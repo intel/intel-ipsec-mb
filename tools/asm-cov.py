@@ -233,35 +233,34 @@ def materialize_symbol_file(rc, env, out_syms=None):
     override = rc["symbol_file_override"]
     if override:
         shutil.copy2(resolve_path(os.getcwd(), override), out_syms)
-        _apply_symbol_ignore(out_syms, ignore, quiet, verbose)
-        return out_syms
+    else:
+        mode = rc["symbols"]["mode"]
+        if mode == "provided":
+            shutil.copy2(rc["symbols"]["path"], out_syms)
+        elif mode == "generate":
+            target_image = rc["target_image_path"]
+            disasm = disassemble_target_image(rc, target_image, env)
+            extract_unique_symbols_from_disasm(disasm, out_syms)
+        elif mode == "command":
+            target_image = rc["target_image_path"]
+            context = {"target_image": target_image}
+            cmd = render_template_list(rc["symbols"]["command_template"], context)
+            stdout, _ = run_cmd(cmd, env=env)
+            with open(out_syms, "w", encoding="utf-8") as f:
+                for line in stdout.splitlines():
+                    sym = line.strip()
+                    if sym:
+                        f.write(sym + "\n")
+        else:
+            raise RuntimeError("Unsupported symbols.mode '{}'".format(mode))
 
-    mode = rc["symbols"]["mode"]
-    if mode == "provided":
-        shutil.copy2(rc["symbols"]["path"], out_syms)
-        _apply_symbol_ignore(out_syms, ignore, quiet, verbose)
-        return out_syms
+    _apply_symbol_ignore(out_syms, ignore, quiet, verbose)
 
-    target_image = rc["target_image_path"]
-    if mode == "generate":
-        disasm = disassemble_target_image(rc, target_image, env)
-        extract_unique_symbols_from_disasm(disasm, out_syms)
-        _apply_symbol_ignore(out_syms, ignore, quiet, verbose)
-        return out_syms
+    with open(out_syms, "r", encoding="utf-8") as f:
+        if not any(line.strip() for line in f):
+            raise RuntimeError("Symbol file is empty after materialization: {}".format(out_syms))
 
-    if mode == "command":
-        context = {"target_image": target_image}
-        cmd = render_template_list(rc["symbols"]["command_template"], context)
-        stdout, _ = run_cmd(cmd, env=env)
-        with open(out_syms, "w", encoding="utf-8") as f:
-            for line in stdout.splitlines():
-                sym = line.strip()
-                if sym:
-                    f.write(sym + "\n")
-        _apply_symbol_ignore(out_syms, ignore, quiet, verbose)
-        return out_syms
-
-    raise RuntimeError("Unsupported symbols.mode '{}'".format(mode))
+    return out_syms
 
 
 # =============================================================================
@@ -1404,16 +1403,17 @@ def generate_cov_report(out_file, xed_file, sym_file, output_dir, report_dir_nam
         symbol_rows = []
 
         for key in symbols.keys():
-            if not symbols[key].found:
+            sym = symbols[key]
+            if not sym.found:
                 continue
-            _total_lines = symbols[key].total_lines
-            _unexec_lines = symbols[key].unexec_lines
+            _total_lines = sym.total_lines
+            _unexec_lines = sym.unexec_lines
             _exec_lines = _total_lines - _unexec_lines
-            _jcc_total = symbols[key].jcc_total
-            _jcc_nt = symbols[key].jcc_nt
+            _jcc_total = sym.jcc_total
+            _jcc_nt = sym.jcc_nt
             _jcc_taken = _jcc_total - _jcc_nt
-            _line_cov = symbols[key].get_line_coverage()
-            _branch_cov = symbols[key].get_branch_coverage()
+            _line_cov = sym.get_line_coverage()
+            _branch_cov = sym.get_branch_coverage()
 
             total_lines += _total_lines
             exec_lines += _exec_lines
@@ -1430,7 +1430,7 @@ def generate_cov_report(out_file, xed_file, sym_file, output_dir, report_dir_nam
                     key, get_cov_class(_line_cov), _exec_lines, _total_lines, _line_cov,
                     get_cov_class(_branch_cov), _jcc_taken, _jcc_total, _branch_cov,
                     sd=symbols_subdir,
-                    slug=html.escape(symbols[key].slug, quote=True),
+                    slug=html.escape(sym.slug, quote=True),
                     name=html.escape(key),
                 )
             )
