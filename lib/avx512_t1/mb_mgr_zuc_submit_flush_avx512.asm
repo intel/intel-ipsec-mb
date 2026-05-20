@@ -264,6 +264,9 @@ mksection .text
         ;; in pointers are cloned from a work lane each loop iteration.
 %endif
 
+        ;; Load lens into ymm0 before any per-lane updates.
+        vmovdqa64       ymm0, [r12 + _zuc_lens]
+
         ;; For init lanes: also set src/dst to KS and set length to init_bytes
         or              DWORD(r15), DWORD(r15)
         jz              %%no_init_lanes_submit_flush
@@ -275,10 +278,13 @@ mksection .text
         ;; For resumed init: reset in/out to KS base (CIPHER_INIT advanced it) but keep lens.
         lea             tmp4, [r12 + _zuc_args_KS]
 %ifidn %%ALGO, ZUC128
-        mov             WORD(tmp3), 128
+        mov             DWORD(tmp3), 128
 %else
-        mov             WORD(tmp3), 192
+        mov             DWORD(tmp3), 192
 %endif
+        ;; Broadcast init_bytes into ymm1 once; accumulate fresh-init lanes in r14
+        vpbroadcastw    ymm1, WORD(tmp3)
+        xor             DWORD(r14), DWORD(r14)              ; fresh_init_mask = 0
 %assign %%I 0
 %rep 16
         test            DWORD(r15), (1 << %%I)
@@ -287,9 +293,9 @@ mksection .text
         mov             tmp5, [r12 + _zuc_args_in + %%I*8]
         sub             tmp5, tmp4                          ; offset from KS base
         cmp             tmp5, (16*128)                      ; is offset < KS buffer size?
-        jb              %%reset_init_ptrs_ %+ %%I          ; yes -> init started, preserve lens
-        ;; Fresh init: set lens = init_bytes (direct memory write)
-        mov             [r12 + _zuc_lens + %%I*2], WORD(tmp3)
+        jb              %%reset_init_ptrs_ %+ %%I           ; yes -> init started, preserve lens
+        ;; Fresh init: record lane in mask (ymm0 updated in bulk after the loop)
+        or              DWORD(r14), (1 << %%I)
 
 align_label
 %%reset_init_ptrs_ %+ %%I:
@@ -303,10 +309,16 @@ align_label
 %assign %%I (%%I + 1)
 %endrep
 
+        ;; Apply fresh-init lengths via one masked vector insert + wide store.
+        or              DWORD(r14), DWORD(r14)
+        jz              %%no_init_lanes_submit_flush
+        kmovw           k5, DWORD(r14)
+        vmovdqu16       ymm0{k5}, ymm1         ; set init_bytes for fresh-init lanes
+        vmovdqa64       [r12 + _zuc_lens], ymm0
+
 align_label
 %%no_init_lanes_submit_flush:
-        ;; Find a lane with min length (already accounts for NULL=0xFFFF)
-        vmovdqa64       ymm0, [r12 + _zuc_lens]
+        ;; ymm0 already loaded/updated above
 
 align_loop
 %%find_min_submit_flush:
@@ -399,9 +411,15 @@ align_label
         lea             tmp3, [r12 + _zuc_args_KS]
         mov             [r12 + _zuc_args_in + idx*8], tmp3
         mov             [r12 + _zuc_args_out + idx*8], tmp3
-        mov             word [r12 + _zuc_lens + idx*2], 4
-        ;; Reload ymm0 lens and loop
-        vmovdqa64       ymm0, [r12 + _zuc_lens]
+
+        ;; Update ymm0 in-register (lane idx -> 4) then write back as wide store.
+        xor             DWORD(tmp3), DWORD(tmp3)
+        bts             DWORD(tmp3), DWORD(idx)   ; tmp3 = 1 << idx
+        kmovw           k5, DWORD(tmp3)
+        mov             DWORD(tmp3), 4
+        vpbroadcastw    ymm1, WORD(tmp3)
+        vmovdqu16       ymm0{k5}, ymm1
+        vmovdqa64       [r12 + _zuc_lens], ymm0
         jmp             %%find_min_submit_flush
 
 align_label
@@ -420,9 +438,14 @@ align_label
         mov             tmp4, [tmp3 + _dst]
         mov             [r12 + _zuc_args_out + idx*8], tmp4
         movzx           DWORD(tmp4), word [tmp3 + _msg_len_to_cipher_in_bytes]
-        mov             word [r12 + _zuc_lens + idx*2], WORD(tmp4)
-        ;; Reload ymm0 lens and loop
-        vmovdqa64       ymm0, [r12 + _zuc_lens]
+
+        ;; Update ymm0 in-register (lane idx -> real length) then write back as wide store.
+        xor             DWORD(tmp3), DWORD(tmp3)
+        bts             DWORD(tmp3), DWORD(idx)   ; tmp3 = 1 << idx
+        kmovw           k5, DWORD(tmp3)
+        vpbroadcastw    ymm1, WORD(tmp4)
+        vmovdqu16       ymm0{k5}, ymm1
+        vmovdqa64       [r12 + _zuc_lens], ymm0
         jmp             %%find_min_submit_flush
 
 align_label
