@@ -50,9 +50,9 @@
 #include <setjmp.h>
 #include <signal.h>
 
+#include "guard_mem.h"
 #include <intel-ipsec-mb.h>
 #include "utils.h"
-#include "guard_mem.h"
 
 /* ========================================================================== */
 /* SIGSEGV / Access Violation handler                                         */
