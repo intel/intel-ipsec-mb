@@ -253,7 +253,7 @@ align_label
 
         vpclmulqdq      xmm8, xmm7, xmm10, 0x1
         vpclmulqdq      xmm7, xmm7, xmm10, 0x10
-        vpternlogq      zmm7, zmm2, zmm8, 0x96
+        vpternlogq      xmm7, xmm2, xmm8, 0x96
 
 align_label
 .done_128:
