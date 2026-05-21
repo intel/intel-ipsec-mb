@@ -678,6 +678,8 @@ align_label
 
 %ifdef SAFE_DATA
         clear_all_ymms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
 %endmacro

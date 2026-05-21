@@ -109,6 +109,8 @@ endstruc
 %macro SNOW5G_NCA4_FUNC_END 0
 %ifdef SAFE_DATA
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif
         mov     rbx, [rsp + _gpr_save_nca4 + 8*0]
         mov     rbp, [rsp + _gpr_save_nca4 + 8*1]
