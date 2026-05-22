@@ -836,7 +836,7 @@ setup_aead_job(IMB_JOB *job, const struct aead_test_vec *tv, const uint8_t *src,
         job->auth_tag_output = tag;
         job->auth_tag_output_len_in_bytes = tv->tag_len;
 
-        /* re-use protected \a src pointer for AAD */
+        /* reuse protected \a src pointer for AAD */
         switch (tv->hash) {
         case IMB_AUTH_AES_GMAC:
         case IMB_AUTH_SM4_GCM:
