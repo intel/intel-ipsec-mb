@@ -2599,6 +2599,45 @@ ci_no_final_rounds:
         vmovdqu64       [pOut]{k6}, zmm1
         vmovdqu64       [pOut + 64]{k7}, zmm2
 
+        ;; Auto-discard: for any init lane (k4) that just reached len=0, run
+        ;; one work-mode ZUC round so the OOO caller can transition the lane
+        ;; directly to work mode without a separate 4-byte discard call.
+        vmovdqa64       ymm0, [lengths]            ; reload final lengths (ymm0 clobbered above)
+        vpxorq          ymm1, ymm1, ymm1
+        vpcmpw          k5, ymm0, ymm1, 0          ; k5 = lanes at len=0
+        kandw           k5, k4, k5                 ; k5 = init lanes just finishing
+        kortestw        k5, k5
+        jz              ci_skip_auto_discard
+
+        ;; Reload mask31 (zmm0 was clobbered by the buf_idx broadcast above)
+        vmovdqa64       zmm0, [rel mask31]
+
+        ;; Load R1/R2 from state
+        vmovdqa32       zmm13, [rax + OFS_R1]
+        vmovdqa32       zmm14, [rax + OFS_R2]
+
+        ;; BITS_REORG16 at ROUND_NUM=1 (constant; no TMP register needed)
+        BITS_REORG16 rax, 1, no_reg, k3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+                        zmm7, zmm8, zmm9, k1, zmm10, zmm11, zmm12
+
+        ;; NONLIN_FUN16: update R1/R2; 13-param form (no W output needed)
+        NONLIN_FUN16 rax, k5, zmm10, zmm11, zmm12, zmm13, zmm14, \
+                        zmm1, zmm2, zmm3, zmm4, zmm5, zmm6
+
+        ;; LFSR_UPDT16: update LFSR for discard lanes only (ROUND_NUM=1, work mode)
+        LFSR_UPDT16  rax, 1, no_reg, k5, zmm1, zmm2, zmm3, zmm4, zmm5, \
+                        zmm6, zmm0, zmm7, work
+
+        ;; Write back updated R1/R2 for discard lanes only
+        vmovdqa32       [rax + OFS_R1]{k5}, zmm13
+        vmovdqa32       [rax + OFS_R2]{k5}, zmm14
+
+        ;; Rotate LFSR by 1 for discard lanes so next CIPHER_INIT starts at ROUND_NUM=1
+        REORDER_LFSR    rax, 1, k5
+
+align_label
+ci_skip_auto_discard:
+
         ; Clear keystream from stack and registers holding plaintext/ciphertext data
 %ifdef SAFE_DATA
         vpxorq          zmm0, zmm0
@@ -2658,7 +2697,6 @@ ZUC128_LFSR_LOAD:
         mov     [arg1 + OFS_R1 + arg4], eax
         mov     [arg1 + OFS_R2 + arg4], eax
 
-        vzeroupper
         ret
 
 ;;
