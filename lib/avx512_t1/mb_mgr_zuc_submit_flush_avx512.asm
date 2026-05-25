@@ -359,7 +359,25 @@ align_label
 
 align_label
 %%no_clone_in:
-        ;; Call ZUC_CIPHER_INIT.
+        ;; Fast path: when no init lanes and no null lanes (tmp4 == 0),
+        ;; call ZUC_CIPHER which avoids init-mode LFSR overhead, per-lane
+        ;; output skip checks, auto-discard logic, and masked pointer updates.
+        or              DWORD(tmp4), DWORD(tmp4)
+        jnz             %%call_cipher_init_sf
+
+        RESERVE_STACK_SPACE 5
+        lea             arg1, [r12 + _zuc_state]
+        lea             arg2, [r12 + _zuc_args_in]
+        lea             arg3, [r12 + _zuc_args_out]
+        lea             arg4, [r12 + _zuc_lens]
+        mov             arg5, min_len
+        call            ZUC_CIPHER
+        RESTORE_STACK_SPACE 5
+        jmp             %%after_cipher_call_sf
+
+align_label
+%%call_cipher_init_sf:
+        ;; Slow path: init or null lanes present.
         ;; Lanes in init_mask (tmp4 = init_not_done | null_jobs_mask):
         ;; LFSR uses init feedback, in/out pointers NOT advanced.
         ;; CIPHER64B skips output writes for init-mask lanes, so null/init-phase
@@ -382,6 +400,12 @@ align_label
         kmovw           k3, DWORD(null_jobs_mask)
         vmovdqu16       ymm0{k3}, ymm1
         vmovdqa64       [r12 + _zuc_lens], ymm0
+        jmp             %%find_min_submit_flush
+
+align_label
+%%after_cipher_call_sf:
+        ;; Reload lens after cipher call (fast path only — no null lanes to fixup)
+        vmovdqa64       ymm0, [r12 + _zuc_lens]
 
         jmp             %%find_min_submit_flush
 
