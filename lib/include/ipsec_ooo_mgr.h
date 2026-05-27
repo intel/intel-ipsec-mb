@@ -357,6 +357,7 @@ typedef struct {
         uint16_t init_not_done;
         uint16_t unused_lane_bitmask;
         uint16_t completed_job_bitmask;
+        uint16_t fresh_init;
         uint64_t road_block;
 } MB_MGR_ZUC_OOO;
 

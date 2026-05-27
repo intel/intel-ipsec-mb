@@ -2225,15 +2225,15 @@ align_label
 %assign j 16
 %assign k 12
 %rep 16
+%if %0 == 16
+        bt      r9d, (j - 16)
+        jc      %%skip_output_ %+ j     ;; init lanes: skip movzx + kmovq + write (LAST_ROUND and full blocks)
+%endif
 %if %%LAST_ROUND == 1
         ;; Read length to encrypt for the lane stored in stack
         ;; and construct byte mask to write to output pointer
         movzx   r12d, word [rsp + LANE_OFFSET + (j-16)*2]
         kmovq   %%BYTE_MASK, [rbx + r12*8]
-%endif
-%if %0 == 16
-        bt      r9d, (j - 16)
-        jc      %%skip_output_ %+ j
 %endif
         mov     APPEND(r, k), [pOut + i]
         vmovdqu8 [APPEND(r, k) + %%OFFSET]{%%BYTE_MASK}, APPEND(zmm, j)
@@ -2664,33 +2664,72 @@ MKGLOBAL(ZUC128_LFSR_LOAD,function,internal)
 align_function
 ZUC128_LFSR_LOAD:
 
-        endbranch64
-
         INIT_LFSR_128 arg2, arg3, zmm0, zmm1
+
+        ;; Build a write mask k1 with a single bit set at position `lane` (= arg4).
+        xor     eax, eax
+        bts     eax, DWORD(arg4)                  ; eax = 1 << lane
+        kmovw   k1, eax
+        shl     arg4, 2                           ; arg4 = lane * 4 (byte offset, for R1/R2)
 
         ;; Scatter LFSR registers to transposed state with +1 rotation.
         ;; S_i stored at position (i+1)%16 so CIPHER64B round 1 correctly
         ;; reads S_j from position (1+j)%16 = (j+1)%16.
-        shl     arg4, 2
-        vmovd   [arg1 + 1*64 + arg4], xmm0           ; S0 -> position 1
-        vpextrd [arg1 + 2*64 + arg4], xmm0, 1      ; S1 -> position 2
-        vpextrd [arg1 + 3*64 + arg4], xmm0, 2      ; S2 -> position 3
-        vpextrd [arg1 + 4*64 + arg4], xmm0, 3      ; S3 -> position 4
-        vextracti128 xmm1, ymm0, 1
-        vmovd   [arg1 + 5*64 + arg4], xmm1           ; S4 -> position 5
-        vpextrd [arg1 + 6*64 + arg4], xmm1, 1      ; S5 -> position 6
-        vpextrd [arg1 + 7*64 + arg4], xmm1, 2      ; S6 -> position 7
-        vpextrd [arg1 + 8*64 + arg4], xmm1, 3      ; S7 -> position 8
-        vextracti64x2 xmm1, zmm0, 2
-        vmovd   [arg1 + 9*64 + arg4], xmm1           ; S8 -> position 9
-        vpextrd [arg1 + 10*64 + arg4], xmm1, 1     ; S9 -> position 10
-        vpextrd [arg1 + 11*64 + arg4], xmm1, 2     ; S10 -> position 11
-        vpextrd [arg1 + 12*64 + arg4], xmm1, 3     ; S11 -> position 12
-        vextracti64x2 xmm1, zmm0, 3
-        vmovd   [arg1 + 13*64 + arg4], xmm1          ; S12 -> position 13
-        vpextrd [arg1 + 14*64 + arg4], xmm1, 1     ; S13 -> position 14
-        vpextrd [arg1 + 15*64 + arg4], xmm1, 2     ; S14 -> position 15
-        vpextrd [arg1 + 0*64 + arg4], xmm1, 3      ; S15 -> position 0
+        ;;
+        ;; Use full-width masked stores (vmovdqu32{k1}) instead of 4-byte vpextrd stores.
+        ;; Each masked store does a read-merge-write at 64-byte granularity, so subsequent
+        ;; ZMM row loads in ZUC_CIPHER/ZUC_CIPHER_INIT can forward from the store buffer
+        ;; instead of stalling on narrow (4-byte) store-to-load forwarding.
+        vpbroadcastd    zmm1, xmm0                ; S0 broadcast
+        vmovdqu32       [arg1 + 1*64]{k1}, zmm1   ; S0 -> row 1
+        vpextrd         eax, xmm0, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 2*64]{k1}, zmm1   ; S1 -> row 2
+        vpextrd         eax, xmm0, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 3*64]{k1}, zmm1   ; S2 -> row 3
+        vpextrd         eax, xmm0, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 4*64]{k1}, zmm1   ; S3 -> row 4
+
+        vextracti128    xmm2, ymm0, 1             ; xmm2 = S4..S7
+        vpbroadcastd    zmm1, xmm2                ; S4 broadcast
+        vmovdqu32       [arg1 + 5*64]{k1}, zmm1   ; S4 -> row 5
+        vpextrd         eax, xmm2, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 6*64]{k1}, zmm1   ; S5 -> row 6
+        vpextrd         eax, xmm2, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 7*64]{k1}, zmm1   ; S6 -> row 7
+        vpextrd         eax, xmm2, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 8*64]{k1}, zmm1   ; S7 -> row 8
+
+        vextracti64x2   xmm2, zmm0, 2             ; xmm2 = S8..S11
+        vpbroadcastd    zmm1, xmm2                ; S8 broadcast
+        vmovdqu32       [arg1 + 9*64]{k1}, zmm1   ; S8 -> row 9
+        vpextrd         eax, xmm2, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 10*64]{k1}, zmm1  ; S9 -> row 10
+        vpextrd         eax, xmm2, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 11*64]{k1}, zmm1  ; S10 -> row 11
+        vpextrd         eax, xmm2, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 12*64]{k1}, zmm1  ; S11 -> row 12
+
+        vextracti64x2   xmm2, zmm0, 3             ; xmm2 = S12..S15
+        vpbroadcastd    zmm1, xmm2                ; S12 broadcast
+        vmovdqu32       [arg1 + 13*64]{k1}, zmm1  ; S12 -> row 13
+        vpextrd         eax, xmm2, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 14*64]{k1}, zmm1  ; S13 -> row 14
+        vpextrd         eax, xmm2, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 15*64]{k1}, zmm1  ; S14 -> row 15
+        vpextrd         eax, xmm2, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 0*64]{k1}, zmm1   ; S15 -> row 0
 
         ; Zero R1/R2 for this lane
         xor     eax, eax
@@ -2710,38 +2749,75 @@ MKGLOBAL(ZUCNEA6_LFSR_LOAD,function,internal)
 align_function
 ZUCNEA6_LFSR_LOAD:
 
-        endbranch64
-
         INIT_LFSR_NEA6 arg2, arg3, zmm0, zmm1
 
+        ;; Build a write mask k1 with a single bit set at position `lane` (= arg4).
+        xor     eax, eax
+        bts     eax, DWORD(arg4)                  ; eax = 1 << lane
+        kmovw   k1, eax
+        shl     arg4, 2                           ; arg4 = lane * 4 (byte offset, for R1/R2)
+
         ;; Scatter LFSR registers to transposed state with +1 rotation.
-        shl     arg4, 2
-        vmovd   [arg1 + 1*64 + arg4], xmm0           ; S0 -> position 1
-        vpextrd [arg1 + 2*64 + arg4], xmm0, 1      ; S1 -> position 2
-        vpextrd [arg1 + 3*64 + arg4], xmm0, 2      ; S2 -> position 3
-        vpextrd [arg1 + 4*64 + arg4], xmm0, 3      ; S3 -> position 4
-        vextracti128 xmm1, ymm0, 1
-        vmovd   [arg1 + 5*64 + arg4], xmm1           ; S4 -> position 5
-        vpextrd [arg1 + 6*64 + arg4], xmm1, 1      ; S5 -> position 6
-        vpextrd [arg1 + 7*64 + arg4], xmm1, 2      ; S6 -> position 7
-        vpextrd [arg1 + 8*64 + arg4], xmm1, 3      ; S7 -> position 8
-        vextracti64x2 xmm1, zmm0, 2
-        vmovd   [arg1 + 9*64 + arg4], xmm1           ; S8 -> position 9
-        vpextrd [arg1 + 10*64 + arg4], xmm1, 1     ; S9 -> position 10
-        vpextrd [arg1 + 11*64 + arg4], xmm1, 2     ; S10 -> position 11
-        vpextrd [arg1 + 12*64 + arg4], xmm1, 3     ; S11 -> position 12
-        vextracti64x2 xmm1, zmm0, 3
-        vmovd   [arg1 + 13*64 + arg4], xmm1          ; S12 -> position 13
-        vpextrd [arg1 + 14*64 + arg4], xmm1, 1     ; S13 -> position 14
-        vpextrd [arg1 + 15*64 + arg4], xmm1, 2     ; S14 -> position 15
-        vpextrd [arg1 + 0*64 + arg4], xmm1, 3      ; S15 -> position 0
+        ;; Use full-width masked stores (vmovdqu32{k1}) instead of 4-byte vpextrd stores.
+        ;; Each masked store does a read-merge-write at 64-byte granularity, so subsequent
+        ;; ZMM row loads in ZUC_CIPHER/ZUC_CIPHER_INIT can forward from the store buffer
+        ;; instead of stalling on narrow (4-byte) store-to-load forwarding.
+        vpbroadcastd    zmm1, xmm0                ; S0 broadcast
+        vmovdqu32       [arg1 + 1*64]{k1}, zmm1   ; S0 -> row 1
+        vpextrd         eax, xmm0, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 2*64]{k1}, zmm1   ; S1 -> row 2
+        vpextrd         eax, xmm0, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 3*64]{k1}, zmm1   ; S2 -> row 3
+        vpextrd         eax, xmm0, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 4*64]{k1}, zmm1   ; S3 -> row 4
+
+        vextracti128    xmm2, ymm0, 1             ; xmm2 = S4..S7
+        vpbroadcastd    zmm1, xmm2                ; S4 broadcast
+        vmovdqu32       [arg1 + 5*64]{k1}, zmm1   ; S4 -> row 5
+        vpextrd         eax, xmm2, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 6*64]{k1}, zmm1   ; S5 -> row 6
+        vpextrd         eax, xmm2, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 7*64]{k1}, zmm1   ; S6 -> row 7
+        vpextrd         eax, xmm2, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 8*64]{k1}, zmm1   ; S7 -> row 8
+
+        vextracti64x2   xmm2, zmm0, 2             ; xmm2 = S8..S11
+        vpbroadcastd    zmm1, xmm2                ; S8 broadcast
+        vmovdqu32       [arg1 + 9*64]{k1}, zmm1   ; S8 -> row 9
+        vpextrd         eax, xmm2, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 10*64]{k1}, zmm1  ; S9 -> row 10
+        vpextrd         eax, xmm2, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 11*64]{k1}, zmm1  ; S10 -> row 11
+        vpextrd         eax, xmm2, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 12*64]{k1}, zmm1  ; S11 -> row 12
+
+        vextracti64x2   xmm2, zmm0, 3             ; xmm2 = S12..S15
+        vpbroadcastd    zmm1, xmm2                ; S12 broadcast
+        vmovdqu32       [arg1 + 13*64]{k1}, zmm1  ; S12 -> row 13
+        vpextrd         eax, xmm2, 1
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 14*64]{k1}, zmm1  ; S13 -> row 14
+        vpextrd         eax, xmm2, 2
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 15*64]{k1}, zmm1  ; S14 -> row 15
+        vpextrd         eax, xmm2, 3
+        vpbroadcastd    zmm1, eax
+        vmovdqu32       [arg1 + 0*64]{k1}, zmm1   ; S15 -> row 0
 
         ; Zero R1/R2 for this lane
         xor     eax, eax
         mov     [arg1 + OFS_R1 + arg4], eax
         mov     [arg1 + OFS_R2 + arg4], eax
 
-        vzeroupper
         ret
 
 
