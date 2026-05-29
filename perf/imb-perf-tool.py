@@ -376,7 +376,7 @@ def parse_args():
                                      "performance application enabling extended functionality")
 
     # parse and validate args
-    parser.add_argument("-a", "--arch", choices=['SSE', 'AVX', 'AVX2', 'AVX512'],
+    parser.add_argument("-a", "--arch", choices=['SSE', 'AVX2', 'AVX512', 'AVX10'],
                         default=None, action='append',
                         help="set architecture to test (default tests all supported archs)")
     parser.add_argument("-c", "--cores", default=cores,
