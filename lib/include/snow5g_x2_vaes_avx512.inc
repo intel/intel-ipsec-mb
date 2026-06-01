@@ -146,6 +146,11 @@ mksection .text
 %define arg3    r8
 %endif
 
+;; NCA4_CIPHER_LANE_PAIR lane mask values
+%define LANE0_ONLY      0
+%define LANE1_ONLY      1
+%define BOTH_LANES      2
+
 struc STACK
 _LFSR_A_HDQ_01:     resb    (16 * 8)
 _LFSR_A_HDQ_23:     resb    (16 * 8)
@@ -580,7 +585,7 @@ align_loop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; NCA4 cipher: encrypt/decrypt 16 bytes per lane, clock FSM and update LFSR
-;; %%LANE_MASK: 2 = both lanes, 0 = lane 0 only (lower xmm), 1 = lane 1 only (upper xmm)
+;; %%LANE_MASK: BOTH_LANES, LANE0_ONLY, or LANE1_ONLY
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro NCA4_CIPHER_LANE_PAIR 17
 %define %%FSM_R1               %1   ;; [in/out] FSM R1 register
@@ -599,19 +604,23 @@ align_loop
 %define %%DST1                 %14  ;; [in] lane 1 dst pointer (pre-loaded)
 %define %%OFFSET               %15  ;; [in] current byte offset into src/dst buffers
 %define %%KREG_INIT            %16  ;; [in] k-register mask for INIT phase
-%define %%LANE_MASK            %17  ;; [in] 2=both lanes, 0=lane0 only, 1=lane1 only
+%define %%LANE_MASK            %17  ;; [in] BOTH_LANES, LANE0_ONLY, or LANE1_ONLY
 
         vpaddw          %%TEMP1, %%LFSR_B_HDQ, %%FSM_R1
         vpxord          %%TEMP1, %%TEMP1, %%FSM_R2
         vmovdqa32       [rsp + %%KEYSTREAM_SAVE], %%TEMP1
 
-%if %%LANE_MASK != 1
+        ;; Lane 0: load src, XOR with lower xmm keystream, store dst
+        ;; runs when LANE_MASK=LANE0_ONLY or BOTH_LANES
+%if %%LANE_MASK != LANE1_ONLY
         vmovdqu32       XWORD(%%TEMP2), [%%SRC0 + %%OFFSET]
         vpxord          XWORD(%%TEMP2), XWORD(%%TEMP1), XWORD(%%TEMP2)
         vmovdqu32       [%%DST0 + %%OFFSET], XWORD(%%TEMP2)
 %endif
 
-%if %%LANE_MASK != 0
+        ;; Lane 1: extract upper xmm keystream, load src, XOR, store dst
+        ;; runs when LANE_MASK=LANE1_ONLY or BOTH_LANES
+%if %%LANE_MASK != LANE0_ONLY
         vextracti32x4   XWORD(%%TEMP1), %%TEMP1, 1
         vmovdqu32       XWORD(%%TEMP2), [%%SRC1 + %%OFFSET]
         vpxord          XWORD(%%TEMP2), XWORD(%%TEMP1), XWORD(%%TEMP2)

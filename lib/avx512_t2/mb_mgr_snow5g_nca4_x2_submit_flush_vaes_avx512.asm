@@ -109,7 +109,7 @@ endstruc
         jz      %%skip_tag_ %+ %%LANE
 %endif
 
-        vmovdqu64 xmm0, [rsp + _digest_nca4 + %%LANE*16]
+        vmovdqa64 xmm0, [rsp + _digest_nca4 + %%LANE*16]
         mov     ecx, [rax + _auth_tag_output_len_in_bytes]
         mov     rdx, [rax + _auth_tag_output]
         mov     eax, -1
@@ -178,7 +178,7 @@ align_loop
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
                 _keystream_nca4, \
-                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, 2
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, BOTH_LANES
         add     %%offset, 16
         dec     DWORD(%%num_blocks)
         jnz     %%phase1
@@ -195,7 +195,7 @@ align_loop
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
                 _keystream_nca4, \
-                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, 0
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE0_ONLY
         add     %%offset, 16
         dec     DWORD(%%len0)
         jnz     %%phase2_lane0
@@ -205,7 +205,7 @@ align_loop
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
                 _keystream_nca4, \
-                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, 1
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE1_ONLY
         add     %%offset, 16
         dec     DWORD(%%len0)
         jnz     %%phase2_lane1
@@ -245,7 +245,7 @@ align_label
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_NCA4_CORE 3
 %define %%STATE         %1  ;; [in] GP reg: SNOW5G OOO state pointer
-%define %%DIR           %2  ;; [in] 0=encrypt, 1=decrypt
+%define %%DIR           %2  ;; [in] ENCRYPT or DECRYPT
 %define %%LANE1_VALID   %3  ;; [in] 1=lane 1 has a job (submit), 0=lane 1 NULL (flush)
 
         mov     p_state, %%STATE
@@ -257,7 +257,7 @@ align_label
         ;; DECRYPT: POLYVAL function call between HQP and cipher clobbers YMMs;
         ;;          must persist state through memory.
         lea     rax, [p_state + _snow5g_args_keys]
-%if %%DIR == 0
+%ifidn %%DIR, ENCRYPT
         SNOW5G_GENERATE_HQP_X2 rax, {p_state + _snow5g_args_IV}, \
                 {rsp + _hqp_nca4}, 0, _keystream_nca4, \
                 FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
@@ -283,7 +283,7 @@ align_label
         xor     r15d, r15d
 %endif
 
-%if %%DIR == 1
+%ifidn %%DIR, DECRYPT
         ;; Decrypt: hash AAD + ciphertext (input) BEFORE cipher
 %if %%LANE1_VALID
         NCA4_POLYVAL_LANE 0, _snow5g_args_in, 0
@@ -294,9 +294,13 @@ align_label
 %endif
 %endif
 
-        SNOW5G_NCA4_CIPHER_X2 (1 - %%DIR)
+%ifidn %%DIR, ENCRYPT
+        SNOW5G_NCA4_CIPHER_X2 1
+%else
+        SNOW5G_NCA4_CIPHER_X2 0
+%endif
 
-%if %%DIR == 0
+%ifidn %%DIR, ENCRYPT
         ;; Encrypt: hash AAD + ciphertext (output) AFTER cipher
 %if %%LANE1_VALID
         NCA4_POLYVAL_LANE 0, _snow5g_args_out, 0
@@ -311,11 +315,11 @@ align_label
         NCA4_COPY_TAG 1, (1 - %%LANE1_VALID)
 
 %ifdef SAFE_DATA
-        vpxorq  zmm0, zmm0, zmm0
+        vpxorq  xmm0, xmm0, xmm0
         vmovdqa64 [rsp + _hqp_nca4], zmm0
         vmovdqa32 [rsp + _hqp_nca4 + 64], ymm0
         vmovdqa64 [rsp + _digest_nca4], ymm0
-%if %%DIR == 1
+%ifidn %%DIR, DECRYPT
         ;; _states_nca4 only written on decrypt path
         vmovdqu64 [rsp + _states_nca4 + 64 * 0], zmm0
         vmovdqu64 [rsp + _states_nca4 + 64 * 1], zmm0
@@ -487,7 +491,7 @@ align_label
 
         ;; Check for empty
         cmp     qword [state + _snow5g_lanes_in_use], 0
-        jz      %%return_null_flush
+        jz      %%return_null_flush_nca4
 
         ;; With 2 lanes, flush always has lane 0 valid, lane 1 null.
         ;; Fill lane 1 from lane 0.
@@ -514,7 +518,7 @@ align_label
         jmp     %%exit_flush
 
 align_label
-%%return_null_flush:
+%%return_null_flush_nca4:
         xor     job_rax, job_rax
 
 align_label
@@ -526,28 +530,28 @@ align_label
 MKGLOBAL(submit_job_snow5g_nca4_enc_vaes_avx512,function,internal)
 align_function
 submit_job_snow5g_nca4_enc_vaes_avx512:
-        SUBMIT_JOB_SNOW5G_NCA4_X2 0
+        SUBMIT_JOB_SNOW5G_NCA4_X2 ENCRYPT
         ret
 
 ;; flush_job_snow5g_nca4_enc_vaes_avx512(state) - encrypt queue
 MKGLOBAL(flush_job_snow5g_nca4_enc_vaes_avx512,function,internal)
 align_function
 flush_job_snow5g_nca4_enc_vaes_avx512:
-        FLUSH_JOB_SNOW5G_NCA4_X2 0
+        FLUSH_JOB_SNOW5G_NCA4_X2 ENCRYPT
         ret
 
 ;; submit_job_snow5g_nca4_dec_vaes_avx512(state, job) - decrypt queue
 MKGLOBAL(submit_job_snow5g_nca4_dec_vaes_avx512,function,internal)
 align_function
 submit_job_snow5g_nca4_dec_vaes_avx512:
-        SUBMIT_JOB_SNOW5G_NCA4_X2 1
+        SUBMIT_JOB_SNOW5G_NCA4_X2 DECRYPT
         ret
 
 ;; flush_job_snow5g_nca4_dec_vaes_avx512(state) - decrypt queue
 MKGLOBAL(flush_job_snow5g_nca4_dec_vaes_avx512,function,internal)
 align_function
 flush_job_snow5g_nca4_dec_vaes_avx512:
-        FLUSH_JOB_SNOW5G_NCA4_X2 1
+        FLUSH_JOB_SNOW5G_NCA4_X2 DECRYPT
         ret
 
 mksection stack-noexec
