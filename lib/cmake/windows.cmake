@@ -56,18 +56,21 @@ set(CMAKE_STATIC_LINKER_FLAGS "/nologo /nodefaultlib")
 
 # set compiler optimization flags
 set_source_files_properties(
-  ${SRC_FILES_AVX_T1}
-  ${SRC_FILES_AVX_T2}
   ${SRC_FILES_AVX2_T1}
   ${SRC_FILES_AVX2_T2}
   ${SRC_FILES_AVX2_T3}
+  ${SRC_FILES_AVX2_T4}
+  PROPERTIES COMPILE_FLAGS "/arch:AVX2 $<$<CONFIG:RELEASE>:/Oi /O2>")
+
+set_source_files_properties(
   ${SRC_FILES_AVX512_T1}
   ${SRC_FILES_AVX512_T2}
-  PROPERTIES COMPILE_FLAGS "/arch:AVX $<$<CONFIG:RELEASE>:/Oi /O2>")
+  ${SRC_FILES_AVX10_T1}
+  PROPERTIES COMPILE_FLAGS "/arch:AVX512 $<$<CONFIG:RELEASE>:/Oi /O2>")
 
 set_source_files_properties(
   ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
-  ${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS "$<$<CONFIG:RELEASE>:/Oi /O2>")
+  ${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS "/arch:SSE4.2 $<$<CONFIG:RELEASE>:/Oi /O2>")
 
 # generate windows DEF file
 if(NOT AVX_IFMA)

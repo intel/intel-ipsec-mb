@@ -63,17 +63,15 @@ if(CET_SUPPORT)
 endif()
 
 # set directory specific C compiler flags
-set_source_files_properties(${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2} PPROPERTIES
-                            COMPILE_FLAGS "-march=sandybridge -maes -mpclmul")
 set_source_files_properties(
-  ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2} ${SRC_FILES_AVX2_T3} PPROPERTIES
+  ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2} ${SRC_FILES_AVX2_T3} ${SRC_FILES_AVX2_T4} PROPERTIES
   COMPILE_FLAGS "-march=haswell -maes -mpclmul")
 set_source_files_properties(
-  ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
-  PROPERTIES COMPILE_FLAGS "-march=broadwell -maes -mpclmul")
+  ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2} ${SRC_FILES_AVX10_T1}
+  PROPERTIES COMPILE_FLAGS "-march=skylake-avx512 -maes -mpclmul")
 set_source_files_properties(
   ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
-  PROPERTIES COMPILE_FLAGS "-march=nehalem -maes -mpclmul")
+  PROPERTIES COMPILE_FLAGS "-march=x86-64-v2 -maes -mpclmul")
 set_source_files_properties(${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS
                                                            "-msse4.2")
 
