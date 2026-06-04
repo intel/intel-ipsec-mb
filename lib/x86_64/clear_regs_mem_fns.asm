@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2024, Intel Corporation
+;; Copyright (c) 2019-2026, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -28,16 +28,31 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
+%include "include/align_sse.inc"
+
+%ifdef LINUX
+%xdefine arg1 rdi
+%xdefine arg2 rsi
+%xdefine arg3 rdx
+%xdefine arg4 rcx
+%else
+%xdefine arg1 rcx
+%xdefine arg2 rdx
+%xdefine arg3 r8
+%xdefine arg4 r9
+%endif
+
+default rel
+
 mksection .text
 ;
 ; This function clears all scratch GP registers
 ;
 ; void clear_scratch_gps(void)
 MKGLOBAL(clear_scratch_gps,function,internal)
+align_function
 clear_scratch_gps:
-
         clear_scratch_gps_asm
-
         ret
 
 ;
@@ -45,10 +60,9 @@ clear_scratch_gps:
 ;
 ; void clear_scratch_xmms_sse(void)
 MKGLOBAL(clear_scratch_xmms_sse,function,internal)
+align_function
 clear_scratch_xmms_sse:
-
         clear_scratch_xmms_sse_asm
-
         ret
 
 ;
@@ -59,10 +73,9 @@ clear_scratch_xmms_sse:
 ;
 ; void clear_scratch_xmms_avx(void)
 MKGLOBAL(clear_scratch_xmms_avx,function,internal)
+align_function
 clear_scratch_xmms_avx:
-
         clear_scratch_xmms_avx_asm
-
         ret
 
 ;
@@ -73,10 +86,9 @@ clear_scratch_xmms_avx:
 ;
 ; void clear_scratch_ymms(void)
 MKGLOBAL(clear_scratch_ymms,function,internal)
+align_function
 clear_scratch_ymms:
-
         clear_scratch_ymms_asm
-
         ret
 
 ;
@@ -90,82 +102,79 @@ clear_scratch_ymms:
 ;
 ; void clear_scratch_zmms(void)
 MKGLOBAL(clear_scratch_zmms,function,internal)
+align_function
 clear_scratch_zmms:
-
         clear_scratch_zmms_asm
-
         ret
-
-%macro MEMSET_ZERO 0
-
-%ifdef LINUX
-        mov rcx, rsi
-%else
-        push rdi
-        mov rdi, rcx
-        mov rcx, rdx
-%endif
-        xor eax, eax
-        cld
-        rep stosb
-
-%ifndef LINUX
-        pop rdi
-%endif
-
-%endmacro
 
 ;
 ; This function clears all memory passed
 ;
 ; void force_memset_zero(void *mem, const size_t size)
 MKGLOBAL(force_memset_zero,function,internal)
-force_memset_zero:
-
-        MEMSET_ZERO
-
-        ret
-
 ;
 ; This function clears all memory passed (volatile version)
 ;
 ; void force_memset_zero(volatile void *mem, const size_t size)
 MKGLOBAL(force_memset_zero_vol,function,internal)
+
+align_function
+force_memset_zero:
 force_memset_zero_vol:
+        pxor    xmm0, xmm0
+        xor     eax, eax
 
-        MEMSET_ZERO
+        or      arg2, arg2
+        jz      .end
 
+align_loop
+.loop16:
+        cmp     arg2, 16
+        jb      .check8
+        movdqu  [arg1], xmm0
+        add     arg1, 16
+        sub     arg2, 16
+        jz      .end
+        jmp     .loop16
+
+align_label
+.check8:
+        cmp     arg2, 8
+        jb      .check4
+        mov     [arg1], rax
+        add     arg1, 8
+        sub     arg2, 8
+        jz      .end
+
+align_label
+.check4:
+        cmp     arg2, 4
+        jb      .loop1
+        mov     [arg1], eax
+        add     arg1, 4
+        sub     arg2, 4
+        jz      .end
+
+align_loop
+.loop1:
+        mov     [arg1], al
+        add     arg1, 1
+        sub     arg2, 1
+        jnz     .loop1
+
+align_label
+.end:
         ret
 
 MKGLOBAL(imb_clear_mem,function,)
+align_function
 imb_clear_mem:
         endbranch64
-%ifdef LINUX
-        cmp rdi, 0
-%else
-        cmp rcx, 0
-%endif
-        jz  clr_mem_return
-
-        pushfq ;; save flags
-%ifdef LINUX
-        mov rcx, rsi
-%else
-        push rdi
-        mov rdi, rcx
-        mov rcx, rdx
-%endif
-        xor eax, eax
-        cld
-        rep stosb
-
-%ifndef LINUX
-        pop rdi
-%endif
-        sfence  ;; ensure stores complete
-        popfq   ;; restore flags
-
-clr_mem_return:
+        or      arg1, arg1
+        jz      .return
+        call    force_memset_zero
+        sfence  ;; ensures stores complete
+.return:
         ret
 
 mksection stack-noexec
