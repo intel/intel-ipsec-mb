@@ -2104,7 +2104,7 @@ ZUC_KEYGEN_SKIP8_16:
 ;; When provided, init lanes use LFSR_UPDT in init mode (W feedback) while work lanes
 ;; use work mode (no W feedback). This allows init and cipher to run in parallel.
 ;;
-;; Clobbers r9
+;; Clobbers rdi when INIT_KMASK is passed
 ;;
 %macro CIPHER64B 15-16
 %define %%NROUNDS      %1
@@ -2218,7 +2218,7 @@ align_label
 
         ;; Write output for all 16 buffers (zmm16-31) using registers r12-15
 %if %0 == 16
-        kmovw   r9d, %%INIT_KMASK
+        kmovw   edi, %%INIT_KMASK
 %endif
 
 %assign i 0
@@ -2226,7 +2226,7 @@ align_label
 %assign k 12
 %rep 16
 %if %0 == 16
-        bt      r9d, (j - 16)
+        bt      edi, (j - 16)
         jc      %%skip_output_ %+ j     ;; init lanes: skip movzx + kmovq + write (LAST_ROUND and full blocks)
 %endif
 %if %%LAST_ROUND == 1
