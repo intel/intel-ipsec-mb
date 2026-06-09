@@ -354,10 +354,10 @@ typedef struct {
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(uint32_t state[MAX_ZUC_STATE_SZ], 64);
-        uint16_t init_not_done;
-        uint16_t unused_lane_bitmask;
-        uint16_t completed_job_bitmask;
-        uint16_t fresh_init;
+        uint32_t init_not_done;
+        uint32_t unused_lane_bitmask;
+        uint32_t completed_job_bitmask;
+        uint32_t fresh_init;
         uint64_t road_block;
 } MB_MGR_ZUC_OOO;
 

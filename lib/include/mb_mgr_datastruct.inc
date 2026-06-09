@@ -257,10 +257,10 @@ FIELD   _zuc_unused_lanes, 8,   8
 FIELD   _zuc_job_in_lane, 16*8, 8
 FIELD   _zuc_lanes_in_use, 8,   8
 FIELD   _zuc_state, 16*4*22, 64
-FIELD   _zuc_init_not_done , 2, 2
-FIELD   _zuc_unused_lane_bitmask, 2, 2
-FIELD   _zuc_completed_job_bitmask, 2, 2
-FIELD   _zuc_fresh_init, 2, 2
+FIELD   _zuc_init_not_done , 4, 4
+FIELD   _zuc_unused_lane_bitmask, 4, 4
+FIELD   _zuc_completed_job_bitmask, 4, 4
+FIELD   _zuc_fresh_init, 4, 4
 FIELD   _zuc_road_block,   8,   8
 END_FIELDS
 %assign _MB_MGR_ZUC_OOO_size    _FIELD_OFFSET
