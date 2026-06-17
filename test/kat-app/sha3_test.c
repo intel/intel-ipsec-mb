@@ -41,12 +41,6 @@ static struct mac_test *sha3_vectors;
 static struct mac_test *shake128_vectors;
 static struct mac_test *shake256_vectors;
 
-static int
-load_sha3_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "sha3_test.json", &sha3_vectors, ctx);
-}
-
 static void
 free_sha3_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -54,23 +48,11 @@ free_sha3_vectors(struct test_json_alloc_ctx *ctx)
         sha3_vectors = NULL;
 }
 
-static int
-load_shake128_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "shake128_test.json", &shake128_vectors, ctx);
-}
-
 static void
 free_shake128_vectors(struct test_json_alloc_ctx *ctx)
 {
         json_free_test_ctx(ctx);
         shake128_vectors = NULL;
-}
-
-static int
-load_shake256_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "shake256_test.json", &shake256_vectors, ctx);
 }
 
 static void
@@ -420,13 +402,15 @@ sha3_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         unsigned i;
 
-        if (load_sha3_vectors(&ctx_sha3) < 0)
+        if (load_mac_vectors(kat_vector_dir, "sha3_test.json", &sha3_vectors, &ctx_sha3) < 0)
                 return 1;
-        if (load_shake128_vectors(&ctx_128) < 0) {
+        if (load_mac_vectors(kat_vector_dir, "shake128_test.json", &shake128_vectors, &ctx_128) <
+            0) {
                 free_sha3_vectors(ctx_sha3);
                 return 1;
         }
-        if (load_shake256_vectors(&ctx_256) < 0) {
+        if (load_mac_vectors(kat_vector_dir, "shake256_test.json", &shake256_vectors, &ctx_256) <
+            0) {
                 free_sha3_vectors(ctx_sha3);
                 free_shake128_vectors(ctx_128);
                 return 1;

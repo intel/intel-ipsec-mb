@@ -40,12 +40,6 @@ hmac_md5_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *hmac_md5_vectors;
 
-static int
-load_hmac_md5_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "hmac_md5_test.json", &hmac_md5_vectors, ctx);
-}
-
 static void
 free_hmac_md5_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -234,7 +228,7 @@ hmac_md5_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *ctx = NULL;
         int num_jobs, errors = 0;
 
-        if (load_hmac_md5_vectors(&ctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "hmac_md5_test.json", &hmac_md5_vectors, &ctx) < 0)
                 return 1;
 
         test_suite_start(&ts, "HMAC-MD5");

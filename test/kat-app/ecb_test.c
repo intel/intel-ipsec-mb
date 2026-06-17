@@ -41,12 +41,6 @@ ecb_test(struct IMB_MGR *mb_mgr);
 
 static struct cipher_test *ecb_vectors;
 
-static int
-load_ecb_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "ecb_test.json", &ecb_vectors, ctx);
-}
-
 static void
 free_ecb_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -370,7 +364,7 @@ ecb_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_ecb_vectors(&jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "ecb_test.json", &ecb_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ts128, "AES-ECB-128");

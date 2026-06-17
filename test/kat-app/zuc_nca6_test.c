@@ -41,12 +41,6 @@ zuc_nca6_test(IMB_MGR *p_mgr);
 
 static struct aead_test *zuc_nca6_vectors;
 
-static int
-load_zuc_nca6_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_aead_vectors(kat_vector_dir, "zuc_nca6_test.json", &zuc_nca6_vectors, ctx);
-}
-
 static void
 free_zuc_nca6_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -398,7 +392,7 @@ zuc_nca6_test(IMB_MGR *p_mgr)
         int errors = 0;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_zuc_nca6_vectors(&jctx) < 0)
+        if (load_aead_vectors(kat_vector_dir, "zuc_nca6_test.json", &zuc_nca6_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ts, "ZUC-NCA6");

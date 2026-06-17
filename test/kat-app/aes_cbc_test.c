@@ -42,18 +42,6 @@ cbc_test(struct IMB_MGR *mb_mgr);
 static struct cipher_test *cbc_vectors;
 
 /**
- * @brief Load AES-CBC vectors from the configured kat-app JSON path.
- *
- * @param ctx receives loader allocation context for later cleanup
- *
- * @return 0 on success or -1 on failure
- */
-static int
-load_cbc_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "cbc_test.json", &cbc_vectors, ctx);
-}
-/**
  * @brief Free AES-CBC vectors previously loaded by load_cbc_vectors().
  *
  * @param ctx loader context returned by load_cbc_vectors()
@@ -575,7 +563,7 @@ cbc_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx256;
         struct test_json_alloc_ctx *ctx = NULL;
 
-        if (load_cbc_vectors(&ctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "cbc_test.json", &cbc_vectors, &ctx) < 0)
                 return 1;
 
         test_suite_start(&ctx128, "AES-CBC-128");

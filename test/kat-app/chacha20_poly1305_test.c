@@ -42,13 +42,6 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 
 static struct aead_test *chacha20_poly1305_vectors;
 
-static int
-load_chacha20_poly1305_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_aead_vectors(kat_vector_dir, "chacha20_poly1305_test.json",
-                                 &chacha20_poly1305_vectors, ctx);
-}
-
 static void
 free_chacha20_poly1305_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -967,7 +960,8 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         uint32_t seg_sz;
 
-        if (load_chacha20_poly1305_vectors(&jctx) < 0)
+        if (load_aead_vectors(kat_vector_dir, "chacha20_poly1305_test.json",
+                              &chacha20_poly1305_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx, "AEAD-CHACHA20-256-POLY1305");

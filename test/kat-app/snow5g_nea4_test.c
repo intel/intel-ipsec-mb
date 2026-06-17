@@ -44,13 +44,6 @@
 
 static struct cipher_test *snow5g_nea4_vectors;
 
-static int
-load_snow5g_nea4_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "snow5g_nea4_test.json", &snow5g_nea4_vectors,
-                                   ctx);
-}
-
 static void
 free_snow5g_nea4_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -216,7 +209,8 @@ snow5g_nea4_test(IMB_MGR *mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_snow5g_nea4_vectors(&jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "snow5g_nea4_test.json", &snow5g_nea4_vectors,
+                                &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx, "SNOW5G-NEA4");

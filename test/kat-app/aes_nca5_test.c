@@ -41,12 +41,6 @@ aes_nca5_test(IMB_MGR *p_mgr);
 
 static struct aead_test *aes_nca5_vectors;
 
-static int
-load_aes_nca5_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_aead_vectors(kat_vector_dir, "aes_nca5_test.json", &aes_nca5_vectors, ctx);
-}
-
 static void
 free_aes_nca5_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -307,7 +301,7 @@ aes_nca5_test(IMB_MGR *p_mgr)
         int errors = 0;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_aes_nca5_vectors(&jctx) < 0)
+        if (load_aead_vectors(kat_vector_dir, "aes_nca5_test.json", &aes_nca5_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ts, "AES-NCA5");

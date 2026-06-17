@@ -39,12 +39,6 @@ snow5g_nia4_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *snow5g_nia4_vectors;
 
-static int
-load_snow5g_nia4_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "snow5g_nia4_test.json", &snow5g_nia4_vectors, ctx);
-}
-
 static void
 free_snow5g_nia4_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -208,7 +202,8 @@ snow5g_nia4_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_snow5g_nia4_vectors(&jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "snow5g_nia4_test.json", &snow5g_nia4_vectors, &jctx) <
+            0)
                 return 1;
 
         /* SNOW5G-NIA4 with standard vectors */

@@ -59,13 +59,6 @@ zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *zuc_eia3_128_vectors;
 
-static int
-load_zuc_eia3_128_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "zuc_eia3_128_test.json", &zuc_eia3_128_vectors,
-                                ctx);
-}
-
 static void
 free_zuc_eia3_128_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -74,12 +67,6 @@ free_zuc_eia3_128_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static struct mac_test *zuc_nia6_vectors;
-
-static int
-load_zuc_nia6_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "zuc_nia6_test.json", &zuc_nia6_vectors, ctx);
-}
 
 static void
 free_zuc_nia6_vectors(struct test_json_alloc_ctx *ctx)
@@ -225,9 +212,11 @@ zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *eia3_jctx = NULL;
         struct test_json_alloc_ctx *nia6_jctx = NULL;
 
-        if (load_zuc_eia3_128_vectors(&eia3_jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "zuc_eia3_128_test.json", &zuc_eia3_128_vectors,
+                             &eia3_jctx) < 0)
                 return 1;
-        if (load_zuc_nia6_vectors(&nia6_jctx) < 0) {
+        if (load_mac_vectors(kat_vector_dir, "zuc_nia6_test.json", &zuc_nia6_vectors, &nia6_jctx) <
+            0) {
                 free_zuc_eia3_128_vectors(eia3_jctx);
                 return 1;
         }

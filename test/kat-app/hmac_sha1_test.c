@@ -41,12 +41,6 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *hmac_sha1_vectors;
 
-static int
-load_hmac_sha1_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "hmac_sha1_test.json", &hmac_sha1_vectors, ctx);
-}
-
 static void
 free_hmac_sha1_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -459,7 +453,7 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
         uint32_t tag_size;
         const struct mac_test *v;
 
-        if (load_hmac_sha1_vectors(&ctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "hmac_sha1_test.json", &hmac_sha1_vectors, &ctx) < 0)
                 return 1;
 
         v = hmac_sha1_vectors;

@@ -42,12 +42,6 @@
 
 static struct mac_test *kasumi_f9_vectors;
 
-static int
-load_kasumi_f9_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "kasumi_f9_test.json", &kasumi_f9_vectors, ctx);
-}
-
 static void
 free_kasumi_f9_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -56,12 +50,6 @@ free_kasumi_f9_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static struct cipher_test *kasumi_f8_vectors;
-
-static int
-load_kasumi_f8_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "kasumi_f8_test.json", &kasumi_f8_vectors, ctx);
-}
 
 static void
 free_kasumi_f8_vectors(struct test_json_alloc_ctx *ctx)
@@ -665,9 +653,11 @@ kasumi_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         unsigned i;
 
-        if (load_kasumi_f9_vectors(&f9_jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "kasumi_f9_test.json", &kasumi_f9_vectors, &f9_jctx) <
+            0)
                 return 1;
-        if (load_kasumi_f8_vectors(&f8_jctx) < 0) {
+        if (load_cipher_vectors(kat_vector_dir, "kasumi_f8_test.json", &kasumi_f8_vectors,
+                                &f8_jctx) < 0) {
                 free_kasumi_f9_vectors(f9_jctx);
                 return 1;
         }

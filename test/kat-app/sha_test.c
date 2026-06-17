@@ -40,12 +40,6 @@ sha_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *sha_vectors;
 
-static int
-load_sha_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "sha_test.json", &sha_vectors, ctx);
-}
-
 static void
 free_sha_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -439,7 +433,7 @@ sha_test(struct IMB_MGR *mb_mgr)
         int errors;
         unsigned i;
 
-        if (load_sha_vectors(&ctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "sha_test.json", &sha_vectors, &ctx) < 0)
                 return 1;
 
         test_suite_start(&sha1_ctx, "SHA1");

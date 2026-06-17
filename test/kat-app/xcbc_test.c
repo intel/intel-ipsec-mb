@@ -40,12 +40,6 @@ xcbc_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *xcbc_vectors;
 
-static int
-load_xcbc_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "xcbc_test.json", &xcbc_vectors, ctx);
-}
-
 static void
 free_xcbc_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -265,7 +259,7 @@ xcbc_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int i, errors;
 
-        if (load_xcbc_vectors(&jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "xcbc_test.json", &xcbc_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx, "AES-XCBC-128");

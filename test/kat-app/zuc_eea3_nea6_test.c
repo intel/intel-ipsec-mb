@@ -59,13 +59,6 @@ zuc_eea3_nea6_test(struct IMB_MGR *mb_mgr);
 
 static struct cipher_test *zuc_eea3_128_vectors;
 
-static int
-load_zuc_eea3_128_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "zuc_eea3_128_test.json", &zuc_eea3_128_vectors,
-                                   ctx);
-}
-
 static void
 free_zuc_eea3_128_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -74,12 +67,6 @@ free_zuc_eea3_128_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static struct cipher_test *zuc_nea6_vectors;
-
-static int
-load_zuc_nea6_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "zuc_nea6_test.json", &zuc_nea6_vectors, ctx);
-}
 
 static void
 free_zuc_nea6_vectors(struct test_json_alloc_ctx *ctx)
@@ -226,9 +213,11 @@ zuc_eea3_nea6_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *eea3_jctx = NULL;
         struct test_json_alloc_ctx *nea6_jctx = NULL;
 
-        if (load_zuc_eea3_128_vectors(&eea3_jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "zuc_eea3_128_test.json", &zuc_eea3_128_vectors,
+                                &eea3_jctx) < 0)
                 return 1;
-        if (load_zuc_nea6_vectors(&nea6_jctx) < 0) {
+        if (load_cipher_vectors(kat_vector_dir, "zuc_nea6_test.json", &zuc_nea6_vectors,
+                                &nea6_jctx) < 0) {
                 free_zuc_eea3_128_vectors(eea3_jctx);
                 return 1;
         }

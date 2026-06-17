@@ -39,12 +39,6 @@ poly1305_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *poly1305_vectors;
 
-static int
-load_poly1305_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "poly1305_test.json", &poly1305_vectors, ctx);
-}
-
 static void
 free_poly1305_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -217,7 +211,7 @@ poly1305_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int i, errors;
 
-        if (load_poly1305_vectors(&jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "poly1305_test.json", &poly1305_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx, "POLY1305");

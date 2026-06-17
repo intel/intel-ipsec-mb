@@ -41,12 +41,6 @@ gmac_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *gmac_vectors;
 
-static int
-load_gmac_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "gmac_test.json", &gmac_vectors, ctx);
-}
-
 static void
 free_gmac_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -229,7 +223,7 @@ gmac_test(IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int errors = 0;
 
-        if (load_gmac_vectors(&jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "gmac_test.json", &gmac_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ts128, "AES-GMAC-128");

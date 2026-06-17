@@ -64,12 +64,6 @@ free_snow3g_f8_vectors(struct test_json_alloc_ctx *ctx_f8, struct test_json_allo
 }
 static struct mac_test *snow3g_f9_vectors;
 
-static int
-load_snow3g_f9_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "snow3g_f9_test.json", &snow3g_f9_vectors, ctx);
-}
-
 static void
 free_snow3g_f9_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -2721,7 +2715,8 @@ snow3g_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *f8_jctx = NULL;
         struct test_json_alloc_ctx *f8_linear_jctx = NULL;
 
-        if (load_snow3g_f9_vectors(&f9_jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "snow3g_f9_test.json", &snow3g_f9_vectors, &f9_jctx) <
+            0)
                 return 1;
         if (load_snow3g_f8_vectors(&f8_jctx, &f8_linear_jctx) < 0) {
                 free_snow3g_f8_vectors(f8_jctx, f8_linear_jctx);

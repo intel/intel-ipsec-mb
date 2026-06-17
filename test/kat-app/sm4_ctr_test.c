@@ -41,12 +41,6 @@ sm4_ctr_test(struct IMB_MGR *mb_mgr);
 
 static struct cipher_test *sm4_ctr_vectors;
 
-static int
-load_sm4_ctr_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "sm4_ctr_test.json", &sm4_ctr_vectors, ctx);
-}
-
 static void
 free_sm4_ctr_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -268,7 +262,7 @@ sm4_ctr_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_sm4_ctr_vectors(&jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "sm4_ctr_test.json", &sm4_ctr_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx, "SM4-CTR-128");

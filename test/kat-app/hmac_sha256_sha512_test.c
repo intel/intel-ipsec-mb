@@ -46,23 +46,11 @@ static struct mac_test *hmac_sha256_vectors;
 static struct mac_test *hmac_sha384_vectors;
 static struct mac_test *hmac_sha512_vectors;
 
-static int
-load_hmac_sha224_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "hmac_sha224_test.json", &hmac_sha224_vectors, ctx);
-}
-
 static void
 free_hmac_sha224_vectors(struct test_json_alloc_ctx *ctx)
 {
         json_free_test_ctx(ctx);
         hmac_sha224_vectors = NULL;
-}
-
-static int
-load_hmac_sha256_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "hmac_sha256_test.json", &hmac_sha256_vectors, ctx);
 }
 
 static void
@@ -72,23 +60,11 @@ free_hmac_sha256_vectors(struct test_json_alloc_ctx *ctx)
         hmac_sha256_vectors = NULL;
 }
 
-static int
-load_hmac_sha384_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "hmac_sha384_test.json", &hmac_sha384_vectors, ctx);
-}
-
 static void
 free_hmac_sha384_vectors(struct test_json_alloc_ctx *ctx)
 {
         json_free_test_ctx(ctx);
         hmac_sha384_vectors = NULL;
-}
-
-static int
-load_hmac_sha512_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "hmac_sha512_test.json", &hmac_sha512_vectors, ctx);
 }
 
 static void
@@ -666,18 +642,22 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         uint32_t tag_size;
 
-        if (load_hmac_sha224_vectors(&ctx224) < 0)
+        if (load_mac_vectors(kat_vector_dir, "hmac_sha224_test.json", &hmac_sha224_vectors,
+                             &ctx224) < 0)
                 return 1;
-        if (load_hmac_sha256_vectors(&ctx256) < 0) {
+        if (load_mac_vectors(kat_vector_dir, "hmac_sha256_test.json", &hmac_sha256_vectors,
+                             &ctx256) < 0) {
                 free_hmac_sha224_vectors(ctx224);
                 return 1;
         }
-        if (load_hmac_sha384_vectors(&ctx384) < 0) {
+        if (load_mac_vectors(kat_vector_dir, "hmac_sha384_test.json", &hmac_sha384_vectors,
+                             &ctx384) < 0) {
                 free_hmac_sha224_vectors(ctx224);
                 free_hmac_sha256_vectors(ctx256);
                 return 1;
         }
-        if (load_hmac_sha512_vectors(&ctx512) < 0) {
+        if (load_mac_vectors(kat_vector_dir, "hmac_sha512_test.json", &hmac_sha512_vectors,
+                             &ctx512) < 0) {
                 free_hmac_sha224_vectors(ctx224);
                 free_hmac_sha256_vectors(ctx256);
                 free_hmac_sha384_vectors(ctx384);

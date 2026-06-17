@@ -41,12 +41,6 @@ ghash_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *ghash_vectors;
 
-static int
-load_ghash_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "ghash_test.json", &ghash_vectors, ctx);
-}
-
 static void
 free_ghash_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -89,7 +83,7 @@ ghash_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int use_job_api = 0;
 
-        if (load_ghash_vectors(&jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "ghash_test.json", &ghash_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ts, "GHASH");

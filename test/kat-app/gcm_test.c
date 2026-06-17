@@ -64,19 +64,6 @@ typedef int (*gcm_enc_dec_many_fn_t)(IMB_MGR *, const struct gcm_key_data *,
 static IMB_MGR *p_gcm_mgr = NULL;
 
 /**
- * @brief Load AES-GCM vectors from the configured kat-app JSON path.
- *
- * @param ctx receives loader allocation context for later cleanup
- *
- * @return 0 on success or -1 on failure
- */
-static int
-load_gcm_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_aead_vectors(kat_vector_dir, "gcm_test.json", &gcm_vectors, ctx);
-}
-
-/**
  * @brief Free AES-GCM vectors previously loaded by load_gcm_vectors().
  *
  * @param ctx loader context returned by load_gcm_vectors()
@@ -1474,7 +1461,7 @@ gcm_test(IMB_MGR *p_mgr)
 
         p_gcm_mgr = p_mgr;
 
-        if (load_gcm_vectors(&vector_ctx) < 0)
+        if (load_aead_vectors(kat_vector_dir, "gcm_test.json", &gcm_vectors, &vector_ctx) < 0)
                 return 1;
 
         test_suite_start(&ts128, "AES-GCM-128");

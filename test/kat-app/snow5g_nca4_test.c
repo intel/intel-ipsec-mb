@@ -41,13 +41,6 @@ snow5g_nca4_test(IMB_MGR *p_mgr);
 
 static struct aead_test *snow5g_nca4_vectors;
 
-static int
-load_snow5g_nca4_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_aead_vectors(kat_vector_dir, "snow5g_nca4_test.json", &snow5g_nca4_vectors,
-                                 ctx);
-}
-
 static void
 free_snow5g_nca4_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -422,7 +415,8 @@ snow5g_nca4_test(IMB_MGR *p_mgr)
         int errors = 0;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_snow5g_nca4_vectors(&jctx) < 0)
+        if (load_aead_vectors(kat_vector_dir, "snow5g_nca4_test.json", &snow5g_nca4_vectors,
+                              &jctx) < 0)
                 return 1;
 
         test_suite_start(&ts, "SNOW5G-NCA4");

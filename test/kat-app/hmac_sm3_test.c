@@ -40,12 +40,6 @@ hmac_sm3_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *hmac_sm3_vectors;
 
-static int
-load_hmac_sm3_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "hmac_sm3_test.json", &hmac_sm3_vectors, ctx);
-}
-
 static void
 free_hmac_sm3_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -331,7 +325,7 @@ hmac_sm3_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         uint32_t num_jobs;
 
-        if (load_hmac_sm3_vectors(&ctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "hmac_sm3_test.json", &hmac_sm3_vectors, &ctx) < 0)
                 return 1;
 
         test_suite_start(&ts, "HMAC-SM3");

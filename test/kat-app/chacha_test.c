@@ -41,12 +41,6 @@ chacha_test(struct IMB_MGR *mb_mgr);
 
 static struct cipher_test *chacha_vectors;
 
-static int
-load_chacha_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "chacha_test.json", &chacha_vectors, ctx);
-}
-
 static void
 free_chacha_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -241,7 +235,7 @@ chacha_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_chacha_vectors(&jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "chacha_test.json", &chacha_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx, "CHACHA20-256");

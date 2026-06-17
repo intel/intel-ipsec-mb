@@ -39,12 +39,6 @@ sm3_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *sm3_vectors;
 
-static int
-load_sm3_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_mac_vectors(kat_vector_dir, "sm3_test.json", &sm3_vectors, ctx);
-}
-
 static void
 free_sm3_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -196,7 +190,7 @@ sm3_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_sm3_vectors(&jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "sm3_test.json", &sm3_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx, "SM3");

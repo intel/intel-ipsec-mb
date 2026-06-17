@@ -41,13 +41,6 @@ cfb_one_block_test(struct IMB_MGR *mb_mgr);
 
 static struct cipher_test *cfb_one_block_vectors;
 
-static int
-load_cfb_one_block_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "aes_cfb_one_block_test.json",
-                                   &cfb_one_block_vectors, ctx);
-}
-
 static void
 free_cfb_one_block_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -177,7 +170,8 @@ cfb_one_block_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx256;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_cfb_one_block_vectors(&jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "aes_cfb_one_block_test.json",
+                                &cfb_one_block_vectors, &jctx) < 0)
                 return 1;
 
         test_suite_start(&ctx128, "AES-CFB-128 ONE-BLOCK");

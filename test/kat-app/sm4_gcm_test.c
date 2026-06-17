@@ -50,12 +50,6 @@ sm4_gcm_test(IMB_MGR *p_mgr);
 
 static struct aead_test *sm4_gcm_vectors;
 
-static int
-load_sm4_gcm_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_aead_vectors(kat_vector_dir, "sm4_gcm_test.json", &sm4_gcm_vectors, ctx);
-}
-
 static void
 free_sm4_gcm_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -320,7 +314,7 @@ sm4_gcm_test(IMB_MGR *p_mgr)
         int errors = 0;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_sm4_gcm_vectors(&jctx) < 0)
+        if (load_aead_vectors(kat_vector_dir, "sm4_gcm_test.json", &sm4_gcm_vectors, &jctx) < 0)
                 return 1;
 
         p_gcm_mgr = p_mgr;

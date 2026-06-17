@@ -43,12 +43,6 @@ ctr_test(struct IMB_MGR *);
 
 static struct cipher_test *ctr_vectors;
 
-static int
-load_ctr_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "ctr_test.json", &ctr_vectors, ctx);
-}
-
 static void
 free_ctr_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -634,7 +628,7 @@ ctr_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx256;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_ctr_vectors(&jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "ctr_test.json", &ctr_vectors, &jctx) < 0)
                 return 1;
 
         /* Standard CTR vectors */

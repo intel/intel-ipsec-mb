@@ -43,12 +43,6 @@ aes_cfb_test(struct IMB_MGR *);
 
 static struct cipher_test *aes_cfb_vectors;
 
-static int
-load_aes_cfb_vectors(struct test_json_alloc_ctx **ctx)
-{
-        return load_cipher_vectors(kat_vector_dir, "aes_cfb_test.json", &aes_cfb_vectors, ctx);
-}
-
 static void
 free_aes_cfb_vectors(struct test_json_alloc_ctx *ctx)
 {
@@ -477,7 +471,7 @@ aes_cfb_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx192;
         struct test_suite_context ctx256;
 
-        if (load_aes_cfb_vectors(&jctx) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "aes_cfb_test.json", &aes_cfb_vectors, &jctx) < 0)
                 return 1;
 
         /* Standard aes_cfb vectors */
