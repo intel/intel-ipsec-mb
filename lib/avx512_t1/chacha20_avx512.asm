@@ -161,24 +161,6 @@ endstruc
 
 mksection .text
 
-%macro ZMM_OP_X4 9
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 16, %1,%2,%3,%4,%5,%2,%3,%4,%5,%6,%7,%8,%9
-%endmacro
-
-%macro ZMM_ROLS_X4 5
-%define %%ZMM_OP1_1      %1
-%define %%ZMM_OP1_2      %2
-%define %%ZMM_OP1_3      %3
-%define %%ZMM_OP1_4      %4
-%define %%BITS_TO_ROTATE %5
-
-        vprold  %%ZMM_OP1_1, %%BITS_TO_ROTATE
-        vprold  %%ZMM_OP1_2, %%BITS_TO_ROTATE
-        vprold  %%ZMM_OP1_3, %%BITS_TO_ROTATE
-        vprold  %%ZMM_OP1_4, %%BITS_TO_ROTATE
-
-%endmacro
-
 %macro GEN_POLY_KEY 2
 %define %%AKEY_PTR      %1
 %define %%CHACHA_STATE  %2
@@ -188,6 +170,21 @@ mksection .text
 
 %endmacro
 
+%macro ZMM_OP_X3 10
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 12, %1, %2, %5, %8, %8, %3, %6, %9, %9, %4, %7, %10, %10
+%endmacro
+
+%macro ZMM_ROLS_X3 4
+%define %%ZMM_OP1_1      %1
+%define %%ZMM_OP1_2      %2
+%define %%ZMM_OP1_3      %3
+%define %%BITS_TO_ROTATE %4
+
+        vprold  %%ZMM_OP1_1, %%BITS_TO_ROTATE
+        vprold  %%ZMM_OP1_2, %%BITS_TO_ROTATE
+        vprold  %%ZMM_OP1_3, %%BITS_TO_ROTATE
+
+%endmacro
 ;
 ; Macro adding original state values to processed state values
 ; and transposing 16x16 u32 from first 16 ZMM registers,
@@ -801,45 +798,71 @@ mksection .text
 %define %%ZMM_DWORD_D3 %15  ;; [in/out] ZMM register containing dword D for third quarter round
 %define %%ZMM_DWORD_D4 %16  ;; [in/out] ZMM register containing dword D for fourth quarter round
 
-        ; A += B
-        ZMM_OP_X4 vpaddd, %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4, \
-                        %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4
-        ; D ^= A
-        ZMM_OP_X4 vpxorq, %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, \
-                        %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4
+;; QUARTERROUND:
+;; 1st half:   a += b; 	d ^= a;         d <<<= 16;
+;;             c += d; 	b ^= c; 	b <<<= 12;
+;; 2nd half:   a += b; 	d ^= a;         d <<<= 8;
+;;             c += d; 	b ^= c; 	b <<<= 7;
 
-        ; D <<< 16
-        ZMM_ROLS_X4 %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, 16
+        ;;  1st half of quarter round 4
+        vpaddd  %%ZMM_DWORD_A4, %%ZMM_DWORD_A4, %%ZMM_DWORD_B4
+        vpxorq  %%ZMM_DWORD_D4, %%ZMM_DWORD_D4, %%ZMM_DWORD_A4
+        vprold  %%ZMM_DWORD_D4, %%ZMM_DWORD_D4, 16
+        vpaddd  %%ZMM_DWORD_C4, %%ZMM_DWORD_C4, %%ZMM_DWORD_D4
+        vpxorq  %%ZMM_DWORD_B4, %%ZMM_DWORD_B4, %%ZMM_DWORD_C4
+        vprold  %%ZMM_DWORD_B4, %%ZMM_DWORD_B4, 12
 
-        ; C += D
-        ZMM_OP_X4 vpaddd, %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4, \
-                        %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4
-        ; B ^= C
-        ZMM_OP_X4 vpxorq, %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, \
-                        %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4
+        ;; 1st half of quarter rounds 1, 2 and 3
+        ;; A += B
+        ZMM_OP_X3      vpaddd, %%ZMM_DWORD_A1, %%ZMM_DWORD_A1, %%ZMM_DWORD_B1, \
+                                %%ZMM_DWORD_A2, %%ZMM_DWORD_A2, %%ZMM_DWORD_B2, \
+                                %%ZMM_DWORD_A3, %%ZMM_DWORD_A3, %%ZMM_DWORD_B3
+        ;; D ^= A
+        ZMM_OP_X3      vpxorq, %%ZMM_DWORD_D1, %%ZMM_DWORD_D1, %%ZMM_DWORD_A1, \
+                                %%ZMM_DWORD_D2, %%ZMM_DWORD_D2, %%ZMM_DWORD_A2, \
+                                %%ZMM_DWORD_D3, %%ZMM_DWORD_D3, %%ZMM_DWORD_A3
+        ;; D <<<= 16
+        ZMM_ROLS_X3    %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, 16
+        ;; C += D
+        ZMM_OP_X3      vpaddd, %%ZMM_DWORD_C1, %%ZMM_DWORD_C1, %%ZMM_DWORD_D1, \
+                                %%ZMM_DWORD_C2, %%ZMM_DWORD_C2, %%ZMM_DWORD_D2, \
+                                %%ZMM_DWORD_C3, %%ZMM_DWORD_C3, %%ZMM_DWORD_D3
+        ;; B ^= C
+        ZMM_OP_X3      vpxorq, %%ZMM_DWORD_B1, %%ZMM_DWORD_B1, %%ZMM_DWORD_C1, \
+                                %%ZMM_DWORD_B2, %%ZMM_DWORD_B2, %%ZMM_DWORD_C2, \
+                                %%ZMM_DWORD_B3, %%ZMM_DWORD_B3, %%ZMM_DWORD_C3
+        ;; B <<<= 12
+        ZMM_ROLS_X3    %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, 12
 
-        ; B <<< 12
-        ZMM_ROLS_X4 %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, 12
+        ;; 2nd half of quarter round 4
+        vpaddd  %%ZMM_DWORD_A4, %%ZMM_DWORD_A4, %%ZMM_DWORD_B4
+        vpxorq  %%ZMM_DWORD_D4, %%ZMM_DWORD_D4, %%ZMM_DWORD_A4
+        vprold  %%ZMM_DWORD_D4, %%ZMM_DWORD_D4, 8
+        vpaddd  %%ZMM_DWORD_C4, %%ZMM_DWORD_C4, %%ZMM_DWORD_D4
+        vpxorq  %%ZMM_DWORD_B4, %%ZMM_DWORD_B4, %%ZMM_DWORD_C4
+        vprold  %%ZMM_DWORD_B4, %%ZMM_DWORD_B4, 7
 
-        ; A += B
-        ZMM_OP_X4 vpaddd, %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4, \
-                        %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4
-        ; D ^= A
-        ZMM_OP_X4 vpxorq, %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, \
-                        %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4
-
-        ; D <<< 8
-        ZMM_ROLS_X4 %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, 8
-
-        ; C += D
-        ZMM_OP_X4 vpaddd, %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4, \
-                        %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4
-        ; B ^= C
-        ZMM_OP_X4 vpxorq, %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, \
-                        %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4
-
-        ; B <<< 7
-        ZMM_ROLS_X4 %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, 7
+        ;; 2nd half of quarter rounds 1, 2 and 3
+        ;; A += B
+        ZMM_OP_X3      vpaddd, %%ZMM_DWORD_A1, %%ZMM_DWORD_A1, %%ZMM_DWORD_B1, \
+                                %%ZMM_DWORD_A2, %%ZMM_DWORD_A2, %%ZMM_DWORD_B2, \
+                                %%ZMM_DWORD_A3, %%ZMM_DWORD_A3, %%ZMM_DWORD_B3
+        ;; D ^= A
+        ZMM_OP_X3      vpxorq, %%ZMM_DWORD_D1, %%ZMM_DWORD_D1, %%ZMM_DWORD_A1, \
+                                %%ZMM_DWORD_D2, %%ZMM_DWORD_D2, %%ZMM_DWORD_A2, \
+                                %%ZMM_DWORD_D3, %%ZMM_DWORD_D3, %%ZMM_DWORD_A3
+        ;; D <<<= 8
+        ZMM_ROLS_X3    %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, 8
+        ;; C += D
+        ZMM_OP_X3      vpaddd, %%ZMM_DWORD_C1, %%ZMM_DWORD_C1, %%ZMM_DWORD_D1, \
+                                %%ZMM_DWORD_C2, %%ZMM_DWORD_C2, %%ZMM_DWORD_D2, \
+                                %%ZMM_DWORD_C3, %%ZMM_DWORD_C3, %%ZMM_DWORD_D3
+        ;; B ^= C
+        ZMM_OP_X3      vpxorq, %%ZMM_DWORD_B1, %%ZMM_DWORD_B1, %%ZMM_DWORD_C1, \
+                                %%ZMM_DWORD_B2, %%ZMM_DWORD_B2, %%ZMM_DWORD_C2, \
+                                %%ZMM_DWORD_B3, %%ZMM_DWORD_B3, %%ZMM_DWORD_C3
+        ;; B <<<= 7
+        ZMM_ROLS_X3    %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, 7
 %endmacro
 
 ;;

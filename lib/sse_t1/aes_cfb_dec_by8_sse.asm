@@ -203,7 +203,7 @@ align_label
 %if %0 == 2
         ;; partial block case only
         pxor    %2, XDATA0
-%else  
+%else
 %assign reg_idx 0
 %rep (%%NBLOCKS - 1)
         pxor    XDATA %+ reg_idx, XTMP %+ reg_idx
