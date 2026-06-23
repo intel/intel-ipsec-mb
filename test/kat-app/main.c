@@ -124,6 +124,8 @@ sha3_test(struct IMB_MGR *mb_mgr);
 extern int
 shake_test(struct IMB_MGR *mb_mgr);
 extern int
+hmac_sha3_test(struct IMB_MGR *mb_mgr);
+extern int
 aes_nia5_test(struct IMB_MGR *mb_mgr);
 extern int
 aes_nea5_test(struct IMB_MGR *mb_mgr);
@@ -198,6 +200,7 @@ struct imb_test tests[] = {
         { .str = "SM4_GCM", .fn = sm4_gcm_test, .enabled = 1 },
         { .str = "SHA3", .fn = sha3_test, .enabled = 1 },
         { .str = "SHAKE", .fn = shake_test, .enabled = 1 },
+        { .str = "HMAC_SHA3", .fn = hmac_sha3_test, .enabled = 1 },
         { .str = "SNOW5G_NEA4", .fn = snow5g_nea4_test, .enabled = 1 },
         { .str = "AES_NIA5", .fn = aes_nia5_test, .enabled = 1 },
         { .str = "AES_NEA5", .fn = aes_nea5_test, .enabled = 1 },

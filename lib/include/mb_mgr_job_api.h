@@ -2921,6 +2921,30 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #else
                 return submit_job_sha3(state, job, IMB_AUTH_SHAKE256);
 #endif
+        case IMB_AUTH_HMAC_SHA3_224:
+#ifdef SUBMIT_JOB_HMAC_SHA3_224
+                return SUBMIT_JOB_HMAC_SHA3_224(job);
+#else
+                return submit_job_hmac_sha3(state, job, IMB_AUTH_HMAC_SHA3_224);
+#endif
+        case IMB_AUTH_HMAC_SHA3_256:
+#ifdef SUBMIT_JOB_HMAC_SHA3_256
+                return SUBMIT_JOB_HMAC_SHA3_256(job);
+#else
+                return submit_job_hmac_sha3(state, job, IMB_AUTH_HMAC_SHA3_256);
+#endif
+        case IMB_AUTH_HMAC_SHA3_384:
+#ifdef SUBMIT_JOB_HMAC_SHA3_384
+                return SUBMIT_JOB_HMAC_SHA3_384(job);
+#else
+                return submit_job_hmac_sha3(state, job, IMB_AUTH_HMAC_SHA3_384);
+#endif
+        case IMB_AUTH_HMAC_SHA3_512:
+#ifdef SUBMIT_JOB_HMAC_SHA3_512
+                return SUBMIT_JOB_HMAC_SHA3_512(job);
+#else
+                return submit_job_hmac_sha3(state, job, IMB_AUTH_HMAC_SHA3_512);
+#endif
         case IMB_AUTH_AES_NIA5:
                 return submit_aes_nia5_job(job);
         case IMB_AUTH_SNOW5G_NIA4:
@@ -3066,6 +3090,10 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_SHAKE256:
                 return FLUSH_JOB_SHAKE256(shake256_ooo, job);
 #endif
+        case IMB_AUTH_HMAC_SHA3_224:
+        case IMB_AUTH_HMAC_SHA3_256:
+        case IMB_AUTH_HMAC_SHA3_384:
+        case IMB_AUTH_HMAC_SHA3_512:
         default:
                 if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                         job->status |= IMB_STATUS_COMPLETED_AUTH;
@@ -3434,6 +3462,30 @@ submit_hash_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW5G_NCA4);
 }
 
+static IMB_JOB *
+submit_hash_hmac_sha3_224(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_224);
+}
+
+static IMB_JOB *
+submit_hash_hmac_sha3_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_256);
+}
+
+static IMB_JOB *
+submit_hash_hmac_sha3_384(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_384);
+}
+
+static IMB_JOB *
+submit_hash_hmac_sha3_512(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_512);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3555,7 +3607,14 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_snow5g_nia4,
         /* [55] SNOW5G NCA4 */
         submit_hash_snow5g_nca4,
-        /* add new hash algorithms here */
+        /* [56] HMAC-SHA3-224 */
+        submit_hash_hmac_sha3_224,
+        /* [57] HMAC-SHA3-256 */
+        submit_hash_hmac_sha3_256,
+        /* [58] HMAC-SHA3-384 */
+        submit_hash_hmac_sha3_384,
+        /* [59] HMAC-SHA3-512 */
+        submit_hash_hmac_sha3_512,
 };
 
 /* ========================================================================= */
@@ -3917,6 +3976,30 @@ flush_hash_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SNOW5G_NCA4);
 }
 
+static IMB_JOB *
+flush_hash_hmac_sha3_224(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_224);
+}
+
+static IMB_JOB *
+flush_hash_hmac_sha3_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_256);
+}
+
+static IMB_JOB *
+flush_hash_hmac_sha3_384(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_384);
+}
+
+static IMB_JOB *
+flush_hash_hmac_sha3_512(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA3_512);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -4038,7 +4121,14 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_snow5g_nia4,
         /* [55] SNOW5G-NCA4 */
         flush_hash_snow5g_nca4,
-        /* add new hash algorithms here */
+        /* [56] HMAC-SHA3-224 */
+        flush_hash_hmac_sha3_224,
+        /* [57] HMAC-SHA3-256 */
+        flush_hash_hmac_sha3_256,
+        /* [58] HMAC-SHA3-384 */
+        flush_hash_hmac_sha3_384,
+        /* [59] HMAC-SHA3-512 */
+        flush_hash_hmac_sha3_512,
 };
 
 __forceinline IMB_JOB *

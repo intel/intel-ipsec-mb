@@ -150,6 +150,10 @@ set(HASH_ALGOS
     sha3-256
     sha3-384
     sha3-512
+    hmac-sha3-224
+    hmac-sha3-256
+    hmac-sha3-384
+    hmac-sha3-512
     shake-128
     shake-256
     aes-nia5

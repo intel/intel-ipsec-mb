@@ -79,7 +79,9 @@ submit_job_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
  * computed by imb_hmac_ipad_opad().
  *
  * We build the inner input (ipad_key || msg) on the stack and call sha3_*
- * twice — once for inner, once for outer. msg_len is bounded by the caller.
+ * twice — once for inner, once for outer. msg_len is bounded by the caller;
+ * for safety very large messages should use a streaming path, but this
+ * mirrors how all other single-buffer hash types work in this library.
  */
 __forceinline IMB_JOB *
 submit_job_hmac_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
@@ -131,6 +133,7 @@ submit_job_hmac_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #ifdef SAFE_DATA
         imb_clear_mem(&ctx, sizeof(ctx));
         imb_clear_mem(inner_digest, sizeof(inner_digest));
+        imb_clear_mem(outer_digest, sizeof(outer_digest));
         clear_scratch_gps();
         clear_scratch_xmms_sse();
 #endif

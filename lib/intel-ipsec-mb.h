@@ -140,6 +140,12 @@ typedef enum {
 #define IMB_SHA3_384_DIGEST_SIZE_IN_BYTES 48
 #define IMB_SHA3_512_DIGEST_SIZE_IN_BYTES 64
 
+#define IMB_SHA3_224_BLOCK_SIZE 144
+#define IMB_SHA3_256_BLOCK_SIZE 136
+#define IMB_SHA3_384_BLOCK_SIZE 104
+#define IMB_SHA3_512_BLOCK_SIZE 72
+#define IMB_SHA3_MAX_BLOCK_SIZE IMB_SHA3_224_BLOCK_SIZE
+
 #define IMB_MD5_DIGEST_SIZE_IN_BYTES 16
 
 #define IMB_SHA1_BLOCK_SIZE    64 /**< 512 bits is 64 byte blocks */
@@ -363,6 +369,10 @@ typedef enum {
         IMB_AUTH_ZUC_NCA6,               /**< ZUC256-NCA6 */
         IMB_AUTH_SNOW5G_NIA4,            /**< SNOW5G-NIA4 */
         IMB_AUTH_SNOW5G_NCA4,            /**< SNOW5G-NCA4 */
+        IMB_AUTH_HMAC_SHA3_224,          /**< HMAC-SHA3-224 */
+        IMB_AUTH_HMAC_SHA3_256,          /**< HMAC-SHA3-256 */
+        IMB_AUTH_HMAC_SHA3_384,          /**< HMAC-SHA3-384 */
+        IMB_AUTH_HMAC_SHA3_512,          /**< HMAC-SHA3-512 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 

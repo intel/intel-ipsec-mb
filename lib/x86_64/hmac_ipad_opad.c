@@ -34,6 +34,7 @@
 #include "include/error.h"
 #include "include/memcpy.h"
 #include "include/arch_sse_type1.h" /* sm3_one_block_sse(), sm3_msg_sse() */
+#include "include/sha3.h"           /* sha3_224/256/384/512 */
 
 IMB_DLL_EXPORT
 void
@@ -94,12 +95,32 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
         case IMB_AUTH_HMAC_SM3:
                 local_key_len = (key_len <= IMB_SM3_BLOCK_SIZE) ? key_len : IMB_SM3_DIGEST_SIZE;
                 break;
+        case IMB_AUTH_HMAC_SHA3_224:
+                local_key_len = (key_len <= IMB_SHA3_224_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
+                break;
+        case IMB_AUTH_HMAC_SHA3_256:
+                local_key_len = (key_len <= IMB_SHA3_256_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
+                break;
+        case IMB_AUTH_HMAC_SHA3_384:
+                local_key_len = (key_len <= IMB_SHA3_384_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
+                break;
+        case IMB_AUTH_HMAC_SHA3_512:
+                local_key_len = (key_len <= IMB_SHA3_512_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
+                break;
         default:
                 imb_set_errno(NULL, IMB_ERR_HASH_ALGO);
                 return;
         }
-        uint8_t key[IMB_SHA_512_BLOCK_SIZE];
-        uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
+        uint8_t key[IMB_SHA3_MAX_BLOCK_SIZE]; /* large enough for all variants */
+        uint8_t buf[IMB_SHA3_MAX_BLOCK_SIZE];
 
         /* prepare the key */
         if (local_key_len == key_len) {
@@ -120,6 +141,18 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         break;
                 case IMB_AUTH_HMAC_SM3:
                         sm3_msg_sse(key, IMB_SM3_DIGEST_SIZE, pkey, key_len);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_224:
+                        sha3_224(pkey, key_len, key);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_256:
+                        sha3_256(pkey, key_len, key);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_384:
+                        sha3_384(pkey, key_len, key);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_512:
+                        sha3_512(pkey, key_len, key);
                         break;
                 default: /* For SHA-512 */
                         IMB_SHA512(mb_mgr, pkey, key_len, key);
@@ -149,7 +182,19 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                 case IMB_AUTH_HMAC_SM3:
                         sm3_one_block_sse(ipad_hash, buf);
                         break;
-                default: /* For MD5*/
+                case IMB_AUTH_HMAC_SHA3_224:
+                        memcpy(ipad_hash, buf, IMB_SHA3_224_BLOCK_SIZE);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_256:
+                        memcpy(ipad_hash, buf, IMB_SHA3_256_BLOCK_SIZE);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_384:
+                        memcpy(ipad_hash, buf, IMB_SHA3_384_BLOCK_SIZE);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_512:
+                        memcpy(ipad_hash, buf, IMB_SHA3_512_BLOCK_SIZE);
+                        break;
+                default: /* For MD5 */
                         IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad_hash);
                 }
         }
@@ -177,6 +222,18 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         break;
                 case IMB_AUTH_HMAC_SM3:
                         sm3_one_block_sse(opad_hash, buf);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_224:
+                        memcpy(opad_hash, buf, IMB_SHA3_224_BLOCK_SIZE);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_256:
+                        memcpy(opad_hash, buf, IMB_SHA3_256_BLOCK_SIZE);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_384:
+                        memcpy(opad_hash, buf, IMB_SHA3_384_BLOCK_SIZE);
+                        break;
+                case IMB_AUTH_HMAC_SHA3_512:
+                        memcpy(opad_hash, buf, IMB_SHA3_512_BLOCK_SIZE);
                         break;
                 default: /* For MD5 */
                         IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad_hash);

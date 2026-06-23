@@ -37,11 +37,13 @@
 
 default rel
 
+%include "include/os.inc"
 %include "include/align_avx512.inc"
 %include "include/sha3_common.inc"
 %include "include/cet.inc"
+%include "include/clear_regs.inc"
 
-section .text
+mksection .text
 
 ; ============================================================
 ; Local (non-exported) Keccak utility functions
@@ -50,6 +52,7 @@ section .text
 ;; Initialise keccak state in registers to zero
 ;; output: xmm0-xmm24
 align_function
+MKGLOBAL(keccak_1600_init_state,function,internal)
 keccak_1600_init_state:
         vpxorq          xmm0,  xmm0, xmm0
         vpxorq          xmm1,  xmm1, xmm1
@@ -481,6 +484,10 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+%ifdef SAFE_DATA
+        ;; Zero all ZMM registers using the standard library macro.
+        clear_scratch_zmms_asm
+%endif
 
         add     rsp, 8*32
         pop     r15
@@ -537,6 +544,9 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
 
         add     rsp, 8*32
         pop     r15
@@ -593,6 +603,9 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
 
         add     rsp, 8*32
         pop     r15
@@ -649,6 +662,9 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
 
         add     rsp, 8*32
         pop     r15
@@ -725,6 +741,9 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
 
         add     rsp, 8*32
         pop     r15
@@ -801,6 +820,9 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
 
         add     rsp, 32 * 8
         pop     r15
@@ -811,7 +833,7 @@ align_label
         pop     rbp
         ret
 
-section .rodata
+mksection .rodata
 
 align 64
 SHA3RC:
@@ -834,4 +856,4 @@ SHA3_MULTI_RATE_PADDING:
 SHAKE_MULTI_RATE_PADDING:
         DB 0x1F
 
-section .note.GNU-stack noalloc noexec nowrite progbits
+mksection .note.GNU-stack noalloc noexec nowrite progbits

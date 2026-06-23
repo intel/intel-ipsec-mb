@@ -39,6 +39,7 @@ http://creativecommons.org/publicdomain/zero/1.0/
 */
 
 #include <stdint.h>
+#include <string.h>
 #include <sha3.h>
 #include "include/clear_regs_mem.h"
 
@@ -74,6 +75,9 @@ void
 Keccak(const uint32_t rate, const uint32_t capacity, const uint8_t *input, uint64_t inputByteLen,
        const uint8_t delimitedSuffix, uint8_t *output, uint64_t outputByteLen);
 
+static void
+KeccakF1600_StatePermute(void *state);
+
 void
 shake128(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t outputByteLen)
 {
@@ -108,6 +112,59 @@ void
 sha3_512(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
 {
         Keccak(576, 1024, input, inputByteLen, 0x06, output, IMB_SHA3_512_DIGEST_SIZE_IN_BYTES);
+}
+
+void
+sha3_ctx_init(sha3_ctx_t *ctx, uint64_t rateInBytes, uint8_t delimitedSuffix)
+{
+        memset(ctx->state, 0, sizeof(ctx->state));
+        ctx->rateInBytes = rateInBytes;
+        ctx->blockPos = 0;
+        ctx->delimitedSuffix = delimitedSuffix;
+}
+
+void
+sha3_ctx_update(sha3_ctx_t *ctx, const uint8_t *input, uint64_t len)
+{
+        while (len > 0) {
+                const uint64_t canAbsorb = ctx->rateInBytes - ctx->blockPos;
+                const uint64_t toAbsorb = (len < canAbsorb) ? len : canAbsorb;
+                uint64_t i;
+
+                for (i = 0; i < toAbsorb; i++)
+                        ctx->state[ctx->blockPos + i] ^= input[i];
+                input += toAbsorb;
+                len -= toAbsorb;
+                ctx->blockPos += toAbsorb;
+
+                if (ctx->blockPos == ctx->rateInBytes) {
+                        KeccakF1600_StatePermute(ctx->state);
+                        ctx->blockPos = 0;
+                }
+        }
+}
+
+void
+sha3_ctx_final(sha3_ctx_t *ctx, uint8_t *output, uint64_t outputLen)
+{
+        /* Apply SHA3/SHAKE padding */
+        ctx->state[ctx->blockPos] ^= ctx->delimitedSuffix;
+        if (((ctx->delimitedSuffix & 0x80) != 0) && (ctx->blockPos == ctx->rateInBytes - 1))
+                KeccakF1600_StatePermute(ctx->state);
+        ctx->state[ctx->rateInBytes - 1] ^= 0x80;
+        KeccakF1600_StatePermute(ctx->state);
+
+        /* Squeeze output blocks */
+        while (outputLen > 0) {
+                const uint64_t blockSize =
+                        (outputLen < ctx->rateInBytes) ? outputLen : ctx->rateInBytes;
+
+                memcpy(output, ctx->state, blockSize);
+                output += blockSize;
+                outputLen -= blockSize;
+                if (outputLen > 0)
+                        KeccakF1600_StatePermute(ctx->state);
+        }
 }
 
 /*
@@ -250,7 +307,6 @@ that use the Keccak-f[1600] permutation.
 ================================================================
 */
 
-#include <string.h>
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 void

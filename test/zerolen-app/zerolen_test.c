@@ -512,6 +512,11 @@ static const struct hash_test_vec hash_tests[] = {
         { "SHA3-256", IMB_AUTH_SHA3_256, 32, HASH_PLAIN },
         { "SHA3-384", IMB_AUTH_SHA3_384, 48, HASH_PLAIN },
         { "SHA3-512", IMB_AUTH_SHA3_512, 64, HASH_PLAIN },
+        /* HMAC-SHA3 */
+        { "HMAC-SHA3-224", IMB_AUTH_HMAC_SHA3_224, 28, HASH_HMAC },
+        { "HMAC-SHA3-256", IMB_AUTH_HMAC_SHA3_256, 32, HASH_HMAC },
+        { "HMAC-SHA3-384", IMB_AUTH_HMAC_SHA3_384, 48, HASH_HMAC },
+        { "HMAC-SHA3-512", IMB_AUTH_HMAC_SHA3_512, 64, HASH_HMAC },
         /* SHAKE */
         { "SHAKE128", IMB_AUTH_SHAKE128, 16, HASH_PLAIN },
         { "SHAKE256", IMB_AUTH_SHAKE256, 32, HASH_PLAIN },

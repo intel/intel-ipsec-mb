@@ -693,6 +693,11 @@ static const struct hash_test_vec hash_tests[] = {
         { "SHA3-256", IMB_AUTH_SHA3_256, 32, 0, 0, 0, 0, HASH_PLAIN, 1, 0, 1, 1 },
         { "SHA3-384", IMB_AUTH_SHA3_384, 48, 0, 0, 0, 0, HASH_PLAIN, 1, 0, 1, 1 },
         { "SHA3-512", IMB_AUTH_SHA3_512, 64, 0, 0, 0, 0, HASH_PLAIN, 1, 0, 1, 1 },
+        /* HMAC-SHA3 -- tag range 4..digest_size, step 1 */
+        { "HMAC-SHA3-224", IMB_AUTH_HMAC_SHA3_224, 28, 4, 28, 1, 0, HASH_HMAC, 1, 0, 1, 1 },
+        { "HMAC-SHA3-256", IMB_AUTH_HMAC_SHA3_256, 32, 4, 32, 1, 0, HASH_HMAC, 1, 0, 1, 1 },
+        { "HMAC-SHA3-384", IMB_AUTH_HMAC_SHA3_384, 48, 4, 48, 1, 0, HASH_HMAC, 1, 0, 1, 1 },
+        { "HMAC-SHA3-512", IMB_AUTH_HMAC_SHA3_512, 64, 4, 64, 1, 0, HASH_HMAC, 1, 0, 1, 1 },
         /* SHAKE -- tag range 1..16, step 1 (variable, no check constraint) */
         { "SHAKE128", IMB_AUTH_SHAKE128, 16, 1, 16, 1, 0, HASH_PLAIN, 1, 0, 1, 1 },
         { "SHAKE256", IMB_AUTH_SHAKE256, 32, 1, 32, 1, 0, HASH_PLAIN, 1, 0, 1, 1 },

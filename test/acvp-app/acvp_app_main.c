@@ -1167,6 +1167,166 @@ hmac_sha512_handler(ACVP_TEST_CASE *test_case)
 }
 
 static int
+hmac_sha3_224_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HMAC_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hmac;
+
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_224, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_HMAC_SHA3_224;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = tc->mac_len;
+        job->auth_tag_output = tc->mac;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        return ACVP_SUCCESS;
+}
+
+static int
+hmac_sha3_256_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HMAC_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hmac;
+
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_256, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_HMAC_SHA3_256;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = tc->mac_len;
+        job->auth_tag_output = tc->mac;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        return ACVP_SUCCESS;
+}
+
+static int
+hmac_sha3_384_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HMAC_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hmac;
+
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_384, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_HMAC_SHA3_384;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = tc->mac_len;
+        job->auth_tag_output = tc->mac;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        return ACVP_SUCCESS;
+}
+
+static int
+hmac_sha3_512_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HMAC_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hmac;
+
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_512, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_HMAC_SHA3_512;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = tc->mac_len;
+        job->auth_tag_output = tc->mac;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        return ACVP_SUCCESS;
+}
+
+static int
 sha1_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
@@ -1950,6 +2110,18 @@ main(int argc, char **argv)
                 goto exit;
 
         if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_512, &hmac_sha512_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA3_224, &hmac_sha3_224_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA3_256, &hmac_sha3_256_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA3_384, &hmac_sha3_384_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA3_512, &hmac_sha3_512_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA1, &sha1_handler) != ACVP_SUCCESS)

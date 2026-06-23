@@ -116,8 +116,8 @@ struct params_s {
 struct cipher_auth_keys {
         uint8_t temp_buf[IMB_SHA_512_BLOCK_SIZE];
         DECLARE_ALIGNED(uint32_t dust[15 * 4], 16);
-        uint8_t ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES];
-        uint8_t opad[IMB_SHA512_DIGEST_SIZE_IN_BYTES];
+        uint8_t ipad[IMB_SHA3_MAX_BLOCK_SIZE]; /* largest ipad/opad block: SHA3-224 rate = 144B */
+        uint8_t opad[IMB_SHA3_MAX_BLOCK_SIZE];
         DECLARE_ALIGNED(uint32_t k1_expanded[15 * 4], 16);
         DECLARE_ALIGNED(uint8_t k2[32], 16);
         DECLARE_ALIGNED(uint8_t k3[16], 16);
@@ -510,6 +510,30 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_SNOW5G_NIA4,
                 }
         },
+        {
+                .name = "HMAC-SHA3-224",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_HMAC_SHA3_224,
+                }
+        },
+        {
+                .name = "HMAC-SHA3-256",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_HMAC_SHA3_256,
+                }
+        },
+        {
+                .name = "HMAC-SHA3-384",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_HMAC_SHA3_384,
+                }
+        },
+        {
+                .name = "HMAC-SHA3-512",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_HMAC_SHA3_512,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -632,6 +656,10 @@ const uint8_t auth_tag_len_bytes[] = {
         4,                         /* IMB_AUTH_ZUC_NCA6 */
         4,                         /* IMB_AUTH_SNOW5G_NIA4 */
         4,                         /* IMB_AUTH_SNOW5G_NCA4 */
+        28,                        /* IMB_AUTH_HMAC_SHA3_224 */
+        32,                        /* IMB_AUTH_HMAC_SHA3_256 */
+        48,                        /* IMB_AUTH_HMAC_SHA3_384 */
+        64,                        /* IMB_AUTH_HMAC_SHA3_512 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -1374,6 +1402,10 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_AUTH_HMAC_SHA_384:
         case IMB_AUTH_HMAC_SHA_512:
         case IMB_AUTH_HMAC_SM3:
+        case IMB_AUTH_HMAC_SHA3_224:
+        case IMB_AUTH_HMAC_SHA3_256:
+        case IMB_AUTH_HMAC_SHA3_384:
+        case IMB_AUTH_HMAC_SHA3_512:
         case IMB_AUTH_MD5:
                 /* HMAC hash alg is SHA1 or MD5 */
                 job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
@@ -1645,6 +1677,10 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_AUTH_HMAC_SHA_384:
                 case IMB_AUTH_HMAC_SHA_512:
                 case IMB_AUTH_HMAC_SM3:
+                case IMB_AUTH_HMAC_SHA3_224:
+                case IMB_AUTH_HMAC_SHA3_256:
+                case IMB_AUTH_HMAC_SHA3_384:
+                case IMB_AUTH_HMAC_SHA3_512:
                 case IMB_AUTH_MD5:
                         nosimd_memset(ipad, pattern_auth_key, sizeof(keys->ipad));
                         nosimd_memset(opad, pattern_auth_key, sizeof(keys->opad));
@@ -1778,6 +1814,10 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_HMAC_SHA_384:
         case IMB_AUTH_HMAC_SHA_512:
         case IMB_AUTH_HMAC_SM3:
+        case IMB_AUTH_HMAC_SHA3_224:
+        case IMB_AUTH_HMAC_SHA3_256:
+        case IMB_AUTH_HMAC_SHA3_384:
+        case IMB_AUTH_HMAC_SHA3_512:
         case IMB_AUTH_MD5:
                 imb_hmac_ipad_opad(mb_mgr, params->hash_alg, auth_key, MAX_KEY_SIZE, ipad, opad);
                 break;

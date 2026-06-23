@@ -1,0 +1,72 @@
+{
+   "algorithm": "HMAC-SHA3-512",
+   "generatorVersion": "",
+   "header": [
+      "HMAC-SHA3-512 test vectors verified with OpenSSL 3.x. Block size = 72 bytes, Digest size = 64 bytes."
+   ],
+   "notes": {},
+   "numberOfTests": 4,
+   "schema": "mac_test_schema_v1.json",
+   "testGroups": [
+      {
+         "keySize": 256,
+         "source": "OpenSSL 3.x",
+         "tagSize": 512,
+         "tests": [
+            {
+               "comment": "key shorter than block size (32 < 72 bytes)",
+               "flags": [],
+               "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+               "msg": "53616d706c65206d65737361676520666f72206b65796c656e3c626c6f636b6c656e",
+               "result": "valid",
+               "tag": "45c37e949cce1eb50ccf6c96439c06e25f4a4416a99a8a8959593aefb8ef584eb0704dc5855faae16196792f4437cdef36d8467b037303ecf62584a4ccc18ddf",
+               "tcId": 1
+            },
+            {
+               "comment": "key shorter than block size, empty message",
+               "flags": [],
+               "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+               "msg": "",
+               "result": "valid",
+               "tag": "1ffa8c8132bf8ef20396e3d0328d7874299b260bbbfc470f3d9bd29a76cc9d1e5fecd32d1da0fb2c260f2c207b6b4862535d9cfc9adb5daa6f31a22cef386d4f",
+               "tcId": 4
+            }
+         ],
+         "type": "MacTest"
+      },
+      {
+         "keySize": 576,
+         "source": "OpenSSL 3.x",
+         "tagSize": 512,
+         "tests": [
+            {
+               "comment": "key equal to block size (72 bytes)",
+               "flags": [],
+               "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f4041424344454647",
+               "msg": "53616d706c65206d65737361676520666f72206b65796c656e3d626c6f636b6c656e",
+               "result": "valid",
+               "tag": "544e257ea2a3e5ea19a590e6a24b724ce6327757723fe2751b75bf007d80f6b360744bf1b7a88ea585f9765b47911976d3191cf83c039f5ffab0d29cc9d9b6da",
+               "tcId": 2
+            }
+         ],
+         "type": "MacTest"
+      },
+      {
+         "keySize": 1600,
+         "source": "OpenSSL 3.x",
+         "tagSize": 512,
+         "tests": [
+            {
+               "comment": "key longer than block size (200 > 72 bytes), triggers key hash",
+               "flags": [],
+               "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7",
+               "msg": "53616d706c65206d65737361676520666f72206b65796c656e3e626c6f636b6c656e",
+               "result": "valid",
+               "tag": "eba5b7668e85748ab6d5f4800f48c292a5085820904091cda307f8431ef37763680ddeed39f4aa9b262f1aa8691e2331563eb0169aaa1249575a4ad17dbd6c53",
+               "tcId": 3
+            }
+         ],
+         "type": "MacTest"
+      }
+   ]
+}

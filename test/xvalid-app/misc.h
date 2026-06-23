@@ -292,6 +292,30 @@ misc_hash_alg_to_str(const IMB_HASH_ALG mode)
                 return "crc6-iuup-header";
         case IMB_AUTH_GHASH:
                 return "ghash";
+        case IMB_AUTH_SM3:
+                return "sm3";
+        case IMB_AUTH_HMAC_SM3:
+                return "hmac-sm3";
+        case IMB_AUTH_SHA3_224:
+                return "sha3-224";
+        case IMB_AUTH_SHA3_256:
+                return "sha3-256";
+        case IMB_AUTH_SHA3_384:
+                return "sha3-384";
+        case IMB_AUTH_SHA3_512:
+                return "sha3-512";
+        case IMB_AUTH_SHAKE128:
+                return "shake-128";
+        case IMB_AUTH_SHAKE256:
+                return "shake-256";
+        case IMB_AUTH_HMAC_SHA3_224:
+                return "hmac-sha3-224";
+        case IMB_AUTH_HMAC_SHA3_256:
+                return "hmac-sha3-256";
+        case IMB_AUTH_HMAC_SHA3_384:
+                return "hmac-sha3-384";
+        case IMB_AUTH_HMAC_SHA3_512:
+                return "hmac-sha3-512";
         case IMB_AUTH_NUM:
         default:
                 break;

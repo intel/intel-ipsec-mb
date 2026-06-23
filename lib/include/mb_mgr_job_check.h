@@ -257,6 +257,10 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_AUTH_SHA3_512:
         case IMB_AUTH_SHAKE128:
         case IMB_AUTH_SHAKE256:
+        case IMB_AUTH_HMAC_SHA3_224:
+        case IMB_AUTH_HMAC_SHA3_256:
+        case IMB_AUTH_HMAC_SHA3_384:
+        case IMB_AUTH_HMAC_SHA3_512:
         case IMB_AUTH_AES_NIA5:
         case IMB_AUTH_SNOW5G_NIA4:
                 break;
@@ -393,6 +397,16 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 64, /* IMB_AUTH_SHA3_512 */
                 0,  /* IMB_AUTH_SHAKE128 - not used */
                 0,  /* IMB_AUTH_SHAKE256 - not used */
+                0,  /* IMB_AUTH_AES_NIA5 - not used */
+                0,  /* IMB_AUTH_AES_NCA5 - not used */
+                0,  /* IMB_AUTH_ZUC_NIA6 - not used */
+                0,  /* IMB_AUTH_ZUC_NCA6 - not used */
+                0,  /* IMB_AUTH_SNOW5G_NIA4 - not used */
+                0,  /* IMB_AUTH_SNOW5G_NCA4 - not used */
+                28, /* IMB_AUTH_HMAC_SHA3_224 */
+                32, /* IMB_AUTH_HMAC_SHA3_256 */
+                48, /* IMB_AUTH_HMAC_SHA3_384 */
+                64, /* IMB_AUTH_HMAC_SHA3_512 */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -440,6 +454,25 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
                 16, /* IMB_AUTH_GHASH */
+                0,  /* IMB_AUTH_SM3 - not used */
+                0,  /* IMB_AUTH_HMAC_SM3 - not used */
+                0,  /* IMB_AUTH_SM4_GCM - not used */
+                28, /* IMB_AUTH_SHA3_224 */
+                32, /* IMB_AUTH_SHA3_256 */
+                48, /* IMB_AUTH_SHA3_384 */
+                64, /* IMB_AUTH_SHA3_512 */
+                0,  /* IMB_AUTH_SHAKE128 - not used */
+                0,  /* IMB_AUTH_SHAKE256 - not used */
+                0,  /* IMB_AUTH_AES_NIA5 - not used */
+                0,  /* IMB_AUTH_AES_NCA5 - not used */
+                0,  /* IMB_AUTH_ZUC_NIA6 - not used */
+                0,  /* IMB_AUTH_ZUC_NCA6 - not used */
+                0,  /* IMB_AUTH_SNOW5G_NIA4 - not used */
+                0,  /* IMB_AUTH_SNOW5G_NCA4 - not used */
+                28, /* IMB_AUTH_HMAC_SHA3_224 */
+                32, /* IMB_AUTH_HMAC_SHA3_256 */
+                48, /* IMB_AUTH_HMAC_SHA3_384 */
+                64, /* IMB_AUTH_HMAC_SHA3_512 */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -2217,6 +2250,32 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_HMAC_SHA3_224:
+        case IMB_AUTH_HMAC_SHA3_256:
+        case IMB_AUTH_HMAC_SHA3_384:
+        case IMB_AUTH_HMAC_SHA3_512:
+                if (job->auth_tag_output_len_in_bytes < 4 ||
+                    job->auth_tag_output_len_in_bytes > auth_tag_len_fips[hash_alg]) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                if (job->u.HMAC._hashed_auth_key_xor_ipad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_IPAD);
+                        return 1;
+                }
+                if (job->u.HMAC._hashed_auth_key_xor_opad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_OPAD);
                         return 1;
                 }
                 break;

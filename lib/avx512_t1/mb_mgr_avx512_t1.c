@@ -366,6 +366,12 @@ submit_aes_docsis256_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job
 #define SUBMIT_JOB_HMAC_SM3 sm3_hmac_submit_sse
 #define FLUSH_JOB_HMAC_SM3  unused
 
+/* HMAC-SHA3 */
+#define SUBMIT_JOB_HMAC_SHA3_224 hmac_sha3_224_submit_avx512
+#define SUBMIT_JOB_HMAC_SHA3_256 hmac_sha3_256_submit_avx512
+#define SUBMIT_JOB_HMAC_SHA3_384 hmac_sha3_384_submit_avx512
+#define SUBMIT_JOB_HMAC_SHA3_512 hmac_sha3_512_submit_avx512
+
 /* AES-NIA5 */
 #define GENERATE_HQP_AES generate_hqp_aes_sse
 #define NIA_MSG          nia_clmul_sse
