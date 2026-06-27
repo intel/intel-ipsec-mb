@@ -119,7 +119,11 @@ hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len, const void *sta
         while (ofs < len) {
                 unsigned int i;
 
-                fprintf(fp, "%p:", &start[ofs]);
+                if (start != NULL) {
+                        fprintf(fp, "%p:", &start[ofs]);
+                } else {
+                        fprintf(fp, "%08zx:", ofs);
+                }
 
                 for (i = 0; ((ofs + i) < len) && (i < 16); i++)
                         fprintf(fp, " %02x", (data[ofs + i] & 0xff));
