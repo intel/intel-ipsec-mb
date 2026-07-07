@@ -126,11 +126,13 @@ mksection .text
         ;; LD_ST_MASK is used to determine if any data should
         ;; be read from src and written to dst
         ;; When set to 0 so no reads/writes occur.
-        ;; In this case, input/output pointers are set to a valid address (rsp)
-        ;; even though no data will be written, to avoid penalties due to invalid addresses.
+        ;; In this case, input/output pointers are set to valid addresses
+        ;; (different from each other) to avoid penalties from masked
+        ;; load/store targeting the same address.
         mov             qword [state + _snow3g_args_LD_ST_MASK + %%LANE*8], 0
         mov             [state + _snow3g_args_in + %%LANE*8], rsp
-        mov             [state + _snow3g_args_out + %%LANE*8], rsp
+        lea             %%TGP0, [rsp + 64]
+        mov             [state + _snow3g_args_out + %%LANE*8], %%TGP0
 
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
         mov             DWORD(%%TGP0), 32
@@ -211,13 +213,22 @@ align_loop
 
         ;; save DST[i] = DST[i] + %%OFFSET
         ;; save SRC[i] = SRC[i] + %%OFFSET
-        ;; for not initialized lanes this will create invalid pointers
-        ;; but no loads/stores take place thanks to masking (LD_ST_MASK)
+        ;; only for lanes actively processing data (LD_ST_MASK != 0).
+        ;; Idle lanes (init/completed) keep their pinned valid pointers,
+        ;; so the memory they reference stays valid and does not vary.
         vpbroadcastq    zmm0, %%OFFSET
-        vpaddq          zmm1, zmm0, [state + _snow3g_args_in + 0*8]
-        vpaddq          zmm2, zmm0, [state + _snow3g_args_in + 8*8]
-        vpaddq          zmm3, zmm0, [state + _snow3g_args_out + 0*8]
-        vpaddq          zmm4, zmm0, [state + _snow3g_args_out + 8*8]
+        vmovdqa64       zmm5, [state + _snow3g_args_LD_ST_MASK + 0*8]
+        vptestmq        k1, zmm5, zmm5
+        vmovdqa64       zmm5, [state + _snow3g_args_LD_ST_MASK + 8*8]
+        vptestmq        k2, zmm5, zmm5
+        vmovdqa64       zmm1, [state + _snow3g_args_in + 0*8]
+        vmovdqa64       zmm2, [state + _snow3g_args_in + 8*8]
+        vmovdqa64       zmm3, [state + _snow3g_args_out + 0*8]
+        vmovdqa64       zmm4, [state + _snow3g_args_out + 8*8]
+        vpaddq          zmm1{k1}, zmm1, zmm0
+        vpaddq          zmm2{k2}, zmm2, zmm0
+        vpaddq          zmm3{k1}, zmm3, zmm0
+        vpaddq          zmm4{k2}, zmm4, zmm0
         vmovdqa32       [state + _snow3g_args_in + 0*8], zmm1
         vmovdqa32       [state + _snow3g_args_in + 8*8], zmm2
         vmovdqa32       [state + _snow3g_args_out + 0*8], zmm3
@@ -313,11 +324,13 @@ align_label
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
         ;; required in case of flush
-        ;; Input/output pointers are set to a valid address (rsp)
-        ;; even though no data will be written, to avoid penalties due to invalid addresses.
+        ;; Input/output pointers are set to valid addresses
+        ;; (different from each other) to avoid penalties from masked
+        ;; load/store targeting the same address.
         mov             qword [state + _snow3g_args_LD_ST_MASK + %%LANE*8], 0
         mov             [state + _snow3g_args_in + %%LANE*8], rsp
-        mov             [state + _snow3g_args_out + %%LANE*8], rsp
+        lea             %%TGP0, [rsp + 64]
+        mov             [state + _snow3g_args_out + %%LANE*8], %%TGP0
 
         ;; decrement number of jobs in use
         dec             qword [state + _snow3g_lanes_in_use]

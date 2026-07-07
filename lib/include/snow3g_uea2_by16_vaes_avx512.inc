@@ -304,6 +304,7 @@ mksection .text
 
 struc STACK
 _keystream:     resb    (16 * 64)
+_offset_mask:   resq    16      ; per lane: all ones if lane processes data, zero otherwise
 _gpr_save:      resq    8
 _rsp_save:      resq    1
 endstruc
@@ -937,7 +938,7 @@ endstruc
 ;; Note: if lane is in initialization mode loads and stores
 ;;       don't really happen (mask) and key stream is simply discarded
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro STORE_KEYSTREAM_ZMM 9
+%macro STORE_KEYSTREAM_ZMM 10
 %xdefine %%SRC_PTRS   %1 ;; [in] address of array of pointers to 16 src buffs or "NULL"
 %xdefine %%DST_PTRS   %2 ;; [in] address of array of pointers to 16 dst buffs
 %xdefine %%STATE_PTR  %3 ;; [in] pointer to state structure
@@ -947,16 +948,21 @@ endstruc
 %xdefine %%TZMM1      %7 ;; [clobbered] temporary zmm register
 %xdefine %%TZMM2      %8 ;; [clobbered] temporary zmm register
 %xdefine %%KREG       %9 ;; [clobbered] k register
+%xdefine %%TGP1       %10;; [clobbered] temporary 64bit register (effective offset)
 
+        mov             %%TGP1, [rsp + _offset_mask + (%%LANEID * 8)]
         kmovq           %%KREG, [%%STATE_PTR + _snow3g_args_LD_ST_MASK + (%%LANEID * 8)]
+        ;; effective offset is 0 for lanes in initialization mode,
+        ;; keeping their masked load/store on valid, non-varying memory
+        and             %%TGP1, %%OFFSET
         vpshufb         %%TZMM1, LFSR_ %+ %%LANEID, [rel const_byte_shuff_mask]
 %ifnidn %%SRC_PTRS, NULL
         mov             %%TGP0, [%%SRC_PTRS + (%%LANEID * 8)]
-        vmovdqu8        %%TZMM2{%%KREG}{z}, [%%TGP0 + %%OFFSET]
+        vmovdqu8        %%TZMM2{%%KREG}{z}, [%%TGP0 + %%TGP1]
         vpxord          %%TZMM1, %%TZMM1, %%TZMM2
 %endif
         mov             %%TGP0, [%%DST_PTRS + (%%LANEID * 8)]
-        vmovdqu8        [%%TGP0 + %%OFFSET]{%%KREG}, %%TZMM1
+        vmovdqu8        [%%TGP0 + %%TGP1]{%%KREG}, %%TZMM1
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -964,7 +970,7 @@ endstruc
 ;; xor's key stream against the plain text, stores the result.
 ;; - here it takes into account partial cases
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro STORE_KEYSTREAM_ZMM_LAST 10
+%macro STORE_KEYSTREAM_ZMM_LAST 11
 %xdefine %%SRC_PTRS     %1 ;; [in] array of pointers to 16 src buffs or "NULL"
 %xdefine %%DST_PTRS     %2 ;; [in] array of pointers to 16 dst buffs
 %xdefine %%STATE_PTR    %3 ;; [in] pointer to state structure
@@ -975,19 +981,24 @@ endstruc
 %xdefine %%TZMM2        %8 ;; [clobbered] temporary zmm register
 %xdefine %%KMASK_DB     %9 ;; [in] k register with byte mask limiting input/output
 %xdefine %%KTMP         %10;; [clobbered] temporary k register
+%xdefine %%TGP1         %11;; [clobbered] temporary 64bit register (effective offset)
 
+        mov             %%TGP1, [rsp + _offset_mask + (%%LANEID * 8)]
         kmovq           %%KTMP, [%%STATE_PTR + _snow3g_args_LD_ST_MASK + (%%LANEID * 8)]
         kandq           %%KTMP, %%KMASK_DB, %%KTMP
+        ;; effective offset is 0 for lanes in initialization mode,
+        ;; keeping their masked load/store on valid, non-varying memory
+        and             %%TGP1, %%OFFSET
 %ifnidn %%SRC_PTRS, NULL
         vpshufb         %%TZMM1, LFSR_ %+ %%LANEID, [rel const_byte_shuff_mask]
         mov             %%TGP0, [%%SRC_PTRS + (%%LANEID * 8)]
-        vmovdqu8        %%TZMM2{%%KTMP}{z}, [%%TGP0 + %%OFFSET]
+        vmovdqu8        %%TZMM2{%%KTMP}{z}, [%%TGP0 + %%TGP1]
         vpxord          %%TZMM1, %%TZMM1, %%TZMM2
         mov             %%TGP0, [%%DST_PTRS + (%%LANEID * 8)]
-        vmovdqu8        [%%TGP0 + %%OFFSET]{%%KTMP}, %%TZMM1
+        vmovdqu8        [%%TGP0 + %%TGP1]{%%KTMP}, %%TZMM1
 %else
         mov             %%TGP0, [%%DST_PTRS + (%%LANEID * 8)]
-        vmovdqu8        [%%TGP0 + %%OFFSET]{%%KTMP}, LFSR_ %+ %%LANEID
+        vmovdqu8        [%%TGP0 + %%TGP1]{%%KTMP}, LFSR_ %+ %%LANEID
 %endif
 
 %endmacro
@@ -1058,6 +1069,22 @@ endstruc
 
         kmovw           %%KR6, [%%STATE_PTR + _snow3g_INIT_MASK]
 
+        ;; Set per lane offset mask to all ones for lanes processing data
+        ;; (LD_ST_MASK is non-zero) and to zero for the remaining lanes,
+        ;; so their effective offset is always 0 and the memory they
+        ;; point at is valid and does not vary.
+        ;; Note that LD_ST_MASK is not just 0 or all ones, as it can hold
+        ;; a partial byte mask (1/3/7) for the trailing bytes of a message.
+        vpternlogq      TEMP_27, TEMP_27, TEMP_27, 0xff ; Set TEMP_27 to all ones
+        vmovdqa64       TEMP_28, [%%STATE_PTR + _snow3g_args_LD_ST_MASK + 0*8]
+        vptestmq        %%KR1, TEMP_28, TEMP_28
+        vmovdqa64       TEMP_29, [%%STATE_PTR + _snow3g_args_LD_ST_MASK + 8*8]
+        vptestmq        %%KR2, TEMP_29, TEMP_29
+        vmovdqa64       TEMP_28{%%KR1}{z}, TEMP_27
+        vmovdqa64       TEMP_29{%%KR2}{z}, TEMP_27
+        vmovdqa64       [rsp + _offset_mask + 0*8], TEMP_28
+        vmovdqa64       [rsp + _offset_mask + 8*8], TEMP_29
+
         INIT_CONSTANTS  %%GEN
         LFSR_FSM_STATE  %%STATE_PTR, LOAD
 
@@ -1097,9 +1124,6 @@ align_loop
         cmp             DWORD(%%TGP0), (16 * 64)
         jnz             %%no_write_yet
 
-        ;; clear the offset to start again
-        xor             %%TGP0, %%TGP0
-
         ;; temporarily free LFSR and FSM registers for the transpose
         LFSR_FSM_STATE  %%STATE_PTR, STORE
 
@@ -1110,9 +1134,12 @@ align_loop
 %rep 16
         STORE_KEYSTREAM_ZMM \
                         %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, %%OFFSET, i, \
-                        %%TGP2, TEMP_27, TEMP_28, %%KR2
+                        %%TGP2, TEMP_27, TEMP_28, %%KR2, %%TGP0
 %assign i (i + 1)
 %endrep
+
+        ;; clear the keystream offset to start again
+        xor             %%TGP0, %%TGP0
 
         ;; restore LFSR and FSM state
         LFSR_FSM_STATE  %%STATE_PTR, LOAD
@@ -1139,7 +1166,7 @@ align_label
 %rep 16
         STORE_KEYSTREAM_ZMM_LAST \
                         %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, %%OFFSET, i, \
-                        %%TGP2, TEMP_27, TEMP_29, %%KR1, %%KR2
+                        %%TGP2, TEMP_27, TEMP_29, %%KR1, %%KR2, %%TGP0
 %assign i (i + 1)
 %endrep
         lea             %%OFFSET, [%%OFFSET + %%TGP1 * 4]
