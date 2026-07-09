@@ -2616,6 +2616,42 @@ exit:
 }
 
 static void
+do_safe_check_test(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr,
+                   const IMB_ARCH dec_arch, const struct params_s *params,
+                   struct data *variant_data, const unsigned imix, const unsigned num_jobs)
+{
+        struct safe_check_ctx safe_ctx1 = { 0 };
+        const int result1 = do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params, variant_data,
+                                    &safe_ctx1, imix, num_jobs);
+
+        if (result1 == -1)
+                exit(EXIT_FAILURE);
+
+        if (result1 == -2) {
+                generate_patterns();
+
+                struct safe_check_ctx safe_ctx2 = { 0 };
+                const int result2 = do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
+                                            variant_data, &safe_ctx2, imix, num_jobs);
+
+                if (result2 == -1)
+                        exit(EXIT_FAILURE);
+
+                if (result2 == -2 && compare_match(&safe_ctx1, &safe_ctx2) == 0) {
+                        const unsigned idx =
+                                (imix && safe_ctx2.job_size == 0) ? num_jobs : safe_ctx2.job_idx;
+
+                        printf("FAIL\n");
+                        print_patterns();
+                        print_fail_context(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
+                                           variant_data, imix, num_jobs, idx, NULL, &safe_ctx2);
+                        print_match(&safe_ctx2, safe_ctx2.dir_name);
+                        exit(EXIT_FAILURE);
+                }
+        }
+}
+
+static void
 test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const IMB_ARCH dec_arch,
             struct params_s *params, struct data *variant_data, const uint32_t buf_size,
             const unsigned int safe_check)
@@ -2695,28 +2731,8 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                         /* Check for sensitive data first, then normal cross
                          * architecture validation */
                         if (safe_check) {
-                                struct safe_check_ctx safe_ctx1 = { 0 };
-                                const int result1 = do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
-                                                            params, variant_data, &safe_ctx1, 0, 1);
-                                if (result1 == -2) {
-                                        generate_patterns();
-
-                                        struct safe_check_ctx safe_ctx2 = { 0 };
-                                        const int result2 =
-                                                do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
-                                                        params, variant_data, &safe_ctx2, 0, 1);
-
-                                        if (result2 == -2 &&
-                                            compare_match(&safe_ctx1, &safe_ctx2) == 0) {
-                                                printf("FAIL\n");
-                                                print_patterns();
-                                                print_fail_context(enc_mgr, enc_arch, dec_mgr,
-                                                                   dec_arch, params, variant_data,
-                                                                   0, 1, 0, NULL, &safe_ctx2);
-                                                print_match(&safe_ctx2, safe_ctx2.dir_name);
-                                                exit(EXIT_FAILURE);
-                                        }
-                                }
+                                do_safe_check_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
+                                                   variant_data, 0, 1);
                         } else {
                                 if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
                                             variant_data, NULL, 0, 1) < 0)
@@ -2766,10 +2782,15 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr,
 
                 for (i = 2; i <= max_num_jobs; i++) {
                         for (j = 0; j < IMIX_ITER; j++) {
-                                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
-                                            variant_data, 0, 1, i) < 0) {
-                                        printf("FAIL\n");
-                                        exit(EXIT_FAILURE);
+                                if (safe_check) {
+                                        do_safe_check_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
+                                                           params, variant_data, 1, i);
+                                } else {
+                                        if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
+                                                    variant_data, NULL, 1, i) < 0) {
+                                                printf("FAIL\n");
+                                                exit(EXIT_FAILURE);
+                                        }
                                 }
                         }
                 }
