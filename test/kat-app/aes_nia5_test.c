@@ -211,8 +211,10 @@ aes_nia5_test(struct IMB_MGR *mb_mgr)
 
         /* AES-NIA5 with standard vectors */
         test_suite_start(&ctx, "AES-NIA5");
-        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
+        for (i = 1; i <= TEST_MAX_NUM_JOBS; i++)
                 test_aes_nia5_std_vectors(mb_mgr, &ctx, i);
+        /* exercise max-burst path */
+        test_aes_nia5_std_vectors(mb_mgr, &ctx, IMB_MAX_BURST_SIZE);
         errors += test_suite_end(&ctx);
 
         free_aes_nia5_vectors(jctx);

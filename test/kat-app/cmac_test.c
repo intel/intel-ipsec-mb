@@ -593,14 +593,18 @@ cmac_test(struct IMB_MGR *mb_mgr)
 
         /* CMAC 128 with standard vectors */
         test_suite_start(&ctx, "AES-CMAC-128");
-        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
+        for (i = 1; i <= TEST_MAX_NUM_JOBS; i++)
                 test_cmac_std_vectors(mb_mgr, &ctx, i);
+        /* exercise max-burst path */
+        test_cmac_std_vectors(mb_mgr, &ctx, IMB_MAX_BURST_SIZE);
         errors += test_suite_end(&ctx);
 
         /* CMAC 256 with standard vectors */
         test_suite_start(&ctx, "AES-CMAC-256");
-        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
+        for (i = 1; i <= TEST_MAX_NUM_JOBS; i++)
                 test_cmac_256_std_vectors(mb_mgr, &ctx, i);
+        /* exercise max-burst path */
+        test_cmac_256_std_vectors(mb_mgr, &ctx, IMB_MAX_BURST_SIZE);
         errors += test_suite_end(&ctx);
 
         free_cmac_vectors(ctx_128, ctx_256);

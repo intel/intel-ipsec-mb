@@ -329,8 +329,10 @@ hmac_sm3_test(struct IMB_MGR *mb_mgr)
                 return 1;
 
         test_suite_start(&ts, "HMAC-SM3");
-        for (num_jobs = 1; num_jobs <= IMB_MAX_BURST_SIZE; num_jobs++)
+        for (num_jobs = 1; num_jobs <= TEST_MAX_NUM_JOBS; num_jobs++)
                 test_hmac_sm3_std_vectors(mb_mgr, num_jobs, &ts);
+        /* exercise max-burst path */
+        test_hmac_sm3_std_vectors(mb_mgr, IMB_MAX_BURST_SIZE, &ts);
         errors = test_suite_end(&ts);
 
         free_hmac_sm3_vectors(ctx);

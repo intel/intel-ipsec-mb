@@ -406,9 +406,12 @@ hmac_sha3_test(struct IMB_MGR *mb_mgr)
                 return 1;
 
         test_suite_start(&ts, "HMAC-SHA3");
-        for (i = 0; i < (sizeof(variants) / sizeof(variants[0])); i++)
-                for (num_jobs = 1; num_jobs <= IMB_MAX_BURST_SIZE; num_jobs++)
+        for (i = 0; i < (sizeof(variants) / sizeof(variants[0])); i++) {
+                for (num_jobs = 1; num_jobs <= TEST_MAX_NUM_JOBS; num_jobs++)
                         test_hmac_sha3_std_vectors(mb_mgr, &variants[i], num_jobs, &ts);
+                /* exercise max-burst path */
+                test_hmac_sha3_std_vectors(mb_mgr, &variants[i], IMB_MAX_BURST_SIZE, &ts);
+        }
         errors = test_suite_end(&ts);
 
         free_hmac_sha3_vectors();

@@ -682,49 +682,73 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         const struct mac_test *vec_224 = hmac_sha224_vectors;
         assert(vec_224->tagSize / 8 == 28);
         for (tag_size = 4; tag_size <= 28; tag_size++) {
-                if (test_hmac_shax(mb_mgr, vec_224, IMB_MAX_BURST_SIZE, sha_types_tab[0],
-                                   tag_size)) {
+                if (test_hmac_shax(mb_mgr, vec_224, max_burst_jobs, sha_types_tab[0], tag_size)) {
                         printf("error tag size: %u\n", tag_size);
                         test_suite_update(&ts_sha224, 0, 1);
                 } else {
                         test_suite_update(&ts_sha224, 1, 0);
                 }
         }
+        /* exercise max-burst path at max tag size */
+        if (test_hmac_shax(mb_mgr, vec_224, IMB_MAX_BURST_SIZE, sha_types_tab[0], 28)) {
+                printf("error tag size: 28 (max burst)\n");
+                test_suite_update(&ts_sha224, 0, 1);
+        } else {
+                test_suite_update(&ts_sha224, 1, 0);
+        }
 
         const struct mac_test *vec_256 = hmac_sha256_vectors;
         assert(vec_256->tagSize / 8 == 32);
         for (tag_size = 4; tag_size <= 32; tag_size++) {
-                if (test_hmac_shax(mb_mgr, vec_256, IMB_MAX_BURST_SIZE, sha_types_tab[1],
-                                   tag_size)) {
+                if (test_hmac_shax(mb_mgr, vec_256, max_burst_jobs, sha_types_tab[1], tag_size)) {
                         printf("error tag size: %u\n", tag_size);
                         test_suite_update(&ts_sha256, 0, 1);
                 } else {
                         test_suite_update(&ts_sha256, 1, 0);
                 }
         }
+        /* exercise max-burst path at max tag size */
+        if (test_hmac_shax(mb_mgr, vec_256, IMB_MAX_BURST_SIZE, sha_types_tab[1], 32)) {
+                printf("error tag size: 32 (max burst)\n");
+                test_suite_update(&ts_sha256, 0, 1);
+        } else {
+                test_suite_update(&ts_sha256, 1, 0);
+        }
 
         const struct mac_test *vec_384 = hmac_sha384_vectors;
         assert(vec_384->tagSize / 8 == 48);
         for (tag_size = 4; tag_size <= 48; tag_size++) {
-                if (test_hmac_shax(mb_mgr, vec_384, IMB_MAX_BURST_SIZE, sha_types_tab[2],
-                                   tag_size)) {
+                if (test_hmac_shax(mb_mgr, vec_384, max_burst_jobs, sha_types_tab[2], tag_size)) {
                         printf("error tag size: %u\n", tag_size);
                         test_suite_update(&ts_sha384, 0, 1);
                 } else {
                         test_suite_update(&ts_sha384, 1, 0);
                 }
         }
+        /* exercise max-burst path at max tag size */
+        if (test_hmac_shax(mb_mgr, vec_384, IMB_MAX_BURST_SIZE, sha_types_tab[2], 48)) {
+                printf("error tag size: 48 (max burst)\n");
+                test_suite_update(&ts_sha384, 0, 1);
+        } else {
+                test_suite_update(&ts_sha384, 1, 0);
+        }
 
         const struct mac_test *vec_512 = hmac_sha512_vectors;
         assert(vec_512->tagSize / 8 == 64);
         for (tag_size = 4; tag_size <= 64; tag_size++) {
-                if (test_hmac_shax(mb_mgr, vec_512, IMB_MAX_BURST_SIZE, sha_types_tab[3],
-                                   tag_size)) {
+                if (test_hmac_shax(mb_mgr, vec_512, max_burst_jobs, sha_types_tab[3], tag_size)) {
                         printf("error tag size: %u\n", tag_size);
                         test_suite_update(&ts_sha512, 0, 1);
                 } else {
                         test_suite_update(&ts_sha512, 1, 0);
                 }
+        }
+        /* exercise max-burst path at max tag size */
+        if (test_hmac_shax(mb_mgr, vec_512, IMB_MAX_BURST_SIZE, sha_types_tab[3], 64)) {
+                printf("error tag size: 64 (max burst)\n");
+                test_suite_update(&ts_sha512, 0, 1);
+        } else {
+                test_suite_update(&ts_sha512, 1, 0);
         }
 
         /* End test suites */

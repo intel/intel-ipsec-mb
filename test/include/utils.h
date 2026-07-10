@@ -54,6 +54,19 @@
 #define DIM(_x)            (sizeof(_x) / sizeof(_x[0]))
 #define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
 
+/*
+ * Reduced maximum number of jobs used by KAT tests. Set to the widest
+ * multi-buffer OOO manager lane count plus 1 (AVX512_NUM_MD5_LANES + 1 = 33), which is
+ * enough to exercise all submit/flush code paths (lane fill, refill and flush
+ * of a partial batch) without the runtime cost of processing
+ * IMB_MAX_BURST_SIZE (128) jobs.
+ */
+#define TEST_MAX_NUM_JOBS 33
+
+#if TEST_MAX_NUM_JOBS > IMB_MAX_BURST_SIZE
+#error "TEST_MAX_NUM_JOBS must not exceed IMB_MAX_BURST_SIZE"
+#endif
+
 extern int quiet_mode;
 extern const unsigned test_num_jobs[];
 extern const size_t test_num_jobs_size;

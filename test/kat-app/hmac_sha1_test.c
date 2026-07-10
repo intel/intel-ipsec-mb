@@ -459,17 +459,26 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
         v = hmac_sha1_vectors;
 
         test_suite_start(&ts, "HMAC-SHA1");
-        for (num_jobs = 1; num_jobs <= IMB_MAX_BURST_SIZE; num_jobs++)
+        for (num_jobs = 1; num_jobs <= TEST_MAX_NUM_JOBS; num_jobs++)
                 test_hmac_sha1_std_vectors(mb_mgr, num_jobs, &ts);
+        /* exercise max-burst path */
+        test_hmac_sha1_std_vectors(mb_mgr, IMB_MAX_BURST_SIZE, &ts);
 
         assert(v->tagSize / 8 == 20);
         for (tag_size = 4; tag_size <= 20; tag_size++) {
-                if (test_hmac_sha1(mb_mgr, v, IMB_MAX_BURST_SIZE, tag_size)) {
+                if (test_hmac_sha1(mb_mgr, v, TEST_MAX_NUM_JOBS, tag_size)) {
                         printf("error tag size: %u\n", tag_size);
                         test_suite_update(&ts, 0, 1);
                 } else {
                         test_suite_update(&ts, 1, 0);
                 }
+        }
+        /* exercise max-burst path at max tag size */
+        if (test_hmac_sha1(mb_mgr, v, IMB_MAX_BURST_SIZE, 20)) {
+                printf("error tag size: %u (max burst)\n", 20);
+                test_suite_update(&ts, 0, 1);
+        } else {
+                test_suite_update(&ts, 1, 0);
         }
 
         errors = test_suite_end(&ts);
