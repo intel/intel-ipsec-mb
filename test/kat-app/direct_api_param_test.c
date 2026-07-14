@@ -3183,6 +3183,357 @@ test_IMB_CHACHA20_POLY1305_DEC_FINALIZE(struct IMB_MGR *mgr)
         return 0;
 }
 
+/*
+ * ML-DSA (FIPS 204) entry points now report invalid parameters directly via
+ * their IMB_ERR_* return value (0 on success); none of them touch imb_errno.
+ */
+static int
+ml_dsa_param_err(const int ret, const IMB_ERR exp_err, const char *desc)
+{
+        if (ret != (int) exp_err) {
+                printf("%s error: expected %s, got %s\n", desc, imb_get_strerror(exp_err),
+                       imb_get_strerror(ret));
+                return 1;
+        }
+        return 0;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_dsa_new
+ *        and imb_ml_dsa_free */
+static int
+test_imb_ml_dsa_new(struct IMB_MGR *mgr)
+{
+        IMB_ML_DSA *self = NULL;
+        int seg_err; /* segfault flag */
+        int rc;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        /* NULL manager: returns IMB_ERR_NULL_MBMGR, *self left NULL */
+        rc = imb_ml_dsa_new(NULL, IMB_ML_DSA_44, &self);
+        if (self != NULL) {
+                printf("imb_ml_dsa_new error: expected NULL self for NULL manager\n");
+                imb_ml_dsa_free(self);
+                return 1;
+        }
+        if (ml_dsa_param_err(rc, IMB_ERR_NULL_MBMGR, "imb_ml_dsa_new"))
+                return 1;
+
+        /* NULL new_self out-param: returns IMB_ERR_NULL_CTX */
+        rc = imb_ml_dsa_new(mgr, IMB_ML_DSA_44, NULL);
+        if (ml_dsa_param_err(rc, IMB_ERR_NULL_CTX, "imb_ml_dsa_new"))
+                return 1;
+
+        /* Invalid parameter set: returns IMB_ERR_PQC_ALG, *self left NULL */
+        rc = imb_ml_dsa_new(mgr, (IMB_ML_DSA_ALG) 0, &self);
+        if (self != NULL) {
+                printf("imb_ml_dsa_new error: expected NULL self for invalid alg\n");
+                imb_ml_dsa_free(self);
+                return 1;
+        }
+        if (ml_dsa_param_err(rc, IMB_ERR_PQC_ALG, "imb_ml_dsa_new"))
+                return 1;
+
+        rc = imb_ml_dsa_new(mgr, (IMB_ML_DSA_ALG) 4, &self);
+        if (self != NULL) {
+                printf("imb_ml_dsa_new error: expected NULL self for invalid alg\n");
+                imb_ml_dsa_free(self);
+                return 1;
+        }
+        if (ml_dsa_param_err(rc, IMB_ERR_PQC_ALG, "imb_ml_dsa_new"))
+                return 1;
+
+        /* imb_ml_dsa_free must tolerate a NULL handle */
+        imb_ml_dsa_free(NULL);
+        return 0;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_dsa_set_privkey
+ *        and imb_ml_dsa_set_pubkey */
+static int
+test_imb_ml_dsa_set_key(struct IMB_MGR *mgr)
+{
+        IMB_ML_DSA *self = NULL;
+        uint8_t pk[BUFF_SIZE], sk[BUFF_SIZE];
+        int seg_err; /* segfault flag */
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self) != 0) {
+                printf("%s: imb_ml_dsa_new failed\n", __func__);
+                return 1;
+        }
+
+        if (ml_dsa_param_err(imb_ml_dsa_set_privkey(NULL, sk), IMB_ERR_NULL_CTX,
+                             "imb_ml_dsa_set_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_set_privkey(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_dsa_set_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_set_pubkey(NULL, pk), IMB_ERR_NULL_CTX,
+                             "imb_ml_dsa_set_pubkey") ||
+            ml_dsa_param_err(imb_ml_dsa_set_pubkey(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_dsa_set_pubkey"))
+                ret = 1;
+
+        imb_ml_dsa_free(self);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_dsa_keypair()
+ *        (covering fresh-random and seeded paths via IMB_ML_DSA_KEYGEN_PARAMS) */
+static int
+test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
+{
+        IMB_ML_DSA *self = NULL;
+        uint8_t pk[BUFF_SIZE], sk[BUFF_SIZE], seed[BUFF_SIZE];
+        int seg_err; /* segfault flag */
+        unsigned i;
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self) != 0) {
+                printf("%s: imb_ml_dsa_new failed\n", __func__);
+                return 1;
+        }
+
+        struct fn_args {
+                IMB_ML_DSA *self;
+                uint8_t *pk;
+                uint8_t *sk;
+                const IMB_ERR exp_err;
+        } fn_args[] = { { NULL, pk, sk, IMB_ERR_NULL_CTX },
+                        { self, NULL, sk, IMB_ERR_NULL_KEY },
+                        { self, pk, NULL, IMB_ERR_NULL_KEY } };
+
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+                IMB_ML_DSA_KEYGEN_PARAMS params;
+                int r;
+
+                /* fresh-random path: xi_32 == NULL */
+                params.xi_32 = NULL;
+                r = imb_ml_dsa_keypair(ap->self, ap->pk, ap->sk, &params);
+                if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_keypair (random)")) {
+                        ret = 1;
+                        break;
+                }
+
+                /* seeded (deterministic) path: xi_32 != NULL */
+                params.xi_32 = seed;
+                r = imb_ml_dsa_keypair(ap->self, ap->pk, ap->sk, &params);
+                if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_keypair (xi_32)")) {
+                        ret = 1;
+                        break;
+                }
+        }
+        imb_ml_dsa_free(self);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_dsa_sign()
+ *        (covering ctx and rnd_32 combinations via IMB_ML_DSA_SIGN_PARAMS) */
+static int
+test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
+{
+        IMB_ML_DSA *self = NULL, *self_no_key = NULL;
+        uint8_t sig[BUFF_SIZE], msg[BUFF_SIZE], ctx[BUFF_SIZE], pk[IMB_ML_DSA_44_PUBKEY_BYTES],
+                sk[IMB_ML_DSA_44_PRIVKEY_BYTES], rnd[BUFF_SIZE];
+        size_t sig_len = 0;
+        int seg_err; /* segfault flag */
+        unsigned i;
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self) != 0 ||
+            imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self_no_key) != 0) {
+                printf("%s: imb_ml_dsa_new failed\n", __func__);
+                goto exit;
+        }
+        /* A key must be bound before sign() can be exercised for the other
+         * invalid-param cases; self_no_key intentionally has none bound, to
+         * exercise the IMB_ERR_PQC_NO_KEY path. */
+        if (imb_ml_dsa_keypair(self, pk, sk, NULL) != 0) {
+                printf("%s: imb_ml_dsa_keypair failed\n", __func__);
+                ret = 1;
+                goto exit;
+        }
+
+        struct fn_args {
+                IMB_ML_DSA *self;
+                uint8_t *sig;
+                size_t *sig_len;
+                const uint8_t *msg;
+                size_t msg_len;
+                const uint8_t *ctx;
+                size_t ctx_len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, sig, &sig_len, msg, BUFF_SIZE, ctx, BUFF_SIZE, IMB_ERR_NULL_CTX },
+                { self, NULL, &sig_len, msg, BUFF_SIZE, ctx, BUFF_SIZE, IMB_ERR_NULL_DST },
+                { self, sig, NULL, msg, BUFF_SIZE, ctx, BUFF_SIZE, IMB_ERR_NULL_DST },
+                { self_no_key, sig, &sig_len, msg, BUFF_SIZE, ctx, BUFF_SIZE, IMB_ERR_PQC_NO_KEY },
+                { self, sig, &sig_len, NULL, BUFF_SIZE, ctx, BUFF_SIZE, IMB_ERR_NULL_SRC },
+                { self, sig, &sig_len, msg, BUFF_SIZE, NULL, BUFF_SIZE, IMB_ERR_NULL_SRC }
+        };
+
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+                IMB_ML_DSA_SIGN_PARAMS params;
+                int r;
+
+                params.ctx = ap->ctx;
+                params.ctx_len = ap->ctx_len;
+
+                /* hedged (auto-random) path: rnd_32 == NULL */
+                params.rnd_32 = NULL;
+                r = imb_ml_dsa_sign(ap->self, ap->sig, ap->sig_len, ap->msg, ap->msg_len, &params);
+                if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_sign (hedged)")) {
+                        ret = 1;
+                        break;
+                }
+
+                /* caller-supplied randomness path: rnd_32 != NULL */
+                params.rnd_32 = rnd;
+                r = imb_ml_dsa_sign(ap->self, ap->sig, ap->sig_len, ap->msg, ap->msg_len, &params);
+                if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_sign (rnd_32)")) {
+                        ret = 1;
+                        break;
+                }
+        }
+exit:
+        imb_ml_dsa_free(self);
+        imb_ml_dsa_free(self_no_key);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_dsa_verify()
+ *        (covering ctx combinations via IMB_ML_DSA_VERIFY_PARAMS) */
+static int
+test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
+{
+        IMB_ML_DSA *self = NULL, *self_no_key = NULL;
+        uint8_t sig[BUFF_SIZE], msg[BUFF_SIZE], ctx[BUFF_SIZE], pk[IMB_ML_DSA_44_PUBKEY_BYTES],
+                sk[IMB_ML_DSA_44_PRIVKEY_BYTES];
+        int seg_err; /* segfault flag */
+        unsigned i;
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self) != 0 ||
+            imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self_no_key) != 0) {
+                printf("%s: imb_ml_dsa_new failed\n", __func__);
+                goto exit;
+        }
+        if (imb_ml_dsa_keypair(self, pk, sk, NULL) != 0) {
+                printf("%s: imb_ml_dsa_keypair failed\n", __func__);
+                ret = 1;
+                goto exit;
+        }
+
+        struct fn_args {
+                IMB_ML_DSA *self;
+                const uint8_t *msg;
+                size_t msg_len;
+                const uint8_t *ctx;
+                size_t ctx_len;
+                const uint8_t *sig;
+                const IMB_ERR exp_err;
+        } fn_args[] = { { NULL, msg, BUFF_SIZE, ctx, BUFF_SIZE, sig, IMB_ERR_NULL_CTX },
+                        { self, msg, BUFF_SIZE, ctx, BUFF_SIZE, NULL, IMB_ERR_NULL_SRC },
+                        { self_no_key, msg, BUFF_SIZE, ctx, BUFF_SIZE, sig, IMB_ERR_PQC_NO_KEY },
+                        { self, NULL, BUFF_SIZE, ctx, BUFF_SIZE, sig, IMB_ERR_NULL_SRC },
+                        { self, msg, BUFF_SIZE, NULL, BUFF_SIZE, sig, IMB_ERR_NULL_SRC } };
+
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+                IMB_ML_DSA_VERIFY_PARAMS params;
+                int r;
+
+                params.ctx = ap->ctx;
+                params.ctx_len = ap->ctx_len;
+                r = imb_ml_dsa_verify(ap->self, ap->msg, ap->msg_len, ap->sig, BUFF_SIZE, &params);
+
+                if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_verify")) {
+                        ret = 1;
+                        break;
+                }
+        }
+exit:
+        imb_ml_dsa_free(self);
+        imb_ml_dsa_free(self_no_key);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_dsa_pubkey_validate,
+ *        imb_ml_dsa_privkey_validate and imb_ml_dsa_pubkey_from_privkey */
+static int
+test_imb_ml_dsa_key_validate(struct IMB_MGR *mgr)
+{
+        IMB_ML_DSA *self = NULL;
+        uint8_t pk[BUFF_SIZE], sk[BUFF_SIZE];
+        int seg_err; /* segfault flag */
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self) != 0) {
+                printf("%s: imb_ml_dsa_new failed\n", __func__);
+                return 1;
+        }
+
+        if (ml_dsa_param_err(imb_ml_dsa_pubkey_validate(NULL, pk), IMB_ERR_NULL_CTX,
+                             "imb_ml_dsa_pubkey_validate") ||
+            ml_dsa_param_err(imb_ml_dsa_pubkey_validate(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_dsa_pubkey_validate") ||
+            ml_dsa_param_err(imb_ml_dsa_privkey_validate(NULL, sk), IMB_ERR_NULL_CTX,
+                             "imb_ml_dsa_privkey_validate") ||
+            ml_dsa_param_err(imb_ml_dsa_privkey_validate(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_dsa_privkey_validate") ||
+            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(NULL, sk, pk), IMB_ERR_NULL_CTX,
+                             "imb_ml_dsa_pubkey_from_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(self, NULL, pk), IMB_ERR_NULL_KEY,
+                             "imb_ml_dsa_pubkey_from_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(self, sk, NULL), IMB_ERR_NULL_DST,
+                             "imb_ml_dsa_pubkey_from_privkey"))
+                ret = 1;
+
+        imb_ml_dsa_free(self);
+        return ret;
+}
+
 int
 direct_api_param_test(struct IMB_MGR *mb_mgr)
 {
@@ -3436,6 +3787,24 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_dsa_new(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_dsa_keypair(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_dsa_set_key(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_dsa_sign(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_dsa_verify(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_dsa_key_validate(mb_mgr);
         run++;
 
         test_suite_update(&ts, run - errors, errors);

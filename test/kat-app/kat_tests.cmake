@@ -84,7 +84,8 @@ set(TEST_TYPES
     HMAC_SM3
     SM4_CTR
     SM4_GCM
-    SHA3)
+    SHA3
+    ML_DSA)
 
 # add tests
 foreach(TYPE ${TEST_TYPES})

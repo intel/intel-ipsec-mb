@@ -37,6 +37,7 @@
 #include "mac_test.h"
 #include "cipher_test.h"
 #include "aead_test.h"
+#include "sig_test.h"
 
 /*
  * Record a parse error and jump to the `err` label.
@@ -872,6 +873,28 @@ json_decode_hex_token(const char *json, const json_tok *token, struct test_json_
         }
 
         *out_buf = (const char *) buf;
+        return 0;
+}
+
+static int
+json_copy_string_token(const char *json, const json_tok *token, struct test_json_alloc_ctx *ctx,
+                       const char **out_str)
+{
+        char *out;
+        size_t len;
+
+        if (token->type != JSON_TOK_STRING)
+                return -1;
+
+        len = (size_t) (token->end - token->start);
+        out = alloc_ctx_alloc(ctx, len + 1);
+        if (out == NULL)
+                return -1;
+
+        memcpy(out, &json[token->start], len);
+        out[len] = '\0';
+        *out_str = out;
+
         return 0;
 }
 
@@ -1755,6 +1778,422 @@ err_no_report:
         return -1;
 }
 
+/**
+ * @brief Load vectors from a signature-scheme sign-format JSON file into a
+ *        sentinel-terminated struct sig_sign_test array.
+ *
+ * @param [in] path path to vector JSON file
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
+                        struct test_json_alloc_ctx **out_ctx)
+{
+        struct test_json_alloc_ctx *ctx;
+        char *json = NULL;
+        json_tok *tokens = NULL;
+        int token_cnt = 0;
+        int test_groups_idx;
+        int tg_pos;
+        size_t test_cnt = 0;
+        struct sig_sign_test *vectors;
+        size_t rec = 0;
+        const char *err_reason = NULL;
+        int errnum = 0;
+        int tg_idx = -1;
+        int test_idx = -1;
+        size_t tcid = 0;
+        int have_tcid = 0;
+
+        if (path == NULL || out_vectors == NULL || out_ctx == NULL) {
+                json_report_parse_error(path, "json_load_sig_sign_test",
+                                        "invalid function arguments", 0, 0, -1, -1, NULL);
+                return -1;
+        }
+
+        *out_vectors = NULL;
+        *out_ctx = NULL;
+
+        ctx = calloc(1, sizeof(*ctx));
+        if (ctx == NULL) {
+                json_report_parse_error(path, "json_load_sig_sign_test",
+                                        "unable to allocate JSON allocation context", ENOMEM, 0, -1,
+                                        -1, NULL);
+                return -1;
+        }
+
+        if (json_load_doc(path, ctx, &json, &tokens, &token_cnt) < 0)
+                goto err_no_report;
+
+        PARSE_FAIL_IF(token_cnt <= 0 || tokens[0].type != JSON_TOK_OBJECT,
+                      "top-level JSON token must be an object");
+
+        test_groups_idx = json_object_get(json, tokens, token_cnt, 0, "testGroups");
+        PARSE_FAIL_IF(test_groups_idx < 0 || tokens[test_groups_idx].type != JSON_TOK_ARRAY,
+                      "missing or invalid top-level testGroups array");
+
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+
+                test_cnt += (size_t) tokens[tests_idx].size;
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        vectors = alloc_ctx_alloc(ctx, (test_cnt + 1) * sizeof(*vectors));
+        if (vectors == NULL) {
+                err_reason = "unable to allocate ML-DSA sign vector array";
+                errnum = ENOMEM;
+                goto err;
+        }
+        memset(vectors, 0, (test_cnt + 1) * sizeof(*vectors));
+
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+                const int private_seed_idx =
+                        json_object_get(json, tokens, token_cnt, tg_pos, "privateSeed");
+                const int private_key_idx =
+                        json_object_get(json, tokens, token_cnt, tg_pos, "privateKey");
+                const int public_key_idx =
+                        json_object_get(json, tokens, token_cnt, tg_pos, "publicKey");
+                size_t public_key_len = 0;
+                size_t private_seed_len = 0;
+                size_t private_key_len = 0;
+                int tc_pos;
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+                PARSE_FAIL_IF((private_seed_idx < 0) == (private_key_idx < 0),
+                              "expected exactly one of privateSeed or privateKey in testGroup");
+                PARSE_FAIL_IF(public_key_idx < 0, "missing publicKey field");
+                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[public_key_idx], &public_key_len) <
+                                      0,
+                              "invalid publicKey hex string");
+                tc_pos = tests_idx + 1;
+
+                if (private_seed_idx >= 0) {
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[private_seed_idx],
+                                                               &private_seed_len) < 0,
+                                      "invalid privateSeed hex string");
+                        PARSE_FAIL_IF(private_seed_len != 32,
+                                      "privateSeed must decode to exactly 32 bytes");
+                }
+                if (private_key_idx >= 0) {
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[private_key_idx],
+                                                               &private_key_len) < 0,
+                                      "invalid privateKey hex string");
+                }
+
+                for (int j = 0; j < tokens[tests_idx].size; j++) {
+                        const int tcid_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "tcId");
+                        const int comment_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "comment");
+                        const int msg_idx = json_object_get(json, tokens, token_cnt, tc_pos, "msg");
+                        const int ctx_idx = json_object_get(json, tokens, token_cnt, tc_pos, "ctx");
+                        const int rnd_idx = json_object_get(json, tokens, token_cnt, tc_pos, "rnd");
+                        const int sig_idx = json_object_get(json, tokens, token_cnt, tc_pos, "sig");
+                        const int result_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "result");
+
+                        test_idx = j;
+                        have_tcid = 0;
+                        vectors[rec].tcId = 0;
+
+                        PARSE_FAIL_IF(comment_idx < 0, "missing comment field");
+                        PARSE_FAIL_IF(msg_idx < 0, "missing msg field");
+                        PARSE_FAIL_IF(sig_idx < 0, "missing sig field");
+
+                        if (tcid_idx >= 0) {
+                                PARSE_FAIL_IF(json_parse_size_t(json, &tokens[tcid_idx],
+                                                                &vectors[rec].tcId) < 0,
+                                              "invalid tcId value");
+                                tcid = vectors[rec].tcId;
+                                have_tcid = 1;
+                        }
+
+                        PARSE_FAIL_IF(json_copy_string_token(json, &tokens[comment_idx], ctx,
+                                                             &vectors[rec].comment) < 0,
+                                      "unable to copy comment string");
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[msg_idx], ctx,
+                                                            &vectors[rec].msg) < 0,
+                                      "unable to decode msg hex string");
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[msg_idx],
+                                                               &vectors[rec].msgLen) < 0,
+                                      "invalid msg hex string");
+
+                        vectors[rec].hasCtx = (ctx_idx >= 0);
+                        if (ctx_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[ctx_idx], ctx,
+                                                                    &vectors[rec].ctx) < 0,
+                                              "unable to decode ctx hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[ctx_idx],
+                                                                       &vectors[rec].ctxLen) < 0,
+                                              "invalid ctx hex string");
+                        } else {
+                                vectors[rec].ctx = NULL;
+                                vectors[rec].ctxLen = 0;
+                        }
+
+                        vectors[rec].hasRnd = (rnd_idx >= 0);
+                        if (rnd_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[rnd_idx], ctx,
+                                                                    &vectors[rec].rnd) < 0,
+                                              "unable to decode rnd hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[rnd_idx],
+                                                                       &vectors[rec].rndLen) < 0,
+                                              "invalid rnd hex string");
+                        }
+
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[sig_idx], ctx,
+                                                            &vectors[rec].sig) < 0,
+                                      "unable to decode sig hex string");
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[sig_idx],
+                                                               &vectors[rec].sigLen) < 0,
+                                      "invalid sig hex string");
+                        PARSE_FAIL_IF(result_idx < 0 ||
+                                              json_result_to_valid(json, &tokens[result_idx],
+                                                                   &vectors[rec].resultValid) < 0,
+                                      "missing or invalid result field");
+
+                        if (private_seed_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[private_seed_idx],
+                                                                    ctx,
+                                                                    &vectors[rec].privateSeed) < 0,
+                                              "unable to decode privateSeed hex string");
+                                vectors[rec].privateSeedLen = private_seed_len;
+                        } else {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[private_key_idx],
+                                                                    ctx,
+                                                                    &vectors[rec].privateKey) < 0,
+                                              "unable to decode privateKey hex string");
+                                vectors[rec].privateKeyLen = private_key_len;
+                        }
+
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[public_key_idx], ctx,
+                                                            &vectors[rec].publicKey) < 0,
+                                      "unable to decode publicKey hex string");
+                        vectors[rec].publicKeyLen = public_key_len;
+
+                        rec++;
+                        tc_pos = json_token_skip(tokens, tc_pos);
+                }
+
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        *out_vectors = vectors;
+        *out_ctx = ctx;
+
+        return 0;
+
+err:
+        json_report_parse_error(path, "json_load_sig_sign_test", err_reason, errnum, 0, tg_idx,
+                                test_idx, have_tcid ? &tcid : NULL);
+err_no_report:
+        json_free_test_ctx(ctx);
+        return -1;
+}
+
+/**
+ * @brief Load vectors from a signature-scheme verify-format JSON file into a
+ *        sentinel-terminated struct sig_verify_test array.
+ *
+ * @param [in] path path to vector JSON file
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+json_load_sig_verify_test(const char *path, struct sig_verify_test **out_vectors,
+                          struct test_json_alloc_ctx **out_ctx)
+{
+        struct test_json_alloc_ctx *ctx;
+        char *json = NULL;
+        json_tok *tokens = NULL;
+        int token_cnt = 0;
+        int test_groups_idx;
+        int tg_pos;
+        size_t test_cnt = 0;
+        struct sig_verify_test *vectors;
+        size_t rec = 0;
+        const char *err_reason = NULL;
+        int errnum = 0;
+        int tg_idx = -1;
+        int test_idx = -1;
+        size_t tcid = 0;
+        int have_tcid = 0;
+
+        if (path == NULL || out_vectors == NULL || out_ctx == NULL) {
+                json_report_parse_error(path, "json_load_sig_verify_test",
+                                        "invalid function arguments", 0, 0, -1, -1, NULL);
+                return -1;
+        }
+
+        *out_vectors = NULL;
+        *out_ctx = NULL;
+
+        ctx = calloc(1, sizeof(*ctx));
+        if (ctx == NULL) {
+                json_report_parse_error(path, "json_load_sig_verify_test",
+                                        "unable to allocate JSON allocation context", ENOMEM, 0, -1,
+                                        -1, NULL);
+                return -1;
+        }
+
+        if (json_load_doc(path, ctx, &json, &tokens, &token_cnt) < 0)
+                goto err_no_report;
+
+        PARSE_FAIL_IF(token_cnt <= 0 || tokens[0].type != JSON_TOK_OBJECT,
+                      "top-level JSON token must be an object");
+
+        test_groups_idx = json_object_get(json, tokens, token_cnt, 0, "testGroups");
+        PARSE_FAIL_IF(test_groups_idx < 0 || tokens[test_groups_idx].type != JSON_TOK_ARRAY,
+                      "missing or invalid top-level testGroups array");
+
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+                test_cnt += (size_t) tokens[tests_idx].size;
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        vectors = alloc_ctx_alloc(ctx, (test_cnt + 1) * sizeof(*vectors));
+        if (vectors == NULL) {
+                err_reason = "unable to allocate ML-DSA verify vector array";
+                errnum = ENOMEM;
+                goto err;
+        }
+        memset(vectors, 0, (test_cnt + 1) * sizeof(*vectors));
+
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+                const int public_key_idx =
+                        json_object_get(json, tokens, token_cnt, tg_pos, "publicKey");
+                size_t public_key_len = 0;
+                int tc_pos;
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+                PARSE_FAIL_IF(public_key_idx < 0, "missing publicKey field");
+                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[public_key_idx], &public_key_len) <
+                                      0,
+                              "invalid publicKey hex string");
+                tc_pos = tests_idx + 1;
+
+                for (int j = 0; j < tokens[tests_idx].size; j++) {
+                        const int tcid_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "tcId");
+                        const int comment_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "comment");
+                        const int msg_idx = json_object_get(json, tokens, token_cnt, tc_pos, "msg");
+                        const int ctx_idx = json_object_get(json, tokens, token_cnt, tc_pos, "ctx");
+                        const int sig_idx = json_object_get(json, tokens, token_cnt, tc_pos, "sig");
+                        const int result_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "result");
+
+                        test_idx = j;
+                        have_tcid = 0;
+                        vectors[rec].tcId = 0;
+
+                        PARSE_FAIL_IF(comment_idx < 0, "missing comment field");
+                        PARSE_FAIL_IF(msg_idx < 0, "missing msg field");
+                        PARSE_FAIL_IF(sig_idx < 0, "missing sig field");
+
+                        if (tcid_idx >= 0) {
+                                PARSE_FAIL_IF(json_parse_size_t(json, &tokens[tcid_idx],
+                                                                &vectors[rec].tcId) < 0,
+                                              "invalid tcId value");
+                                tcid = vectors[rec].tcId;
+                                have_tcid = 1;
+                        }
+
+                        PARSE_FAIL_IF(json_copy_string_token(json, &tokens[comment_idx], ctx,
+                                                             &vectors[rec].comment) < 0,
+                                      "unable to copy comment string");
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[msg_idx], ctx,
+                                                            &vectors[rec].msg) < 0,
+                                      "unable to decode msg hex string");
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[msg_idx],
+                                                               &vectors[rec].msgLen) < 0,
+                                      "invalid msg hex string");
+
+                        vectors[rec].hasCtx = (ctx_idx >= 0);
+                        if (ctx_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[ctx_idx], ctx,
+                                                                    &vectors[rec].ctx) < 0,
+                                              "unable to decode ctx hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[ctx_idx],
+                                                                       &vectors[rec].ctxLen) < 0,
+                                              "invalid ctx hex string");
+                        } else {
+                                vectors[rec].ctx = NULL;
+                                vectors[rec].ctxLen = 0;
+                        }
+
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[sig_idx], ctx,
+                                                            &vectors[rec].sig) < 0,
+                                      "unable to decode sig hex string");
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[sig_idx],
+                                                               &vectors[rec].sigLen) < 0,
+                                      "invalid sig hex string");
+                        PARSE_FAIL_IF(result_idx < 0 ||
+                                              json_result_to_valid(json, &tokens[result_idx],
+                                                                   &vectors[rec].resultValid) < 0,
+                                      "missing or invalid result field");
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[public_key_idx], ctx,
+                                                            &vectors[rec].publicKey) < 0,
+                                      "unable to decode publicKey hex string");
+                        vectors[rec].publicKeyLen = public_key_len;
+
+                        rec++;
+                        tc_pos = json_token_skip(tokens, tc_pos);
+                }
+
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        *out_vectors = vectors;
+        *out_ctx = ctx;
+
+        return 0;
+
+err:
+        json_report_parse_error(path, "json_load_sig_verify_test", err_reason, errnum, 0, tg_idx,
+                                test_idx, have_tcid ? &tcid : NULL);
+err_no_report:
+        json_free_test_ctx(ctx);
+        return -1;
+}
+
 static int
 build_vector_path(const char *vector_dir, const char *file_name, char *buf, size_t buf_size)
 {
@@ -1801,4 +2240,50 @@ load_aead_vectors(const char *vector_dir, const char *file_name, struct aead_tes
         if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
                 return -1;
         return json_load_aead_test(path, out_vectors, out_ctx);
+}
+
+/**
+ * @brief Load signature-scheme sign-format vectors from a file in the given vector directory.
+ *
+ * @param [in] vector_dir directory containing vector files
+ * @param [in] file_name  vector file name (not a full path)
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+load_sig_sign_vectors(const char *vector_dir, const char *file_name,
+                      struct sig_sign_test **out_vectors, struct test_json_alloc_ctx **out_ctx)
+{
+        char path[1024] = { 0 };
+
+        if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
+                return -1;
+        return json_load_sig_sign_test(path, out_vectors, out_ctx);
+}
+
+/**
+ * @brief Load signature-scheme verify-format vectors from a file in the given vector directory.
+ *
+ * @param [in] vector_dir directory containing vector files
+ * @param [in] file_name  vector file name (not a full path)
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+load_sig_verify_vectors(const char *vector_dir, const char *file_name,
+                        struct sig_verify_test **out_vectors, struct test_json_alloc_ctx **out_ctx)
+{
+        char path[1024] = { 0 };
+
+        if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
+                return -1;
+        return json_load_sig_verify_test(path, out_vectors, out_ctx);
 }

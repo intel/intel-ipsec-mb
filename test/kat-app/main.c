@@ -135,6 +135,8 @@ extern int
 snow5g_nia4_test(struct IMB_MGR *mb_mgr);
 extern int
 snow5g_nca4_test(struct IMB_MGR *mb_mgr);
+extern int
+ml_dsa_test(struct IMB_MGR *mb_mgr);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -204,7 +206,8 @@ struct imb_test tests[] = {
         { .str = "AES_NCA5", .fn = aes_nca5_test, .enabled = 1 },
         { .str = "ZUC_NCA6", .fn = zuc_nca6_test, .enabled = 1 },
         { .str = "SNOW5G_NIA4", .fn = snow5g_nia4_test, .enabled = 1 },
-        { .str = "SNOW5G_NCA4", .fn = snow5g_nca4_test, .enabled = 1 }
+        { .str = "SNOW5G_NCA4", .fn = snow5g_nca4_test, .enabled = 1 },
+        { .str = "ML_DSA", .fn = ml_dsa_test, .enabled = 1 }
 };
 
 static int self_test_corrupt = 0;
