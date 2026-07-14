@@ -86,6 +86,16 @@ NULL, AES128-CCM, AES256-CCM, AES128-CMAC-96, AES256-CMAC-96, KASUMI-F9,
 ZUC-EIA3, SNOW3G-UIA2, DOCSIS-CRC32, HEC, POLY1305, POLY1305 AEAD,
 GHASH, PON-CRC-BIP as well as multiple CRC types.
 
+.SS POST-QUANTUM SIGNATURE ALGORITHMS
+ML-DSA-44, ML-DSA-65 and ML-DSA-87 (FIPS 204 Module-Lattice-Based Digital
+Signature Algorithm). Key generation, signing (hedged or deterministic, with an
+optional context string) and verification are provided through the opaque
+.B IMB_ML_DSA
+handle and the
+.B imb_ml_dsa_*
+functions (imb_ml_dsa_new, imb_ml_dsa_keypair, imb_ml_dsa_sign,
+imb_ml_dsa_verify and related).
+
 .SS RECOMMENDATIONS
 DES algorithm should be avoided and AES encryption should be used instead.
 .br

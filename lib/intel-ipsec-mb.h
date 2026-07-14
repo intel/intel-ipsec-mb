@@ -372,7 +372,12 @@ typedef enum {
         IMB_ERR_BURST_SUITE_ID,
         IMB_ERR_JOB_SGL_STATE,
         /* add new error types above this comment */
-        IMB_ERR_MAX /* don't move this one */
+        IMB_ERR_PQC_KEYOP,  /**< PQC key generation or key parse failure */
+        IMB_ERR_PQC_SIGNOP, /**< PQC sign or verify operation failure */
+        IMB_ERR_PQC_NO_KEY, /**< PQC operation attempted with no key bound to the context */
+        IMB_ERR_PQC_ALG,    /**< Invalid PQC algorithm/parameter set selector */
+        IMB_ERR_PQC_INIT,   /**< PQC context allocation or initialization failure */
+        IMB_ERR_MAX         /* don't move this one */
 } IMB_ERR;
 
 /**
@@ -760,9 +765,10 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_SELF_TEST_PHASE_FAIL    "FAIL"
 #define IMB_SELF_TEST_PHASE_CORRUPT "CORRUPT"
 
-#define IMB_SELF_TEST_TYPE_KAT_CIPHER "KAT_Cipher"
-#define IMB_SELF_TEST_TYPE_KAT_AUTH   "KAT_Auth"
-#define IMB_SELF_TEST_TYPE_KAT_AEAD   "KAT_AEAD"
+#define IMB_SELF_TEST_TYPE_KAT_CIPHER    "KAT_Cipher"
+#define IMB_SELF_TEST_TYPE_KAT_AUTH      "KAT_Auth"
+#define IMB_SELF_TEST_TYPE_KAT_AEAD      "KAT_AEAD"
+#define IMB_SELF_TEST_TYPE_KAT_SIGNATURE "KAT_Signature"
 
 /**
  * CPU flags needed for each implementation
@@ -1599,6 +1605,287 @@ imb_sha512_one_block(const void *src, void *digest, IMB_MGR *state);
  */
 IMB_DLL_EXPORT void
 imb_sha512(const void *src, const uint64_t length, void *digest, IMB_MGR *state);
+
+/*
+ * =========================================================
+ * =========================================================
+ * ML-DSA (FIPS 204) - Module-Lattice-Based Digital Signature Algorithm
+ * =========================================================
+ * =========================================================
+ */
+
+/**
+ * Opaque ML-DSA context handle. Created with imb_ml_dsa_new() and released
+ * with imb_ml_dsa_free(). Bound to a single parameter set for its lifetime.
+ *
+ * The context also caches at most one decoded/generated key at a time (see
+ * imb_ml_dsa_keypair(), imb_ml_dsa_set_privkey() and imb_ml_dsa_set_pubkey()),
+ * which every sign/verify call reuses. This
+ * mirrors the key-lifecycle model used by an OpenSSL provider: decode/import
+ * a key once, then perform many signature operations against it. Binding a
+ * new key to a context replaces the previously bound one. A context is not
+ * safe for concurrent use by multiple threads; independent threads should
+ * use their own IMB_ML_DSA context (they may share the same key material by
+ * calling imb_ml_dsa_set_privkey()/imb_ml_dsa_set_pubkey() with the same
+ * encoded bytes on each context).
+ */
+struct IMB_ML_DSA;
+typedef struct IMB_ML_DSA IMB_ML_DSA;
+
+/**
+ * ML-DSA parameter set selector (FIPS 204).
+ */
+typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_DSA_ALG;
+
+/* Encoded public key, private key and signature sizes in bytes.
+ * See FIPS 204 Section 4, Tables 1 & 2. */
+#define IMB_ML_DSA_44_PUBKEY_BYTES  1312
+#define IMB_ML_DSA_44_PRIVKEY_BYTES 2560
+#define IMB_ML_DSA_44_SIG_BYTES     2420
+
+#define IMB_ML_DSA_65_PUBKEY_BYTES  1952
+#define IMB_ML_DSA_65_PRIVKEY_BYTES 4032
+#define IMB_ML_DSA_65_SIG_BYTES     3309
+
+#define IMB_ML_DSA_87_PUBKEY_BYTES  2592
+#define IMB_ML_DSA_87_PRIVKEY_BYTES 4896
+#define IMB_ML_DSA_87_SIG_BYTES     4627
+
+/**
+ * Allocate and initialize an ML-DSA context for a given parameter set.
+ *
+ * @param [in]  mgr      Pointer to initialized IMB_MGR structure
+ * @param [in]  alg      ML-DSA parameter set (IMB_ML_DSA_44/65/87)
+ * @param [out] new_self Receives the new IMB_ML_DSA context on success, or
+ *                       NULL on failure
+ *
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_MBMGR invalid \a mgr pointer
+ * @retval IMB_ERR_NULL_CTX invalid \a new_self pointer
+ * @retval IMB_ERR_PQC_ALG invalid \a alg
+ * @retval IMB_ERR_PQC_INIT context allocation or initialization failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_new(IMB_MGR *mgr, IMB_ML_DSA_ALG alg, IMB_ML_DSA **new_self);
+
+/**
+ * Release an ML-DSA context allocated by imb_ml_dsa_new(), along with any
+ * key currently bound to it.
+ *
+ * @param [in] self  ML-DSA context (may be NULL)
+ */
+IMB_DLL_EXPORT void
+imb_ml_dsa_free(IMB_ML_DSA *self);
+
+/**
+ * Optional parameters for imb_ml_dsa_keypair(). A NULL \a params pointer is
+ * equivalent to a zero-initialized structure: fresh-random key generation -
+ * the common-case default.
+ */
+typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
+        /**
+         * Optional 32-byte key generation seed (FIPS 204 xi).
+         * NULL requests fresh-random key generation: the library generates
+         * a fresh random seed internally for each call.
+         * Non-NULL uses the supplied 32 bytes verbatim, producing a
+         * deterministic key pair.
+         */
+        const uint8_t *xi_32;
+} IMB_ML_DSA_KEYGEN_PARAMS;
+
+/**
+ * Generate an ML-DSA key pair (FIPS 204 KeyGen) and bind it to \a self,
+ * replacing any previously bound key. The generated key carries both
+ * private and public components, so \a self may be used with both the sign
+ * and verify functions immediately afterwards.
+ *
+ * @param [in]  self    ML-DSA context
+ * @param [out] pk      Encoded public key buffer (variant PUBKEY_BYTES)
+ * @param [out] sk      Encoded private key buffer (variant PRIVKEY_BYTES)
+ * @param [in]  params  Optional key generation parameters, or NULL for
+ *                       fresh-random key generation
+ *
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a pk or \a sk pointer
+ * @retval IMB_ERR_PQC_KEYOP key generation operation failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
+                   const IMB_ML_DSA_KEYGEN_PARAMS *params);
+
+/**
+ * Bind an encoded ML-DSA private key to the context, replacing any
+ * previously bound key. The key is decoded and fully validated (its public
+ * component is re-derived and the embedded consistency hash checked) once
+ * here; every subsequent sign/verify call on \a self reuses the cached,
+ * decoded key instead of repeating that work. The bound key carries both
+ * private and public components, so it may also be used with the verify
+ * functions.
+ *
+ * @param [in] self  ML-DSA context
+ * @param [in] sk    Encoded private key (variant PRIVKEY_BYTES)
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
+ * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const uint8_t *sk);
+
+/**
+ * Bind an encoded ML-DSA public key to the context, replacing any
+ * previously bound key. The key is decoded once here; every subsequent
+ * verify call on \a self reuses the cached, decoded key instead of
+ * repeating that work. The bound key only carries the public component and
+ * so may only be used with the verify functions.
+ *
+ * @param [in] self  ML-DSA context
+ * @param [in] pk    Encoded public key (variant PUBKEY_BYTES)
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
+ * @retval IMB_ERR_PQC_KEYOP key decode failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const uint8_t *pk);
+
+/**
+ * Optional parameters for imb_ml_dsa_sign(). A NULL \a params pointer is
+ * equivalent to a zero-initialized structure: no context string, hedged
+ * (fresh-random) signing - the common-case default.
+ */
+typedef struct IMB_ML_DSA_SIGN_PARAMS {
+        /**
+         * Optional context string (FIPS 204 ctx) for domain separation.
+         * NULL together with ctx_len = 0 means no context string.
+         */
+        const uint8_t *ctx;
+        /** Context string length in bytes (0..255). */
+        size_t ctx_len;
+        /**
+         * Optional 32-byte randomizer.
+         * NULL requests hedged signing: the library generates a fresh
+         * random value internally for each call.
+         * Non-NULL uses the supplied 32 bytes verbatim - an all-zero
+         * buffer yields deterministic signing, any other value supplies
+         * caller-controlled entropy.
+         */
+        const uint8_t *rnd_32;
+} IMB_ML_DSA_SIGN_PARAMS;
+
+/**
+ * Optional parameters for imb_ml_dsa_verify(). A NULL \a params pointer is
+ * equivalent to a zero-initialized structure: no context string.
+ */
+typedef struct IMB_ML_DSA_VERIFY_PARAMS {
+        /**
+         * Optional context string (FIPS 204 ctx) for domain separation.
+         * NULL together with ctx_len = 0 means no context string.
+         */
+        const uint8_t *ctx;
+        /** Context string length in bytes (0..255). */
+        size_t ctx_len;
+} IMB_ML_DSA_VERIFY_PARAMS;
+
+/**
+ * Sign a message. Requires a private key to have been bound to \a self via
+ * imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
+ *
+ * @param [in]  self     ML-DSA context with a bound private key
+ * @param [out] sig      Signature buffer (variant SIG_BYTES)
+ * @param [out] sig_len  Produced signature length in bytes
+ * @param [in]  msg      Message buffer
+ * @param [in]  msg_len  Message length in bytes
+ * @param [in]  params   Optional signing parameters, or NULL for hedged
+ *                       signing with no context string
+ *
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_DST invalid \a sig or \a sig_len pointer
+ * @retval IMB_ERR_NULL_SRC invalid \a msg pointer, or invalid
+ *         \a params->ctx pointer
+ * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
+ * @retval IMB_ERR_PQC_SIGNOP signing operation failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg, size_t msg_len,
+                const IMB_ML_DSA_SIGN_PARAMS *params);
+
+/**
+ * Verify a signature over a message. Requires a public key to have been
+ * bound to \a self via imb_ml_dsa_keypair(),
+ * imb_ml_dsa_set_privkey() (private keys carry the public component too) or
+ * imb_ml_dsa_set_pubkey().
+ *
+ * @param [in] self     ML-DSA context with a bound public key
+ * @param [in] msg      Message buffer
+ * @param [in] msg_len  Message length in bytes
+ * @param [in] sig      Signature buffer
+ * @param [in] sig_len  Signature length in bytes
+ * @param [in] params   Optional verification parameters, or NULL for no
+ *                      context string
+ *
+ * @return operation status.
+ * @retval 0 the signature is valid
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_SRC invalid \a sig, \a msg or \a params->ctx pointer
+ * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
+ * @retval IMB_ERR_PQC_SIGNOP the signature is invalid, or verification
+ *         could not be performed
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *sig,
+                  size_t sig_len, const IMB_ML_DSA_VERIFY_PARAMS *params);
+
+/**
+ * Validate an encoded ML-DSA public key.
+ *
+ * @param [in] self  ML-DSA context
+ * @param [in] pk    Encoded public key (variant PUBKEY_BYTES)
+ * @return operation status.
+ * @retval 0 the key is valid
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const uint8_t *pk);
+
+/**
+ * Validate an encoded ML-DSA private key (decodes and checks consistency).
+ *
+ * @param [in] self  ML-DSA context
+ * @param [in] sk    Encoded private key (variant PRIVKEY_BYTES)
+ * @return operation status.
+ * @retval 0 the key is valid
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk);
+
+/**
+ * Derive an encoded public key from an encoded private key.
+ *
+ * @param [in]  self  ML-DSA context
+ * @param [in]  sk    Encoded private key (variant PRIVKEY_BYTES)
+ * @param [out] pk    Encoded public key buffer (variant PUBKEY_BYTES)
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
+ * @retval IMB_ERR_NULL_DST invalid \a pk pointer
+ * @retval IMB_ERR_PQC_KEYOP derivation failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const uint8_t *sk, uint8_t *pk);
 
 /*
  * =========================================================

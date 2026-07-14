@@ -165,3 +165,15 @@ EXPORTS
     imb_sm4_keyexp                            @139
     imb_get_ooo_mgr                           @140
     imb_get_flags                             @141
+    imb_ml_dsa_new                            @142
+    imb_ml_dsa_free                           @143
+    imb_ml_dsa_keypair                        @144
+    imb_ml_dsa_sign                           @145
+    imb_ml_dsa_verify                         @146
+    imb_ml_dsa_pubkey_validate                @147
+    imb_ml_dsa_privkey_validate               @148
+    imb_ml_dsa_pubkey_from_privkey            @149
+    imb_ml_dsa_sign_internal                  @150
+    imb_ml_dsa_verify_internal                @151
+    imb_ml_dsa_set_privkey                    @152
+    imb_ml_dsa_set_pubkey                     @153

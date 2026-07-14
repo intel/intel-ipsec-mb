@@ -58,6 +58,10 @@ imb_detect_os()
 # do compiler checks
 imb_compiler_check()
 
+# post-quantum cryptography (ML-DSA) requires perl for OpenSSL-style asm gen
+find_package(Perl REQUIRED)
+message(STATUS "PERL_EXECUTABLE...         ${PERL_EXECUTABLE}")
+
 # ##############################################################################
 # configure pre gen custom targets
 # ##############################################################################

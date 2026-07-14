@@ -112,6 +112,19 @@ macro(imb_set_proj_defaults)
       ""
       CACHE STRING "" FORCE)
 
+  # clear default release build ASM (GAS) flags: CMake's default -DNDEBUG is
+  # never consumed by the raw, non-preprocessed .s files generated for
+  # ML-DSA (e.g. keccak1600-x86_64.s), so clang flags it as an unused
+  # command-line argument warning. Mirror the CMAKE_C_FLAGS_RELEASE clearing
+  # above to avoid it.
+  set(CMAKE_ASM_FLAGS_RELEASE
+      ""
+      CACHE STRING "" FORCE)
+  # clear default debug build ASM (GAS) flags for the same reason
+  set(CMAKE_ASM_FLAGS_DEBUG
+      ""
+      CACHE STRING "" FORCE)
+
   if(WIN32)
     set(CMAKE_OBJECT_PATH_MAX 512)
     set(DEFAULT_INSTALL_PREFIX "C:/Program Files/intel-ipsec-mb")
@@ -294,7 +307,7 @@ macro(imb_add_target_spellcheck)
   find_program(CODESPELL NAMES ${CODESPELL_BIN})
 
   # ignore some needed words
-  set(CS_IGNORE_WORDS "iinclude,struc,fo,ue,od,ba,padd,BufferIn")
+  set(CS_IGNORE_WORDS "iinclude,struc,fo,ue,od,ba,padd,BufferIn,keypair")
 
   if(CODESPELL)
     add_custom_target(
@@ -304,6 +317,7 @@ macro(imb_add_target_spellcheck)
         bash -c "${CODESPELL} -d -L ${CS_IGNORE_WORDS} \
               -S '*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,imb-perf' \
               -S 'imb-kat,imb-xvalid' \
+              -S '*.pl' \
               ./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
               ReleaseNotes.md LICENSE ${CS_EXTRA_OPTS}"
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -322,3 +336,41 @@ macro(imb_add_target_doxy)
       VERBATIM)
   endif()
 endmacro()
+
+# ##############################################################################
+# PQC / OpenSSL perl-asm support
+# ##############################################################################
+
+# Determine the perl-asm output flavour for the current platform.
+macro(imb_perlasm_flavour OUT_VAR)
+  if(WIN32)
+    set(${OUT_VAR} "nasm")
+  else()
+    set(${OUT_VAR} "elf")
+  endif()
+endmacro()
+
+# Generate an assembly file from an OpenSSL-style perl-asm (.pl) script.
+#
+#   imb_add_perlasm(<src.pl> <dst-asm>)
+#
+# The generated assembly is written into the build tree (never committed).
+# Requires PERL_EXECUTABLE (find_package(Perl REQUIRED)) and the vendored
+# lib/openssl/crypto/perlasm/x86_64-xlate.pl helper.
+function(imb_add_perlasm SRC_PL DST_ASM)
+  imb_perlasm_flavour(_flavour)
+  get_filename_component(_dst_dir ${DST_ASM} DIRECTORY)
+  # OpenSSL-style perl-asm probes $ENV{CC} to detect assembler feature support
+  # (e.g. AVX2 / AVX512VL); the full vectorised code path is only emitted when
+  # CC resolves to a capable compiler.  Forward the project C compiler so the
+  # generated assembly is complete (not a degraded stub).
+  add_custom_command(
+    OUTPUT ${DST_ASM}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${_dst_dir}
+    COMMAND ${CMAKE_COMMAND} -E env "CC=${CMAKE_C_COMPILER}" ${PERL_EXECUTABLE}
+            ${SRC_PL} ${_flavour} ${DST_ASM}
+    DEPENDS ${SRC_PL} ${CMAKE_SOURCE_DIR}/lib/openssl/crypto/perlasm/x86_64-xlate.pl
+            ${CMAKE_SOURCE_DIR}/lib/openssl/crypto/perlasm/x86_64-support.pl
+    COMMENT "Generating ASM ${DST_ASM} from ${SRC_PL}"
+    VERBATIM)
+endfunction()

@@ -42,7 +42,7 @@ string(APPEND CMAKE_ASM_NASM_FLAGS
 
 # set C compiler flags
 set(CMAKE_C_FLAGS
-    "-fPIC -W -Wall -Wextra -Wmissing-declarations \
+    "-fPIC -fvisibility=hidden -W -Wall -Wextra -Wmissing-declarations \
 -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
 -Wformat-security -Wunreachable-code -Wmissing-noreturn \
 -Wsign-compare -Wno-endif-labels -Wstrict-prototypes \
@@ -93,6 +93,13 @@ set_source_files_properties(${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS
 # ##############################################################################
 
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C})
+
+# Exports are controlled via libIPSec_MB.def / opaque handle API, so the
+# ${LIB}_EXPORTS macro CMake adds by default for shared libraries is unused.
+# Disable it: it otherwise gets passed as -D to the raw (non-preprocessed)
+# ML-DSA .s assembly sources, which clang flags as an unused command-line
+# argument warning.
+set_target_properties(${LIB} PROPERTIES DEFINE_SYMBOL "")
 
 # set library SO version
 string(REPLACE "." ";" VERSION_LIST ${IPSEC_MB_VERSION})

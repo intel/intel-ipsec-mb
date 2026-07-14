@@ -168,6 +168,18 @@ if(SMX_NI)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T4})
 endif()
 
+# post-quantum: ML-DSA (FIPS 204) C sources. Vendored OpenSSL sources (the core
+# ML-DSA algorithm and the shared SHA-3/SHAKE implementation, including the x4
+# AVX512VL wrapper sha3_x4_avx512vl.c) live under lib/openssl/crypto; the
+# ipsec-mb glue (public API and internal ops) stays in lib/x86_64/ml_dsa. The
+# OPENSSL_ia32cap_P provider that drives vendored-OpenSSL asm kernels
+# (lib/x86_64/imb_ossl_ia32cap.c) is not ML-DSA specific - it is picked up
+# unconditionally via SRC_FILES_X86_64 above so any future vendored-OpenSSL
+# port (e.g. ML-KEM) can reuse it too.
+file(GLOB SRC_FILES_ML_DSA "${DIR_X86_64}/ml_dsa/*.c" "${DIR_CURRENT}/openssl/crypto/ml_dsa/*.c"
+     "${DIR_CURRENT}/openssl/crypto/sha/*.c")
+list(APPEND SRC_FILES_C ${SRC_FILES_ML_DSA})
+
 list(SORT SRC_FILES_C)
 
 # ##############################################################################
@@ -179,6 +191,43 @@ foreach(DIR ${DIR_SOURCES})
 endforeach()
 
 list(SORT SRC_FILES_ASM)
+
+# post-quantum: ML-DSA (FIPS 204) optimized asm kernels, generated from the
+# vendored OpenSSL perl-asm. The AVX2 NTT and the x4 AVX512VL Keccak/SHAKE
+# replace the portable-C baseline at run time (selected via OPENSSL_ia32cap_P).
+# On Linux the perl-asm emits GAS (.S, LANGUAGE ASM); on Windows it emits NASM
+# (.asm, LANGUAGE ASM_NASM) to match the imb_perlasm_flavour selection, and
+# avoid the MSVC_RUNTIME_LIBRARY configure error caused by GAS (as.exe from
+# Strawberry Perl MinGW) not being an MSVC-family assembler. The Linux output
+# uses an upper-case .S extension (rather than .s) so the assembler driver
+# treats it as assembler-with-cpp: this consumes compiler-driven flags like
+# -D/-MD/-MT/-MF instead of ignoring them (clang otherwise flags them as
+# unused command-line arguments on a raw, non-preprocessed .s file).
+if(WINDOWS)
+  set(MLDSA_NTT_S ${CMAKE_CURRENT_BINARY_DIR}/ml_dsa_ntt-x86_64.asm)
+  set(KECCAK1600_S ${CMAKE_CURRENT_BINARY_DIR}/keccak1600-x86_64.asm)
+  set(KECCAK_X4_S ${CMAKE_CURRENT_BINARY_DIR}/keccak1600x4-avx512vl.asm)
+  set(ML_DSA_ASM_LANGUAGE ASM_NASM)
+else()
+  set(MLDSA_NTT_S ${CMAKE_CURRENT_BINARY_DIR}/ml_dsa_ntt-x86_64.S)
+  set(KECCAK1600_S ${CMAKE_CURRENT_BINARY_DIR}/keccak1600-x86_64.S)
+  set(KECCAK_X4_S ${CMAKE_CURRENT_BINARY_DIR}/keccak1600x4-avx512vl.S)
+  set(ML_DSA_ASM_LANGUAGE ASM)
+endif()
+
+set(MLDSA_NTT_PL ${CMAKE_CURRENT_SOURCE_DIR}/openssl/crypto/ml_dsa/asm/ml_dsa_ntt-x86_64.pl)
+imb_add_perlasm(${MLDSA_NTT_PL} ${MLDSA_NTT_S})
+
+set(KECCAK1600_PL ${CMAKE_CURRENT_SOURCE_DIR}/openssl/crypto/sha/asm/keccak1600-x86_64.pl)
+imb_add_perlasm(${KECCAK1600_PL} ${KECCAK1600_S})
+
+set(KECCAK_X4_PL ${CMAKE_CURRENT_SOURCE_DIR}/openssl/crypto/sha/asm/keccak1600x4-avx512vl.pl)
+imb_add_perlasm(${KECCAK_X4_PL} ${KECCAK_X4_S})
+
+set(SRC_FILES_ML_DSA_ASM ${MLDSA_NTT_S} ${KECCAK1600_S} ${KECCAK_X4_S})
+set_source_files_properties(${SRC_FILES_ML_DSA_ASM} PROPERTIES GENERATED TRUE
+                                                               LANGUAGE ${ML_DSA_ASM_LANGUAGE})
+list(APPEND SRC_FILES_ASM ${SRC_FILES_ML_DSA_ASM})
 
 # ##############################################################################
 # set C compiler options
@@ -232,3 +281,30 @@ endforeach()
 
 # add include directories
 target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})
+
+# ##############################################################################
+# ML-DSA (FIPS 204) build wiring
+# ##############################################################################
+# The vendored OpenSSL ML-DSA sources compile against a self-contained compat
+# include tree rooted at include/openssl:
+#   include/openssl/crypto        - genuine ported OpenSSL headers (e.g. crypto/ml_dsa.h)
+#   include/openssl/crypto/ml_dsa - genuine ported OpenSSL ML-DSA headers
+#   include/openssl/internal      - genuine ported OpenSSL internal headers
+#   include/openssl/compat        - ipsec-mb stand-ins for OpenSSL headers that
+#                                    were not vendored (resolves <openssl/...>,
+#                                    "internal/...", and "crypto/types.h" includes)
+# Defining KECCAK1600_ASM (and leaving OPENSSL_NO_ASM undefined) enables the
+# asm-accelerated paths: ml_dsa_ntt.c selects the AVX2 NTT and ml_dsa_sample.c
+# pulls in the x4 AVX512VL SHAKE sampling, both chosen at run time via
+# OPENSSL_ia32cap_P (populated by the generic lib/x86_64/imb_ossl_ia32cap.c,
+# built unconditionally via SRC_FILES_X86_64, see above). These definitions
+# are applied to the ML-DSA sources only (sha3_x4_avx512vl.c needs
+# KECCAK1600_ASM).
+target_include_directories(
+  ${LIB} PRIVATE ${DIR_INCLUDE}/ml_dsa ${DIR_INCLUDE}/openssl
+                 ${DIR_INCLUDE}/openssl/crypto/ml_dsa ${DIR_INCLUDE}/openssl/compat)
+foreach(FILE ${SRC_FILES_ML_DSA})
+  set_source_files_properties(
+    ${FILE} PROPERTIES COMPILE_DEFINITIONS
+                       "${LIB_DEFINES};KECCAK1600_ASM")
+endforeach()

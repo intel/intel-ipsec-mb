@@ -42,7 +42,7 @@ set(CMAKE_C_FLAGS
 -Wformat-security -Wunreachable-code -Wmissing-noreturn \
 -Wsign-compare -Wno-endif-labels -Wstrict-prototypes \
 -Wmissing-prototypes -Wold-style-definition \
--fno-delete-null-pointer-checks -fwrapv -std=c99")
+-fno-delete-null-pointer-checks -fwrapv -std=gnu99")
 
 if(NOT DEBUG_OPT)
   set(DEBUG_OPT "-O0")
@@ -96,6 +96,12 @@ endif()
 # ##############################################################################
 
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
+
+target_link_libraries(${LIB} PRIVATE bcrypt)
+
+# Exports are controlled via ${LIB}.def, so the ${LIB}_EXPORTS macro CMake
+# adds by default for shared libraries is unused; disable it.
+set_target_properties(${LIB} PROPERTIES DEFINE_SYMBOL "")
 
 # ##############################################################################
 # library install rules

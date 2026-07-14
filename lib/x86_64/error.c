@@ -92,7 +92,12 @@ IMB_DLL_LOCAL const int imb_errno_types[] = { IMB_ERR_NULL_MBMGR,
                                               IMB_ERR_BURST_OOO,
                                               IMB_ERR_SELFTEST,
                                               IMB_ERR_BURST_SUITE_ID,
-                                              IMB_ERR_JOB_SGL_STATE };
+                                              IMB_ERR_JOB_SGL_STATE,
+                                              IMB_ERR_PQC_KEYOP,
+                                              IMB_ERR_PQC_SIGNOP,
+                                              IMB_ERR_PQC_NO_KEY,
+                                              IMB_ERR_PQC_ALG,
+                                              IMB_ERR_PQC_INIT };
 
 int
 imb_get_errno(IMB_MGR *mb_mgr)
@@ -226,6 +231,16 @@ imb_get_strerror(int errnum)
                 return "Invalid cipher suite ID (async burst API)";
         case IMB_ERR_JOB_SGL_STATE:
                 return "Invalid SGL state";
+        case IMB_ERR_PQC_KEYOP:
+                return "PQC key generation or key parse failure";
+        case IMB_ERR_PQC_SIGNOP:
+                return "PQC sign or verify operation failure";
+        case IMB_ERR_PQC_NO_KEY:
+                return "PQC operation attempted with no key bound to the context";
+        case IMB_ERR_PQC_ALG:
+                return "Invalid PQC algorithm/parameter set selector";
+        case IMB_ERR_PQC_INIT:
+                return "PQC context allocation or initialization failure";
         default:
                 return strerror(errnum);
         }
