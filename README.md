@@ -51,6 +51,12 @@ which provides industry-leading performance on a range of Intel(R) Processors.
 For information on how the library works, see the Intel White Paper:
 ["Fast Multi-buffer IPsec Implementations on Intel Architecture Processors". Jim Guilford, Sean Gulley, et. al.](https://github.com/intel/intel-ipsec-mb/wiki/doc/fast-multi-buffer-ipsec-implementations-ia-processors-paper.pdf)
 
+The library also provides post-quantum signature support for ML-DSA-44,
+ML-DSA-65 and ML-DSA-87 (FIPS 204) through the opaque `IMB_ML_DSA` handle and
+the `imb_ml_dsa_*` API.
+The ML-DSA implementation is derived from OpenSSL and is licensed under the
+Apache License 2.0 (see LICENSE.OpenSSL).
+
 Table 1. List of supported cipher algorithms and their implementations.
 ```
 +------------------------------------------------------------------------------------------------------------+

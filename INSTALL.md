@@ -115,6 +115,10 @@ cmake -DSAFE_OPTIONS=OFF ..
 cmake -DSAFE_DATA=OFF -DSAFE_PARAM=OFF -DSAFE_LOOKUP=OFF ..
 ```
 
+- Post-quantum cryptography (ML-DSA / FIPS 204) is always built. Perl is
+  required at configure time to generate assembly from the vendored
+  OpenSSL-style scripts.
+
 ## Creating Installation Packages
 
 ### Linux Packages (DEB and RPM)
