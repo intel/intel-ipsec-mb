@@ -42,6 +42,8 @@
 %define NUM_KEYS 11
 %endif
 
+%define APPEND(a,b) a %+ b
+
 extern AES_XCBC_X16
 extern AES_XCBC_X16_FLUSH
 
@@ -380,6 +382,11 @@ align_label
 
 %ifdef SAFE_DATA
         vpxor   xmm0, xmm0, xmm0
+
+%ifidn %%SUBMIT_FLUSH, SUBMIT
+        ;; Clear ICV
+        vmovdqa [state + _aes_xcbc_args_ICV + idx], xmm0
+
         ;; Clear final block (32 bytes)
         vmovdqa [lane_data + _xcbc_final_block], ymm0
 
@@ -389,7 +396,30 @@ align_label
         vmovdqa [state + _aes_xcbc_args_key_tab + round * (16*16) + idx], xmm0
 %assign round (round + 1)
 %endrep
-%endif
+
+%else   ;; FLUSH
+        ;; Clear ICV, final blocks and expanded keys in all NULL lanes
+%assign I 0
+%rep 16
+        cmp     qword [state + _aes_xcbc_ldata + I * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
+        jne     APPEND(%%skip_clear_,I)
+
+        vmovdqa [state + _aes_xcbc_args_ICV + I*16], xmm0
+
+        lea     lane_data, [state + _aes_xcbc_ldata + (I * _XCBC_LANE_DATA_size)]
+        vmovdqu64 [lane_data + _xcbc_final_block], ymm0
+
+%assign round 0
+%rep NUM_KEYS
+        vmovdqa [state + _aes_xcbc_args_key_tab + round * (16*16) + I*16], xmm0
+%assign round (round + 1)
+%endrep
+
+APPEND(%%skip_clear_,I):
+%assign I (I+1)
+%endrep
+%endif  ;; SUBMIT_FLUSH
+%endif  ;; SAFE_DATA
 
 align_label
 %%_return:
