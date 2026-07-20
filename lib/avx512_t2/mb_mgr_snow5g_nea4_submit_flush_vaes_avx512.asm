@@ -105,7 +105,7 @@ mksection .text
 %endmacro
 
 
-%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 12
+%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 13
 %define %%SUBMIT_FLUSH    %1  ;; [in] submit/flush selector
 %define %%UNUSED_LANES    %2  ;; [clobbered] GP register
 %define %%LANE            %3  ;; [clobbered] GP register
@@ -116,8 +116,9 @@ mksection .text
 %define %%TGP4            %8  ;; [clobbered] GP register
 %define %%TGP5            %9  ;; [clobbered] GP register
 %define %%MIN_COMMON_LEN  %10 ;; [clobbered] GP register
-%define %%OFFSET          %11 ;; [clobbered] GP register
-%define %%GEN             %12 ;; [in] avx512_gen1/avx512_gen2
+%define %%OFFSET0         %11 ;; [clobbered] GP register
+%define %%OFFSET1         %12 ;; [clobbered] GP register
+%define %%GEN             %13 ;; [in] avx512_gen1/avx512_gen2
 
         xor     job_rax, job_rax        ;; assume NULL return job
 
@@ -150,10 +151,12 @@ mksection .text
         ;; LD_ST_MASK is used to determine if any data should
         ;; be read from src and written to dst
         ;; When set to 0 so no reads/writes occur.
-        ;; In this case, input/output pointers are set to a valid address.
+        ;; In this case, input/output pointers are set to a valid address (different from each other).
         mov             word [state + _snow5g_args_LD_ST_MASK + %%LANE*2], 0
         mov             [state + _snow5g_args_in + %%LANE*8], state
-        mov             [state + _snow5g_args_out + %%LANE*8], state
+        lea             %%TGP1, [state + 16] ; set output pointer to a valid address (different from input)
+        mov             [state + _snow5g_args_out + %%LANE*8], %%TGP1
+
 
         mov             dword [state + _snow5g_lens_dqw + %%LANE*4], 15
 
@@ -210,19 +213,19 @@ align_loop
         kmovb           k1, byte [state + _snow5g_arg_LP_INIT_MASK]
 
         SNOW5G_KEYSTREAM_X2 state, %%MIN_COMMON_LEN, {state + _snow5g_args_in}, \
-                        {state + _snow5g_args_out}, %%OFFSET, %%TGP0, %%TGP1, k1
+                        {state + _snow5g_args_out}, %%OFFSET0, %%OFFSET1, %%TGP0, %%TGP1, k1
 
         ;; Update src/dst pointers for lanes not in INIT
         mov             BYTE(%%TGP0), [state + _snow5g_arg_LP_INIT_MASK]
         test            BYTE(%%TGP0), 0x3
         jnz             %%_skip_ptr_0
-        add             [state + _snow5g_args_in], %%OFFSET
-        add             [state + _snow5g_args_out], %%OFFSET
+        add             [state + _snow5g_args_in], %%OFFSET0
+        add             [state + _snow5g_args_out], %%OFFSET0
 %%_skip_ptr_0:
         test            BYTE(%%TGP0), 0xC
         jnz             %%_skip_ptr_1
-        add             [state + _snow5g_args_in + 8], %%OFFSET
-        add             [state + _snow5g_args_out + 8], %%OFFSET
+        add             [state + _snow5g_args_in + 8], %%OFFSET1
+        add             [state + _snow5g_args_out + 8], %%OFFSET1
 %%_skip_ptr_1:
 
 align_label
@@ -327,10 +330,11 @@ align_label
         mov             dword [state + _snow5g_lens_dqw + %%LANE*4], 0xFFFFFFFF
 
         ;; required in case of flush
-        ;; Input/output pointers are set to a valid address.
+        ;; Input/output pointers are set to a valid address (different from each other).
         mov             word [state + _snow5g_args_LD_ST_MASK + %%LANE*2], 0
         mov             [state + _snow5g_args_in + %%LANE*8], state
-        mov             [state + _snow5g_args_out + %%LANE*8], state
+        lea             %%TGP1, [state + 16] ; set output pointer to a valid address (different from input)
+        mov             [state + _snow5g_args_out + %%LANE*8], %%TGP1
 
         ;; decrement number of jobs in use
         dec             qword [state + _snow5g_lanes_in_use]
@@ -388,7 +392,7 @@ MKGLOBAL(SUBMIT_JOB_SNOW5G_NEA4_GEN2,function,internal)
 align_function
 SUBMIT_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 submit, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
+        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 submit, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, rax, avx512_gen2
         SNOW5G_FUNC_END
         ret
 
@@ -398,7 +402,7 @@ MKGLOBAL(FLUSH_JOB_SNOW5G_NEA4_GEN2,function,internal)
 align_function
 FLUSH_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 flush, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
+        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 flush, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, rax, avx512_gen2
         SNOW5G_FUNC_END
         ret
 
