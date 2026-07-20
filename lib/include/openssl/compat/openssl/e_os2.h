@@ -35,6 +35,7 @@
 #define IMB_ML_DSA_COMPAT_OPENSSL_E_OS2_H
 
 #include "openssl_compat.h"
+#include <limits.h>
 
 #ifndef OPENSSL_EXPORT
 #define OPENSSL_EXPORT extern

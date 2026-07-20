@@ -79,7 +79,7 @@ set_source_files_properties(
 # code plus the ipsec-mb glue) built at the MSVC default optimization level
 # (i.e. unoptimized) in Release builds, even though the hand-written AVX2 NTT
 # and AVX512VL x4 SHAKE asm kernels are dispatched correctly at run time.
-set_source_files_properties(${SRC_FILES_ML_DSA}
+set_source_files_properties(${SRC_FILES_ML_DSA} ${SRC_FILES_ML_KEM}
                             PROPERTIES COMPILE_FLAGS "$<$<CONFIG:RELEASE>:/Oi /O2>")
 
 # generate windows DEF file

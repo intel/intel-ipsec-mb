@@ -67,6 +67,17 @@
 #define EVP_PKEY_ML_DSA_87 1459
 #endif
 
+/* ML-KEM algorithm identifiers (match OpenSSL NID values, FIPS 203). */
+#ifndef NID_ML_KEM_512
+#define NID_ML_KEM_512 1454
+#endif
+#ifndef NID_ML_KEM_768
+#define NID_ML_KEM_768 1455
+#endif
+#ifndef NID_ML_KEM_1024
+#define NID_ML_KEM_1024 1456
+#endif
+
 typedef struct {
         int rate;    /* block size in bytes: 168 (SHAKE-128) or 136 (SHAKE-256) */
         int md_size; /* nominal output bytes: 16 or 32 */
@@ -85,6 +96,9 @@ typedef void ENGINE;
 
 static EVP_MD imb_evp_shake128 = { 168, 16, 128, 0x1F, "SHAKE-128" };
 static EVP_MD imb_evp_shake256 = { 136, 32, 256, 0x1F, "SHAKE-256" };
+/* SHA3-256/512 are used by ML-KEM for G(), H() and J(); pad=0x06 (FIPS 202). */
+static EVP_MD imb_evp_sha3_256 = { 136, 32, 256, 0x06, "SHA3-256" };
+static EVP_MD imb_evp_sha3_512 = { 72, 64, 512, 0x06, "SHA3-512" };
 
 static ossl_inline ossl_unused EVP_MD *
 EVP_MD_fetch(OSSL_LIB_CTX *c, const char *name, const char *propq)
@@ -95,6 +109,10 @@ EVP_MD_fetch(OSSL_LIB_CTX *c, const char *name, const char *propq)
                 return &imb_evp_shake128;
         if (name != NULL && (strcmp(name, "SHAKE-256") == 0 || strcmp(name, "SHAKE256") == 0))
                 return &imb_evp_shake256;
+        if (name != NULL && (strcmp(name, "SHA3-256") == 0 || strcmp(name, "SHA3_256") == 0))
+                return &imb_evp_sha3_256;
+        if (name != NULL && (strcmp(name, "SHA3-512") == 0 || strcmp(name, "SHA3_512") == 0))
+                return &imb_evp_sha3_512;
         return NULL;
 }
 
@@ -197,6 +215,27 @@ static ossl_inline ossl_unused int
 EVP_DigestFinalXOF(EVP_MD_CTX *ctx, uint8_t *out, size_t len)
 {
         return EVP_DigestSqueeze(ctx, out, len);
+}
+
+/*
+ * Fixed-length digest finalisation (SHA3-256/SHA3-512), used by ML-KEM for
+ * G(), H() and the pubkey-hash / implicit-rejection derivations.
+ */
+static ossl_inline ossl_unused int
+EVP_DigestFinal_ex(EVP_MD_CTX *ctx, uint8_t *out, unsigned int *outlen)
+{
+        size_t sz;
+
+        if (ctx == NULL || ctx->md == NULL)
+                return 0;
+
+        sz = (size_t) ctx->md->md_size;
+        if (!ossl_sha3_final(&ctx->sctx, out, sz))
+                return 0;
+
+        if (outlen != NULL)
+                *outlen = (unsigned int) sz;
+        return 1;
 }
 
 #endif /* IMB_ML_DSA_COMPAT_EVP_H */

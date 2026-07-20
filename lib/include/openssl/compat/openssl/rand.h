@@ -27,9 +27,9 @@
 
 /*
  * Compatibility shim for <openssl/rand.h> used by the vendored ML-DSA
- * (FIPS 204) sources.  RAND_priv_bytes_ex() is routed to the libipsec-mb
- * random source.  Note OpenSSL returns 1 on success, whereas imb_get_random()
- * returns 0 on success.
+ * (FIPS 204) and ML-KEM (FIPS 203) sources.  RAND_priv_bytes_ex() and
+ * RAND_bytes_ex() are routed to the intel-ipsec-mb random source.  Note OpenSSL
+ * returns 1 on success, whereas imb_get_random() returns 0 on success.
  */
 
 #ifndef IMB_ML_DSA_COMPAT_OPENSSL_RAND_H
@@ -42,6 +42,14 @@
 
 static ossl_inline ossl_unused int
 RAND_priv_bytes_ex(void *libctx, unsigned char *buf, size_t num, unsigned int strength)
+{
+        (void) libctx;
+        (void) strength;
+        return imb_get_random(buf, num) == 0;
+}
+
+static ossl_inline ossl_unused int
+RAND_bytes_ex(void *libctx, unsigned char *buf, size_t num, unsigned int strength)
 {
         (void) libctx;
         (void) strength;

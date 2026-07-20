@@ -177,3 +177,12 @@ EXPORTS
     imb_ml_dsa_verify_internal                @151
     imb_ml_dsa_set_privkey                    @152
     imb_ml_dsa_set_pubkey                     @153
+    imb_ml_kem_new                            @154
+    imb_ml_kem_free                           @155
+    imb_ml_kem_keypair                        @156
+    imb_ml_kem_set_privkey                    @157
+    imb_ml_kem_set_pubkey                     @158
+    imb_ml_kem_encap                          @159
+    imb_ml_kem_decap                          @160
+    imb_ml_kem_pubkey_validate                @161
+    imb_ml_kem_privkey_validate               @162

@@ -377,6 +377,7 @@ typedef enum {
         IMB_ERR_PQC_NO_KEY, /**< PQC operation attempted with no key bound to the context */
         IMB_ERR_PQC_ALG,    /**< Invalid PQC algorithm/parameter set selector */
         IMB_ERR_PQC_INIT,   /**< PQC context allocation or initialization failure */
+        IMB_ERR_PQC_KEMOP,  /**< PQC key-encapsulation encap/decap operation failure */
         IMB_ERR_MAX         /* don't move this one */
 } IMB_ERR;
 
@@ -769,6 +770,7 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_SELF_TEST_TYPE_KAT_AUTH      "KAT_Auth"
 #define IMB_SELF_TEST_TYPE_KAT_AEAD      "KAT_AEAD"
 #define IMB_SELF_TEST_TYPE_KAT_SIGNATURE "KAT_Signature"
+#define IMB_SELF_TEST_TYPE_KAT_KEM       "KAT_KEM"
 
 /**
  * CPU flags needed for each implementation
@@ -1886,6 +1888,273 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk);
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const uint8_t *sk, uint8_t *pk);
+
+/*
+ * =========================================================
+ * =========================================================
+ * ML-KEM (FIPS 203) - Module-Lattice-Based Key-Encapsulation Mechanism
+ * =========================================================
+ * =========================================================
+ */
+
+/**
+ * Opaque ML-KEM context handle. Created with imb_ml_kem_new() and released
+ * with imb_ml_kem_free(). Bound to a single parameter set for its lifetime.
+ *
+ * The context also caches at most one decoded/generated key at a time (see
+ * imb_ml_kem_keypair(), imb_ml_kem_set_privkey() and imb_ml_kem_set_pubkey()),
+ * which every subsequent encapsulate/decapsulate call reuses. This mirrors
+ * the key-lifecycle model used by an OpenSSL provider: decode/import a key
+ * once, then perform many KEM operations against it. Binding a new key to a
+ * context replaces the previously bound one. A context is not safe for
+ * concurrent use by multiple threads; independent threads should use their
+ * own IMB_ML_KEM context (they may share the same key material by calling
+ * imb_ml_kem_set_privkey()/imb_ml_kem_set_pubkey() with the same encoded
+ * bytes on each context).
+ */
+struct IMB_ML_KEM;
+typedef struct IMB_ML_KEM IMB_ML_KEM;
+
+/**
+ * ML-KEM parameter set selector (FIPS 203).
+ */
+typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB_ML_KEM_ALG;
+
+/* Encoded encapsulation (public) key, decapsulation (private) key and
+ * ciphertext sizes in bytes, and the fixed shared-secret size. See FIPS 203
+ * Section 8, Table 2. */
+#define IMB_ML_KEM_512_PUBKEY_BYTES     800
+#define IMB_ML_KEM_512_PRIVKEY_BYTES    1632
+#define IMB_ML_KEM_512_CIPHERTEXT_BYTES 768
+
+#define IMB_ML_KEM_768_PUBKEY_BYTES     1184
+#define IMB_ML_KEM_768_PRIVKEY_BYTES    2400
+#define IMB_ML_KEM_768_CIPHERTEXT_BYTES 1088
+
+#define IMB_ML_KEM_1024_PUBKEY_BYTES     1568
+#define IMB_ML_KEM_1024_PRIVKEY_BYTES    3168
+#define IMB_ML_KEM_1024_CIPHERTEXT_BYTES 1568
+
+/** Shared secret size in bytes: fixed across all ML-KEM parameter sets. */
+#define IMB_ML_KEM_SHARED_SECRET_BYTES 32
+
+/**
+ * @brief Allocate and initialize an ML-KEM context for a parameter set.
+ *
+ * @param [in]  mgr      Pointer to initialized IMB_MGR structure
+ * @param [in]  alg      ML-KEM parameter set (IMB_ML_KEM_512/768/1024)
+ * @param [out] new_self Receives the new IMB_ML_KEM context on success, or
+ *                       NULL on failure
+ *
+ * @return Status code.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_MBMGR invalid \a mgr pointer
+ * @retval IMB_ERR_NULL_CTX invalid \a new_self pointer
+ * @retval IMB_ERR_PQC_ALG invalid \a alg
+ * @retval IMB_ERR_PQC_INIT context allocation or initialization failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_new(IMB_MGR *mgr, IMB_ML_KEM_ALG alg, IMB_ML_KEM **new_self);
+
+/**
+ * @brief Release an ML-KEM context allocated by imb_ml_kem_new(), along with
+ * any key currently bound to it.
+ *
+ * @param [in] self  ML-KEM context (may be NULL)
+ */
+IMB_DLL_EXPORT void
+imb_ml_kem_free(IMB_ML_KEM *self);
+
+/**
+ * Optional parameters for imb_ml_kem_keypair(). A NULL \a params pointer is
+ * equivalent to a zero-initialized structure: fresh-random key generation -
+ * the common-case default.
+ */
+typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
+        /**
+         * Optional 64-byte key generation seed: the FIPS 203 "d" (first 32
+         * bytes) concatenated with "z" (last 32 bytes).
+         * NULL requests fresh-random key generation: the library generates
+         * a fresh random seed internally for each call.
+         * Non-NULL uses the supplied 64 bytes verbatim, producing a
+         * deterministic key pair.
+         */
+        const uint8_t *seed_d_z;
+} IMB_ML_KEM_KEYGEN_PARAMS;
+
+/**
+ * @brief Generate an ML-KEM key pair (FIPS 203 KeyGen) and bind it to \a self,
+ * replacing any previously bound key. The generated key carries both
+ * private and public components, so \a self may be used with both the
+ * encapsulate and decapsulate functions immediately afterwards.
+ *
+ * @param [in]  self    ML-KEM context
+ * @param [out] ek      Encoded encapsulation key buffer (variant PUBKEY_BYTES)
+ * @param [out] dk      Encoded decapsulation key buffer (variant
+ *                      PRIVKEY_BYTES)
+ * @param [in]  params  Optional key generation parameters, or NULL for
+ *                      fresh-random key generation
+ *
+ * @return Status code.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a ek or \a dk pointer
+ * @retval IMB_ERR_PQC_KEYOP key generation operation failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_keypair(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk,
+                   const IMB_ML_KEM_KEYGEN_PARAMS *params);
+
+/**
+ * @brief Bind an encoded ML-KEM decapsulation (private) key to the context,
+ * replacing any previously bound key. The key is decoded and fully
+ * validated (its public component is re-derived and the embedded
+ * consistency hash checked - FIPS 203 Section 7.3 decapsulation key check)
+ * once here; every subsequent decapsulate call on \a self reuses the
+ * cached, decoded key instead of repeating that work. The bound key carries
+ * both private and public components, so it may also be used with the
+ * encapsulate functions.
+ *
+ * @param [in] self  ML-KEM context
+ * @param [in] dk    Encoded decapsulation key (variant PRIVKEY_BYTES)
+ * @return Status code.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a dk pointer
+ * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_set_privkey(IMB_ML_KEM *self, const uint8_t *dk);
+
+/**
+ * @brief Bind an encoded ML-KEM encapsulation (public) key to the context,
+ * replacing any previously bound key. The key is decoded once here (its
+ * encoded length and coefficient ranges are checked - FIPS 203 Section 7.2
+ * encapsulation key check); every subsequent encapsulate call on \a self
+ * reuses the cached, decoded key instead of repeating that work. The bound
+ * key only carries the public component and so may only be used with the
+ * encapsulate functions.
+ *
+ * @param [in] self  ML-KEM context
+ * @param [in] ek    Encoded encapsulation key (variant PUBKEY_BYTES)
+ * @return Status code.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
+ * @retval IMB_ERR_PQC_KEYOP key decode failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const uint8_t *ek);
+
+/**
+ * Optional parameters for imb_ml_kem_encap(). A NULL \a params pointer is
+ * equivalent to a zero-initialized structure: fresh-random encapsulation -
+ * the common-case default.
+ */
+typedef struct IMB_ML_KEM_ENCAP_PARAMS {
+        /**
+         * Optional 32-byte randomness (FIPS 203 "m").
+         * NULL requests fresh-random encapsulation: the library generates a
+         * fresh random value internally for each call.
+         * Non-NULL uses the supplied 32 bytes verbatim, producing
+         * deterministic encapsulation output (e.g. for ACVP conformance
+         * testing).
+         */
+        const uint8_t *m_32;
+} IMB_ML_KEM_ENCAP_PARAMS;
+
+/**
+ * @brief Encapsulate, producing a ciphertext and shared secret. Requires an
+ * encapsulation key to have been bound to \a self via imb_ml_kem_keypair(),
+ * imb_ml_kem_set_privkey() (private keys carry the public component too) or
+ * imb_ml_kem_set_pubkey().
+ *
+ * @param [in]  self           ML-KEM context with a bound encapsulation key
+ * @param [out] ct             Ciphertext buffer (variant CIPHERTEXT_BYTES)
+ * @param [out] shared_secret  Shared secret buffer
+ *                             (IMB_ML_KEM_SHARED_SECRET_BYTES)
+ * @param [in]  params         Optional encapsulation parameters, or NULL for
+ *                             fresh-random encapsulation
+ *
+ * @return Status code.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_DST invalid \a ct or \a shared_secret pointer
+ * @retval IMB_ERR_PQC_NO_KEY no encapsulation key bound to \a self
+ * @retval IMB_ERR_PQC_KEMOP encapsulation operation failed
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_encap(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret,
+                 const IMB_ML_KEM_ENCAP_PARAMS *params);
+
+/**
+ * Reserved opaque decapsulation-parameters type (future use).
+ * imb_ml_kem_decap() currently ignores this parameter; pass NULL.
+ */
+struct IMB_ML_KEM_DECAP_PARAMS;
+typedef struct IMB_ML_KEM_DECAP_PARAMS IMB_ML_KEM_DECAP_PARAMS;
+
+/**
+ * @brief Decapsulate, recovering the shared secret from a ciphertext.
+ * Requires a decapsulation key to have been bound to \a self via
+ * imb_ml_kem_keypair()
+ * or imb_ml_kem_set_privkey().
+ *
+ * Per FIPS 203, decapsulation never signals a cryptographic failure for a
+ * content-invalid (but correctly sized) ciphertext: the "implicit
+ * rejection" mechanism always returns a (pseudorandom, but deterministic per
+ * key and ciphertext) shared secret in that case. Only a ciphertext whose
+ * length does not match the bound parameter set is rejected as an error
+ * (FIPS 203 Section 7.3 mandates this length check on every call).
+ *
+ * @param [in]  self           ML-KEM context with a bound decapsulation key
+ * @param [out] shared_secret  Shared secret buffer
+ *                             (IMB_ML_KEM_SHARED_SECRET_BYTES)
+ * @param [in]  ct             Ciphertext buffer
+ * @param [in]  ct_len         Ciphertext length in bytes (must equal the
+ *                             bound parameter set's CIPHERTEXT_BYTES)
+ * @param [in]  params         Reserved for future use; pass NULL
+ *
+ * @return Status code.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_DST invalid \a shared_secret pointer
+ * @retval IMB_ERR_NULL_SRC invalid \a ct pointer
+ * @retval IMB_ERR_PQC_NO_KEY no decapsulation key bound to \a self
+ * @retval IMB_ERR_PQC_KEMOP decapsulation failed (e.g. \a ct_len mismatch)
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, size_t ct_len,
+                 const IMB_ML_KEM_DECAP_PARAMS *params);
+
+/**
+ * @brief Validate an encoded ML-KEM encapsulation (public) key.
+ *
+ * @param [in] self  ML-KEM context
+ * @param [in] ek    Encoded encapsulation key (variant PUBKEY_BYTES)
+ * @return Status code.
+ * @retval 0 the key is valid
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const uint8_t *ek);
+
+/**
+ * @brief Validate an encoded ML-KEM decapsulation (private) key (decodes and
+ * checks consistency).
+ *
+ * @param [in] self  ML-KEM context
+ * @param [in] dk    Encoded decapsulation key (variant PRIVKEY_BYTES)
+ * @return Status code.
+ * @retval 0 the key is valid
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_KEY invalid \a dk pointer
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ */
+IMB_DLL_EXPORT int
+imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const uint8_t *dk);
 
 /*
  * =========================================================

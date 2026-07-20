@@ -26,21 +26,18 @@
 *******************************************************************************/
 
 /*
- * Compatibility shim for <openssl/proverr.h> used by the vendored ML-DSA
- * (FIPS 204) sources.  The reason codes only feed ERR_raise(), which is a
- * no-op here, so any distinct integer values are sufficient.
+ * Compatibility shim for "crypto/evp.h" used by the vendored ML-KEM
+ * (FIPS 203) sources.  "crypto/ml_kem.h" includes this header but does not
+ * reference any of the internal EVP_PKEY types it normally declares - it
+ * only needs the transitively-available EVP_MD/EVP_MD_CTX/OSSL_LIB_CTX and
+ * CRYPTO_ONCE types (matching what real OpenSSL's "crypto/evp.h" eventually
+ * pulls in), which are already provided by the existing ML-DSA compat shims.
  */
 
-#ifndef IMB_ML_DSA_COMPAT_OPENSSL_PROVERR_H
-#define IMB_ML_DSA_COMPAT_OPENSSL_PROVERR_H
+#ifndef IMB_ML_KEM_COMPAT_CRYPTO_EVP_H
+#define IMB_ML_KEM_COMPAT_CRYPTO_EVP_H
 
-#include <openssl/err.h>
+#include <openssl/types.h>
+#include <openssl/crypto.h>
 
-#ifndef PROV_R_BAD_LENGTH
-#define PROV_R_BAD_LENGTH 0
-#endif
-#ifndef PROV_R_INVALID_KEY
-#define PROV_R_INVALID_KEY 0
-#endif
-
-#endif /* IMB_ML_DSA_COMPAT_OPENSSL_PROVERR_H */
+#endif /* IMB_ML_KEM_COMPAT_CRYPTO_EVP_H */

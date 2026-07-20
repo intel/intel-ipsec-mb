@@ -26,21 +26,12 @@
 *******************************************************************************/
 
 /*
- * Compatibility shim for <openssl/proverr.h> used by the vendored ML-DSA
- * (FIPS 204) sources.  The reason codes only feed ERR_raise(), which is a
- * no-op here, so any distinct integer values are sufficient.
+ * Compatibility shim for <openssl/bio.h> used by the vendored ML-KEM
+ * (FIPS 203) sources.  "crypto/ml_kem.h" includes this header but does not
+ * reference any BIO type or function, so this header only needs to exist.
  */
 
-#ifndef IMB_ML_DSA_COMPAT_OPENSSL_PROVERR_H
-#define IMB_ML_DSA_COMPAT_OPENSSL_PROVERR_H
+#ifndef IMB_ML_KEM_COMPAT_OPENSSL_BIO_H
+#define IMB_ML_KEM_COMPAT_OPENSSL_BIO_H
 
-#include <openssl/err.h>
-
-#ifndef PROV_R_BAD_LENGTH
-#define PROV_R_BAD_LENGTH 0
-#endif
-#ifndef PROV_R_INVALID_KEY
-#define PROV_R_INVALID_KEY 0
-#endif
-
-#endif /* IMB_ML_DSA_COMPAT_OPENSSL_PROVERR_H */
+#endif /* IMB_ML_KEM_COMPAT_OPENSSL_BIO_H */

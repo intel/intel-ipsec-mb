@@ -19,7 +19,8 @@ Files were ported from OpenSSL at commit:
 ## `compat/` — ipsec-mb compatibility shims
 
 `compat/` provides header-only stand-ins for OpenSSL headers that the ML-DSA
-port needs at compile time but that were *not* vendored from OpenSSL.
+and ML-KEM ports need at compile time but that were *not* vendored from
+OpenSSL.
 Sub-folders mirror the OpenSSL include namespace each stub replaces
 (`compat/openssl/` for `<openssl/*.h>`, `compat/internal/` for
 `"internal/*.h"`, `compat/crypto/` for `"crypto/*.h"`), so the vendored

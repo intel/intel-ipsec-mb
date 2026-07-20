@@ -1385,8 +1385,8 @@ genkey(const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX *mdctx, uint8_t *pubenc
 
         ret = 1;
 end:
-        OPENSSL_cleanse((void *) augmented_seed, ML_KEM_RANDOM_BYTES);
-        OPENSSL_cleanse((void *) sigma, ML_KEM_RANDOM_BYTES);
+        OPENSSL_cleanse(augmented_seed, sizeof(augmented_seed));
+        OPENSSL_cleanse(hashed, sizeof(hashed));
         if (ret == 0) {
                 ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
                                "internal error while generating %s private key",
@@ -1514,7 +1514,7 @@ end:
  * (non-zero) return from this function.
  */
 static __owur int
-add_storage(scalar *pub, scalar *priv, int private, int dup, ML_KEM_KEY *key)
+add_storage(scalar *pub, scalar *priv, const int private, const int dup, ML_KEM_KEY *key)
 {
         int rank = key->vinfo->rank;
 

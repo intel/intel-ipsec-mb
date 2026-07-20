@@ -102,7 +102,10 @@ SET_ERRNO_TYPES \
         IMB_ERR_JOB_SGL_STATE, \
         IMB_ERR_PQC_KEYOP, \
         IMB_ERR_PQC_SIGNOP, \
-        IMB_ERR_PQC_NO_KEY
+        IMB_ERR_PQC_NO_KEY, \
+        IMB_ERR_PQC_ALG, \
+        IMB_ERR_PQC_INIT, \
+        IMB_ERR_PQC_KEMOP
 
 ;; Reset global imb_errno to 0
 %macro IMB_ERR_CHECK_RESET 0

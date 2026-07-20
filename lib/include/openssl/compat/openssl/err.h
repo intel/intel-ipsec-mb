@@ -27,9 +27,10 @@
 
 /*
  * Compatibility shim for <openssl/err.h> used by the vendored ML-DSA
- * (FIPS 204) sources.  ERR_raise/ERR_raise_data degrade to no-ops in the
- * libipsec-mb OpenSSL compatibility layer (errors surface via return codes);
- * the only library id referenced by the ported code is provided here.
+ * (FIPS 204) and ML-KEM (FIPS 203) sources.  ERR_raise/ERR_raise_data
+ * degrade to no-ops in the intel-ipsec-mb OpenSSL compatibility layer (errors
+ * surface via return codes); the library/reason ids referenced by the
+ * ported code are provided here.
  */
 
 #ifndef IMB_ML_DSA_COMPAT_OPENSSL_ERR_H
@@ -39,6 +40,15 @@
 
 #ifndef ERR_LIB_PROV
 #define ERR_LIB_PROV 0
+#endif
+#ifndef ERR_LIB_CRYPTO
+#define ERR_LIB_CRYPTO 0
+#endif
+#ifndef ERR_R_INTERNAL_ERROR
+#define ERR_R_INTERNAL_ERROR 0
+#endif
+#ifndef ERR_R_PASSED_INVALID_ARGUMENT
+#define ERR_R_PASSED_INVALID_ARGUMENT 0
 #endif
 
 #endif /* IMB_ML_DSA_COMPAT_OPENSSL_ERR_H */

@@ -180,6 +180,12 @@ file(GLOB SRC_FILES_ML_DSA "${DIR_X86_64}/ml_dsa/*.c" "${DIR_CURRENT}/openssl/cr
      "${DIR_CURRENT}/openssl/crypto/sha/*.c")
 list(APPEND SRC_FILES_C ${SRC_FILES_ML_DSA})
 
+# post-quantum: ML-KEM (FIPS 203) C sources. Vendored OpenSSL code lives in
+# lib/openssl/crypto/ml_kem; ipsec-mb glue stays in lib/x86_64/ml_kem and
+# reuses the shared SHA-3/SHAKE sources above.
+file(GLOB SRC_FILES_ML_KEM "${DIR_X86_64}/ml_kem/*.c" "${DIR_CURRENT}/openssl/crypto/ml_kem/*.c")
+list(APPEND SRC_FILES_C ${SRC_FILES_ML_KEM})
+
 list(SORT SRC_FILES_C)
 
 # ##############################################################################
@@ -304,6 +310,29 @@ target_include_directories(
   ${LIB} PRIVATE ${DIR_INCLUDE}/ml_dsa ${DIR_INCLUDE}/openssl
                  ${DIR_INCLUDE}/openssl/crypto/ml_dsa ${DIR_INCLUDE}/openssl/compat)
 foreach(FILE ${SRC_FILES_ML_DSA})
+  set_source_files_properties(
+    ${FILE} PROPERTIES COMPILE_DEFINITIONS
+                       "${LIB_DEFINES};KECCAK1600_ASM")
+endforeach()
+
+# ##############################################################################
+# ML-KEM (FIPS 203) build wiring
+# ##############################################################################
+# The vendored OpenSSL ML-KEM source compiles against the same self-contained
+# compat include tree used by ML-DSA:
+#   include/openssl/crypto - genuine ported OpenSSL headers (e.g. crypto/ml_kem.h)
+#   include/openssl/compat - ipsec-mb stand-ins for OpenSSL headers that were
+#                            not vendored (resolves <openssl/...> and
+#                            "crypto/evp.h" includes; extended here with
+#                            SHA3-256/SHA3-512 EVP_MD entries needed by
+#                            ML-KEM's G()/H() hashes, on top of the SHAKE-128/
+#                            256 entries ML-DSA already added)
+# ML-KEM reuses the same vendored SHA-3/SHAKE implementation as ML-DSA
+# (lib/openssl/crypto/sha, already on SRC_FILES_ML_DSA above), so also needs
+# KECCAK1600_ASM defined for its compat EVP shim to resolve.
+target_include_directories(${LIB} PRIVATE ${DIR_INCLUDE}/ml_kem ${DIR_INCLUDE}/openssl
+                                           ${DIR_INCLUDE}/openssl/compat)
+foreach(FILE ${SRC_FILES_ML_KEM})
   set_source_files_properties(
     ${FILE} PROPERTIES COMPILE_DEFINITIONS
                        "${LIB_DEFINES};KECCAK1600_ASM")
