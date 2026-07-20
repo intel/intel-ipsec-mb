@@ -378,7 +378,6 @@ align_label
 
         vmovdqa32       [rsp + _LFSR_A_HDQ_01], ymm0
         vmovdqa32       [rsp + _LFSR_B_HDQ_01], ymm0
-        vmovdqa32       [rsp + _keystream_01], ymm0
 %else
         vzeroupper
 %endif
