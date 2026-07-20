@@ -307,7 +307,7 @@ macro(imb_add_target_spellcheck)
   find_program(CODESPELL NAMES ${CODESPELL_BIN})
 
   # ignore some needed words
-  set(CS_IGNORE_WORDS "iinclude,struc,fo,ue,od,ba,padd,BufferIn,keypair")
+  set(CS_IGNORE_WORDS "iinclude,struc,fo,ue,od,ba,padd,BufferIn,keypair,clen,hask")
 
   if(CODESPELL)
     add_custom_target(

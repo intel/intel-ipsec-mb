@@ -38,6 +38,7 @@
 #include "cipher_test.h"
 #include "aead_test.h"
 #include "sig_test.h"
+#include "kem_test.h"
 
 /*
  * Record a parse error and jump to the `err` label.
@@ -2194,6 +2195,225 @@ err_no_report:
         return -1;
 }
 
+/**
+ * @brief Load vectors from a KEM-format JSON file (any of the four ML-KEM
+ *        Wycheproof vector schema families - see kem_test.h) into a
+ *        sentinel-terminated struct kem_test array.
+ *
+ * Every one of seed/ek/dk/m/c/K is optional at the per-test level (the
+ * four schema families each populate a different subset); the associated
+ * hasXxx flag on struct kem_test reflects whether the corresponding field
+ * was actually present in a given test's JSON object.
+ *
+ * @param [in] path path to vector JSON file
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+json_load_kem_test(const char *path, struct kem_test **out_vectors,
+                   struct test_json_alloc_ctx **out_ctx)
+{
+        struct test_json_alloc_ctx *ctx;
+        char *json = NULL;
+        json_tok *tokens = NULL;
+        int token_cnt = 0;
+        int test_groups_idx;
+        int tg_pos;
+        size_t test_cnt = 0;
+        struct kem_test *vectors;
+        size_t rec = 0;
+        const char *err_reason = NULL;
+        int errnum = 0;
+        int tg_idx = -1;
+        int test_idx = -1;
+        size_t tcid = 0;
+        int have_tcid = 0;
+
+        if (path == NULL || out_vectors == NULL || out_ctx == NULL) {
+                json_report_parse_error(path, "json_load_kem_test", "invalid function arguments", 0,
+                                        0, -1, -1, NULL);
+                return -1;
+        }
+
+        *out_vectors = NULL;
+        *out_ctx = NULL;
+
+        ctx = calloc(1, sizeof(*ctx));
+        if (ctx == NULL) {
+                json_report_parse_error(path, "json_load_kem_test",
+                                        "unable to allocate JSON allocation context", ENOMEM, 0, -1,
+                                        -1, NULL);
+                return -1;
+        }
+
+        if (json_load_doc(path, ctx, &json, &tokens, &token_cnt) < 0)
+                goto err_no_report;
+
+        PARSE_FAIL_IF(token_cnt <= 0 || tokens[0].type != JSON_TOK_OBJECT,
+                      "top-level JSON token must be an object");
+
+        test_groups_idx = json_object_get(json, tokens, token_cnt, 0, "testGroups");
+        PARSE_FAIL_IF(test_groups_idx < 0 || tokens[test_groups_idx].type != JSON_TOK_ARRAY,
+                      "missing or invalid top-level testGroups array");
+
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+                test_cnt += (size_t) tokens[tests_idx].size;
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        vectors = alloc_ctx_alloc(ctx, (test_cnt + 1) * sizeof(*vectors));
+        if (vectors == NULL) {
+                err_reason = "unable to allocate ML-KEM vector array";
+                errnum = ENOMEM;
+                goto err;
+        }
+        memset(vectors, 0, (test_cnt + 1) * sizeof(*vectors));
+
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+                int tc_pos;
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+                tc_pos = tests_idx + 1;
+
+                for (int j = 0; j < tokens[tests_idx].size; j++) {
+                        const int tcid_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "tcId");
+                        const int comment_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "comment");
+                        const int seed_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "seed");
+                        const int ek_idx = json_object_get(json, tokens, token_cnt, tc_pos, "ek");
+                        const int dk_idx = json_object_get(json, tokens, token_cnt, tc_pos, "dk");
+                        const int m_idx = json_object_get(json, tokens, token_cnt, tc_pos, "m");
+                        const int c_idx = json_object_get(json, tokens, token_cnt, tc_pos, "c");
+                        const int k_idx = json_object_get(json, tokens, token_cnt, tc_pos, "K");
+                        const int result_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "result");
+
+                        test_idx = j;
+                        have_tcid = 0;
+                        vectors[rec].tcId = 0;
+
+                        if (tcid_idx >= 0) {
+                                PARSE_FAIL_IF(json_parse_size_t(json, &tokens[tcid_idx],
+                                                                &vectors[rec].tcId) < 0,
+                                              "invalid tcId value");
+                                tcid = vectors[rec].tcId;
+                                have_tcid = 1;
+                        }
+
+                        if (comment_idx >= 0) {
+                                PARSE_FAIL_IF(json_copy_string_token(json, &tokens[comment_idx],
+                                                                     ctx,
+                                                                     &vectors[rec].comment) < 0,
+                                              "unable to copy comment string");
+                        } else {
+                                vectors[rec].comment = "";
+                        }
+
+                        vectors[rec].hasSeed = (seed_idx >= 0);
+                        if (seed_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[seed_idx], ctx,
+                                                                    &vectors[rec].seed) < 0,
+                                              "unable to decode seed hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[seed_idx],
+                                                                       &vectors[rec].seedLen) < 0,
+                                              "invalid seed hex string");
+                        }
+
+                        vectors[rec].hasEk = (ek_idx >= 0);
+                        if (ek_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[ek_idx], ctx,
+                                                                    &vectors[rec].ek) < 0,
+                                              "unable to decode ek hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[ek_idx],
+                                                                       &vectors[rec].ekLen) < 0,
+                                              "invalid ek hex string");
+                        }
+
+                        vectors[rec].hasDk = (dk_idx >= 0);
+                        if (dk_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[dk_idx], ctx,
+                                                                    &vectors[rec].dk) < 0,
+                                              "unable to decode dk hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[dk_idx],
+                                                                       &vectors[rec].dkLen) < 0,
+                                              "invalid dk hex string");
+                        }
+
+                        vectors[rec].hasM = (m_idx >= 0);
+                        if (m_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[m_idx], ctx,
+                                                                    &vectors[rec].m) < 0,
+                                              "unable to decode m hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[m_idx],
+                                                                       &vectors[rec].mLen) < 0,
+                                              "invalid m hex string");
+                        }
+
+                        vectors[rec].hasC = (c_idx >= 0);
+                        if (c_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[c_idx], ctx,
+                                                                    &vectors[rec].c) < 0,
+                                              "unable to decode c hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[c_idx],
+                                                                       &vectors[rec].cLen) < 0,
+                                              "invalid c hex string");
+                        }
+
+                        vectors[rec].hasK = (k_idx >= 0);
+                        if (k_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[k_idx], ctx,
+                                                                    &vectors[rec].K) < 0,
+                                              "unable to decode K hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[k_idx],
+                                                                       &vectors[rec].KLen) < 0,
+                                              "invalid K hex string");
+                        }
+
+                        PARSE_FAIL_IF(result_idx < 0 ||
+                                              json_result_to_valid(json, &tokens[result_idx],
+                                                                   &vectors[rec].resultValid) < 0,
+                                      "missing or invalid result field");
+
+                        rec++;
+                        tc_pos = json_token_skip(tokens, tc_pos);
+                }
+
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        *out_vectors = vectors;
+        *out_ctx = ctx;
+
+        return 0;
+
+err:
+        json_report_parse_error(path, "json_load_kem_test", err_reason, errnum, 0, tg_idx, test_idx,
+                                have_tcid ? &tcid : NULL);
+err_no_report:
+        json_free_test_ctx(ctx);
+        return -1;
+}
+
 static int
 build_vector_path(const char *vector_dir, const char *file_name, char *buf, size_t buf_size)
 {
@@ -2286,4 +2506,29 @@ load_sig_verify_vectors(const char *vector_dir, const char *file_name,
         if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
                 return -1;
         return json_load_sig_verify_test(path, out_vectors, out_ctx);
+}
+
+/**
+ * @brief Load KEM-format vectors from a file in the given vector directory
+ *        (any of the four ML-KEM Wycheproof vector schema families - see
+ *        kem_test.h).
+ *
+ * @param [in] vector_dir directory containing vector files
+ * @param [in] file_name  vector file name (not a full path)
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+load_kem_vectors(const char *vector_dir, const char *file_name, struct kem_test **out_vectors,
+                 struct test_json_alloc_ctx **out_ctx)
+{
+        char path[1024] = { 0 };
+
+        if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
+                return -1;
+        return json_load_kem_test(path, out_vectors, out_ctx);
 }

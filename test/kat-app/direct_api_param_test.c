@@ -3534,6 +3534,330 @@ test_imb_ml_dsa_key_validate(struct IMB_MGR *mgr)
         return ret;
 }
 
+/*
+ * ML-KEM (FIPS 203) entry points report invalid parameters directly via their
+ * IMB_ERR_* return value (0 on success); none of them touch imb_errno.
+ */
+static int
+ml_kem_param_err(const int ret, const IMB_ERR exp_err, const char *desc)
+{
+        if (ret != (int) exp_err) {
+                printf("%s error: expected %s, got %s\n", desc, imb_get_strerror(exp_err),
+                       imb_get_strerror(ret));
+                return 1;
+        }
+        return 0;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_kem_new
+ *        and imb_ml_kem_free */
+static int
+test_imb_ml_kem_new(struct IMB_MGR *mgr)
+{
+        IMB_ML_KEM *self = NULL;
+        int seg_err; /* segfault flag */
+        int rc;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        /* NULL manager: returns IMB_ERR_NULL_MBMGR, *self left NULL */
+        rc = imb_ml_kem_new(NULL, IMB_ML_KEM_512, &self);
+        if (self != NULL) {
+                printf("imb_ml_kem_new error: expected NULL self for NULL manager\n");
+                imb_ml_kem_free(self);
+                return 1;
+        }
+        if (ml_kem_param_err(rc, IMB_ERR_NULL_MBMGR, "imb_ml_kem_new"))
+                return 1;
+
+        /* NULL new_self out-param: returns IMB_ERR_NULL_CTX */
+        rc = imb_ml_kem_new(mgr, IMB_ML_KEM_512, NULL);
+        if (ml_kem_param_err(rc, IMB_ERR_NULL_CTX, "imb_ml_kem_new"))
+                return 1;
+
+        /* Invalid parameter set: returns IMB_ERR_PQC_ALG, *self left NULL */
+        rc = imb_ml_kem_new(mgr, (IMB_ML_KEM_ALG) 0, &self);
+        if (self != NULL) {
+                printf("imb_ml_kem_new error: expected NULL self for invalid alg\n");
+                imb_ml_kem_free(self);
+                return 1;
+        }
+        if (ml_kem_param_err(rc, IMB_ERR_PQC_ALG, "imb_ml_kem_new"))
+                return 1;
+
+        rc = imb_ml_kem_new(mgr, (IMB_ML_KEM_ALG) 4, &self);
+        if (self != NULL) {
+                printf("imb_ml_kem_new error: expected NULL self for invalid alg\n");
+                imb_ml_kem_free(self);
+                return 1;
+        }
+        if (ml_kem_param_err(rc, IMB_ERR_PQC_ALG, "imb_ml_kem_new"))
+                return 1;
+
+        /* imb_ml_kem_free must tolerate a NULL handle */
+        imb_ml_kem_free(NULL);
+        return 0;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_kem_set_privkey
+ *        and imb_ml_kem_set_pubkey */
+static int
+test_imb_ml_kem_set_key(struct IMB_MGR *mgr)
+{
+        IMB_ML_KEM *self = NULL;
+        uint8_t ek[IMB_ML_KEM_512_PUBKEY_BYTES], dk[IMB_ML_KEM_512_PRIVKEY_BYTES];
+        int seg_err; /* segfault flag */
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self) != 0) {
+                printf("%s: imb_ml_kem_new failed\n", __func__);
+                return 1;
+        }
+
+        if (ml_kem_param_err(imb_ml_kem_set_privkey(NULL, dk), IMB_ERR_NULL_CTX,
+                             "imb_ml_kem_set_privkey") ||
+            ml_kem_param_err(imb_ml_kem_set_privkey(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_kem_set_privkey") ||
+            ml_kem_param_err(imb_ml_kem_set_pubkey(NULL, ek), IMB_ERR_NULL_CTX,
+                             "imb_ml_kem_set_pubkey") ||
+            ml_kem_param_err(imb_ml_kem_set_pubkey(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_kem_set_pubkey"))
+                ret = 1;
+
+        imb_ml_kem_free(self);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_kem_keypair()
+ *        (covering fresh-random and seeded paths via
+ *        IMB_ML_KEM_KEYGEN_PARAMS) */
+static int
+test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
+{
+        IMB_ML_KEM *self = NULL;
+        uint8_t ek[IMB_ML_KEM_512_PUBKEY_BYTES], dk[IMB_ML_KEM_512_PRIVKEY_BYTES];
+        uint8_t seed[64];
+        int seg_err; /* segfault flag */
+        unsigned i;
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self) != 0) {
+                printf("%s: imb_ml_kem_new failed\n", __func__);
+                return 1;
+        }
+
+        struct fn_args {
+                IMB_ML_KEM *self;
+                uint8_t *ek;
+                uint8_t *dk;
+                const IMB_ERR exp_err;
+        } fn_args[] = { { NULL, ek, dk, IMB_ERR_NULL_CTX },
+                        { self, NULL, dk, IMB_ERR_NULL_KEY },
+                        { self, ek, NULL, IMB_ERR_NULL_KEY } };
+
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+                IMB_ML_KEM_KEYGEN_PARAMS params;
+                int r;
+
+                /* fresh-random path: seed_d_z == NULL */
+                params.seed_d_z = NULL;
+                r = imb_ml_kem_keypair(ap->self, ap->ek, ap->dk, &params);
+                if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_keypair (random)")) {
+                        ret = 1;
+                        break;
+                }
+
+                /* seeded (deterministic) path: seed_d_z != NULL */
+                params.seed_d_z = seed;
+                r = imb_ml_kem_keypair(ap->self, ap->ek, ap->dk, &params);
+                if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_keypair (seed_d_z)")) {
+                        ret = 1;
+                        break;
+                }
+        }
+        imb_ml_kem_free(self);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_kem_encap()
+ *        (covering random and deterministic paths via
+ *        IMB_ML_KEM_ENCAP_PARAMS) */
+static int
+test_imb_ml_kem_encap(struct IMB_MGR *mgr)
+{
+        IMB_ML_KEM *self = NULL, *self_no_key = NULL;
+        uint8_t ek[IMB_ML_KEM_512_PUBKEY_BYTES], dk[IMB_ML_KEM_512_PRIVKEY_BYTES];
+        uint8_t ct[IMB_ML_KEM_512_CIPHERTEXT_BYTES], ss[IMB_ML_KEM_SHARED_SECRET_BYTES];
+        uint8_t m[IMB_ML_KEM_SHARED_SECRET_BYTES];
+        int seg_err; /* segfault flag */
+        unsigned i;
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self) != 0 ||
+            imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self_no_key) != 0) {
+                printf("%s: imb_ml_kem_new failed\n", __func__);
+                goto exit;
+        }
+        if (imb_ml_kem_keypair(self, ek, dk, NULL) != 0) {
+                printf("%s: imb_ml_kem_keypair failed\n", __func__);
+                ret = 1;
+                goto exit;
+        }
+
+        struct fn_args {
+                IMB_ML_KEM *self;
+                uint8_t *ct;
+                uint8_t *ss;
+                const IMB_ERR exp_err;
+        } fn_args[] = { { NULL, ct, ss, IMB_ERR_NULL_CTX },
+                        { self, NULL, ss, IMB_ERR_NULL_DST },
+                        { self, ct, NULL, IMB_ERR_NULL_DST },
+                        { self_no_key, ct, ss, IMB_ERR_PQC_NO_KEY } };
+
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+                IMB_ML_KEM_ENCAP_PARAMS params;
+                int r;
+
+                /* random path: m_32 == NULL */
+                params.m_32 = NULL;
+                r = imb_ml_kem_encap(ap->self, ap->ct, ap->ss, &params);
+                if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_encap (random)")) {
+                        ret = 1;
+                        break;
+                }
+
+                /* deterministic path: m_32 != NULL */
+                params.m_32 = m;
+                r = imb_ml_kem_encap(ap->self, ap->ct, ap->ss, &params);
+                if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_encap (m_32)")) {
+                        ret = 1;
+                        break;
+                }
+        }
+exit:
+        imb_ml_kem_free(self);
+        imb_ml_kem_free(self_no_key);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for imb_ml_kem_decap()
+ *        (including NULL and non-NULL params-pointer paths) */
+static int
+test_imb_ml_kem_decap(struct IMB_MGR *mgr)
+{
+        IMB_ML_KEM *self = NULL, *self_no_key = NULL;
+        uint8_t ek[IMB_ML_KEM_512_PUBKEY_BYTES], dk[IMB_ML_KEM_512_PRIVKEY_BYTES];
+        uint8_t ct[IMB_ML_KEM_512_CIPHERTEXT_BYTES], ss[IMB_ML_KEM_SHARED_SECRET_BYTES];
+        const IMB_ML_KEM_DECAP_PARAMS *params = (const IMB_ML_KEM_DECAP_PARAMS *) (const void *) ct;
+        int seg_err; /* segfault flag */
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self) != 0 ||
+            imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self_no_key) != 0) {
+                printf("%s: imb_ml_kem_new failed\n", __func__);
+                goto exit;
+        }
+        if (imb_ml_kem_keypair(self, ek, dk, NULL) != 0) {
+                printf("%s: imb_ml_kem_keypair failed\n", __func__);
+                ret = 1;
+                goto exit;
+        }
+
+        if (ml_kem_param_err(imb_ml_kem_decap(NULL, ss, ct, sizeof(ct), NULL), IMB_ERR_NULL_CTX,
+                             "imb_ml_kem_decap") ||
+            ml_kem_param_err(imb_ml_kem_decap(self, NULL, ct, sizeof(ct), NULL), IMB_ERR_NULL_DST,
+                             "imb_ml_kem_decap") ||
+            ml_kem_param_err(imb_ml_kem_decap(self_no_key, ss, ct, sizeof(ct), NULL),
+                             IMB_ERR_PQC_NO_KEY, "imb_ml_kem_decap") ||
+            ml_kem_param_err(imb_ml_kem_decap(self, ss, NULL, sizeof(ct), NULL), IMB_ERR_NULL_SRC,
+                             "imb_ml_kem_decap") ||
+            ml_kem_param_err(imb_ml_kem_decap(NULL, ss, ct, sizeof(ct), params), IMB_ERR_NULL_CTX,
+                             "imb_ml_kem_decap (params)") ||
+            ml_kem_param_err(imb_ml_kem_decap(self, NULL, ct, sizeof(ct), params), IMB_ERR_NULL_DST,
+                             "imb_ml_kem_decap (params)") ||
+            ml_kem_param_err(imb_ml_kem_decap(self_no_key, ss, ct, sizeof(ct), params),
+                             IMB_ERR_PQC_NO_KEY, "imb_ml_kem_decap (params)") ||
+            ml_kem_param_err(imb_ml_kem_decap(self, ss, NULL, sizeof(ct), params), IMB_ERR_NULL_SRC,
+                             "imb_ml_kem_decap (params)"))
+                ret = 1;
+
+exit:
+        imb_ml_kem_free(self);
+        imb_ml_kem_free(self_no_key);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid param tests for
+ *        imb_ml_kem_pubkey_validate and imb_ml_kem_privkey_validate */
+static int
+test_imb_ml_kem_key_validate(struct IMB_MGR *mgr)
+{
+        IMB_ML_KEM *self = NULL;
+        uint8_t ek[IMB_ML_KEM_512_PUBKEY_BYTES], dk[IMB_ML_KEM_512_PRIVKEY_BYTES];
+        int seg_err; /* segfault flag */
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self) != 0) {
+                printf("%s: imb_ml_kem_new failed\n", __func__);
+                return 1;
+        }
+
+        if (ml_kem_param_err(imb_ml_kem_pubkey_validate(NULL, ek), IMB_ERR_NULL_CTX,
+                             "imb_ml_kem_pubkey_validate") ||
+            ml_kem_param_err(imb_ml_kem_pubkey_validate(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_kem_pubkey_validate") ||
+            ml_kem_param_err(imb_ml_kem_privkey_validate(NULL, dk), IMB_ERR_NULL_CTX,
+                             "imb_ml_kem_privkey_validate") ||
+            ml_kem_param_err(imb_ml_kem_privkey_validate(self, NULL), IMB_ERR_NULL_KEY,
+                             "imb_ml_kem_privkey_validate"))
+                ret = 1;
+
+        imb_ml_kem_free(self);
+        return ret;
+}
+
 int
 direct_api_param_test(struct IMB_MGR *mb_mgr)
 {
@@ -3805,6 +4129,24 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_imb_ml_dsa_key_validate(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_kem_new(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_kem_keypair(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_kem_set_key(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_kem_encap(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_kem_decap(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_kem_key_validate(mb_mgr);
         run++;
 
         test_suite_update(&ts, run - errors, errors);
