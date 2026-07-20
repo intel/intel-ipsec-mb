@@ -7,7 +7,7 @@ This tree holds headers that support the vendored OpenSSL sources in
 
 | Directory | Contents |
 |---|---|
-| `crypto/` | Ported OpenSSL headers (e.g. `ml_dsa.h`, `ml_dsa/*.h`), mirroring the upstream `include/crypto/` tree |
+| `crypto/` | Ported OpenSSL headers (e.g. `ml_dsa.h`, `ml_dsa/*.h`, `ml_kem.h`), mirroring the upstream `include/crypto/` tree |
 | `internal/` | Ported OpenSSL internal headers (e.g. `constant_time.h`), mirroring the upstream `include/internal/` tree |
 
 These carry the OpenSSL Project Authors copyright and are licensed under the

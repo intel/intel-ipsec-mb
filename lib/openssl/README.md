@@ -24,7 +24,7 @@ Files were ported from OpenSSL at commit:
 |---|---|
 | `crypto/ml_dsa/` | Core ML-DSA (FIPS 204) algorithm: key generation, sign/verify, NTT, matrix/vector arithmetic, sampling, and encoders |
 | `crypto/ml_dsa/asm/` | Perlasm for ML-DSA NTT/Montgomery arithmetic (AVX2/AVX512), authored by Intel as an OpenSSL contribution |
-| `crypto/ml_kem/` | Reserved for a future ML-KEM (FIPS 203) port, sharing the SHA-3/perlasm infrastructure below |
+| `crypto/ml_kem/` | Core ML-KEM (FIPS 203) algorithm: key generation, encapsulation/decapsulation, K-PKE, NTT, and encoders |
 | `crypto/sha/` | SHA-3/SHAKE single-buffer implementation and its x4 AVX512VL parallel variant |
 | `crypto/sha/asm/` | Perlasm for the Keccak-1600 permutation (single-buffer and x4 AVX512VL) |
 | `crypto/perlasm/` | OpenSSL's perlasm assembler back-end (`x86_64-xlate.pl`) and support scripts, shared by all vendored asm above |
