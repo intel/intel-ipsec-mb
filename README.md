@@ -53,9 +53,11 @@ For information on how the library works, see the Intel White Paper:
 
 The library also provides post-quantum signature support for ML-DSA-44,
 ML-DSA-65 and ML-DSA-87 (FIPS 204) through the opaque `IMB_ML_DSA` handle and
-the `imb_ml_dsa_*` API.
-The ML-DSA implementation is derived from OpenSSL and is licensed under the
-Apache License 2.0 (see LICENSE.OpenSSL).
+the `imb_ml_dsa_*` API, and post-quantum key-encapsulation support for
+ML-KEM-512, ML-KEM-768 and ML-KEM-1024 (FIPS 203) through the opaque
+`IMB_ML_KEM` handle and the `imb_ml_kem_*` API.
+The ML-DSA and ML-KEM implementations are derived from OpenSSL and are
+licensed under the Apache License 2.0 (see LICENSE.OpenSSL).
 
 Table 1. List of supported cipher algorithms and their implementations.
 ```

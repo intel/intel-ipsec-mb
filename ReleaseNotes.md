@@ -38,6 +38,7 @@ Library
 - Removed SNOW3G-UEA2 and SNOW3G-UIA2 direct API support.
 - Removed KASUMI-F8 and KASUMI-F9 direct API support.
 - Added ML-DSA (FIPS 204) support for ML-DSA-44, ML-DSA-65 and ML-DSA-87.
+- Added ML-KEM (FIPS 203) support for ML-KEM-512, ML-KEM-768 and ML-KEM-1024.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
@@ -50,6 +51,7 @@ Test Applications
 - Added new zero length message test application.
 - Added zero-length message HMAC-SHA and HMAC-MD5 test vectors.
 - Added ML-DSA (FIPS 204) support for ML-DSA-44, ML-DSA-65 and ML-DSA-87 to imb-kat.
+- Added ML-KEM (FIPS 203) support for ML-KEM-512, ML-KEM-768 and ML-KEM-1024 to imb-kat.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.

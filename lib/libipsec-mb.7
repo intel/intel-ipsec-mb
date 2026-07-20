@@ -96,6 +96,24 @@ handle and the
 functions (imb_ml_dsa_new, imb_ml_dsa_keypair, imb_ml_dsa_sign,
 imb_ml_dsa_verify and related).
 
+.SS POST-QUANTUM KEM ALGORITHMS
+ML-KEM-512, ML-KEM-768 and ML-KEM-1024 (FIPS 203 Module-Lattice-Based
+Key-Encapsulation Mechanism). Key generation, key import, encapsulation,
+decapsulation and key validation are provided through the opaque
+.B IMB_ML_KEM
+handle and the
+.B imb_ml_kem_*
+functions (imb_ml_kem_new, imb_ml_kem_keypair, imb_ml_kem_set_privkey,
+imb_ml_kem_set_pubkey, imb_ml_kem_encap, imb_ml_kem_decap and related).
+.br
+The public API supports deterministic ACVP-style test inputs via optional
+caller-supplied key generation seed (d||z) and encapsulation randomness (m)
+parameters.
+.br
+Decapsulation has no optional randomness input; the
+.B IMB_ML_KEM_DECAP_PARAMS
+structure is reserved for future use and should be passed as NULL.
+
 .SS RECOMMENDATIONS
 DES algorithm should be avoided and AES encryption should be used instead.
 .br
