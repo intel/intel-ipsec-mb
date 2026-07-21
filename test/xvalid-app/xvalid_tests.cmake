@@ -223,15 +223,27 @@ endforeach()
 
 # run safe check only when SAFE_DATA is enabled and only run on release build
 if(SAFE_DATA)
-  add_test(
-    NAME XVALID::SAFE_CHECK
-    COMMAND ${XVALID_APP} --safe-check --job-size 64
-    CONFIGURATIONS Release
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  set(SAFE_CHECK_ARCHS SSE AVX2 AVX512 AVX10)
+  set(SAFE_CHECK_JOB_SIZE 64)
+  set(SAFE_CHECK_EXT_JOB_SIZE 16:16:1024)
 
-  add_test(
-    NAME XVALID::EXT::SAFE_CHECK
-    COMMAND ${XVALID_APP} --safe-check --job-size 16:16:512
-    CONFIGURATIONS Release
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  # matrix of enc-arch x dec-arch, split into individual ctest tests
+  foreach(ENC_ARCH ${SAFE_CHECK_ARCHS})
+    foreach(DEC_ARCH ${SAFE_CHECK_ARCHS})
+      add_test(
+        NAME XVALID::SAFE_CHECK::${ENC_ARCH}_${DEC_ARCH}::${SAFE_CHECK_JOB_SIZE}
+        COMMAND
+          ${XVALID_APP} --safe-check --enc-arch ${ENC_ARCH} --dec-arch
+          ${DEC_ARCH} --job-size ${SAFE_CHECK_JOB_SIZE}
+        CONFIGURATIONS Release
+        WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+
+      add_test(
+        NAME XVALID::EXT::SAFE_CHECK::${ENC_ARCH}_${DEC_ARCH}::${SAFE_CHECK_EXT_JOB_SIZE}
+        COMMAND ${XVALID_APP} --safe-check --enc-arch ${ENC_ARCH} --dec-arch
+                ${DEC_ARCH} --job-size ${SAFE_CHECK_EXT_JOB_SIZE}
+        CONFIGURATIONS Release
+        WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+    endforeach()
+  endforeach()
 endif()
