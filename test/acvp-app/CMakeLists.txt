@@ -50,6 +50,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
 
 include_directories(${LIB_DIR} ${TEST_INCLUDE_DIR} ${ACVP_INCLUDE_DIR})
 link_directories(${LIB_DIR})
+include_directories(${LIB_DIR}/include)
 
 # ##############################################################################
 # add target

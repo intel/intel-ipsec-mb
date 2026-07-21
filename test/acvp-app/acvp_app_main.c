@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2022-2024, Intel Corporation All rights reserved.
+  Copyright(c) 2022-2026, Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -43,6 +43,10 @@
 #else
 /* Assume version 2.0.0 (minimum required for this app) */
 #define INT_ACVP_LIB_VER_NUM LIB_VER(2, 0, 0)
+#endif
+
+#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0)
+#include <ml_dsa/ml_dsa_internal_api.h>
 #endif
 
 #define MAX_TAG_LENGTH 16
@@ -1996,6 +2000,258 @@ shake256_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
+#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0)
+
+#define ML_DSA_RND_BYTES  32
+#define ML_DSA_SEED_BYTES 32
+
+struct ml_dsa_variant {
+        IMB_ML_DSA_ALG alg;
+        size_t pk_len;
+        size_t sk_len;
+        size_t sig_len;
+};
+
+static int
+ml_dsa_get_variant(ACVP_ML_DSA_PARAM_SET param_set, struct ml_dsa_variant *v)
+{
+        switch (param_set) {
+        case ACVP_ML_DSA_PARAM_SET_ML_DSA_44:
+                v->alg = IMB_ML_DSA_44;
+                v->pk_len = IMB_ML_DSA_44_PUBKEY_BYTES;
+                v->sk_len = IMB_ML_DSA_44_PRIVKEY_BYTES;
+                v->sig_len = IMB_ML_DSA_44_SIG_BYTES;
+                return 0;
+        case ACVP_ML_DSA_PARAM_SET_ML_DSA_65:
+                v->alg = IMB_ML_DSA_65;
+                v->pk_len = IMB_ML_DSA_65_PUBKEY_BYTES;
+                v->sk_len = IMB_ML_DSA_65_PRIVKEY_BYTES;
+                v->sig_len = IMB_ML_DSA_65_SIG_BYTES;
+                return 0;
+        case ACVP_ML_DSA_PARAM_SET_ML_DSA_87:
+                v->alg = IMB_ML_DSA_87;
+                v->pk_len = IMB_ML_DSA_87_PUBKEY_BYTES;
+                v->sk_len = IMB_ML_DSA_87_PRIVKEY_BYTES;
+                v->sig_len = IMB_ML_DSA_87_SIG_BYTES;
+                return 0;
+        default:
+                return -1;
+        }
+}
+
+static int
+ml_dsa_keygen_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_ML_DSA_TC *tc;
+        IMB_ML_DSA *handle = NULL;
+        IMB_ML_DSA_KEYGEN_PARAMS keygen_params;
+        struct ml_dsa_variant v;
+        int ret = ACVP_CRYPTO_MODULE_FAIL;
+        int imb_rc;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.ml_dsa;
+
+        if (ml_dsa_get_variant(tc->param_set, &v) != 0) {
+                fprintf(stderr, "Unsupported ML-DSA parameter set\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->seed == NULL || tc->seed_len != ML_DSA_SEED_BYTES) {
+                fprintf(stderr, "Invalid ML-DSA key generation seed\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->pub_key == NULL || tc->secret_key == NULL) {
+                fprintf(stderr, "Missing ML-DSA key output buffers\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        imb_rc = imb_ml_dsa_new(mb_mgr, v.alg, &handle);
+        if (imb_rc != 0 || handle == NULL) {
+                fprintf(stderr, "Could not allocate ML-DSA context\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        keygen_params.xi_32 = tc->seed;
+        if (imb_ml_dsa_keypair(handle, tc->pub_key, tc->secret_key, &keygen_params) != 0) {
+                fprintf(stderr, "ML-DSA key generation failed\n");
+                goto exit;
+        }
+
+        tc->pub_key_len = (int) v.pk_len;
+        tc->secret_key_len = (int) v.sk_len;
+        ret = ACVP_SUCCESS;
+exit:
+        imb_ml_dsa_free(handle);
+        return ret;
+}
+
+static int
+ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_ML_DSA_TC *tc;
+        IMB_ML_DSA *handle = NULL;
+        struct ml_dsa_variant v;
+        uint8_t rnd[ML_DSA_RND_BYTES];
+        size_t sig_len = 0;
+        int ret = ACVP_CRYPTO_MODULE_FAIL;
+        int sign_rc;
+        int imb_rc;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.ml_dsa;
+
+        if ((tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL && tc->is_prehash != 0) ||
+            (tc->sig_interface != ACVP_SIG_INTERFACE_EXTERNAL &&
+             tc->sig_interface != ACVP_SIG_INTERFACE_INTERNAL)) {
+                tc->sig_len = 0;
+                return ACVP_SUCCESS;
+        }
+        if (ml_dsa_get_variant(tc->param_set, &v) != 0) {
+                fprintf(stderr, "Unsupported ML-DSA parameter set\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->secret_key == NULL || (size_t) tc->secret_key_len != v.sk_len) {
+                fprintf(stderr, "Invalid ML-DSA private key\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->msg == NULL || tc->sig == NULL) {
+                if (!tc->is_mu_external || tc->mu == NULL || tc->sig == NULL) {
+                        fprintf(stderr, "Missing ML-DSA message or signature buffer\n");
+                        return ACVP_CRYPTO_MODULE_FAIL;
+                }
+        }
+
+        if (tc->is_deterministic) {
+                memset(rnd, 0, sizeof(rnd));
+        } else {
+                if (tc->rnd == NULL || tc->rnd_len != (int) sizeof(rnd)) {
+                        fprintf(stderr, "Invalid ML-DSA signing randomizer\n");
+                        return ACVP_CRYPTO_MODULE_FAIL;
+                }
+                memcpy(rnd, tc->rnd, sizeof(rnd));
+        }
+
+        imb_rc = imb_ml_dsa_new(mb_mgr, v.alg, &handle);
+        if (imb_rc != 0 || handle == NULL) {
+                fprintf(stderr, "Could not allocate ML-DSA context\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        if (imb_ml_dsa_set_privkey(handle, tc->secret_key) != 0) {
+                fprintf(stderr, "ML-DSA private key binding failed\n");
+                goto exit;
+        }
+
+        if (tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL) {
+                IMB_ML_DSA_SIGN_PARAMS params = { 0 };
+
+                params.ctx = tc->context;
+                params.ctx_len = (size_t) tc->context_len;
+                params.rnd_32 = rnd;
+                sign_rc = imb_ml_dsa_sign(handle, tc->sig, &sig_len, tc->msg, (size_t) tc->msg_len,
+                                          &params);
+        } else if (tc->is_mu_external) {
+                IMB_ML_DSA_SIGN_PARAMS params = { 0 };
+
+                params.rnd_32 = rnd;
+                params.msg_is_mu = 1;
+                sign_rc = imb_ml_dsa_sign(handle, tc->sig, &sig_len, tc->mu, (size_t) tc->mu_len,
+                                          &params);
+        } else {
+                sign_rc = imb_ml_dsa_sign_internal(handle, tc->sig, &sig_len, tc->msg,
+                                                   (size_t) tc->msg_len, rnd);
+        }
+
+        if (sign_rc != 0) {
+                fprintf(stderr, "ML-DSA signature generation failed\n");
+                goto exit;
+        }
+
+        tc->sig_len = (int) sig_len;
+        ret = ACVP_SUCCESS;
+exit:
+        imb_ml_dsa_free(handle);
+        return ret;
+}
+
+static int
+ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_ML_DSA_TC *tc;
+        IMB_ML_DSA *handle = NULL;
+        struct ml_dsa_variant v;
+        int ret = ACVP_CRYPTO_MODULE_FAIL;
+        int verify_rc;
+        int imb_rc;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.ml_dsa;
+
+        if ((tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL && tc->is_prehash != 0) ||
+            (tc->sig_interface != ACVP_SIG_INTERFACE_EXTERNAL &&
+             tc->sig_interface != ACVP_SIG_INTERFACE_INTERNAL)) {
+                tc->ver_disposition = ACVP_TEST_DISPOSITION_FAIL;
+                return ACVP_SUCCESS;
+        }
+        if (ml_dsa_get_variant(tc->param_set, &v) != 0) {
+                fprintf(stderr, "Unsupported ML-DSA parameter set\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->pub_key == NULL || (size_t) tc->pub_key_len != v.pk_len) {
+                fprintf(stderr, "Invalid ML-DSA public key\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->msg == NULL || tc->sig == NULL) {
+                if (!tc->is_mu_external || tc->mu == NULL || tc->sig == NULL) {
+                        fprintf(stderr, "Missing ML-DSA message or signature\n");
+                        return ACVP_CRYPTO_MODULE_FAIL;
+                }
+        }
+
+        imb_rc = imb_ml_dsa_new(mb_mgr, v.alg, &handle);
+        if (imb_rc != 0 || handle == NULL) {
+                fprintf(stderr, "Could not allocate ML-DSA context\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        if (imb_ml_dsa_set_pubkey(handle, tc->pub_key) != 0) {
+                verify_rc = -1;
+        } else if (tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL) {
+                IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
+
+                params.ctx = tc->context;
+                params.ctx_len = (size_t) tc->context_len;
+                verify_rc = imb_ml_dsa_verify(handle, tc->msg, (size_t) tc->msg_len, tc->sig,
+                                              (size_t) tc->sig_len, &params);
+        } else if (tc->is_mu_external) {
+                IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
+
+                params.msg_is_mu = 1;
+                verify_rc = imb_ml_dsa_verify(handle, tc->mu, (size_t) tc->mu_len, tc->sig,
+                                              (size_t) tc->sig_len, &params);
+        } else {
+                verify_rc = imb_ml_dsa_verify_internal(handle, tc->msg, (size_t) tc->msg_len,
+                                                       tc->sig, (size_t) tc->sig_len);
+        }
+
+        if (verify_rc == 0)
+                tc->ver_disposition = ACVP_TEST_DISPOSITION_PASS;
+        else
+                tc->ver_disposition = ACVP_TEST_DISPOSITION_FAIL;
+
+        ret = ACVP_SUCCESS;
+        imb_ml_dsa_free(handle);
+        return ret;
+}
+
+#endif /* INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0) */
+
 static void
 usage(const char *app_name)
 {
@@ -2192,6 +2448,59 @@ main(int argc, char **argv)
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHAKE_256, &shake256_handler) != ACVP_SUCCESS)
                 goto exit;
+
+#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0)
+        if (acvp_cap_ml_dsa_enable(ctx, ACVP_ML_DSA_KEYGEN, &ml_dsa_keygen_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_KEYGEN, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_44) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_KEYGEN, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_65) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_KEYGEN, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_87) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_enable(ctx, ACVP_ML_DSA_SIGGEN, &ml_dsa_siggen_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_SIGGEN, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_44) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_SIGGEN, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_65) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_SIGGEN, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_87) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_SIGGEN, 0,
+                                     ACVP_ML_DSA_PARAM_DETERMINISTIC_MODE,
+                                     ACVP_DETERMINISTIC_BOTH) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_enable(ctx, ACVP_ML_DSA_SIGVER, &ml_dsa_sigver_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_SIGVER, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_44) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_SIGVER, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_65) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_dsa_set_parm(ctx, ACVP_ML_DSA_SIGVER, 0, ACVP_ML_DSA_PARAM_PARAMETER_SET,
+                                     ACVP_ML_DSA_PARAM_SET_ML_DSA_87) != ACVP_SUCCESS)
+                goto exit;
+
+#endif /* INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0) */
 
         /* Allocate and initialize MB_MGR */
         mb_mgr = alloc_mb_mgr(0);
