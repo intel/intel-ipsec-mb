@@ -45,7 +45,7 @@
 #define INT_ACVP_LIB_VER_NUM LIB_VER(2, 0, 0)
 #endif
 
-#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0)
+#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 3, 0)
 #include <ml_dsa/ml_dsa_internal_api.h>
 #endif
 
@@ -2000,10 +2000,12 @@ shake256_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0)
+#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 3, 0)
 
 #define ML_DSA_RND_BYTES  32
 #define ML_DSA_SEED_BYTES 32
+#define ML_KEM_SEED_BYTES 32
+#define ML_KEM_M_BYTES    32
 
 struct ml_dsa_variant {
         IMB_ML_DSA_ALG alg;
@@ -2250,7 +2252,202 @@ ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
         return ret;
 }
 
-#endif /* INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0) */
+struct ml_kem_variant {
+        IMB_ML_KEM_ALG alg;
+        size_t ek_len;
+        size_t dk_len;
+        size_t ct_len;
+};
+
+static int
+ml_kem_get_variant(ACVP_ML_KEM_PARAM_SET param_set, struct ml_kem_variant *v)
+{
+        switch (param_set) {
+        case ACVP_ML_KEM_PARAM_SET_ML_KEM_512:
+                v->alg = IMB_ML_KEM_512;
+                v->ek_len = IMB_ML_KEM_512_PUBKEY_BYTES;
+                v->dk_len = IMB_ML_KEM_512_PRIVKEY_BYTES;
+                v->ct_len = IMB_ML_KEM_512_CIPHERTEXT_BYTES;
+                return 0;
+        case ACVP_ML_KEM_PARAM_SET_ML_KEM_768:
+                v->alg = IMB_ML_KEM_768;
+                v->ek_len = IMB_ML_KEM_768_PUBKEY_BYTES;
+                v->dk_len = IMB_ML_KEM_768_PRIVKEY_BYTES;
+                v->ct_len = IMB_ML_KEM_768_CIPHERTEXT_BYTES;
+                return 0;
+        case ACVP_ML_KEM_PARAM_SET_ML_KEM_1024:
+                v->alg = IMB_ML_KEM_1024;
+                v->ek_len = IMB_ML_KEM_1024_PUBKEY_BYTES;
+                v->dk_len = IMB_ML_KEM_1024_PRIVKEY_BYTES;
+                v->ct_len = IMB_ML_KEM_1024_CIPHERTEXT_BYTES;
+                return 0;
+        default:
+                return -1;
+        }
+}
+
+static int
+ml_kem_keygen_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_ML_KEM_TC *tc;
+        IMB_ML_KEM *handle = NULL;
+        IMB_ML_KEM_KEYGEN_PARAMS params;
+        struct ml_kem_variant v;
+        uint8_t seed_d_z[ML_KEM_SEED_BYTES * 2];
+        int ret = ACVP_CRYPTO_MODULE_FAIL;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.ml_kem;
+
+        if (ml_kem_get_variant(tc->param_set, &v) != 0) {
+                fprintf(stderr, "Unsupported ML-KEM parameter set\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->d == NULL || tc->z == NULL || tc->d_len != ML_KEM_SEED_BYTES ||
+            tc->z_len != ML_KEM_SEED_BYTES) {
+                fprintf(stderr, "Invalid ML-KEM key generation seeds\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (tc->ek == NULL || tc->dk == NULL) {
+                fprintf(stderr, "Missing ML-KEM key output buffers\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        if (imb_ml_kem_new(mb_mgr, v.alg, &handle) != 0 || handle == NULL) {
+                fprintf(stderr, "Could not allocate ML-KEM context\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        memcpy(seed_d_z, tc->d, ML_KEM_SEED_BYTES);
+        memcpy(seed_d_z + ML_KEM_SEED_BYTES, tc->z, ML_KEM_SEED_BYTES);
+        params.seed_d_z = seed_d_z;
+
+        if (imb_ml_kem_keypair(handle, tc->ek, tc->dk, &params) != 0) {
+                fprintf(stderr, "ML-KEM key generation failed\n");
+                goto exit;
+        }
+
+        tc->ek_len = (int) v.ek_len;
+        tc->dk_len = (int) v.dk_len;
+        ret = ACVP_SUCCESS;
+exit:
+        imb_ml_kem_free(handle);
+        return ret;
+}
+
+static int
+ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_ML_KEM_TC *tc;
+        IMB_ML_KEM *handle = NULL;
+        IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
+        IMB_ML_KEM_ENCAP_PARAMS encap_params;
+        struct ml_kem_variant v;
+        uint8_t seed_d_z[ML_KEM_SEED_BYTES * 2];
+        uint8_t tmp_ek[IMB_ML_KEM_1024_PUBKEY_BYTES];
+        uint8_t tmp_dk[IMB_ML_KEM_1024_PRIVKEY_BYTES];
+        int ret = ACVP_CRYPTO_MODULE_FAIL;
+        int imb_rc;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.ml_kem;
+
+        if (ml_kem_get_variant(tc->param_set, &v) != 0) {
+                fprintf(stderr, "Unsupported ML-KEM parameter set\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        if (imb_ml_kem_new(mb_mgr, v.alg, &handle) != 0 || handle == NULL) {
+                fprintf(stderr, "Could not allocate ML-KEM context\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        switch (tc->function) {
+        case ACVP_ML_KEM_FUNCTION_ENCAPSULATE:
+                if (tc->ek == NULL || tc->ek_len != (int) v.ek_len || tc->m == NULL ||
+                    tc->m_len != ML_KEM_M_BYTES || tc->c == NULL || tc->k == NULL) {
+                        fprintf(stderr, "Invalid ML-KEM encapsulation inputs\n");
+                        goto exit;
+                }
+                if (imb_ml_kem_set_pubkey(handle, tc->ek) != 0) {
+                        fprintf(stderr, "ML-KEM encapsulation key binding failed\n");
+                        goto exit;
+                }
+                encap_params.m_32 = tc->m;
+                if (imb_ml_kem_encap(handle, tc->c, tc->k, &encap_params) != 0) {
+                        fprintf(stderr, "ML-KEM encapsulation failed\n");
+                        goto exit;
+                }
+                tc->c_len = (int) v.ct_len;
+                tc->k_len = IMB_ML_KEM_SHARED_SECRET_BYTES;
+                ret = ACVP_SUCCESS;
+                break;
+        case ACVP_ML_KEM_FUNCTION_DECAPSULATE:
+                if (tc->c == NULL || tc->c_len != (int) v.ct_len || tc->k == NULL) {
+                        fprintf(stderr, "Invalid ML-KEM decapsulation inputs\n");
+                        goto exit;
+                }
+                if (tc->dk != NULL && tc->dk_len == (int) v.dk_len) {
+                        if (imb_ml_kem_set_privkey(handle, tc->dk) != 0) {
+                                fprintf(stderr, "ML-KEM decapsulation key binding failed\n");
+                                goto exit;
+                        }
+                } else if (tc->d != NULL && tc->z != NULL && tc->d_len == ML_KEM_SEED_BYTES &&
+                           tc->z_len == ML_KEM_SEED_BYTES) {
+                        memcpy(seed_d_z, tc->d, ML_KEM_SEED_BYTES);
+                        memcpy(seed_d_z + ML_KEM_SEED_BYTES, tc->z, ML_KEM_SEED_BYTES);
+                        keygen_params.seed_d_z = seed_d_z;
+                        if (imb_ml_kem_keypair(handle, tmp_ek, tmp_dk, &keygen_params) != 0) {
+                                fprintf(stderr, "ML-KEM key generation from seeds failed\n");
+                                goto exit;
+                        }
+                } else {
+                        fprintf(stderr, "Missing ML-KEM decapsulation key material\n");
+                        goto exit;
+                }
+                if (imb_ml_kem_decap(handle, tc->k, tc->c, (size_t) tc->c_len, NULL) != 0) {
+                        fprintf(stderr, "ML-KEM decapsulation failed\n");
+                        goto exit;
+                }
+                tc->k_len = IMB_ML_KEM_SHARED_SECRET_BYTES;
+                ret = ACVP_SUCCESS;
+                break;
+        case ACVP_ML_KEM_FUNCTION_ENC_KEYCHECK:
+                if (tc->ek == NULL || tc->ek_len != (int) v.ek_len) {
+                        tc->keycheck_disposition = ACVP_TEST_DISPOSITION_FAIL;
+                        ret = ACVP_SUCCESS;
+                        break;
+                }
+                imb_rc = imb_ml_kem_pubkey_validate(handle, tc->ek);
+                tc->keycheck_disposition =
+                        (imb_rc == 0) ? ACVP_TEST_DISPOSITION_PASS : ACVP_TEST_DISPOSITION_FAIL;
+                ret = ACVP_SUCCESS;
+                break;
+        case ACVP_ML_KEM_FUNCTION_DEC_KEYCHECK:
+                if (tc->dk == NULL || tc->dk_len != (int) v.dk_len) {
+                        tc->keycheck_disposition = ACVP_TEST_DISPOSITION_FAIL;
+                        ret = ACVP_SUCCESS;
+                        break;
+                }
+                imb_rc = imb_ml_kem_privkey_validate(handle, tc->dk);
+                tc->keycheck_disposition =
+                        (imb_rc == 0) ? ACVP_TEST_DISPOSITION_PASS : ACVP_TEST_DISPOSITION_FAIL;
+                ret = ACVP_SUCCESS;
+                break;
+        default:
+                fprintf(stderr, "Unsupported ML-KEM function\n");
+                goto exit;
+        }
+
+exit:
+        imb_ml_kem_free(handle);
+        return ret;
+}
+
+#endif /* INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 3, 0) */
 
 static void
 usage(const char *app_name)
@@ -2449,7 +2646,7 @@ main(int argc, char **argv)
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHAKE_256, &shake256_handler) != ACVP_SUCCESS)
                 goto exit;
 
-#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0)
+#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 3, 0)
         if (acvp_cap_ml_dsa_enable(ctx, ACVP_ML_DSA_KEYGEN, &ml_dsa_keygen_handler) != ACVP_SUCCESS)
                 goto exit;
 
@@ -2500,7 +2697,53 @@ main(int argc, char **argv)
                                      ACVP_ML_DSA_PARAM_SET_ML_DSA_87) != ACVP_SUCCESS)
                 goto exit;
 
-#endif /* INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0) */
+        if (acvp_cap_ml_kem_enable(ctx, ACVP_ML_KEM_KEYGEN, &ml_kem_keygen_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_KEYGEN, ACVP_ML_KEM_PARAM_PARAMETER_SET,
+                                     ACVP_ML_KEM_PARAM_SET_ML_KEM_512) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_KEYGEN, ACVP_ML_KEM_PARAM_PARAMETER_SET,
+                                     ACVP_ML_KEM_PARAM_SET_ML_KEM_768) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_KEYGEN, ACVP_ML_KEM_PARAM_PARAMETER_SET,
+                                     ACVP_ML_KEM_PARAM_SET_ML_KEM_1024) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_enable(ctx, ACVP_ML_KEM_XCAP, &ml_kem_xcap_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_XCAP, ACVP_ML_KEM_PARAM_PARAMETER_SET,
+                                     ACVP_ML_KEM_PARAM_SET_ML_KEM_512) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_XCAP, ACVP_ML_KEM_PARAM_PARAMETER_SET,
+                                     ACVP_ML_KEM_PARAM_SET_ML_KEM_768) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_XCAP, ACVP_ML_KEM_PARAM_PARAMETER_SET,
+                                     ACVP_ML_KEM_PARAM_SET_ML_KEM_1024) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_XCAP, ACVP_ML_KEM_PARAM_FUNCTION,
+                                     ACVP_ML_KEM_FUNCTION_ENCAPSULATE) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_XCAP, ACVP_ML_KEM_PARAM_FUNCTION,
+                                     ACVP_ML_KEM_FUNCTION_DECAPSULATE) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_XCAP, ACVP_ML_KEM_PARAM_FUNCTION,
+                                     ACVP_ML_KEM_FUNCTION_ENC_KEYCHECK) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_ml_kem_set_parm(ctx, ACVP_ML_KEM_XCAP, ACVP_ML_KEM_PARAM_FUNCTION,
+                                     ACVP_ML_KEM_FUNCTION_DEC_KEYCHECK) != ACVP_SUCCESS)
+                goto exit;
+
+#endif /* INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 3, 0) */
 
         /* Allocate and initialize MB_MGR */
         mb_mgr = alloc_mb_mgr(0);
