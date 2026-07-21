@@ -1,5 +1,6 @@
 /*
  * Copyright 2024-2026 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright (c) 2026 Intel Corporation. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -24,6 +25,25 @@
 
 #if UINT_MAX < UINT32_MAX
 #error "Unsupported compiler: sizeof(unsigned int) < sizeof(uint32_t)"
+#endif
+
+#ifndef __has_extension
+#define __has_extension(x) 0
+#endif
+#ifndef __has_warning
+#define __has_warning(x) 0
+#endif
+
+#if defined(__clang_analyzer__) && __has_extension(c_attributes)
+#if __has_warning("-Wc23-extensions")
+#define ANALYZER_SUPPRESS_NEXT                                                                     \
+        _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wc23-extensions\"")  \
+                [[clang::suppress]] _Pragma("clang diagnostic pop")
+#else
+#define ANALYZER_SUPPRESS_NEXT [[clang::suppress]]
+#endif
+#else
+#define ANALYZER_SUPPRESS_NEXT
 #endif
 
 /* Handy function-like bit-extraction macros */
@@ -583,6 +603,13 @@ scalar_mult_add(scalar *out, const scalar *lhs, const scalar *rhs)
         const uint16_t *roots = kModRoots;
 
         do {
+                /*
+                 * lhs and rhs are always fully populated arrays of DEGREE
+                 * elements by the time scalar_mult_add() is called; clang
+                 * static analyzer cannot verify this across the call chain
+                 * from decode/keygen, hence the false-positive suppression.
+                 */
+                ANALYZER_SUPPRESS_NEXT
                 uint32_t l0 = *lc++, r0 = *rc++;
                 uint32_t l1 = *lc++, r1 = *rc++;
                 uint16_t *c0 = curr++;
@@ -612,6 +639,13 @@ scalar_encode(uint8_t *out, const scalar *s, int bits)
                         used += bits;
                 } else if (used + bits > 64) {
                         out = OPENSSL_store_u64_le(out, accum | (element << used));
+                        /*
+                         * bits <= 12, so this branch (used + bits > 64)
+                         * implies used > 52, keeping the shift amount
+                         * (64 - used) safely within [1, 11]. clang static
+                         * analyzer cannot infer this cross-branch invariant.
+                         */
+                        ANALYZER_SUPPRESS_NEXT
                         accum = element >> (64 - used);
                         used = (used + bits) - 64;
                 } else {
@@ -688,6 +722,13 @@ scalar_decode(scalar *out, const uint8_t *in, int bits)
                          */
                         element = ((uint16_t) accum) & mask;
                         todo -= accum_bits;
+                        /*
+                         * This branch is only reached when accum_bits < todo
+                         * <= bits <= 12, so accum_bits is well below 64 here.
+                         * clang static analyzer cannot infer this invariant
+                         * across the preceding branch conditions.
+                         */
+                        ANALYZER_SUPPRESS_NEXT
                         mask = bitmask >> accum_bits;
                         accum_bits = 0;
                 }
