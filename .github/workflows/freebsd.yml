@@ -23,7 +23,7 @@ jobs:
         with:
           usesh: true
           mem: 8192
-          prepare: pkg install -y curl nasm gmake cmake perl
+          prepare: pkg install -y curl nasm gmake cmake perl5
           run: |
             echo ">>> CMAKE CONFIGURE"
             cmake -B ./build -DCMAKE_BUILD_TYPE=Release
@@ -47,7 +47,7 @@ jobs:
         with:
           usesh: true
           mem: 8192
-          prepare: pkg install -y curl nasm gmake cmake gcc perl
+          prepare: pkg install -y curl nasm gmake cmake gcc perl5
           run: |
             echo ">>> CMAKE CONFIGURE"
             cmake -B ./build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc
