@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * Internal definition of the opaque IMB_ML_DSA context and its backend
  * dispatch (vtable). The vtable keeps a single portable backend today but
  * allows future ISA-specific backends to be selected at imb_ml_dsa_new()
@@ -65,13 +65,15 @@
 extern "C" {
 #endif
 
-/* Opaque vendored OpenSSL ML-DSA key object (see crypto/ml_dsa.h). Only a
+/**
+ * Opaque vendored OpenSSL ML-DSA key object (see crypto/ml_dsa.h). Only a
  * pointer to it is referenced here, so the full definition is not needed.
  * A plain struct-tag forward declaration (rather than a duplicate "typedef
  * ... ML_DSA_KEY" here) is used deliberately: translation units that include
  * both this header and the real crypto/ml_dsa.h (e.g. the backend
  * implementation) would otherwise see the ML_DSA_KEY typedef declared twice,
- * which some compilers/standard versions warn/error on outside of C11. */
+ * which some compilers/standard versions warn/error on outside of C11.
+ */
 struct ml_dsa_key_st;
 
 struct IMB_ML_DSA {
@@ -99,7 +101,7 @@ struct IMB_ML_DSA {
                         size_t msg_len, const uint8_t *ctx, size_t ctx_len);
         int (*verify_ctx)(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *ctx,
                           size_t ctx_len, const uint8_t *sig, size_t sig_len);
-        /*
+        /**
          * FIPS 204 internal interface (ML-DSA.Sign_internal /
          * ML-DSA.Verify_internal): no context string, no message encoding
          * (equivalent to sign_ctx/verify_ctx with ctx = NULL, ctx_len = 0 and

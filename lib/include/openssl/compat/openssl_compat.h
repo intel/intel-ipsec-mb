@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * Copyright 2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -34,7 +34,7 @@
  * https://www.openssl.org/source/license.html
  */
 
-/*
+/**
  * Thin OpenSSL-compatibility shim for the ported ML-DSA (FIPS 204) sources.
  *
  * Maps the small set of OpenSSL allocator / error / cleanse / byte-order

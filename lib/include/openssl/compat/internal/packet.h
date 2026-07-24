@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * Copyright 2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -34,7 +34,7 @@
  * https://www.openssl.org/source/license.html
  */
 
-/*
+/**
  * Minimal self-contained replacement for OpenSSL's "internal/packet.h",
  * implementing only the read (PACKET) and write (WPACKET) helpers referenced
  * by the vendored ML-DSA (FIPS 204) encoders:
@@ -203,7 +203,7 @@ WPACKET_get_total_written(WPACKET *pkt, size_t *written)
         return 1;
 }
 
-/*
+/**
  * Close the top-level WPACKET.  With no length prefix and no sub-packets there
  * is nothing to back-fill, so this simply succeeds.
  */

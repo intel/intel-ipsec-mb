@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * Internal definition of the opaque IMB_ML_KEM context and its backend
  * dispatch (vtable). The vtable keeps a single portable backend today but
  * allows future ISA-specific backends to be selected at imb_ml_kem_new()
@@ -73,13 +73,15 @@
 extern "C" {
 #endif
 
-/* Opaque vendored OpenSSL ML-KEM key object (see crypto/ml_kem.h). Only a
+/**
+ * Opaque vendored OpenSSL ML-KEM key object (see crypto/ml_kem.h). Only a
  * pointer to it is referenced here, so the full definition is not needed.
  * A plain struct-tag forward declaration (rather than a duplicate "typedef
  * ... ML_KEM_KEY" here) is used deliberately: translation units that include
  * both this header and the real crypto/ml_kem.h (e.g. the backend
  * implementation) would otherwise see the ML_KEM_KEY typedef declared twice,
- * which some compilers/standard versions warn/error on outside of C11. */
+ * which some compilers/standard versions warn/error on outside of C11.
+ */
 struct ossl_ml_kem_key_st;
 
 struct IMB_ML_KEM {
@@ -95,7 +97,8 @@ struct IMB_ML_KEM {
         /* Cached decoded/generated key bound to this context (see above). */
         struct ossl_ml_kem_key_st *key;
 
-        /* Backend dispatch table (0 on success, <0 on error).
+        /**
+         * Backend dispatch table (0 on success, <0 on error).
          * keypair()/encap() accept optional randomness (NULL = internal RNG).
          * decap() takes no randomness input.
          */
@@ -105,7 +108,7 @@ struct IMB_ML_KEM {
         int (*set_pubkey)(IMB_ML_KEM *self, const uint8_t *ek);
         int (*encap)(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret,
                      const uint8_t m_32_or_null[32]);
-        /*
+        /**
          * FIPS 203 Section 7.3 mandates the ciphertext-length ("ciphertext
          * type") check be performed on every single call, unlike the
          * encapsulation/decapsulation key checks (which "need not be

@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * Copyright 2019-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -34,7 +34,7 @@
  * https://www.openssl.org/source/license.html
  */
 
-/*
+/**
  * Compatibility shim for "internal/sha3.h" used by the vendored ML-DSA
  * (FIPS 204) sources.  Provides the full KECCAK1600_CTX context (matching
  * OpenSSL's struct keccak_st), the PROV_SHA3_METHOD vtable, and all

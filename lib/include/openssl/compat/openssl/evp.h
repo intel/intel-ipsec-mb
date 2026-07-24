@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * Copyright 2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -34,7 +34,7 @@
  * https://www.openssl.org/source/license.html
  */
 
-/*
+/**
  * Compatibility shim for <openssl/evp.h> used by the vendored ML-DSA
  * (FIPS 204) sources.  Provides a header-only EVP digest interface that
  * understands SHAKE-128 and SHAKE-256, backed by the OpenSSL KECCAK1600_CTX
@@ -166,7 +166,7 @@ EVP_MD_CTX_free(EVP_MD_CTX *ctx)
 static ossl_inline ossl_unused int
 EVP_DigestInit_ex2(EVP_MD_CTX *ctx, const EVP_MD *md, const OSSL_PARAM *p)
 {
-        /*
+        /**
          * ossl_sha3_init sets block_size, md_size, pad, and zeros xof_state/bufsz
          * but does NOT populate ctx->sctx.meth.  Set the x86_64 generic vtable
          * entries explicitly so ossl_sha3_absorb / ossl_sha3_squeeze dispatch
@@ -216,7 +216,7 @@ EVP_DigestFinalXOF(EVP_MD_CTX *ctx, uint8_t *out, size_t len)
         return EVP_DigestSqueeze(ctx, out, len);
 }
 
-/*
+/**
  * Fixed-length digest finalisation (SHA3-256/SHA3-512), used by ML-KEM for
  * G(), H() and the pubkey-hash / implicit-rejection derivations.
  */
