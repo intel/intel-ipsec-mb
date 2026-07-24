@@ -131,8 +131,7 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
                 return IMB_ERR_NULL_KEY;
 #endif
         const uint8_t *xi_32 = (params != NULL) ? params->xi_32 : NULL;
-        const int rc = (xi_32 != NULL) ? self->keypair_derand(self, pk, sk, xi_32)
-                                       : self->keypair(self, pk, sk);
+        const int rc = self->keypair(self, pk, sk, xi_32);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
 }
@@ -198,10 +197,7 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
 #endif
         int rc;
 
-        if (rnd_32 != NULL)
-                rc = self->sign_ctx_derand(self, sig, sig_len, msg, msg_len, ctx, ctx_len, rnd_32);
-        else
-                rc = self->sign_ctx(self, sig, sig_len, msg, msg_len, ctx, ctx_len);
+        rc = self->sign_ctx(self, sig, sig_len, msg, msg_len, ctx, ctx_len, rnd_32);
 
         return (rc != 0) ? IMB_ERR_PQC_SIGNOP : 0;
 }

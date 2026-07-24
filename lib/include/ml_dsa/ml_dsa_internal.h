@@ -44,7 +44,7 @@
  * same context - mirroring how an OpenSSL provider decodes/imports a key
  * once (keymgmt) and reuses it across many signature operations (signature
  * provider). Re-binding a context (calling any of the above again) replaces
- * the previously cached key. A key produced by keypair()/keypair_derand()
+ * the previously cached key. A key produced by keypair()
  * or set_privkey() carries both the private and public components (the
  * public part is always derived as part of decoding/generating the private
  * key) and so may be used for both signing and verification; a key produced
@@ -90,15 +90,12 @@ struct IMB_ML_DSA {
         struct ml_dsa_key_st *key;
 
         /* Backend dispatch table. All ops return 0 on success, <0 on error. */
-        int (*keypair_derand)(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk, const uint8_t xi_32[32]);
-        int (*keypair)(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk);
+        int (*keypair)(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk, const uint8_t xi_32_or_null[32]);
         int (*set_privkey)(IMB_ML_DSA *self, const uint8_t *sk);
         int (*set_pubkey)(IMB_ML_DSA *self, const uint8_t *pk);
-        int (*sign_ctx_derand)(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                               size_t msg_len, const uint8_t *ctx, size_t ctx_len,
-                               const uint8_t *rnd_32_or_null);
         int (*sign_ctx)(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                        size_t msg_len, const uint8_t *ctx, size_t ctx_len);
+                        size_t msg_len, const uint8_t *ctx, size_t ctx_len,
+                        const uint8_t *rnd_32_or_null);
         int (*verify_ctx)(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *ctx,
                           size_t ctx_len, const uint8_t *sig, size_t sig_len);
         /**

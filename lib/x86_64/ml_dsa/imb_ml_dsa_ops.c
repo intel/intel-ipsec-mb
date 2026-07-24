@@ -31,7 +31,7 @@
  * (ossl_ml_dsa_*).
  *
  * Unlike the previous design, the decoded/generated ML_DSA_KEY is cached in
- * self->key across calls: keypair()/keypair_derand() generate it once,
+ * self->key across calls: keypair() generates it once,
  * set_privkey()/set_pubkey() decode (and, for private keys, fully validate)
  * it once, and every sign/verify call reuses that cached key instead of
  * re-decoding and re-validating it. This matches the key-lifecycle model
@@ -80,11 +80,20 @@ imb_ml_dsa_backend_free_key(IMB_ML_DSA *self)
 /* Key generation                                                            */
 /* ------------------------------------------------------------------------- */
 static int
-op_keypair_derand(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk, const uint8_t xi_32[32])
+op_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk, const uint8_t xi_32_or_null[32])
 {
         ML_DSA_KEY *key = NULL;
+        uint8_t xi[ML_DSA_RND_BYTES] = { 0 };
+        const uint8_t *xi_32 = xi_32_or_null;
         const uint8_t *enc;
         int rc = -1;
+
+        /* A NULL seed requests fresh-random key generation. */
+        if (xi_32 == NULL) {
+                if (imb_get_random(xi, sizeof(xi)) != 0)
+                        goto end;
+                xi_32 = xi;
+        }
 
         key = ossl_ml_dsa_key_new(NULL, NULL, self->evp_type);
         if (key == NULL)
@@ -112,21 +121,8 @@ op_keypair_derand(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk, const uint8_t xi_3
         key = NULL;
         rc = 0;
 end:
-        ossl_ml_dsa_key_free(key);
-        return rc;
-}
-
-static int
-op_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk)
-{
-        uint8_t xi[ML_DSA_RND_BYTES];
-        int rc;
-
-        if (imb_get_random(xi, sizeof(xi)) != 0)
-                return -1;
-
-        rc = op_keypair_derand(self, pk, sk, xi);
         clear_mem(xi, sizeof(xi));
+        ossl_ml_dsa_key_free(key);
         return rc;
 }
 
@@ -182,22 +178,20 @@ end:
 /* Signing                                                                   */
 /* ------------------------------------------------------------------------- */
 static int
-op_sign_ctx_derand(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                   size_t msg_len, const uint8_t *ctx, size_t ctx_len,
-                   const uint8_t *rnd_32_or_null)
+op_sign_ctx(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg, size_t msg_len,
+            const uint8_t *ctx, size_t ctx_len, const uint8_t *rnd_32_or_null)
 {
-        uint8_t rnd[ML_DSA_RND_BYTES];
+        uint8_t rnd[ML_DSA_RND_BYTES] = { 0 };
         size_t out_len = 0;
         int rc = -1;
 
         if (self->key == NULL || ossl_ml_dsa_key_get_priv(self->key) == NULL)
                 return -1;
 
-        /* A NULL randomizer requests deterministic signing (rnd = 32 zeros). */
         if (rnd_32_or_null != NULL)
                 memcpy(rnd, rnd_32_or_null, sizeof(rnd));
-        else
-                memset(rnd, 0, sizeof(rnd));
+        else if (imb_get_random(rnd, sizeof(rnd)) != 0)
+                goto end;
 
         if (!ossl_ml_dsa_sign(self->key, 0 /* msg_is_mu */, msg, msg_len, ctx, ctx_len, rnd,
                               sizeof(rnd), 1 /* encode */, sig, &out_len, self->sig_len))
@@ -207,22 +201,6 @@ op_sign_ctx_derand(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_
                 *sig_len = out_len;
         rc = 0;
 end:
-        clear_mem(rnd, sizeof(rnd));
-        return rc;
-}
-
-static int
-op_sign_ctx(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg, size_t msg_len,
-            const uint8_t *ctx, size_t ctx_len)
-{
-        uint8_t rnd[ML_DSA_RND_BYTES];
-        int rc;
-
-        /* Hedged signing: derive a fresh per-signature randomizer. */
-        if (imb_get_random(rnd, sizeof(rnd)) != 0)
-                return -1;
-
-        rc = op_sign_ctx_derand(self, sig, sig_len, msg, msg_len, ctx, ctx_len, rnd);
         clear_mem(rnd, sizeof(rnd));
         return rc;
 }
@@ -251,7 +229,7 @@ static int
 op_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
                  size_t msg_len, const uint8_t *rnd_32_or_null)
 {
-        uint8_t rnd[ML_DSA_RND_BYTES];
+        uint8_t rnd[ML_DSA_RND_BYTES] = { 0 };
         size_t out_len = 0;
         int rc = -1;
 
@@ -262,7 +240,7 @@ op_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t 
                 memcpy(rnd, rnd_32_or_null, sizeof(rnd));
         /* Hedged signing: derive a fresh per-signature randomizer. */
         else if (imb_get_random(rnd, sizeof(rnd)) != 0)
-                return -1;
+                goto end;
 
         /* No context string, no message encoding: encode = 0. */
         if (!ossl_ml_dsa_sign(self->key, 0 /* msg_is_mu */, msg, msg_len, NULL, 0, rnd, sizeof(rnd),
@@ -394,11 +372,9 @@ imb_ml_dsa_backend_init_portable(IMB_ML_DSA *self)
         }
 
         self->key = NULL;
-        self->keypair_derand = op_keypair_derand;
         self->keypair = op_keypair;
         self->set_privkey = op_set_privkey;
         self->set_pubkey = op_set_pubkey;
-        self->sign_ctx_derand = op_sign_ctx_derand;
         self->sign_ctx = op_sign_ctx;
         self->verify_ctx = op_verify_ctx;
         self->sign_internal = op_sign_internal;
