@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * Public IMB ML-DSA (FIPS 204) API: context lifecycle plus the exported
  * one-line wrappers. Each wrapper performs optional SAFE_PARAM validation
  * then forwards to the backend dispatch table installed at imb_ml_dsa_new()
@@ -67,13 +67,13 @@ imb_ml_dsa_new(IMB_MGR *mgr, IMB_ML_DSA_ALG alg, IMB_ML_DSA **new_self)
         if (alg != IMB_ML_DSA_44 && alg != IMB_ML_DSA_65 && alg != IMB_ML_DSA_87)
                 return IMB_ERR_PQC_ALG;
 
-        /*
+        /**
          * Features are queried so a future ISA-specific backend can be chosen
          * here.
          */
         (void) imb_get_features(mgr, &features);
 
-        /*
+        /**
          * Cap the features passed to the OpenSSL ia32cap shim at the ISA
          * level the caller explicitly selected via init_mb_mgr_*() (recorded
          * in mgr->used_arch). Without this, an explicit init_mb_mgr_avx2()
@@ -108,8 +108,10 @@ imb_ml_dsa_free(IMB_ML_DSA *self)
 {
         if (self == NULL)
                 return;
-        /* Release any key cached by imb_ml_dsa_keypair()/set_privkey()/
-         * set_pubkey() before wiping the handle. */
+        /**
+         * Release any key cached by imb_ml_dsa_keypair()/set_privkey()/
+         * set_pubkey() before wiping the handle.
+         */
         imb_ml_dsa_backend_free_key(self);
         imb_clear_mem(self, sizeof(*self));
         free(self);
@@ -204,7 +206,7 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
         return (rc != 0) ? IMB_ERR_PQC_SIGNOP : 0;
 }
 
-/*
+/**
  * ------------------------------------------------------------------------
  * FIPS 204 internal interface (ML-DSA.Sign_internal / ML-DSA.Verify_internal):
  * no context string, no message encoding. Intended for callers that perform

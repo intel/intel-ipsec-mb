@@ -1654,14 +1654,14 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
 #define IMB_ML_DSA_87_SIG_BYTES     4627
 
 /**
- * Allocate and initialize an ML-DSA context for a given parameter set.
+ * @brief Allocate and initialize an ML-DSA context for a given parameter set.
  *
  * @param [in]  mgr      Pointer to initialized IMB_MGR structure
  * @param [in]  alg      ML-DSA parameter set (IMB_ML_DSA_44/65/87)
  * @param [out] new_self Receives the new IMB_ML_DSA context on success, or
  *                       NULL on failure
  *
- * @return operation status.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_MBMGR invalid \a mgr pointer
  * @retval IMB_ERR_NULL_CTX invalid \a new_self pointer
@@ -1672,8 +1672,8 @@ IMB_DLL_EXPORT int
 imb_ml_dsa_new(IMB_MGR *mgr, IMB_ML_DSA_ALG alg, IMB_ML_DSA **new_self);
 
 /**
- * Release an ML-DSA context allocated by imb_ml_dsa_new(), along with any
- * key currently bound to it.
+ * @brief Release an ML-DSA context allocated by imb_ml_dsa_new(), along with any
+ *        key currently bound to it.
  *
  * @param [in] self  ML-DSA context (may be NULL)
  */
@@ -1697,18 +1697,18 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
 } IMB_ML_DSA_KEYGEN_PARAMS;
 
 /**
- * Generate an ML-DSA key pair (FIPS 204 KeyGen) and bind it to \a self,
- * replacing any previously bound key. The generated key carries both
- * private and public components, so \a self may be used with both the sign
- * and verify functions immediately afterwards.
+ * @brief Generate an ML-DSA key pair (FIPS 204 KeyGen) and bind it to \a self,
+ *        replacing any previously bound key. The generated key carries both
+ *        private and public components, so \a self may be used with both the sign
+ *        and verify functions immediately afterwards.
  *
  * @param [in]  self    ML-DSA context
  * @param [out] pk      Encoded public key buffer (variant PUBKEY_BYTES)
  * @param [out] sk      Encoded private key buffer (variant PRIVKEY_BYTES)
  * @param [in]  params  Optional key generation parameters, or NULL for
- *                       fresh-random key generation
+ *                      fresh-random key generation
  *
- * @return operation status.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk or \a sk pointer
@@ -1719,17 +1719,17 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
                    const IMB_ML_DSA_KEYGEN_PARAMS *params);
 
 /**
- * Bind an encoded ML-DSA private key to the context, replacing any
- * previously bound key. The key is decoded and fully validated (its public
- * component is re-derived and the embedded consistency hash checked) once
- * here; every subsequent sign/verify call on \a self reuses the cached,
- * decoded key instead of repeating that work. The bound key carries both
- * private and public components, so it may also be used with the verify
- * functions.
+ * @brief Bind an encoded ML-DSA private key to the context, replacing any
+ *        previously bound key. The key is decoded and fully validated (its public
+ *        component is re-derived and the embedded consistency hash checked) once
+ *        here; every subsequent sign/verify call on \a self reuses the cached,
+ *        decoded key instead of repeating that work. The bound key carries both
+ *        private and public components, so it may also be used with the verify
+ *        functions.
  *
  * @param [in] self  ML-DSA context
  * @param [in] sk    Encoded private key (variant PRIVKEY_BYTES)
- * @return operation status.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
@@ -1739,15 +1739,15 @@ IMB_DLL_EXPORT int
 imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const uint8_t *sk);
 
 /**
- * Bind an encoded ML-DSA public key to the context, replacing any
- * previously bound key. The key is decoded once here; every subsequent
- * verify call on \a self reuses the cached, decoded key instead of
- * repeating that work. The bound key only carries the public component and
- * so may only be used with the verify functions.
+ * @brief Bind an encoded ML-DSA public key to the context, replacing any
+ *        previously bound key. The key is decoded once here; every subsequent
+ *        verify call on \a self reuses the cached, decoded key instead of
+ *        repeating that work. The bound key only carries the public component and
+ *        so may only be used with the verify functions.
  *
  * @param [in] self  ML-DSA context
  * @param [in] pk    Encoded public key (variant PUBKEY_BYTES)
- * @return operation status.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
@@ -1767,7 +1767,7 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * NULL together with ctx_len = 0 means no context string.
          */
         const uint8_t *ctx;
-        /** Context string length in bytes (0..255). */
+        /** Context string length in bytes (0..255) */
         size_t ctx_len;
         /**
          * Optional 32-byte randomizer.
@@ -1790,13 +1790,13 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
          * NULL together with ctx_len = 0 means no context string.
          */
         const uint8_t *ctx;
-        /** Context string length in bytes (0..255). */
+        /** Context string length in bytes (0..255) */
         size_t ctx_len;
 } IMB_ML_DSA_VERIFY_PARAMS;
 
 /**
- * Sign a message. Requires a private key to have been bound to \a self via
- * imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
+ * @brief Sign a message. Requires a private key to have been bound to \a self via
+ *        imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
  *
  * @param [in]  self     ML-DSA context with a bound private key
  * @param [out] sig      Signature buffer (variant SIG_BYTES)
@@ -1806,7 +1806,7 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @param [in]  params   Optional signing parameters, or NULL for hedged
  *                       signing with no context string
  *
- * @return operation status.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a sig or \a sig_len pointer
@@ -1820,10 +1820,10 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
                 const IMB_ML_DSA_SIGN_PARAMS *params);
 
 /**
- * Verify a signature over a message. Requires a public key to have been
- * bound to \a self via imb_ml_dsa_keypair(),
- * imb_ml_dsa_set_privkey() (private keys carry the public component too) or
- * imb_ml_dsa_set_pubkey().
+ * @brief Verify a signature over a message. Requires a public key to have been
+ *        bound to \a self via imb_ml_dsa_keypair(),
+ *        imb_ml_dsa_set_privkey() (private keys carry the public component too) or
+ *        imb_ml_dsa_set_pubkey().
  *
  * @param [in] self     ML-DSA context with a bound public key
  * @param [in] msg      Message buffer
@@ -1833,7 +1833,7 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
  * @param [in] params   Optional verification parameters, or NULL for no
  *                      context string
  *
- * @return operation status.
+ * @return Operation status
  * @retval 0 the signature is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_SRC invalid \a sig, \a msg or \a params->ctx pointer
@@ -1846,11 +1846,11 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const ui
                   size_t sig_len, const IMB_ML_DSA_VERIFY_PARAMS *params);
 
 /**
- * Validate an encoded ML-DSA public key.
+ * @brief Validate an encoded ML-DSA public key.
  *
  * @param [in] self  ML-DSA context
  * @param [in] pk    Encoded public key (variant PUBKEY_BYTES)
- * @return operation status.
+ * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
@@ -1860,11 +1860,11 @@ IMB_DLL_EXPORT int
 imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const uint8_t *pk);
 
 /**
- * Validate an encoded ML-DSA private key (decodes and checks consistency).
+ * @brief Validate an encoded ML-DSA private key (decodes and checks consistency).
  *
  * @param [in] self  ML-DSA context
  * @param [in] sk    Encoded private key (variant PRIVKEY_BYTES)
- * @return operation status.
+ * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
@@ -1874,12 +1874,12 @@ IMB_DLL_EXPORT int
 imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk);
 
 /**
- * Derive an encoded public key from an encoded private key.
+ * @brief Derive an encoded public key from an encoded private key.
  *
  * @param [in]  self  ML-DSA context
  * @param [in]  sk    Encoded private key (variant PRIVKEY_BYTES)
  * @param [out] pk    Encoded public key buffer (variant PUBKEY_BYTES)
- * @return operation status.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
@@ -1920,9 +1920,11 @@ typedef struct IMB_ML_KEM IMB_ML_KEM;
  */
 typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB_ML_KEM_ALG;
 
-/* Encoded encapsulation (public) key, decapsulation (private) key and
+/**
+ * Encoded encapsulation (public) key, decapsulation (private) key and
  * ciphertext sizes in bytes, and the fixed shared-secret size. See FIPS 203
- * Section 8, Table 2. */
+ * Section 8, Table 2.
+ */
 #define IMB_ML_KEM_512_PUBKEY_BYTES     800
 #define IMB_ML_KEM_512_PRIVKEY_BYTES    1632
 #define IMB_ML_KEM_512_CIPHERTEXT_BYTES 768
@@ -1935,7 +1937,7 @@ typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB
 #define IMB_ML_KEM_1024_PRIVKEY_BYTES    3168
 #define IMB_ML_KEM_1024_CIPHERTEXT_BYTES 1568
 
-/** Shared secret size in bytes: fixed across all ML-KEM parameter sets. */
+/* Shared secret size in bytes: fixed across all ML-KEM parameter sets */
 #define IMB_ML_KEM_SHARED_SECRET_BYTES 32
 
 /**
@@ -1946,7 +1948,7 @@ typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB
  * @param [out] new_self Receives the new IMB_ML_KEM context on success, or
  *                       NULL on failure
  *
- * @return Status code.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_MBMGR invalid \a mgr pointer
  * @retval IMB_ERR_NULL_CTX invalid \a new_self pointer
@@ -1958,7 +1960,7 @@ imb_ml_kem_new(IMB_MGR *mgr, IMB_ML_KEM_ALG alg, IMB_ML_KEM **new_self);
 
 /**
  * @brief Release an ML-KEM context allocated by imb_ml_kem_new(), along with
- * any key currently bound to it.
+ *        any key currently bound to it.
  *
  * @param [in] self  ML-KEM context (may be NULL)
  */
@@ -1984,9 +1986,9 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
 
 /**
  * @brief Generate an ML-KEM key pair (FIPS 203 KeyGen) and bind it to \a self,
- * replacing any previously bound key. The generated key carries both
- * private and public components, so \a self may be used with both the
- * encapsulate and decapsulate functions immediately afterwards.
+ *        replacing any previously bound key. The generated key carries both
+ *        private and public components, so \a self may be used with both the
+ *        encapsulate and decapsulate functions immediately afterwards.
  *
  * @param [in]  self    ML-KEM context
  * @param [out] ek      Encoded encapsulation key buffer (variant PUBKEY_BYTES)
@@ -1995,7 +1997,7 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
  * @param [in]  params  Optional key generation parameters, or NULL for
  *                      fresh-random key generation
  *
- * @return Status code.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek or \a dk pointer
@@ -2007,17 +2009,17 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk,
 
 /**
  * @brief Bind an encoded ML-KEM decapsulation (private) key to the context,
- * replacing any previously bound key. The key is decoded and fully
- * validated (its public component is re-derived and the embedded
- * consistency hash checked - FIPS 203 Section 7.3 decapsulation key check)
- * once here; every subsequent decapsulate call on \a self reuses the
- * cached, decoded key instead of repeating that work. The bound key carries
- * both private and public components, so it may also be used with the
- * encapsulate functions.
+ *        replacing any previously bound key. The key is decoded and fully
+ *        validated (its public component is re-derived and the embedded
+ *        consistency hash checked - FIPS 203 Section 7.3 decapsulation key check)
+ *        once here; every subsequent decapsulate call on \a self reuses the
+ *        cached, decoded key instead of repeating that work. The bound key carries
+ *        both private and public components, so it may also be used with the
+ *        encapsulate functions.
  *
  * @param [in] self  ML-KEM context
  * @param [in] dk    Encoded decapsulation key (variant PRIVKEY_BYTES)
- * @return Status code.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a dk pointer
@@ -2028,16 +2030,16 @@ imb_ml_kem_set_privkey(IMB_ML_KEM *self, const uint8_t *dk);
 
 /**
  * @brief Bind an encoded ML-KEM encapsulation (public) key to the context,
- * replacing any previously bound key. The key is decoded once here (its
- * encoded length and coefficient ranges are checked - FIPS 203 Section 7.2
- * encapsulation key check); every subsequent encapsulate call on \a self
- * reuses the cached, decoded key instead of repeating that work. The bound
- * key only carries the public component and so may only be used with the
- * encapsulate functions.
+ *        replacing any previously bound key. The key is decoded once here (its
+ *        encoded length and coefficient ranges are checked - FIPS 203 Section 7.2
+ *        encapsulation key check); every subsequent encapsulate call on \a self
+ *        reuses the cached, decoded key instead of repeating that work. The bound
+ *        key only carries the public component and so may only be used with the
+ *        encapsulate functions.
  *
  * @param [in] self  ML-KEM context
  * @param [in] ek    Encoded encapsulation key (variant PUBKEY_BYTES)
- * @return Status code.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
@@ -2065,9 +2067,9 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
 
 /**
  * @brief Encapsulate, producing a ciphertext and shared secret. Requires an
- * encapsulation key to have been bound to \a self via imb_ml_kem_keypair(),
- * imb_ml_kem_set_privkey() (private keys carry the public component too) or
- * imb_ml_kem_set_pubkey().
+ *        encapsulation key to have been bound to \a self via imb_ml_kem_keypair(),
+ *        imb_ml_kem_set_privkey() (private keys carry the public component too) or
+ *        imb_ml_kem_set_pubkey().
  *
  * @param [in]  self           ML-KEM context with a bound encapsulation key
  * @param [out] ct             Ciphertext buffer (variant CIPHERTEXT_BYTES)
@@ -2076,7 +2078,7 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
  * @param [in]  params         Optional encapsulation parameters, or NULL for
  *                             fresh-random encapsulation
  *
- * @return Status code.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a ct or \a shared_secret pointer
@@ -2096,9 +2098,9 @@ typedef struct IMB_ML_KEM_DECAP_PARAMS IMB_ML_KEM_DECAP_PARAMS;
 
 /**
  * @brief Decapsulate, recovering the shared secret from a ciphertext.
- * Requires a decapsulation key to have been bound to \a self via
- * imb_ml_kem_keypair()
- * or imb_ml_kem_set_privkey().
+ *        Requires a decapsulation key to have been bound to \a self via
+ *        imb_ml_kem_keypair()
+ *        or imb_ml_kem_set_privkey().
  *
  * Per FIPS 203, decapsulation never signals a cryptographic failure for a
  * content-invalid (but correctly sized) ciphertext: the "implicit
@@ -2115,7 +2117,7 @@ typedef struct IMB_ML_KEM_DECAP_PARAMS IMB_ML_KEM_DECAP_PARAMS;
  *                             bound parameter set's CIPHERTEXT_BYTES)
  * @param [in]  params         Reserved for future use; pass NULL
  *
- * @return Status code.
+ * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a shared_secret pointer
@@ -2132,7 +2134,7 @@ imb_ml_kem_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, si
  *
  * @param [in] self  ML-KEM context
  * @param [in] ek    Encoded encapsulation key (variant PUBKEY_BYTES)
- * @return Status code.
+ * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
@@ -2143,11 +2145,11 @@ imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const uint8_t *ek);
 
 /**
  * @brief Validate an encoded ML-KEM decapsulation (private) key (decodes and
- * checks consistency).
+ *        checks consistency).
  *
  * @param [in] self  ML-KEM context
  * @param [in] dk    Encoded decapsulation key (variant PRIVKEY_BYTES)
- * @return Status code.
+ * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a dk pointer

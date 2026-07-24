@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/*
+/**
  * FIPS 204 Section 6 "Internal Functions" states: "Other than for testing
  * purposes, the interfaces for key generation and signature generation
  * specified in this section should not be made available to applications,
@@ -63,12 +63,12 @@ extern "C" {
 #endif
 
 /**
- * Sign a message using the FIPS 204 internal interface (ML-DSA.Sign_internal).
- * No context string, no message encoding. Intended for composite schemes that
- * perform their own external-interface encoding, and for ACVP/CAVP
- * conformance testing of the internal interface.
- * Requires a private key to have been bound to \a self via
- * imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
+ * @brief Sign a message using the FIPS 204 internal interface (ML-DSA.Sign_internal).
+ *        No context string, no message encoding. Intended for composite schemes that
+ *        perform their own external-interface encoding, and for ACVP/CAVP
+ *        conformance testing of the internal interface.
+ *        Requires a private key to have been bound to \a self via
+ *        imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
  *
  * @param [in]  self           ML-DSA context with a bound private key
  * @param [out] sig            Signature buffer (variant SIG_BYTES)
@@ -80,7 +80,13 @@ extern "C" {
  *                             signing). Pass 32 zero bytes for FIPS 204
  *                             deterministic signing (e.g. ACVP conformance
  *                             testing).
- * @return 0 on success, negative on failure.
+ * @return Operation status
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_DST invalid \a sig or \a sig_len pointer
+ * @retval IMB_ERR_NULL_SRC invalid \a msg pointer
+ * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
+ * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  *
  * @warning Per FIPS 204 Section 6, the internal Sign_internal interface
  * should not be made available to applications outside of CAVP/ACVP
@@ -94,19 +100,25 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const 
                          size_t msg_len, const uint8_t *rnd_32_or_null);
 
 /**
- * Verify a signature over a message using the FIPS 204 internal interface
- * (ML-DSA.Verify_internal). No context string, no message encoding.
- * Requires a public key to have been bound to \a self via
- * imb_ml_dsa_keypair(),
- * imb_ml_dsa_set_privkey() (private keys carry the public component too) or
- * imb_ml_dsa_set_pubkey().
+ * @brief Verify a signature over a message using the FIPS 204 internal interface
+ *        (ML-DSA.Verify_internal). No context string, no message encoding.
+ *        Requires a public key to have been bound to \a self via
+ *        imb_ml_dsa_keypair(),
+ *        imb_ml_dsa_set_privkey() (private keys carry the public component too) or
+ *        imb_ml_dsa_set_pubkey().
  *
  * @param [in] self     ML-DSA context with a bound public key
  * @param [in] msg      Message buffer
  * @param [in] msg_len  Message length in bytes
  * @param [in] sig      Signature buffer
  * @param [in] sig_len  Signature length in bytes
- * @return 0 if the signature is valid, negative otherwise.
+ * @return Operation status
+ * @retval 0 the signature is valid
+ * @retval IMB_ERR_NULL_CTX invalid \a self pointer
+ * @retval IMB_ERR_NULL_SRC invalid \a sig or \a msg pointer
+ * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
+ * @retval IMB_ERR_PQC_SIGNOP the signature is invalid, or verification
+ *         could not be performed
  *
  * @warning Per FIPS 204 Section 6, the internal Verify_internal interface
  * should not be made available to applications outside of CAVP/ACVP
