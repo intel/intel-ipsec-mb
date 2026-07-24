@@ -17,8 +17,8 @@
  * Callers should check SHA3_avx512vl_capable() before calling.
  */
 
+#include "openssl_compat.h"
 #include "internal/sha3.h"
-#include <openssl/crypto.h>
 #include <string.h>
 
 #if defined(KECCAK1600_ASM) &&                                                                     \

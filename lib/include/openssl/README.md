@@ -18,19 +18,19 @@ Files were ported from OpenSSL at commit:
 
 ## `compat/` — ipsec-mb compatibility shims
 
-`compat/` provides header-only stand-ins for OpenSSL headers that the ML-DSA
-and ML-KEM ports need at compile time but that were *not* vendored from
-OpenSSL.
-Sub-folders mirror the OpenSSL include namespace each stub replaces
-(`compat/openssl/` for `<openssl/*.h>`, `compat/internal/` for
-`"internal/*.h"`, `compat/crypto/` for `"crypto/*.h"`), so the vendored
-sources' `#include` lines resolve unchanged via the compiler include path.
+`compat/` provides the OpenSSL-compatibility surface that the vendored ML-DSA
+and ML-KEM code uses. The vendored sources include `openssl_compat.h`
+directly for allocator/error/random/byte-order helpers.
 
-Most files here are original ipsec-mb glue code (Intel copyright only) that
-just maps an OpenSSL API name onto an ipsec-mb/libc equivalent. A few,
-however, reuse actual logic or struct layout copied from genuine OpenSSL
-sources rather than merely replicating the API surface, and therefore carry a
-dual Intel + OpenSSL copyright/license header:
+The remaining namespace shims are only for OpenSSL headers that define
+non-trivial types or constants used by the vendored code:
+- `compat/openssl/evp.h`
+- `compat/internal/sha3.h`
+- `compat/internal/packet.h`
+
+`openssl_compat.h` is original ipsec-mb glue plus selected OpenSSL-adapted
+logic, and therefore carries a dual Intel + OpenSSL copyright/license header.
+OpenSSL-derived pieces include:
 
 - `openssl_compat.h` — `CRYPTO_memcmp()`, `OPENSSL_memdup()`, and the
   `OPENSSL_{store,load}_u{16,32,64}_le()` helpers are adapted from OpenSSL's

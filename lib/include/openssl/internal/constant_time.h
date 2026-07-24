@@ -13,7 +13,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/e_os2.h> /* For 'ossl_inline' */
+#include "openssl_compat.h" /* For 'ossl_inline' */
 
 /*-
  * The boolean methods return a bitmask of all ones (0xff...f) for true

@@ -7,10 +7,8 @@
  * https://www.openssl.org/source/license.html
  */
 
-#include <openssl/byteorder.h>
-#include <openssl/err.h>
+#include "openssl_compat.h"
 #include <openssl/evp.h>
-#include <openssl/proverr.h>
 #include "ml_dsa_hash.h"
 #include "ml_dsa_key.h"
 #include "ml_dsa_sign.h"

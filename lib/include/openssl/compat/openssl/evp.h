@@ -54,7 +54,6 @@
 
 #include "internal/sha3.h" /* KECCAK1600_CTX, PROV_SHA3_METHOD, ossl_sha3_* */
 #include "openssl_compat.h"
-#include <openssl/params.h> /* OSSL_PARAM (compat) */
 
 /* ML-DSA algorithm identifiers (match OpenSSL NID values, FIPS 204). */
 #ifndef EVP_PKEY_ML_DSA_44

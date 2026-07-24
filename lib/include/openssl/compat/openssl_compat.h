@@ -60,12 +60,43 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "clear_regs_mem.h"
+#include "imb_rand.h"
 
 /* ------------------------------------------------------------------------- */
 /* Compiler attribute / inline keyword shims (from OpenSSL e_os2.h)          */
 /* ------------------------------------------------------------------------- */
+#ifndef OPENSSL_EXPORT
+#define OPENSSL_EXPORT extern
+#endif
+
+#ifndef IMB_ML_DSA_COMPAT_OPENSSL_PARAMS_H
+#define IMB_ML_DSA_COMPAT_OPENSSL_PARAMS_H
+typedef struct ossl_param_st {
+        const char *key;
+        unsigned int data_type;
+        void *data;
+        size_t data_size;
+        size_t return_size;
+} OSSL_PARAM;
+#endif
+
+#ifndef IMB_ML_DSA_COMPAT_OPENSSL_CORE_DISPATCH_H
+#define IMB_ML_DSA_COMPAT_OPENSSL_CORE_DISPATCH_H
+#define OSSL_KEYMGMT_SELECT_PRIVATE_KEY       0x01
+#define OSSL_KEYMGMT_SELECT_PUBLIC_KEY        0x02
+#define OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS 0x04
+#define OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS  0x80
+
+#define OSSL_KEYMGMT_SELECT_ALL_PARAMETERS                                                         \
+        (OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS | OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS)
+#define OSSL_KEYMGMT_SELECT_KEYPAIR                                                                \
+        (OSSL_KEYMGMT_SELECT_PRIVATE_KEY | OSSL_KEYMGMT_SELECT_PUBLIC_KEY)
+#define OSSL_KEYMGMT_SELECT_ALL (OSSL_KEYMGMT_SELECT_KEYPAIR | OSSL_KEYMGMT_SELECT_ALL_PARAMETERS)
+#endif
+
 #ifndef ossl_inline
 #define ossl_inline inline
 #endif
@@ -143,11 +174,79 @@ OPENSSL_memdup(const void *data, size_t size)
 }
 
 /* ------------------------------------------------------------------------- */
+/* Aligned allocation (OpenSSL OPENSSL_aligned_alloc semantics).             */
+/* Returns an |alignment|-aligned pointer of |num| usable bytes and stores   */
+/* the pointer that must be passed to OPENSSL_free() in |*freeptr|.          */
+/* ------------------------------------------------------------------------- */
+static ossl_inline ossl_unused void *
+OPENSSL_aligned_alloc(size_t num, size_t alignment, void **freeptr)
+{
+        uintptr_t raw, aligned;
+
+        *freeptr = NULL;
+        if (alignment == 0 || (alignment & (alignment - 1)) != 0)
+                return NULL;
+        if (num == 0)
+                return NULL;
+        if (num > SIZE_MAX - alignment)
+                return NULL;
+        raw = (uintptr_t) malloc(num + alignment);
+        if (raw == 0)
+                return NULL;
+        aligned = (raw + alignment) & ~(uintptr_t) (alignment - 1);
+        *freeptr = (void *) raw;
+        return (void *) aligned;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Run-once primitive (OpenSSL CRYPTO_THREAD_run_once semantics).            */
+/* ------------------------------------------------------------------------- */
+typedef int CRYPTO_ONCE;
+#define CRYPTO_ONCE_STATIC_INIT 0
+
+static ossl_inline ossl_unused int
+CRYPTO_THREAD_run_once(CRYPTO_ONCE *once, void (*init)(void))
+{
+#if defined(__GNUC__) || defined(__clang__)
+        if (__atomic_load_n(once, __ATOMIC_ACQUIRE) == 0) {
+                init();
+                __atomic_store_n(once, 1, __ATOMIC_RELEASE);
+        }
+#else
+        if (*once == 0) {
+                init();
+                *once = 1;
+        }
+#endif
+        return 1;
+}
+
+/* ------------------------------------------------------------------------- */
 /* Error reporting shims - ML-DSA error state is surfaced via return codes,  */
 /* so OpenSSL's ERR_raise machinery degrades to a no-op.                     */
 /* ------------------------------------------------------------------------- */
 #define ERR_raise(lib, reason)           ((void) (lib), (void) (reason))
 #define ERR_raise_data(lib, reason, ...) ((void) (lib), (void) (reason))
+
+#ifndef ERR_LIB_PROV
+#define ERR_LIB_PROV 0
+#endif
+#ifndef ERR_LIB_CRYPTO
+#define ERR_LIB_CRYPTO 0
+#endif
+#ifndef ERR_R_INTERNAL_ERROR
+#define ERR_R_INTERNAL_ERROR 0
+#endif
+#ifndef ERR_R_PASSED_INVALID_ARGUMENT
+#define ERR_R_PASSED_INVALID_ARGUMENT 0
+#endif
+
+#ifndef PROV_R_BAD_LENGTH
+#define PROV_R_BAD_LENGTH 0
+#endif
+#ifndef PROV_R_INVALID_KEY
+#define PROV_R_INVALID_KEY 0
+#endif
 
 /* ------------------------------------------------------------------------- */
 /* Constant-time memory compare (OpenSSL CRYPTO_memcmp semantics).           */
@@ -222,6 +321,23 @@ OPENSSL_load_u64_le(uint64_t *val, const unsigned char *in)
                 v |= (uint64_t) in[i] << (8 * i);
         *val = v;
         return in + 8;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Randomness shims used by ML-DSA/ML-KEM.                                   */
+/* ------------------------------------------------------------------------- */
+static ossl_inline ossl_unused int
+RAND_priv_bytes_ex(void *libctx, unsigned char *buf, size_t num, unsigned int strength)
+{
+        (void) libctx;
+        (void) strength;
+        return imb_get_random(buf, num) == 0;
+}
+
+static ossl_inline ossl_unused int
+RAND_bytes_ex(void *libctx, unsigned char *buf, size_t num, unsigned int strength)
+{
+        return RAND_priv_bytes_ex(libctx, buf, num, strength);
 }
 
 #endif /* IMB_ML_DSA_OPENSSL_COMPAT_H */

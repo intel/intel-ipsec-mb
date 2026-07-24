@@ -11,10 +11,8 @@
 #define OPENSSL_HEADER_ML_KEM_H
 #pragma once
 
-#include <openssl/e_os2.h>
-#include <openssl/bio.h>
-#include <openssl/core_dispatch.h>
-#include <crypto/evp.h>
+#include "openssl_compat.h"
+#include <openssl/evp.h>
 
 #define ML_KEM_DEGREE 256
 /*
@@ -229,7 +227,7 @@ void
 ossl_ml_kem_key_free(ML_KEM_KEY *key);
 /*
  * Duplicate a key, optionally including some key material, per the
- * |selection|, see <openssl/core_dispatch.h>.
+ * |selection|, see OSSL_KEYMGMT_SELECT_* in openssl_compat.h.
  */
 ML_KEM_KEY *
 ossl_ml_kem_key_dup(const ML_KEM_KEY *key, int selection);

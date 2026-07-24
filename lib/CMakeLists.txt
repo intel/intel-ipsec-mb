@@ -296,9 +296,11 @@ target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})
 #   include/openssl/crypto        - genuine ported OpenSSL headers (e.g. crypto/ml_dsa.h)
 #   include/openssl/crypto/ml_dsa - genuine ported OpenSSL ML-DSA headers
 #   include/openssl/internal      - genuine ported OpenSSL internal headers
-#   include/openssl/compat        - ipsec-mb stand-ins for OpenSSL headers that
-#                                    were not vendored (resolves <openssl/...>,
-#                                    "internal/...", and "crypto/types.h" includes)
+#   include/openssl/compat        - ipsec-mb compatibility helpers
+#                                    (vendored sources include openssl_compat.h
+#                                    directly; compat/openssl/* and
+#                                    compat/internal/* provide remaining
+#                                    non-vendored OpenSSL type/constant shims)
 # Defining KECCAK1600_ASM (and leaving OPENSSL_NO_ASM undefined) enables the
 # asm-accelerated paths: ml_dsa_ntt.c selects the AVX2 NTT and ml_dsa_sample.c
 # pulls in the x4 AVX512VL SHAKE sampling, both chosen at run time via
@@ -321,12 +323,11 @@ endforeach()
 # The vendored OpenSSL ML-KEM source compiles against the same self-contained
 # compat include tree used by ML-DSA:
 #   include/openssl/crypto - genuine ported OpenSSL headers (e.g. crypto/ml_kem.h)
-#   include/openssl/compat - ipsec-mb stand-ins for OpenSSL headers that were
-#                            not vendored (resolves <openssl/...> and
-#                            "crypto/evp.h" includes; extended here with
-#                            SHA3-256/SHA3-512 EVP_MD entries needed by
-#                            ML-KEM's G()/H() hashes, on top of the SHAKE-128/
-#                            256 entries ML-DSA already added)
+#   include/openssl/compat - ipsec-mb compatibility headers and helpers
+#                            (vendored sources include openssl_compat.h
+#                            directly; compat/openssl/* and compat/internal/*
+#                            provide the remaining non-vendored OpenSSL
+#                            type/constant shims)
 # ML-KEM reuses the same vendored SHA-3/SHAKE implementation as ML-DSA
 # (lib/openssl/crypto/sha, already on SRC_FILES_ML_DSA above), so also needs
 # KECCAK1600_ASM defined for its compat EVP shim to resolve.

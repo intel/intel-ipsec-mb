@@ -8,11 +8,8 @@
  * https://www.openssl.org/source/license.html
  */
 
-#include <openssl/byteorder.h>
-#include <openssl/rand.h>
-#include <openssl/proverr.h>
+#include "openssl_compat.h"
 #include "crypto/ml_kem.h"
-#include "internal/common.h"
 #include "internal/constant_time.h"
 #include "internal/sha3.h"
 

@@ -9,9 +9,8 @@
 #if !defined(OSSL_LIBCRYPTO_ML_DSA_ML_DSA_POLY_H)
 #define OSSL_LIBCRYPTO_ML_DSA_ML_DSA_POLY_H
 
-#include <openssl/crypto.h>
+#include "openssl_compat.h"
 
-#include "internal/common.h"
 #include "ml_dsa_local.h"
 
 #define ML_DSA_NUM_POLY_COEFFICIENTS 256

@@ -7,13 +7,7 @@
  * https://www.openssl.org/source/license.html
  */
 
-#include <openssl/core_dispatch.h>
-#include <openssl/core_names.h>
-#include <openssl/params.h>
-#include <openssl/rand.h>
-#include <openssl/err.h>
-#include <openssl/proverr.h>
-#include "internal/common.h"
+#include "openssl_compat.h"
 #include "internal/constant_time.h"
 #include "ml_dsa_local.h"
 #include "ml_dsa_key.h"
