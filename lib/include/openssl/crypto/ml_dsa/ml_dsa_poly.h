@@ -17,11 +17,7 @@
 
 /* Polynomial object with 256 coefficients. The coefficients are unsigned 32 bits */
 struct poly_st {
-#if defined(VX_COMPILER_SUPPORT_VEC128)
-        ALIGN16 uint32_t coeff[ML_DSA_NUM_POLY_COEFFICIENTS];
-#else
         uint32_t coeff[ML_DSA_NUM_POLY_COEFFICIENTS];
-#endif
 };
 
 static ossl_inline ossl_unused void

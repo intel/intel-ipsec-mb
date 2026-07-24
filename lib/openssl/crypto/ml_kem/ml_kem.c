@@ -374,61 +374,17 @@ sample_scalar(scalar *out, EVP_MD_CTX *mdctx)
 
 static CRYPTO_ONCE ml_kem_ntt_once = CRYPTO_ONCE_STATIC_INIT;
 
-#if defined(_ARCH_PPC64)
-#include "arch/ppc_arch.h"
-#endif
-
-#if defined(MLKEM_NTT_PPC_ASM) && defined(_ARCH_PPC64)
-/*
- * PPC64LE Platform supports.
- */
-typedef void (*ml_kem_scalar_ntt_fn)(scalar *p);
-typedef void (*ml_kem_scalar_inverse_ntt_fn)(scalar *p);
-
 static void
-scalar_ntt_generic(scalar *p);
+scalar_ntt(scalar *p);
 static void
-scalar_inverse_ntt_generic(scalar *p);
-
-static ml_kem_scalar_ntt_fn scalar_ntt = scalar_ntt_generic;
-static ml_kem_scalar_inverse_ntt_fn scalar_inverse_ntt = scalar_inverse_ntt_generic;
-
-void
-mlkem_ntt_ppc(uint16_t *c);
-void
-mlkem_inverse_ntt_ppc(uint16_t *c);
-
-static void
-scalar_ntt_ppc(scalar *s)
-{
-        mlkem_ntt_ppc(s->c);
-}
-
-static void
-scalar_inverse_ntt_ppc(scalar *s)
-{
-        mlkem_inverse_ntt_ppc(s->c);
-}
-#else
-#define scalar_ntt_generic         scalar_ntt
-#define scalar_inverse_ntt_generic scalar_inverse_ntt
-#endif
+scalar_inverse_ntt(scalar *p);
 
 /*
- * Initialize NTT function pointers to PPC64le implementations if available.
- * Scalar implementations are used by default.
+ * NTT init hook retained for run-once wiring consistency.
  */
 static void
 ml_kem_ntt_init(void)
 {
-#if defined(MLKEM_NTT_PPC_ASM) && defined(_ARCH_PPC64)
-#if defined(__LITTLE_ENDIAN__) || (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-        if (OPENSSL_ppccap_P & PPC_CRYPTO207) {
-                scalar_ntt = scalar_ntt_ppc;
-                scalar_inverse_ntt = scalar_inverse_ntt_ppc;
-        }
-#endif
-#endif
 }
 
 /*-
@@ -485,7 +441,7 @@ scalar_mult_const(scalar *s, uint16_t a)
  * consecutive entries in |s->c|.
  */
 static void
-scalar_ntt_generic(scalar *s)
+scalar_ntt(scalar *s)
 {
         const uint16_t *roots = kNTTRoots;
         uint16_t *end = s->c + DEGREE;
@@ -518,7 +474,7 @@ scalar_ntt_generic(scalar *s)
  * using the precomputed 128 roots of unity stored in InverseNTTRoots.
  */
 static void
-scalar_inverse_ntt_generic(scalar *s)
+scalar_inverse_ntt(scalar *s)
 {
         const uint16_t *roots = kInverseNTTRoots;
         uint16_t *end = s->c + DEGREE;
