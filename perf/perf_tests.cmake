@@ -266,3 +266,12 @@ foreach(ALGO ${AEAD_BURST_API_ALGOS})
     COMMAND ${PERF_APP} --smoke --aead-burst-api --aead-algo ${ALGO}
     WORKING_DIRECTORY ${APP_BIN_DIR})
 endforeach()
+
+########################################
+# PQC smoke test
+########################################
+
+add_test(
+  NAME PERF::PQC::SMOKE
+  COMMAND ${PQC_PERF_APP} --seconds 0.05
+  WORKING_DIRECTORY ${APP_BIN_DIR})

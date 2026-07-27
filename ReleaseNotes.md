@@ -65,6 +65,7 @@ Performance Applications
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Added SHA3/SHAKE support to imb-perf application.
 - Added "--skip" option to imb-perf-tool.py to skip specific algorithms.
+- Added `imb-speed-pqc` application for benchmarking PQC algorithms.
 
 Tools
 - Added asm-format.py tool that formats assembly source files.

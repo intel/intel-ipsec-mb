@@ -4,12 +4,13 @@
 
 - Overview
 - Usage
+- Post-Quantum Performance Application
 
 ## Overview
 The performance application is used to measure the performance of all supported algorithms in the Intel(R) Multi-Buffer Crypto for IPsec Library.
 The application accepts a user specified algorithm as an input, and outputs the number of CPU cycles taken to process a range of buffer sizes for that algorithm.
-By default, all supported architectural implementations (e.g. SSE, AVX, AVX2 & AVX512) are exercised. 
-The perf directory also contains scripts to add extra functionality to the application, and to post process the results.  
+By default, all supported architectural implementations (e.g. SSE, AVX2 & AVX512) are exercised. 
+The perf directory also contains scripts to add extra functionality to the application, the post-quantum benchmark app, and to post process the results.  
 
 ## Usage
 
@@ -31,6 +32,19 @@ To print system and available algorithms:
 
 For more options:  
 `imb-perf --help`  
+
+### Post-Quantum Performance Application
+
+The `imb-speed-pqc` application benchmarks PQC algorithms exposed by the library using an OpenSSL-speed-style interface.
+
+To benchmark all supported PQC algorithms:
+`imb-speed-pqc`
+
+To benchmark specific algorithms:
+`imb-speed-pqc ML-DSA-44 ML-KEM-768`
+
+For more options:
+`imb-speed-pqc --help`
 
 ### Post Processing
 

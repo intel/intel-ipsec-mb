@@ -82,6 +82,17 @@ target_link_libraries(${PERF_APP} PRIVATE ${IPSEC_MB_LIB})
 target_compile_definitions(${PERF_APP} PRIVATE ${APP_DEFINES})
 
 # ##############################################################################
+# build post-quantum performance application
+# ##############################################################################
+
+set(PQC_PERF_APP imb-speed-pqc)
+set(PQC_PERF_APP_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/pqc_perf.c)
+
+add_executable(${PQC_PERF_APP} ${PQC_PERF_APP_SRC_FILES})
+target_link_libraries(${PQC_PERF_APP} PRIVATE ${IPSEC_MB_LIB})
+target_compile_definitions(${PQC_PERF_APP} PRIVATE ${APP_DEFINES})
+
+# ##############################################################################
 # include tests
 # ##############################################################################
 
