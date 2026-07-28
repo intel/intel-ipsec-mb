@@ -179,7 +179,7 @@ end:
 /* ------------------------------------------------------------------------- */
 static int
 op_sign_ctx(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg, size_t msg_len,
-            const uint8_t *ctx, size_t ctx_len, const uint8_t *rnd_32_or_null)
+            const uint8_t *ctx, size_t ctx_len, const uint8_t *rnd_32_or_null, int msg_is_mu)
 {
         uint8_t rnd[ML_DSA_RND_BYTES] = { 0 };
         size_t out_len = 0;
@@ -193,7 +193,11 @@ op_sign_ctx(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
         else if (imb_get_random(rnd, sizeof(rnd)) != 0)
                 goto end;
 
-        if (!ossl_ml_dsa_sign(self->key, 0 /* msg_is_mu */, msg, msg_len, ctx, ctx_len, rnd,
+        /* When msg_is_mu=1, ctx is already baked into mu - pass NULL/0. */
+        const uint8_t *sign_ctx = msg_is_mu ? NULL : ctx;
+        const size_t sign_ctx_len = msg_is_mu ? 0 : ctx_len;
+
+        if (!ossl_ml_dsa_sign(self->key, msg_is_mu, msg, msg_len, sign_ctx, sign_ctx_len, rnd,
                               sizeof(rnd), 1 /* encode */, sig, &out_len, self->sig_len))
                 goto end;
 
@@ -210,12 +214,16 @@ end:
 /* ------------------------------------------------------------------------- */
 static int
 op_verify_ctx(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *ctx,
-              size_t ctx_len, const uint8_t *sig, size_t sig_len)
+              size_t ctx_len, const uint8_t *sig, size_t sig_len, int msg_is_mu)
 {
         if (self->key == NULL || ossl_ml_dsa_key_get_pub(self->key) == NULL)
                 return -1;
 
-        if (!ossl_ml_dsa_verify(self->key, 0 /* msg_is_mu */, msg, msg_len, ctx, ctx_len,
+        /* When msg_is_mu=1, ctx is already baked into mu - pass NULL/0. */
+        const uint8_t *verify_ctx = msg_is_mu ? NULL : ctx;
+        const size_t verify_ctx_len = msg_is_mu ? 0 : ctx_len;
+
+        if (!ossl_ml_dsa_verify(self->key, msg_is_mu, msg, msg_len, verify_ctx, verify_ctx_len,
                                 1 /* encode */, sig, sig_len))
                 return -1;
 

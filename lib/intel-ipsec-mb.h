@@ -1778,6 +1778,12 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * caller-controlled entropy.
          */
         const uint8_t *rnd_32;
+        /**
+         * If non-zero, \a msg is a pre-computed \mu value (exactly 64 bytes)
+         * and the SHAKE hashing step H(tr || M') is skipped entirely.
+         * \a ctx and \a ctx_len are ignored when this flag is set.
+         */
+        int msg_is_mu;
 } IMB_ML_DSA_SIGN_PARAMS;
 
 /**
@@ -1792,6 +1798,12 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
         const uint8_t *ctx;
         /** Context string length in bytes (0..255) */
         size_t ctx_len;
+        /**
+         * If non-zero, \a msg is a pre-computed \mu value (exactly 64 bytes)
+         * and the SHAKE hashing step H(tr || M') is skipped entirely.
+         * \a ctx and \a ctx_len are ignored when this flag is set.
+         */
+        int msg_is_mu;
 } IMB_ML_DSA_VERIFY_PARAMS;
 
 /**
@@ -1810,8 +1822,9 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a sig or \a sig_len pointer
- * @retval IMB_ERR_NULL_SRC invalid \a msg pointer, or invalid
- *         \a params->ctx pointer
+ * @retval IMB_ERR_NULL_SRC invalid \a msg pointer, invalid
+ *         \a params->ctx pointer, or \a params->msg_is_mu is set but
+ *         \a msg_len is not 64
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  */
@@ -1836,7 +1849,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
  * @return Operation status
  * @retval 0 the signature is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
- * @retval IMB_ERR_NULL_SRC invalid \a sig, \a msg or \a params->ctx pointer
+ * @retval IMB_ERR_NULL_SRC invalid \a sig, \a msg, \a params->ctx pointer,
+ *         or \a params->msg_is_mu is set but \a msg_len is not 64
  * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
  * @retval IMB_ERR_PQC_SIGNOP the signature is invalid, or verification
  *         could not be performed

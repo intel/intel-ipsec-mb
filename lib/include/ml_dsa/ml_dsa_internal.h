@@ -95,9 +95,9 @@ struct IMB_ML_DSA {
         int (*set_pubkey)(IMB_ML_DSA *self, const uint8_t *pk);
         int (*sign_ctx)(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
                         size_t msg_len, const uint8_t *ctx, size_t ctx_len,
-                        const uint8_t *rnd_32_or_null);
+                        const uint8_t *rnd_32_or_null, int msg_is_mu);
         int (*verify_ctx)(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *ctx,
-                          size_t ctx_len, const uint8_t *sig, size_t sig_len);
+                          size_t ctx_len, const uint8_t *sig, size_t sig_len, int msg_is_mu);
         /**
          * FIPS 204 internal interface (ML-DSA.Sign_internal /
          * ML-DSA.Verify_internal): no context string, no message encoding

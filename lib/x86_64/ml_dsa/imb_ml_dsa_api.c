@@ -177,11 +177,13 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
         const uint8_t *ctx = NULL;
         size_t ctx_len = 0;
         const uint8_t *rnd_32 = NULL;
+        int msg_is_mu = 0;
 
         if (params != NULL) {
                 ctx = params->ctx;
                 ctx_len = params->ctx_len;
                 rnd_32 = params->rnd_32;
+                msg_is_mu = params->msg_is_mu;
         }
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -192,12 +194,14 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
                 return IMB_ERR_PQC_NO_KEY;
         if (msg == NULL && msg_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (ctx == NULL && ctx_len != 0)
+        if (msg_is_mu && msg_len != 64)
+                return IMB_ERR_NULL_SRC;
+        if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
 #endif
         int rc;
 
-        rc = self->sign_ctx(self, sig, sig_len, msg, msg_len, ctx, ctx_len, rnd_32);
+        rc = self->sign_ctx(self, sig, sig_len, msg, msg_len, ctx, ctx_len, rnd_32, msg_is_mu);
 
         return (rc != 0) ? IMB_ERR_PQC_SIGNOP : 0;
 }
@@ -238,10 +242,12 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const ui
 {
         const uint8_t *ctx = NULL;
         size_t ctx_len = 0;
+        int msg_is_mu = 0;
 
         if (params != NULL) {
                 ctx = params->ctx;
                 ctx_len = params->ctx_len;
+                msg_is_mu = params->msg_is_mu;
         }
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -252,10 +258,12 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const ui
                 return IMB_ERR_PQC_NO_KEY;
         if (msg == NULL && msg_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (ctx == NULL && ctx_len != 0)
+        if (msg_is_mu && msg_len != 64)
+                return IMB_ERR_NULL_SRC;
+        if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
 #endif
-        const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len);
+        const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len, msg_is_mu);
 
         return (rc != 0) ? IMB_ERR_PQC_SIGNOP : 0;
 }

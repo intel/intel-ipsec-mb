@@ -3288,7 +3288,7 @@ self_test_ml_dsa(IMB_MGR *p_mgr, const struct self_test_ml_dsa_vector *v)
                 goto end;
 
         {
-                IMB_ML_DSA_SIGN_PARAMS sign_params;
+                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
 
                 sign_params.ctx = v->ctx;
                 sign_params.ctx_len = v->ctx_len;
@@ -3302,7 +3302,7 @@ self_test_ml_dsa(IMB_MGR *p_mgr, const struct self_test_ml_dsa_vector *v)
                 goto end;
 
         {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
 
                 verify_params.ctx = v->ctx;
                 verify_params.ctx_len = v->ctx_len;
