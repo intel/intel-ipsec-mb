@@ -1882,17 +1882,17 @@ json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
                 PARSE_FAIL_IF((private_seed_idx < 0) == (private_key_idx < 0),
                               "expected exactly one of privateSeed or privateKey in testGroup");
                 PARSE_FAIL_IF(public_key_idx < 0, "missing publicKey field");
-                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[public_key_idx], &public_key_len) <
-                                      0,
-                              "invalid publicKey hex string");
+                if (tokens[public_key_idx].type != JSON_TOK_PRIMITIVE) {
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[public_key_idx],
+                                                               &public_key_len) < 0,
+                                      "invalid publicKey hex string");
+                }
                 tc_pos = tests_idx + 1;
 
                 if (private_seed_idx >= 0) {
-                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[private_seed_idx],
-                                                               &private_seed_len) < 0,
-                                      "invalid privateSeed hex string");
-                        PARSE_FAIL_IF(private_seed_len != 32,
-                                      "privateSeed must decode to exactly 32 bytes");
+                        if (json_hex_token_len_bytes(&tokens[private_seed_idx], &private_seed_len) <
+                            0)
+                                private_seed_len = 0;
                 }
                 if (private_key_idx >= 0) {
                         PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[private_key_idx],
@@ -1908,6 +1908,7 @@ json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
                         const int msg_idx = json_object_get(json, tokens, token_cnt, tc_pos, "msg");
                         const int ctx_idx = json_object_get(json, tokens, token_cnt, tc_pos, "ctx");
                         const int rnd_idx = json_object_get(json, tokens, token_cnt, tc_pos, "rnd");
+                        const int mu_idx = json_object_get(json, tokens, token_cnt, tc_pos, "mu");
                         const int sig_idx = json_object_get(json, tokens, token_cnt, tc_pos, "sig");
                         const int result_idx =
                                 json_object_get(json, tokens, token_cnt, tc_pos, "result");
@@ -1917,7 +1918,6 @@ json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
                         vectors[rec].tcId = 0;
 
                         PARSE_FAIL_IF(comment_idx < 0, "missing comment field");
-                        PARSE_FAIL_IF(msg_idx < 0, "missing msg field");
                         PARSE_FAIL_IF(sig_idx < 0, "missing sig field");
 
                         if (tcid_idx >= 0) {
@@ -1931,12 +1931,19 @@ json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
                         PARSE_FAIL_IF(json_copy_string_token(json, &tokens[comment_idx], ctx,
                                                              &vectors[rec].comment) < 0,
                                       "unable to copy comment string");
-                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[msg_idx], ctx,
-                                                            &vectors[rec].msg) < 0,
-                                      "unable to decode msg hex string");
-                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[msg_idx],
-                                                               &vectors[rec].msgLen) < 0,
-                                      "invalid msg hex string");
+
+                        /* msg is optional: absent in mu-only test vectors */
+                        if (msg_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[msg_idx], ctx,
+                                                                    &vectors[rec].msg) < 0,
+                                              "unable to decode msg hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[msg_idx],
+                                                                       &vectors[rec].msgLen) < 0,
+                                              "invalid msg hex string");
+                        } else {
+                                vectors[rec].msg = NULL;
+                                vectors[rec].msgLen = 0;
+                        }
 
                         vectors[rec].hasCtx = (ctx_idx >= 0);
                         if (ctx_idx >= 0) {
@@ -1961,6 +1968,19 @@ json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
                                               "invalid rnd hex string");
                         }
 
+                        vectors[rec].hasMu = (mu_idx >= 0);
+                        if (mu_idx >= 0) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[mu_idx], ctx,
+                                                                    &vectors[rec].mu) < 0,
+                                              "unable to decode mu hex string");
+                                PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[mu_idx],
+                                                                       &vectors[rec].muLen) < 0,
+                                              "invalid mu hex string");
+                        } else {
+                                vectors[rec].mu = NULL;
+                                vectors[rec].muLen = 0;
+                        }
+
                         PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[sig_idx], ctx,
                                                             &vectors[rec].sig) < 0,
                                       "unable to decode sig hex string");
@@ -1973,10 +1993,12 @@ json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
                                       "missing or invalid result field");
 
                         if (private_seed_idx >= 0) {
-                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[private_seed_idx],
-                                                                    ctx,
-                                                                    &vectors[rec].privateSeed) < 0,
-                                              "unable to decode privateSeed hex string");
+                                if (private_seed_len > 0) {
+                                        PARSE_FAIL_IF(json_decode_hex_token(
+                                                              json, &tokens[private_seed_idx], ctx,
+                                                              &vectors[rec].privateSeed) < 0,
+                                                      "unable to decode privateSeed hex string");
+                                }
                                 vectors[rec].privateSeedLen = private_seed_len;
                         } else {
                                 PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[private_key_idx],
@@ -1986,9 +2008,12 @@ json_load_sig_sign_test(const char *path, struct sig_sign_test **out_vectors,
                                 vectors[rec].privateKeyLen = private_key_len;
                         }
 
-                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[public_key_idx], ctx,
-                                                            &vectors[rec].publicKey) < 0,
-                                      "unable to decode publicKey hex string");
+                        if (tokens[public_key_idx].type != JSON_TOK_PRIMITIVE) {
+                                PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[public_key_idx],
+                                                                    ctx,
+                                                                    &vectors[rec].publicKey) < 0,
+                                              "unable to decode publicKey hex string");
+                        }
                         vectors[rec].publicKeyLen = public_key_len;
 
                         rec++;

@@ -3400,7 +3400,7 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
 
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
-                IMB_ML_DSA_SIGN_PARAMS params;
+                IMB_ML_DSA_SIGN_PARAMS params = { 0 };
                 int r;
 
                 params.ctx = ap->ctx;
@@ -3474,7 +3474,7 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
 
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
-                IMB_ML_DSA_VERIFY_PARAMS params;
+                IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
                 int r;
 
                 params.ctx = ap->ctx;

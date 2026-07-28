@@ -49,6 +49,9 @@ struct sig_sign_test {
         const char *rnd;
         size_t rndLen;
         int hasRnd;
+        const char *mu;
+        size_t muLen;
+        int hasMu;
         const char *sig;
         size_t sigLen;
         int resultValid;

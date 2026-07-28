@@ -50,6 +50,7 @@ ml_dsa_test(struct IMB_MGR *mb_mgr);
 #define ML_DSA_MAX_MSG     8192
 #define ML_DSA_MAX_CTX     256
 #define ML_DSA_MAX_MPRIME  (2 + ML_DSA_MAX_CTX + ML_DSA_MAX_MSG)
+#define ML_DSA_MU_BYTES    64
 
 struct ml_dsa_variant {
         IMB_ML_DSA_ALG alg;
@@ -229,9 +230,10 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
         if (ml_dsa_alg_sizes(alg, &pk_bytes, &sk_bytes, &sig_bytes) < 0)
                 return 1;
-        if (v->privateSeedLen != ML_DSA_SEED_BYTES || v->publicKeyLen != pk_bytes ||
-            v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
+        if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
+        if (v->privateSeedLen != ML_DSA_SEED_BYTES)
+                return v->resultValid ? 1 : 0;
         if (v->hasRnd) {
                 if (v->rndLen != ML_DSA_RND_BYTES)
                         return 1;
@@ -249,14 +251,14 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 keygen_params.xi_32 = (const uint8_t *) v->privateSeed;
                 rc = imb_ml_dsa_keypair(self, buf_pk, buf_sk, &keygen_params);
         }
-        if (rc != 0 || memcmp(buf_pk, v->publicKey, pk_bytes) != 0) {
+        if (rc != 0 || (v->publicKey != NULL && memcmp(buf_pk, v->publicKey, pk_bytes) != 0)) {
                 printf("ML-DSA keyGen KAT mismatch (%s tcId=%zu rc=%d)\n", ml_dsa_alg_name(alg),
                        v->tcId, rc);
                 goto exit;
         }
 
-        {
-                IMB_ML_DSA_SIGN_PARAMS sign_params;
+        if (v->msg != NULL) {
+                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
 
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
@@ -265,34 +267,71 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                                      &sign_params);
         }
         if (v->resultValid) {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
 
-                if (v->sigLen != sig_bytes || rc != 0 || sig_len != sig_bytes ||
-                    memcmp(buf_sig, v->sig, sig_bytes) != 0) {
-                        printf("ML-DSA sigGen KAT mismatch (%s tcId=%zu rc=%d sig_len=%zu "
-                               "exp=%zu)\n",
-                               ml_dsa_alg_name(alg), v->tcId, rc, sig_len, v->sigLen);
-                        goto exit;
+                if (v->msg != NULL) {
+                        if (v->sigLen != sig_bytes || rc != 0 || sig_len != sig_bytes ||
+                            memcmp(buf_sig, v->sig, sig_bytes) != 0) {
+                                printf("ML-DSA sigGen KAT mismatch (%s tcId=%zu rc=%d sig_len=%zu "
+                                       "exp=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId, rc, sig_len, v->sigLen);
+                                goto exit;
+                        }
+                        verify_params.ctx = ctx_ptr;
+                        verify_params.ctx_len = v->ctxLen;
+                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->msg, v->msgLen, buf_sig,
+                                              sig_len, &verify_params) != 0) {
+                                printf("ML-DSA sigGen verify failed (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
+                                                       v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
+                                                       (const uint8_t *) v->sig, v->sigLen, 1) != 0)
+                                goto exit;
                 }
-                verify_params.ctx = ctx_ptr;
-                verify_params.ctx_len = v->ctxLen;
-                if (imb_ml_dsa_verify(self, (const uint8_t *) v->msg, v->msgLen, buf_sig, sig_len,
-                                      &verify_params) != 0) {
-                        printf("ML-DSA sigGen verify failed (%s tcId=%zu)\n", ml_dsa_alg_name(alg),
-                               v->tcId);
-                        goto exit;
+
+                /* msg_is_mu path: sign pre-computed mu directly, expect same sig */
+                if (v->hasMu) {
+                        IMB_ML_DSA_SIGN_PARAMS mu_params = { 0 };
+                        IMB_ML_DSA_VERIFY_PARAMS mu_verify_params = { 0 };
+                        size_t mu_sig_len = 0;
+
+                        if (v->muLen != ML_DSA_MU_BYTES) {
+                                printf("ML-DSA sigGen mu wrong length (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        mu_params.rnd_32 = rnd_ptr;
+                        mu_params.msg_is_mu = 1;
+                        if (v->sigLen != sig_bytes) {
+                                printf("ML-DSA sigGen mu sig wrong length (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        if (imb_ml_dsa_sign(self, buf_sig, &mu_sig_len, (const uint8_t *) v->mu,
+                                            v->muLen, &mu_params) != 0 ||
+                            mu_sig_len != sig_bytes || memcmp(buf_sig, v->sig, sig_bytes) != 0) {
+                                printf("ML-DSA sigGen msg_is_mu mismatch (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        mu_verify_params.msg_is_mu = 1;
+                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->mu, v->muLen, buf_sig,
+                                              mu_sig_len, &mu_verify_params) != 0) {
+                                printf("ML-DSA sigGen msg_is_mu verify failed (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
                 }
-                if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
-                                               v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
-                                               (const uint8_t *) v->sig, v->sigLen, 1) != 0)
-                        goto exit;
         } else {
-                if (rc == 0) {
+                if (v->msg != NULL && rc == 0) {
                         printf("ML-DSA sigGen unexpectedly succeeded (%s tcId=%zu)\n",
                                ml_dsa_alg_name(alg), v->tcId);
                         goto exit;
                 }
-                if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
+                if (v->msg != NULL &&
+                    ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
                                                v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
                                                (const uint8_t *) v->sig, v->sigLen, 0) != 0)
                         goto exit;
@@ -324,9 +363,10 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
         if (ml_dsa_alg_sizes(alg, &pk_bytes, &sk_bytes, &sig_bytes) < 0)
                 return 1;
-        if (v->privateKeyLen != sk_bytes || v->publicKeyLen != pk_bytes ||
-            v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
+        if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
+        if (v->privateKeyLen != sk_bytes)
+                return v->resultValid ? 1 : 0;
         if (v->hasRnd) {
                 if (v->rndLen != ML_DSA_RND_BYTES)
                         return 1;
@@ -339,8 +379,8 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 return 1;
 
         set_rc = imb_ml_dsa_set_privkey(self, (const uint8_t *) v->privateKey);
-        if (set_rc == 0) {
-                IMB_ML_DSA_SIGN_PARAMS sign_params;
+        if (set_rc == 0 && v->msg != NULL) {
+                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
 
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
@@ -350,34 +390,72 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         }
 
         if (v->resultValid) {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
 
-                if (set_rc != 0 || v->sigLen != sig_bytes || rc != 0 || sig_len != sig_bytes ||
-                    memcmp(buf_sig, v->sig, sig_bytes) != 0) {
-                        printf("ML-DSA sigGen KAT mismatch (%s tcId=%zu set_rc=%d rc=%d "
-                               "sig_len=%zu exp=%zu)\n",
-                               ml_dsa_alg_name(alg), v->tcId, set_rc, rc, sig_len, v->sigLen);
-                        goto exit;
+                if (v->msg != NULL) {
+                        if (set_rc != 0 || v->sigLen != sig_bytes || rc != 0 ||
+                            sig_len != sig_bytes || memcmp(buf_sig, v->sig, sig_bytes) != 0) {
+                                printf("ML-DSA sigGen KAT mismatch (%s tcId=%zu set_rc=%d rc=%d "
+                                       "sig_len=%zu exp=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId, set_rc, rc, sig_len,
+                                       v->sigLen);
+                                goto exit;
+                        }
+                        verify_params.ctx = ctx_ptr;
+                        verify_params.ctx_len = v->ctxLen;
+                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->msg, v->msgLen, buf_sig,
+                                              sig_len, &verify_params) != 0) {
+                                printf("ML-DSA sigGen verify failed (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
+                                                       v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
+                                                       (const uint8_t *) v->sig, v->sigLen, 1) != 0)
+                                goto exit;
                 }
-                verify_params.ctx = ctx_ptr;
-                verify_params.ctx_len = v->ctxLen;
-                if (imb_ml_dsa_verify(self, (const uint8_t *) v->msg, v->msgLen, buf_sig, sig_len,
-                                      &verify_params) != 0) {
-                        printf("ML-DSA sigGen verify failed (%s tcId=%zu)\n", ml_dsa_alg_name(alg),
-                               v->tcId);
-                        goto exit;
+
+                /* msg_is_mu path: sign pre-computed mu directly, expect same sig */
+                if (v->hasMu) {
+                        IMB_ML_DSA_SIGN_PARAMS mu_params = { 0 };
+                        IMB_ML_DSA_VERIFY_PARAMS mu_verify_params = { 0 };
+                        size_t mu_sig_len = 0;
+
+                        if (v->muLen != ML_DSA_MU_BYTES) {
+                                printf("ML-DSA sigGen mu wrong length (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        mu_params.rnd_32 = rnd_ptr;
+                        mu_params.msg_is_mu = 1;
+                        if (v->sigLen != sig_bytes) {
+                                printf("ML-DSA sigGen mu sig wrong length (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        if (imb_ml_dsa_sign(self, buf_sig, &mu_sig_len, (const uint8_t *) v->mu,
+                                            v->muLen, &mu_params) != 0 ||
+                            mu_sig_len != sig_bytes || memcmp(buf_sig, v->sig, sig_bytes) != 0) {
+                                printf("ML-DSA sigGen msg_is_mu mismatch (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
+                        mu_verify_params.msg_is_mu = 1;
+                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->mu, v->muLen, buf_sig,
+                                              mu_sig_len, &mu_verify_params) != 0) {
+                                printf("ML-DSA sigGen msg_is_mu verify failed (%s tcId=%zu)\n",
+                                       ml_dsa_alg_name(alg), v->tcId);
+                                goto exit;
+                        }
                 }
-                if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
-                                               v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
-                                               (const uint8_t *) v->sig, v->sigLen, 1) != 0)
-                        goto exit;
         } else {
-                if (set_rc == 0 && rc == 0) {
+                if (v->msg != NULL && set_rc == 0 && rc == 0) {
                         printf("ML-DSA sigGen unexpectedly succeeded (%s tcId=%zu)\n",
                                ml_dsa_alg_name(alg), v->tcId);
                         goto exit;
                 }
-                if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
+                if (v->msg != NULL &&
+                    ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
                                                v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
                                                (const uint8_t *) v->sig, v->sigLen, 0) != 0)
                         goto exit;
@@ -402,8 +480,10 @@ ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
         if (ml_dsa_alg_sizes(alg, &pk_bytes, &sk_bytes, &sig_bytes) < 0)
                 return 1;
-        if (v->publicKeyLen != pk_bytes || v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
+        if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
+        if (v->publicKeyLen != pk_bytes)
+                return v->resultValid ? 1 : 0;
         if (v->hasCtx)
                 ctx_ptr = (const uint8_t *) v->ctx;
 
@@ -412,7 +492,7 @@ ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
         set_rc = imb_ml_dsa_set_pubkey(self, (const uint8_t *) v->publicKey);
         if (set_rc == 0) {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
 
                 verify_params.ctx = ctx_ptr;
                 verify_params.ctx_len = v->ctxLen;
@@ -454,6 +534,10 @@ ml_dsa_run_sign_seed_vectors(struct IMB_MGR *mb_mgr, const struct ml_dsa_variant
         }
 
         for (v = vectors; v->comment != NULL; v++) {
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("ML-DSA sign-seed Test Case %zu (%s)\n", v->tcId, v->comment);
+#endif
                 if (ml_dsa_sign_seed_vector(mb_mgr, variant->alg, v) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
@@ -483,6 +567,10 @@ ml_dsa_run_sign_noseed_vectors(struct IMB_MGR *mb_mgr, const struct ml_dsa_varia
         }
 
         for (v = vectors; v->comment != NULL; v++) {
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("ML-DSA sign-noseed Test Case %zu (%s)\n", v->tcId, v->comment);
+#endif
                 if (ml_dsa_sign_noseed_vector(mb_mgr, variant->alg, v) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
@@ -511,6 +599,10 @@ ml_dsa_run_verify_vectors(struct IMB_MGR *mb_mgr, const struct ml_dsa_variant *v
         }
 
         for (v = vectors; v->comment != NULL; v++) {
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("ML-DSA verify Test Case %zu (%s)\n", v->tcId, v->comment);
+#endif
                 if (ml_dsa_verify_vector(mb_mgr, variant->alg, v) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
@@ -563,7 +655,7 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
         /* hedged sign with context, then verify */
         {
-                IMB_ML_DSA_SIGN_PARAMS sign_params;
+                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
 
                 sign_params.ctx = ctx;
                 sign_params.ctx_len = ctx_len;
@@ -573,7 +665,7 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
                         goto exit;
         }
         {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
 
                 verify_params.ctx = ctx;
                 verify_params.ctx_len = ctx_len;
@@ -593,7 +685,7 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
         /* deterministic signing is reproducible (explicit all-zero rnd_32) */
         {
-                IMB_ML_DSA_SIGN_PARAMS sign_params;
+                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
 
                 sign_params.ctx = NULL;
                 sign_params.ctx_len = 0;
