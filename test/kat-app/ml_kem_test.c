@@ -364,6 +364,10 @@ ml_kem_run_combined_vectors(struct IMB_MGR *mb_mgr, const struct ml_kem_variant 
         }
 
         for (v = vectors; v->comment != NULL; v++) {
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("ML-KEM combined Test Case %zu (%s)\n", v->tcId, v->comment);
+#endif
                 if (ml_kem_combined_vector(mb_mgr, variant->alg, v) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
@@ -391,6 +395,10 @@ ml_kem_run_encaps_vectors(struct IMB_MGR *mb_mgr, const struct ml_kem_variant *v
         }
 
         for (v = vectors; v->comment != NULL; v++) {
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("ML-KEM encaps Test Case %zu (%s)\n", v->tcId, v->comment);
+#endif
                 if (ml_kem_encaps_vector(mb_mgr, variant->alg, v) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
@@ -419,6 +427,10 @@ ml_kem_run_keygen_seed_vectors(struct IMB_MGR *mb_mgr, const struct ml_kem_varia
         }
 
         for (v = vectors; v->comment != NULL; v++) {
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("ML-KEM keygen-seed Test Case %zu (%s)\n", v->tcId, v->comment);
+#endif
                 if (ml_kem_keygen_seed_vector(mb_mgr, variant->alg, v) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
@@ -449,6 +461,11 @@ ml_kem_run_semi_expanded_decaps_vectors(struct IMB_MGR *mb_mgr,
         }
 
         for (v = vectors; v->comment != NULL; v++) {
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("ML-KEM semi-expanded-decaps Test Case %zu (%s)\n", v->tcId,
+                               v->comment);
+#endif
                 if (ml_kem_semi_expanded_decaps_vector(mb_mgr, variant->alg, v) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
