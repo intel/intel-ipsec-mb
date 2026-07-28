@@ -222,7 +222,7 @@ static int
 ml_dsa_op_keygen(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
-        IMB_ML_DSA_KEYGEN_PARAMS params;
+        IMB_ML_DSA_KEYGEN_PARAMS params = { 0 };
 
         fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
         params.xi_32 = c->seed_buf;
@@ -234,7 +234,7 @@ static int
 ml_dsa_op_sign(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
-        IMB_ML_DSA_SIGN_PARAMS params;
+        IMB_ML_DSA_SIGN_PARAMS params = { 0 };
         size_t sig_len = 0;
         int ret;
 
@@ -252,7 +252,7 @@ static int
 ml_dsa_op_verify(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
-        IMB_ML_DSA_VERIFY_PARAMS params;
+        IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
 
         params.ctx = NULL;
         params.ctx_len = 0;
