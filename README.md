@@ -427,6 +427,12 @@ ACVP test application located in `test` directory is to support CAVP process. It
 - HMAC-SHA3-256
 - HMAC-SHA3-384
 - HMAC-SHA3-512  
+- ML-DSA-44  
+- ML-DSA-65  
+- ML-DSA-87  
+- ML-KEM-512  
+- ML-KEM-768  
+- ML-KEM-1024  
 
 Note: the acvp-app requires libacvp 2.0+ to be built.
 
@@ -524,6 +530,24 @@ Note: the acvp-app requires libacvp 2.0+ to be built.
 | SHAKE-128           | FIPS202   | outputLen: [min = 16, max = 65536, increment = 8]        |
 |---------------------+-----------+----------------------------------------------------------|
 | SHAKE-256           | FIPS202   | outputLen: [min = 16, max = 65536, increment = 8]        |
+|---------------------+-----------+----------------------------------------------------------|
+| ML-DSA              | FIPS204   | Operations: keyGen, sigGen, sigVer                       |
+|                     |           | parameterSet: ML-DSA-44, ML-DSA-65, ML-DSA-87            |
+|                     |           | sigGen messageLength: [min=8, max=65536, incr=8]         |
+|                     |           | sigGen contextLength: [min=0, max=2040, incr=8]          |
+|                     |           | sigGen deterministic: true, false                        |
+|                     |           | sigGen externalMu: true                                  |
+|                     |           | sigGen signatureInterface: internal, external            |
+|                     |           | sigGen preHash: pure                                     |
+|                     |           | sigVer messageLength: [min=8, max=65536, incr=8]         |
+|                     |           | sigVer contextLength: [min=0, max=2040, incr=8]          |
+|                     |           | sigVer externalMu: true                                  |
+|                     |           | sigVer signatureInterface: internal, external            |
+|                     |           | sigVer preHash: pure                                     |
+|---------------------+-----------+----------------------------------------------------------|
+| ML-KEM              | FIPS203   | Operations: keyGen, encapDecap                           |
+|                     |           | parameterSet: ML-KEM-512, ML-KEM-768, ML-KEM-1024        |
+|                     |           | encapDecap functions: encapsulation, decapsulation       |
 +--------------------------------------------------------------------------------------------+
 ```
 ### Self-Test
