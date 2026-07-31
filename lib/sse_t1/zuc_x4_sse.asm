@@ -1023,11 +1023,13 @@ align_label
         REORDER_LFSR pState, %%NUM_ROUNDS
 
         ;; Clear stack frame containing keystream information
+%ifdef SAFE_DATA
         pxor    xmm0, xmm0
         movdqa  [rsp + KEYSTR_OFFSET], xmm0
         movdqa  [rsp + KEYSTR_OFFSET + 16], xmm0
         movdqa  [rsp + KEYSTR_OFFSET + 32], xmm0
         movdqa  [rsp + KEYSTR_OFFSET + 48], xmm0
+%endif
 
         FUNC_RESTORE
 
@@ -1455,12 +1457,14 @@ exit_final_rounds:
         movdqa         [pOut], xmm1
         movdqa         [pOut + 16], xmm2
 
+%ifdef SAFE_DATA
         ;; Clear stack frame containing keystream information
         pxor    xmm0, xmm0
         movdqa  [rsp + KEYSTR_OFFSET], xmm0
         movdqa  [rsp + KEYSTR_OFFSET + 16], xmm0
         movdqa  [rsp + KEYSTR_OFFSET + 32], xmm0
         movdqa  [rsp + KEYSTR_OFFSET + 48], xmm0
+%endif
 
         FUNC_RESTORE
 
