@@ -30,24 +30,23 @@
 
 #include <stdint.h>
 #include <intel-ipsec-mb.h>
+#include "internal/sha3.h" /* for KECCAK1600_CTX */
 
 /**
  * Keccak sponge context for incremental (init / update / final) hashing.
- * Allows absorbing data in multiple pieces without allocating a
- * contiguous buffer.  Total size is 224 bytes — safe to use on the stack.
+ * Wraps KECCAK1600_CTX to use the optimised OpenSSL SHA3/SHAKE back-end
+ * (SHA3_absorb / SHA3_squeeze from keccak1600-x86_64) instead of the
+ * portable reference permutation.
  */
 typedef struct {
-        uint8_t state[200];      /**< Keccak state (1600 bits) */
-        uint64_t rateInBytes;    /**< Absorb rate in bytes (== block size) */
-        uint64_t blockPos;       /**< Bytes absorbed into the current block */
-        uint8_t delimitedSuffix; /**< Domain byte: 0x06 SHA3-*, 0x1F SHAKE* */
-        uint8_t _pad[7];         /**< Alignment padding — do not use */
+        KECCAK1600_CTX kctx; /**< OpenSSL Keccak context (state + buffer + vtable) */
 } sha3_ctx_t;
 
 /**
  * Initialise a SHA3 context.
  * @param ctx             Context to initialise.
- * @param rateInBytes     Absorb rate: IMB_SHA3_{224,256,384,512}_BLOCK_SIZE.
+ * @param rateInBytes     Absorb rate: IMB_SHA3_{224,256,384,512}_BLOCK_SIZE
+ *                        (144/136/104/72 bytes) or 168/136 for SHAKE-128/256.
  * @param delimitedSuffix Domain suffix byte (0x06 for SHA3-*, 0x1F for SHAKE*).
  */
 IMB_DLL_LOCAL void
