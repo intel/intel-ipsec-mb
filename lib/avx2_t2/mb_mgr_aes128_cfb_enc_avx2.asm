@@ -423,6 +423,7 @@ align_label
 %rep 16
         cmp             qword [state + _aes_job_in_lane + LANE_ID*8], 0
         jne             %%skip_clear_ %+ LANE_ID
+        vmovdqa         [state + _aes_args_IV + LANE_ID*16], xmm0
         ;; Clear expanded keys per lane
 %assign KEY 0
 %rep NUM_KEYS
@@ -436,6 +437,7 @@ align_label
 
 %else ;; SUBMIT
         shl     idx, 4
+        vmovdqa [state + _aes_args_IV + idx], xmm0
         ;; Clear expanded keys for processed lane
 %assign key_round 0
 %rep NUM_KEYS

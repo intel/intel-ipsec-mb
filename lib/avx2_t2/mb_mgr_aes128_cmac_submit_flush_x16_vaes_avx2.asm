@@ -527,6 +527,7 @@ align_label
 
         ;; Clear scratch memory of returned job and "NULL lanes"
         vmovdqa [state + _aes_cmac_scratch + LANE_ID*16], XMM_TMP_0
+        vmovdqa [state + _aes_cmac_args_IV + LANE_ID*16], XMM_TMP_0
 
         ;; Clear expanded keys per lane
 %assign KEY 0
@@ -544,6 +545,7 @@ align_label
         ;; Clear scratch memory of returned job
         shl     idx, 4
         vmovdqa [state + _aes_cmac_scratch + idx], XMM_TMP_0
+        vmovdqa [state + _aes_cmac_args_IV + idx], XMM_TMP_0
 
         ;; Clear expanded keys for processed lane
 %assign key_round 0

@@ -375,6 +375,7 @@ align_label
         pxor    xmm0, xmm0
         shl     idx, 4
         movdqa  [state + _aes_cmac_scratch + idx], xmm0
+        movdqa  [state + _aes_cmac_args_IV + idx], xmm0
 %endif
 
 align_label

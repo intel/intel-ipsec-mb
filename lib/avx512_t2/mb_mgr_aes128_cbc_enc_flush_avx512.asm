@@ -253,6 +253,7 @@ len_is_0:
         ;; Clear IV
         vpxorq  xmm0, xmm0
         shl     idx, 4 ; multiply by 16
+        vmovdqa [state + _aes_args_IV + idx], xmm0
 
         ;; Clear expanded keys
 %assign round 0

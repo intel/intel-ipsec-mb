@@ -411,6 +411,7 @@ align_label
         vpxor   xmm0, xmm0, xmm0
         shl     idx, 4
         vmovdqa [state + _aes_cmac_scratch + idx], xmm0
+        vmovdqa [state + _aes_cmac_args_IV + idx], xmm0
 %endif
 
 align_label
