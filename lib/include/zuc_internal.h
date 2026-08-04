@@ -936,7 +936,7 @@ IMB_DLL_LOCAL void
 asm_Eia3Remainder_gfni_sse(void *T, const void *ks, const void *data, const uint64_t n_bits);
 
 IMB_DLL_LOCAL void
-asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t n_bits);
+asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t n_bytes);
 
 /**
  ******************************************************************************
@@ -1045,13 +1045,13 @@ IMB_DLL_LOCAL
 void
 zuc_eia3_8_buffer_job_avx2(const void *const pKey[8], const uint8_t *ivs,
                            const void *const pBufferIn[8], uint32_t *pMacI[8],
-                           const uint16_t lengthInBits[8], const void *const job_in_lane[8]);
+                           const uint16_t lengthInBytes[8], const void *const job_in_lane[8]);
 
 IMB_DLL_LOCAL
 void
 zuc_eia3_8_buffer_job_gfni_avx2(const void *const pKey[8], const uint8_t *ivs,
                                 const void *const pBufferIn[8], uint32_t *pMacI[8],
-                                const uint16_t lengthInBits[8], const void *const job_in_lane[8]);
+                                const uint16_t lengthInBytes[8], const void *const job_in_lane[8]);
 
 IMB_DLL_LOCAL
 void

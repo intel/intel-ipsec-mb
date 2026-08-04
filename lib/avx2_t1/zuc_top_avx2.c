@@ -85,7 +85,7 @@ keygen_8(ZucState8_t *state, uint32_t **pKeyStrArr, const uint64_t numKeyStrByte
 }
 
 static inline uint16_t
-find_min_length16(const uint16_t length[NUM_AVX2_BUFS], unsigned int *allCommonBits)
+find_min_length16(const uint16_t length[NUM_AVX2_BUFS], unsigned int *allCommonBytes)
 {
         static const uint16_t bcast_mask[8] = { 0x0001, 0x0001, 0x0001, 0x0001,
                                                 0x0001, 0x0001, 0x0001, 0x0001 };
@@ -96,7 +96,7 @@ find_min_length16(const uint16_t length[NUM_AVX2_BUFS], unsigned int *allCommonB
         __m128i bcast_first = _mm_shuffle_epi8(xmm_lengths, shuf_mask);
         /* Compare if all lengths are the same value */
         __m128i res = _mm_cmpeq_epi16(xmm_lengths, bcast_first);
-        *allCommonBits = (_mm_movemask_epi8(res) == 0xFFFF);
+        *allCommonBytes = (_mm_movemask_epi8(res) == 0xFFFF);
 
         xmm_lengths = _mm_minpos_epu16(xmm_lengths);
 
@@ -106,7 +106,7 @@ find_min_length16(const uint16_t length[NUM_AVX2_BUFS], unsigned int *allCommonB
 static inline void
 _zuc_eia3_8_buffer_job(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *ivs,
                        const void *const pBufferIn[NUM_AVX2_BUFS], uint32_t *pMacI[NUM_AVX2_BUFS],
-                       const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                       const uint16_t lengthInBytes[NUM_AVX2_BUFS],
                        const void *const job_in_lane[NUM_AVX2_BUFS], const unsigned use_gfni)
 {
         unsigned int i = 0;
@@ -118,10 +118,10 @@ _zuc_eia3_8_buffer_job(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *ivs
         const uint8_t *pIn8[NUM_AVX2_BUFS] = { NULL };
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX2_BUFS];
-        const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
+        const uint32_t keyStreamLengthInBytes = KEYSTR_ROUND_LEN;
         DECLARE_ALIGNED(uint32_t * pKeyStrArr[NUM_AVX2_BUFS], 32) = { NULL };
-        unsigned int allCommonBits;
-        uint32_t remainCommonBits = find_min_length16(lengthInBits, &allCommonBits);
+        unsigned int allCommonBytes;
+        uint32_t remainCommonBytes = find_min_length16(lengthInBytes, &allCommonBytes);
 
         memset(T, 0, sizeof(T));
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
@@ -138,12 +138,12 @@ _zuc_eia3_8_buffer_job(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *ivs
         /* Point at the next 32 bytes of the key */
         for (i = 0; i < NUM_AVX2_BUFS; i++)
                 pKeyStrArr[i] = (uint32_t *) &keyStr[i][KEYSTR_ROUND_LEN];
-        /* loop over the message bits */
-        while (remainCommonBits >= keyStreamLengthInBits) {
-                remainCommonBits -= keyStreamLengthInBits;
+        /* loop over the message bytes */
+        while (remainCommonBytes >= keyStreamLengthInBytes) {
+                remainCommonBytes -= keyStreamLengthInBytes;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 32 bytes */
-                if (!remainCommonBits && allCommonBits)
+                if (!remainCommonBytes && allCommonBytes)
                         keygen_8(&state, pKeyStrArr, 8, use_gfni);
                 else
                         keygen_8(&state, pKeyStrArr, 32, use_gfni);
@@ -157,18 +157,18 @@ _zuc_eia3_8_buffer_job(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *ivs
                 }
         }
 
-        /* Process each packet separately for the remaining bits */
+        /* Process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 if (job_in_lane[i] == NULL)
                         continue;
 
-                uint32_t remainBits = lengthInBits[i] - numKeyStr * keyStreamLengthInBits;
+                uint32_t remainBytes = lengthInBytes[i] - numKeyStr * keyStreamLengthInBytes;
                 uint32_t *keyStr32 = (uint32_t *) keyStr[i];
 
-                /* If remaining bits are more than 24 bytes, we need to generate
+                /* If remaining bytes are more than 24 bytes (6 ZUC words), we need to generate
                  * at least 8B more of keystream, so we need to copy
                  * the zuc state to single packet state first */
-                if (remainBits > (6 * 32)) {
+                if (remainBytes > 24) {
                         singlePktState.lfsrState[0] = state.lfsrState[0][i];
                         singlePktState.lfsrState[1] = state.lfsrState[1][i];
                         singlePktState.lfsrState[2] = state.lfsrState[2][i];
@@ -190,11 +190,11 @@ _zuc_eia3_8_buffer_job(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *ivs
                         singlePktState.fR2 = state.fR2[i];
                 }
 
-                while (remainBits >= keyStreamLengthInBits) {
-                        remainBits -= keyStreamLengthInBits;
+                while (remainBytes >= keyStreamLengthInBytes) {
+                        remainBytes -= keyStreamLengthInBytes;
 
                         /* Generate the next key stream 8 bytes or 32 bytes */
-                        if (!remainBits)
+                        if (!remainBytes)
                                 asm_ZucGenKeystream8B_avx(&keyStr32[8], &singlePktState);
                         else
                                 asm_ZucGenKeystream32B_avx(&keyStr32[8], &singlePktState);
@@ -203,14 +203,13 @@ _zuc_eia3_8_buffer_job(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *ivs
                 }
 
                 /*
-                 * If remaining bits has more than 6 ZUC WORDS (double words),
-                 * keystream needs to have up to another 2 ZUC WORDS (8B)
+                 * If remaining bytes are more than 24 bytes (6 ZUC words),
+                 * keystream needs to have up to another 8B
                  */
-
-                if (remainBits > (6 * 32))
+                if (remainBytes > 24)
                         asm_ZucGenKeystream8B_avx(&keyStr32[8], &singlePktState);
 
-                asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBits);
+                asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBytes);
 
                 /* save the final MAC-I result */
                 *(pMacI[i]) = T[i];
@@ -229,18 +228,18 @@ void
 zuc_eia3_8_buffer_job_avx2(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *pIv,
                            const void *const pBufferIn[NUM_AVX2_BUFS],
                            uint32_t *pMacI[NUM_AVX2_BUFS],
-                           const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                           const uint16_t lengthInBytes[NUM_AVX2_BUFS],
                            const void *const job_in_lane[NUM_AVX2_BUFS])
 {
-        _zuc_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits, job_in_lane, 0);
+        _zuc_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBytes, job_in_lane, 0);
 }
 
 void
 zuc_eia3_8_buffer_job_gfni_avx2(const void *const pKey[NUM_AVX2_BUFS], const uint8_t *pIv,
                                 const void *const pBufferIn[NUM_AVX2_BUFS],
                                 uint32_t *pMacI[NUM_AVX2_BUFS],
-                                const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                                const uint16_t lengthInBytes[NUM_AVX2_BUFS],
                                 const void *const job_in_lane[NUM_AVX2_BUFS])
 {
-        _zuc_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits, job_in_lane, 1);
+        _zuc_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBytes, job_in_lane, 1);
 }

@@ -772,7 +772,6 @@ FLUSH_JOB_ZUC_NEA6:
 
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_hash_in_bytes]
-        shl     len, 3
 
         vmovdqa xmm0, [state + _zuc_lens]
         XVPINSRW xmm0, xmm1, tmp, lane, len, scale_x16
