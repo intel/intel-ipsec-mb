@@ -391,12 +391,10 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
         DECLARE_ALIGNED(uint8_t Q[NUM_SSE_BUFS][16], 64);
         DECLARE_ALIGNED(uint8_t P[NUM_SSE_BUFS][16], 64);
         DECLARE_ALIGNED(uint32_t * pKeyStrArr[NUM_SSE_BUFS], 16) = { NULL };
-        uint8_t tag[NUM_SSE_BUFS][16];
         DECLARE_ALIGNED(const uint64_t *pIn64[NUM_SSE_BUFS], 64) = { NULL };
         DECLARE_ALIGNED(uint64_t * pOut64[NUM_SSE_BUFS], 64) = { NULL };
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
-        struct gcm_key_data gdata_key[NUM_SSE_BUFS];
 
         /*
          * Calculate the number of bytes left over for each packet,
@@ -429,26 +427,29 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        /* Set tags to zero */
-        memset(tag, 0, 16 * NUM_SSE_BUFS);
-
         if (dir == IMB_DIR_DECRYPT) {
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
                         const IMB_JOB *job = job_in_lane[i];
+                        uint8_t hqp[3 * 16];
+                        uint8_t tag[16];
 
                         if (job == NULL)
                                 continue;
 
                         shuffle(H[i]);
-                        /* Precompute hash keys from H */
-                        polyval_pre_sse(H[i], &gdata_key[i]);
+                        shuffle(Q[i]);
+                        shuffle(P[i]);
+                        memcpy(&hqp[0], H[i], 16);
+                        memcpy(&hqp[16], Q[i], 16);
+                        memcpy(&hqp[32], P[i], 16);
 
-                        /* Digest AAD */
-                        polyval_sse(&gdata_key[i], job->u.NCA.aad, job->u.NCA.aad_len_in_bytes,
-                                    tag[i]);
+                        nca_clmul_sse(tag, hqp, pBufferIn[i], lengthInBytes[i], job->u.NCA.aad,
+                                      job->u.NCA.aad_len_in_bytes);
+                        memcpy(job->auth_tag_output, tag, job->auth_tag_output_len_in_bytes);
 
-                        /* Digest plaintext */
-                        polyval_sse(&gdata_key[i], pBufferIn[i], lengthInBytes[i], tag[i]);
+#ifdef SAFE_DATA
+                        clear_mem(hqp, sizeof(hqp));
+#endif
                 }
         }
         /* Encrypt common length of all buffers */
@@ -545,37 +546,24 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
                 }
 
                 if (dir == IMB_DIR_ENCRYPT) {
+                        uint8_t hqp[3 * 16];
+                        uint8_t tag[16];
+
                         shuffle(H[i]);
-                        /* Precompute hash keys from H */
-                        polyval_pre_sse(H[i], &gdata_key[i]);
+                        shuffle(Q[i]);
+                        shuffle(P[i]);
+                        memcpy(&hqp[0], H[i], 16);
+                        memcpy(&hqp[16], Q[i], 16);
+                        memcpy(&hqp[32], P[i], 16);
 
-                        /* Digest AAD */
-                        polyval_sse(&gdata_key[i], job->u.NCA.aad, job->u.NCA.aad_len_in_bytes,
-                                    tag[i]);
+                        nca_clmul_sse(tag, hqp, pBufferOut[i], lengthInBytes[i], job->u.NCA.aad,
+                                      job->u.NCA.aad_len_in_bytes);
+                        memcpy(job->auth_tag_output, tag, job->auth_tag_output_len_in_bytes);
 
-                        /* Digest ciphertext (TODO: decrypt direction) */
-                        polyval_sse(&gdata_key[i], pBufferOut[i], lengthInBytes[i], tag[i]);
+#ifdef SAFE_DATA
+                        clear_mem(hqp, sizeof(hqp));
+#endif
                 }
-
-                /* XOR 16-byte lengths array with previous digest and hash with Q */
-                uint64_t lengths[2] = { 0 };
-
-                lengths[0] = lengthInBytes[i] * 8;
-                lengths[1] = job->u.NCA.aad_len_in_bytes * 8;
-
-                uint64_t *tag64 = (uint64_t *) tag[i];
-                tag64[0] ^= lengths[0];
-                tag64[1] ^= lengths[1];
-
-                shuffle(Q[i]);
-                polyval_16B_sse(Q[i], tag64);
-
-                /* XOR tag with P */
-                shuffle(P[i]);
-                for (int j = 0; j < 16; j++)
-                        tag[i][j] ^= P[i][j];
-
-                memcpy(job->auth_tag_output, tag[i], job->auth_tag_output_len_in_bytes);
         }
 
 #ifdef SAFE_DATA
