@@ -408,16 +408,6 @@ sm3_hmac_submit_sse(IMB_JOB *job);
 IMB_JOB *
 sm3_msg_submit_sse(IMB_JOB *job);
 
-/* POLYVAL */
-void
-polyval_sse(const struct gcm_key_data *key_data, const void *in, const uint64_t in_len,
-            void *io_tag);
-void
-polyval_pre_sse(const void *key, struct gcm_key_data *key_data);
-
-void
-polyval_16B_sse(const void *key, void *in_out_data);
-
 /* NIA */
 IMB_DLL_LOCAL void
 nia_clmul_sse(void *digest, const void *hqp, const void *msg, const uint64_t msg_len);
