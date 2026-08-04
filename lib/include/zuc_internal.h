@@ -930,10 +930,10 @@ asm_Eia3Round32B_avx(void *T, const void *ks, const void *data);
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_Eia3Remainder_sse(void *T, const void *ks, const void *data, const uint64_t n_bits);
+asm_Eia3Remainder_sse(void *T, const void *ks, const void *data, const uint64_t n_bytes);
 
 IMB_DLL_LOCAL void
-asm_Eia3Remainder_gfni_sse(void *T, const void *ks, const void *data, const uint64_t n_bits);
+asm_Eia3Remainder_gfni_sse(void *T, const void *ks, const void *data, const uint64_t n_bytes);
 
 IMB_DLL_LOCAL void
 asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t n_bytes);
@@ -1020,13 +1020,14 @@ IMB_DLL_LOCAL
 void
 zuc_eia3_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
                                const void *const pBufferIn[4], uint32_t *pMacI[4],
-                               const uint16_t lengthInBits[4], const void *const job_in_lane[4]);
+                               const uint16_t lengthInBytes[4], const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
 void
 zuc_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
                                   const void *const pBufferIn[4], uint32_t *pMacI[4],
-                                  const uint16_t lengthInBits[4], const void *const job_in_lane[4]);
+                                  const uint16_t lengthInBytes[4],
+                                  const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
 void
