@@ -467,7 +467,7 @@ align_label
 %macro ZUC_EIA3_16_BUFFER 4
 %define %%OOO           %1 ; [in] Pointer to ZUC OOO manager
 %define %%L             %2 ; [clobbered] Temporary GP register (dword)
-%define %%REMAIN_BITS   %3 ; [clobbered] Temporary GP register (dword)
+%define %%REMAIN_BYTES  %3 ; [clobbered] Temporary GP register (dword)
 %define %%TMP           %4 ; [clobbered] Temporary GP register
 
         ; Find minimum length
@@ -475,15 +475,15 @@ align_label
         vphminposuw xmm0, xmm0
         vmovdqa xmm1, [%%OOO + _zuc_lens + 16]
         vphminposuw xmm1, xmm1
-        vpextrw %%REMAIN_BITS, xmm0, 0
+        vpextrw %%REMAIN_BYTES, xmm0, 0
         vpextrw DWORD(%%TMP), xmm1, 0
-        cmp     DWORD(%%TMP), %%REMAIN_BITS
-        cmovbe  %%REMAIN_BITS, DWORD(%%TMP)
+        cmp     DWORD(%%TMP), %%REMAIN_BYTES
+        cmovbe  %%REMAIN_BYTES, DWORD(%%TMP)
 
-        ; Get number of KS 32-bit words to generate ([length/32] + tag_size))
-        lea     %%L, [%%REMAIN_BITS + 31 + 2*(8*4)]
+        ; Get number of KS 32-bit words to generate ([length/4] + tag_size)
+        lea     %%L, [%%REMAIN_BYTES + 11]
 
-        shr     %%L, 5
+        shr     %%L, 2
 
         cmp     %%L, 16
         jae     %%_above_eq_16
@@ -523,7 +523,7 @@ align_label
 
 align_loop
 %%_loop:
-        cmp     %%REMAIN_BITS, 64*8
+        cmp     %%REMAIN_BYTES, 64
         jbe     %%_exit_loop
 
         cmp     %%L, 16
@@ -549,7 +549,7 @@ align_loop
 
         RESTORE_STACK_SPACE 4
 
-        sub     %%REMAIN_BITS, 64*8
+        sub     %%REMAIN_BYTES, 64
         jmp     %%_exit
 
 align_label
@@ -561,10 +561,10 @@ align_label
         mov     DWORD(%%TMP), %%L
         shr     DWORD(%%TMP), 4 ; Number of rounds of 64 bytes
 
-        ;; Calculate number of remaining bits after function call
-        mov     eax, 64*8
+        ;; Calculate number of remaining bytes after function call
+        mov     eax, 64
         mul     %%TMP
-        sub     %%REMAIN_BITS, eax
+        sub     %%REMAIN_BYTES, eax
         lea     arg1, [%%OOO + _zuc_state]
         lea     arg2, [%%OOO + _zuc_args_KS]
         lea     arg3, [%%OOO + _zuc_args_digest]
@@ -608,9 +608,9 @@ align_label
         lea     arg3, [%%OOO + _zuc_args_in]
         lea     arg4, [%%OOO + _zuc_lens]
 %ifdef LINUX
-        mov     DWORD(arg5), %%REMAIN_BITS
+        mov     DWORD(arg5), %%REMAIN_BYTES
 %else
-        mov     [rsp + 32], %%REMAIN_BITS
+        mov     [rsp + 32], %%REMAIN_BYTES
 %endif
 
         call    ZUC_REMAINDER_16
@@ -681,7 +681,6 @@ align_label
 
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_hash_in_bytes]
-        shl     len, 3
 
         ;; Update lane len
         vmovdqa64       ymm0, [state + _zuc_lens]

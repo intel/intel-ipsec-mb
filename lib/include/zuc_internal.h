@@ -978,22 +978,22 @@ asm_Eia3Round64BAVX512(uint32_t *T, const void *ks, const void *data);
  *
  * @param[in] data                  Pointer to the data
  *
- * @param[in] n_bits                Number of data bits to be processed
+ * @param[in] n_bytes               Number of data bytes to be processed
  *
  * @pre
  *      None
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_Eia3RemainderAVX512(uint32_t *T, const void *ks, const void *data, const uint32_t n_bits);
+asm_Eia3RemainderAVX512(uint32_t *T, const void *ks, const void *data, const uint32_t n_bytes);
 
 IMB_DLL_LOCAL uint32_t
 asm_Eia3RemainderAVX512_16(uint32_t *T, const uint32_t *ks, const void **data, uint16_t *lens,
-                           const uint32_t commonBits);
+                           const uint32_t commonBytes);
 
 IMB_DLL_LOCAL uint32_t
 asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const void **data,
-                                   uint16_t *lens, const uint32_t commonBits);
+                                   uint16_t *lens, const uint32_t commonBytes);
 
 /**
  ******************************************************************************

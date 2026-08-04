@@ -245,9 +245,9 @@ add_64:
 dq      64, 64, 64, 64, 64, 64, 64, 64
 
 align 32
-all_512w:
-dw      512, 512, 512, 512, 512, 512, 512, 512
-dw      512, 512, 512, 512, 512, 512, 512, 512
+all_64w:
+dw      64, 64, 64, 64, 64, 64, 64, 64
+dw      64, 64, 64, 64, 64, 64, 64, 64
 
 align 64
 bswap_mask:
@@ -259,16 +259,6 @@ db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
-
-align 64
-all_31w:
-dw      31, 31, 31, 31, 31, 31, 31, 31
-dw      31, 31, 31, 31, 31, 31, 31, 31
-
-align 64
-all_ffe0w:
-dw      0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0
-dw      0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0
 
 align 32
 permw_mask:
@@ -1885,7 +1875,6 @@ align_loop
         ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
         vmovdqa64       YWORD(%%ZTMP2), [%%LEN]
         vpcmpw          %%TMP_KMASK1, YWORD(%%ZTMP2), [rel all_ffs], 4 ; valid lanes
-        shl             %%OFFSET, 3 ; Convert to bits
         vpbroadcastw    YWORD(%%ZTMP1), DWORD(%%OFFSET)
         vpsubw          YWORD(%%ZTMP2){%%TMP_KMASK1}, YWORD(%%ZTMP1)
         vmovdqa64       [%%LEN], YWORD(%%ZTMP2)
@@ -2947,10 +2936,10 @@ ZUCNEA6_LFSR_LOAD:
         vmovdqu64       [%%DATA], %%ZTMP1
         vmovdqu64       [%%DATA + 64], %%ZTMP2
 
-        ; Update array of lengths (subtract 512 bits from all lengths if valid lane)
+        ; Update array of lengths (subtract 64 bytes from all lengths if valid lane)
         vmovdqa64       %%YTMP1, [LEN]
         vpcmpw          %%TMP_KMASK1, %%YTMP1, [rel all_ffs], 4
-        vpsubw          %%YTMP1{%%TMP_KMASK1}, [rel all_512w]
+        vpsubw          %%YTMP1{%%TMP_KMASK1}, [rel all_64w]
         vmovdqa64       [%%LEN], %%YTMP1
 
 %endmacro
@@ -3075,10 +3064,10 @@ ZUCNEA6_LFSR_LOAD:
         vmovdqu64       [%%DATA], %%ZTMP2
         vmovdqu64       [%%DATA + 64], %%ZTMP3
 
-        ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
+        ; Update array of lengths (subtract 64 bytes from all lengths if valid lane)
         vmovdqa64       %%YTMP1, [%%LEN]
         vpcmpw          %%TMP_KMASK1, %%YTMP1, [rel all_ffs], 4 ; valid lanes
-        vpsubw          %%YTMP1{%%TMP_KMASK1}, [rel all_512w]
+        vpsubw          %%YTMP1{%%TMP_KMASK1}, [rel all_64w]
         vmovdqa64       [%%LEN], %%YTMP1
 
 %endmacro
@@ -3153,10 +3142,11 @@ align_label
         or      %%IN_OFFSET_OUT_KS, %%TMP1
 align_label
 %%_ks_qword_read:
-        ; Rotate left by MIN_LEN % 32
+        ; Rotate left by (LEN_BUF % 4) * 8 bits
         mov     %%TMP1, rcx
         mov     rcx, %%LEN_BUF
-        and     rcx, 0x1F
+        and     rcx, 0x3
+        shl     rcx, 3
         rol     %%IN_OFFSET_OUT_KS, cl
         mov     rcx, %%TMP1
 %endmacro
@@ -3213,10 +3203,11 @@ align_label
         mov     %%IN_OFFSET_OUT_KS, [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (4+48)]
 align_label
 %%_ks_qwords_read:
-        ; Rotate left by LEN_BUF % 32
+        ; Rotate left by (LEN_BUF % 4) * 8 bits
         mov     %%TMP2, rcx
         mov     rcx, %%LEN_BUF
-        and     rcx, 0x1F
+        and     rcx, 0x3
+        shl     rcx, 3
         rol     %%TMP1, cl
         rol     %%IN_OFFSET_OUT_KS, cl
         mov     rcx, %%TMP2
@@ -3295,11 +3286,11 @@ align_label
         vmovdqa %%YTMP2, [%%LEN]
         vpcmpw %%VALID_KMASK, %%YTMP2, [rel all_ffs], 4 ; NEQ
 
-        ; Round up to nearest multiple of 32 bits
-        vpaddw  %%YTMP1{%%VALID_KMASK}, [rel all_31w]
-        vpandq  %%YTMP1, [rel all_ffe0w]
+        ; Round up to nearest multiple of 4 bytes
+        vpaddw  %%YTMP1{%%VALID_KMASK}, [rel all_threes]
+        vpandq  %%YTMP1, [rel all_fffcs]
 
-        ; Calculate remaining bits to authenticate after function call
+        ; Calculate remaining bytes to authenticate after function call
         vpcmpuw %%TMP_KMASK1, %%YTMP2, %%YTMP1, 1 ; Get mask of lengths that will be < 0 after subtracting
         vpsubw  %%YTMP3{%%VALID_KMASK}, %%YTMP2, %%YTMP1
         vpxorq  %%YTMP4, %%YTMP4
@@ -3307,9 +3298,9 @@ align_label
         vmovdqu16 %%YTMP3{%%TMP_KMASK1}, %%YTMP4 ; YMM2 contain final lengths
         vmovdqu16 [%%LEN]{%%VALID_KMASK}, %%YTMP3 ; Update in memory the final updated lengths
 
-        ; Calculate number of bits to authenticate (up to 511 bits),
+        ; Calculate number of bytes to authenticate (up to 63 bytes),
         ; for each lane, and store it in stack to be used later
-        vpsubw  %%YTMP2{%%VALID_KMASK}{z}, %%YTMP3 ; Bits to authenticate in all lanes (zero out length of NULL lanes)
+        vpsubw  %%YTMP2{%%VALID_KMASK}{z}, %%YTMP3 ; Bytes to authenticate in all lanes (zero out length of NULL lanes)
         sub     rsp, 32
         vmovdqu [rsp], %%YTMP2
 
@@ -3344,7 +3335,7 @@ align_label
 
 %assign K 0
 %rep 4
-        cmp     %%LEN_BUF, 128
+        cmp     %%LEN_BUF, 16
         jb      APPEND3(%%Eia3RoundsAVX512_dq_end,I,J)
 
         ;; read 16 bytes and reverse bits
@@ -3371,7 +3362,7 @@ align_label
         DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%XTMP7, %%XTMP8, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
                         %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
         add     %%OFFSET, 16
-        sub     %%LEN_BUF, 128
+        sub     %%LEN_BUF, 16
 %assign K (K + 1)
 %endrep
 APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
@@ -3379,33 +3370,14 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         or      %%LEN_BUF, %%LEN_BUF
         jz      APPEND3(%%Eia3RoundsAVX_end,I,J)
 
-        ; Get number of bytes
+        ; N_BYTES = LEN_BUF (already bytes)
         mov     %%N_BYTES, %%LEN_BUF
-        add     %%N_BYTES, 7
-        shr     %%N_BYTES, 3
 
         lea     %%TMP1, [rel byte64_len_to_mask_table]
         kmovq   %%TMP_KMASK1, [%%TMP1 + %%N_BYTES*8]
 
-        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        ;; read up to 16 bytes of data and bit-reverse (lengths always byte-aligned)
         vmovdqu8 %%XTMP1{%%TMP_KMASK1}{z}, [%%DATA_ADDR + %%OFFSET]
-        ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     %%TMP2, %%LEN_BUF
-        and     %%TMP2, 0x7
-        shl     %%TMP2, 4
-        lea     %%TMP1, [rel bit_mask_table]
-        add     %%TMP1, %%TMP2
-
-        ; Get mask to clear last bits
-        vmovdqa %%XTMP4, [%%TMP1]
-
-        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
-        ; to apply mask, then restore by shifting right same amount of bytes
-        mov     %%TMP1, 16
-        sub     %%TMP1, %%N_BYTES
-        XVPSLLB %%XTMP1, %%TMP1, %%XTMP5, %%TMP2
-        vpandq  %%XTMP1, %%XTMP4
-        XVPSRLB %%XTMP1, %%TMP1, %%XTMP5, %%TMP2
 
 %if USE_GFNI_VAES_VPCLMUL == 1
         vgf2p8affineqb  %%XDATA, %%XTMP1, [rel bit_reverse_table], 0x00
@@ -3449,7 +3421,6 @@ align_loop
 %%start_loop:
         ; Update data pointer
         movzx   DWORD(%%TMP1), word [rsp + %%IDX*2]
-        shr     DWORD(%%TMP1), 3 ; length authenticated in bytes
         add     [%%DATA + %%IDX*8], %%TMP1
 
         cmp     word [%%LEN + 2*%%IDX], 0
@@ -3470,10 +3441,10 @@ align_loop
         ;; Load pointer to the base address of keystream for lane %%IDX
         lea     %%KS_ADDR, [%%KS + %%TMP1]
 
-        ; Read keyStr[MIN_LEN / 32] (last dwords of KS, based on tag_size)
+        ; Read keyStr[LEN_BUF / 4] (last dwords of KS, based on tag_size)
         movzx   %%LEN_BUF, word [rsp + 2*%%IDX]
         mov     %%TMP2, %%LEN_BUF
-        shr     %%TMP2, 5
+        shr     %%TMP2, 2
         mov     %%TMP3, %%TMP2
         shr     %%TMP2, 2
         shl     %%TMP2, (4+2)
@@ -3488,9 +3459,8 @@ align_loop
         xor     DWORD(%%DIGEST), DWORD(%%TMP2)
 
         ; Read keystr[L - 1] (last dword of keyStr)
-        add     %%LEN_BUF, (31 + 64)
-        shr     %%LEN_BUF, 5 ; L
-        dec     %%LEN_BUF
+        add     %%LEN_BUF, 7
+        shr     %%LEN_BUF, 2 ; L - 1
         mov     %%TMP2, %%LEN_BUF
         shr     %%TMP2, 2
         shl     %%TMP2, (4+2)
@@ -3513,8 +3483,8 @@ align_label
 
         add     rsp, 32
 
-        add     DWORD(%%MIN_LEN), 31
-        shr     DWORD(%%MIN_LEN), 5
+        add     DWORD(%%MIN_LEN), 3
+        shr     DWORD(%%MIN_LEN), 2
         shl     DWORD(%%MIN_LEN), 2 ; Offset where to copy the last 4/8 bytes from
 
 %define %%KS_WORDS_TO_COPY 2
@@ -3565,12 +3535,12 @@ align_label
 ;;
 ;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks,
 ;;                                        const void **data, uint16_t *len,
-;;                                        const uint64_t n_bits)
+;;                                        const uint64_t n_bytes)
 ;;
 ;;  @param [in] T: Array of digests for all 16 buffers
 ;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
 ;;  @param [in] DATA : Array of pointers to data for all 16 buffers
-;;  @param [in] N_BITS : Number of common data bits to process
+;;  @param [in] N_BYTES : Number of common data bytes to process
 ;;
 align_function
 MKGLOBAL(ZUC128_REMAINDER_16,function,internal)
@@ -3599,14 +3569,14 @@ ZUC128_REMAINDER_16:
 %if USE_GFNI_VAES_VPCLMUL == 0
 ;;
 ;; extern void asm_Eia3RemainderAVX512(uint32_t *T, const void *ks,
-;;                                     const void *data, uint64_t n_bits)
+;;                                     const void *data, uint64_t n_bytes)
 ;;
 ;; Returns authentication update value to be XOR'ed with current authentication tag
 ;;
 ;;  @param [in] T (digest pointer)
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
-;;  @param [in] N_BITS (number data bits to process)
+;;  @param [in] N_BYTES (number of data bytes to process)
 ;;
 align_function
 MKGLOBAL(asm_Eia3RemainderAVX512,function,internal)
@@ -3615,15 +3585,14 @@ asm_Eia3RemainderAVX512:
         %define         T       rdi
         %define         KS      rsi
         %define         DATA    rdx
-        %define         N_BITS  rcx
+        %define         N_BYTES rcx
 %else
         %define         T       rcx
         %define         KS      rdx
         %define         DATA    r8
-        %define         N_BITS  r9
+        %define         N_BYTES r9
 %endif
 
-%define N_BYTES rbx
 %define OFFSET  r15
 
         endbranch64
@@ -3640,7 +3609,7 @@ asm_Eia3RemainderAVX512:
         xor     OFFSET, OFFSET
 %assign I 0
 %rep 3
-        cmp     N_BITS, 128
+        cmp     N_BYTES, 16
         jb      Eia3RoundsAVX512_dq_end
 
         ;; read 16 bytes and reverse bits
@@ -3685,19 +3654,14 @@ asm_Eia3RemainderAVX512:
         vpternlogq xmm9, xmm13, xmm15, 0x96
 
         add     OFFSET, 16
-        sub     N_BITS, 128
+        sub     N_BYTES, 16
 %assign I (I + 1)
 %endrep
 align_label
 Eia3RoundsAVX512_dq_end:
 
-        or      N_BITS, N_BITS
+        or      N_BYTES, N_BYTES
         jz      Eia3RoundsAVX_end
-
-        ; Get number of bytes
-        mov     N_BYTES, N_BITS
-        add     N_BYTES, 7
-        shr     N_BYTES, 3
 
         lea     r10, [rel byte64_len_to_mask_table]
         kmovq   k1, [r10 + N_BYTES*8]
@@ -3709,25 +3673,8 @@ Eia3RoundsAVX512_dq_end:
         vpshufd xmm11, xmm1, 0x61
         vpshufd xmm12, xmm13, 0x61
 
-        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        ;; read up to 16 bytes of data and bit-reverse (lengths always byte-aligned)
         vmovdqu8 xmm0{k1}{z}, [DATA + OFFSET]
-        ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     rax, N_BITS
-        and     rax, 0x7
-        shl     rax, 4
-        lea     r10, [rel bit_mask_table]
-        add     r10, rax
-
-        ; Get mask to clear last bits
-        vmovdqa xmm3, [r10]
-
-        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
-        ; to apply mask, then restore by shifting right same amount of bytes
-        mov     r10, 16
-        sub     r10, N_BYTES
-        XVPSLLB xmm0, r10, xmm4, r11
-        vpandq  xmm0, xmm3
-        XVPSRLB xmm0, r10, xmm4, r11
 
         ; Bit reverse input data
         vpand   xmm1, xmm0, xmm7
@@ -3760,15 +3707,16 @@ Eia3RoundsAVX_end:
         shr     rax, 32
         xor     eax, r11d
 
-        ; Read keyStr[N_BITS / 32]
-        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
-        shr     r10, 5
+        ; Read keyStr[N_BYTES / 4]
+        lea     r10, [N_BYTES + OFFSET] ; Restore original N_BYTES
+        shr     r10, 2
         mov     r11, [KS + r10*4]
 
-        ; Rotate left by N_BITS % 32
+        ; Rotate left by (N_BYTES % 4) * 8 bits
         mov     r12, rcx ; Save RCX
-        mov     rcx, N_BITS
-        and     rcx, 0x1F
+        mov     rcx, N_BYTES
+        and     rcx, 0x3
+        shl     rcx, 3
         rol     r11, cl
         mov     rcx, r12 ; Restore RCX
 
@@ -3776,10 +3724,9 @@ Eia3RoundsAVX_end:
         xor     eax, r11d
 
         ; Read keyStr[L - 1] (last double word of keyStr)
-        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
-        add     r10, (31 + 64)
-        shr     r10, 5 ; L
-        dec     r10
+        lea     r10, [N_BYTES + OFFSET] ; Restore original N_BYTES
+        add     r10, 7
+        shr     r10, 2 ; L - 1
         mov     r11d, [KS + r10 * 4]
 
         ; XOR with previous digest calculation and bswap it
