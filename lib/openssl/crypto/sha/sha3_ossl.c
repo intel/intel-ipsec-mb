@@ -10,6 +10,7 @@
 #include <string.h>
 #include "openssl_compat.h"
 #include "internal/sha3.h"
+#include "memcpy.h"
 
 void
 SHA3_squeeze(uint64_t A[5][5], unsigned char *out, size_t len, size_t r, int next);
@@ -70,12 +71,12 @@ ossl_sha3_absorb(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len)
                 rem = bsz - num;
                 /* If the new input does not fill the buffer then just add it */
                 if (len < rem) {
-                        memcpy(ctx->buf + num, inp, len);
+                        safe_memcpy(ctx->buf + num, inp, len);
                         ctx->bufsz += len;
                         return 1;
                 }
                 /* otherwise fill up the buffer and absorb the buffer */
-                memcpy(ctx->buf + num, inp, rem);
+                safe_memcpy(ctx->buf + num, inp, rem);
                 /* Update the input pointer */
                 inp += rem;
                 len -= rem;
@@ -89,7 +90,7 @@ ossl_sha3_absorb(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len)
                 ctx->xof_state = XOF_STATE_ABSORB;
         /* Copy the leftover bit of the input into the buffer */
         if (ossl_likely(rem > 0)) {
-                memcpy(ctx->buf, inp + len - rem, rem);
+                safe_memcpy(ctx->buf, inp + len - rem, rem);
                 ctx->bufsz = rem;
         }
         return 1;
@@ -206,7 +207,7 @@ ossl_shake_squeeze_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outle
                         len = ctx->bufsz;
                 else
                         len = outlen;
-                memcpy(out, ctx->buf + bsz - ctx->bufsz, len);
+                safe_memcpy(out, ctx->buf + bsz - ctx->bufsz, len);
                 out += len;
                 outlen -= len;
                 ctx->bufsz -= len;
@@ -225,7 +226,7 @@ ossl_shake_squeeze_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outle
         if (outlen > 0) {
                 /* Step 3. Squeeze one more block into a buffer */
                 SHA3_squeeze(ctx->A, ctx->buf, bsz, bsz, next);
-                memcpy(out, ctx->buf, outlen);
+                safe_memcpy(out, ctx->buf, outlen);
                 /* Step 4. Remember the leftover part of the squeezed block */
                 ctx->bufsz = bsz - outlen;
         }

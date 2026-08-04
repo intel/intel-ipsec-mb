@@ -39,6 +39,7 @@
  * vtable-driven absorb/final/squeeze code is reused throughout.
  */
 
+#include <intel-ipsec-mb.h>
 #include <stdint.h>
 #include <sha3.h>
 #include "include/clear_regs_mem.h"
@@ -63,6 +64,9 @@ shake128(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t 
         ctx.meth = sha3_ossl_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_squeeze(&ctx, output, (size_t) outputByteLen);
+#ifdef SAFE_DATA
+        imb_clear_mem(&ctx, sizeof(ctx));
+#endif
 }
 
 void
@@ -74,6 +78,9 @@ shake256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t 
         ctx.meth = sha3_ossl_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_squeeze(&ctx, output, (size_t) outputByteLen);
+#ifdef SAFE_DATA
+        imb_clear_mem(&ctx, sizeof(ctx));
+#endif
 }
 
 void
@@ -85,6 +92,9 @@ sha3_224(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         ctx.meth = sha3_ossl_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_224_DIGEST_SIZE_IN_BYTES);
+#ifdef SAFE_DATA
+        imb_clear_mem(&ctx, sizeof(ctx));
+#endif
 }
 
 void
@@ -96,6 +106,9 @@ sha3_256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         ctx.meth = sha3_ossl_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_256_DIGEST_SIZE_IN_BYTES);
+#ifdef SAFE_DATA
+        imb_clear_mem(&ctx, sizeof(ctx));
+#endif
 }
 
 void
@@ -107,6 +120,9 @@ sha3_384(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         ctx.meth = sha3_ossl_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_384_DIGEST_SIZE_IN_BYTES);
+#ifdef SAFE_DATA
+        imb_clear_mem(&ctx, sizeof(ctx));
+#endif
 }
 
 void
@@ -118,6 +134,9 @@ sha3_512(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         ctx.meth = sha3_ossl_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_512_DIGEST_SIZE_IN_BYTES);
+#ifdef SAFE_DATA
+        imb_clear_mem(&ctx, sizeof(ctx));
+#endif
 }
 
 /* ------------------------------------------------------------------ */
@@ -154,12 +173,12 @@ sha3_ctx_final(sha3_ctx_t *ctx, uint8_t *output, uint64_t outputLen)
          * SHAKE (pad 0x1f): XOF squeeze - same first call but supports
          * arbitrary output lengths via ossl_shake_squeeze_default.
          */
-        if (ctx->kctx.pad == 0x06)
+        if (ctx->kctx.pad == 0x06) {
                 ossl_sha3_final(&ctx->kctx, output, (size_t) outputLen);
-        else
+        } else {
                 ossl_sha3_squeeze(&ctx->kctx, output, (size_t) outputLen);
-
+        }
 #ifdef SAFE_DATA
-        clear_scratch_xmms_sse();
+        imb_clear_mem(&ctx->kctx, sizeof(ctx->kctx));
 #endif
 }
