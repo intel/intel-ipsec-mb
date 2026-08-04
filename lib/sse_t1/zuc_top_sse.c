@@ -286,13 +286,10 @@ _zuc_nia6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
         DECLARE_ALIGNED(uint8_t Q[NUM_SSE_BUFS][16], 64);
         DECLARE_ALIGNED(uint8_t P[NUM_SSE_BUFS][16], 64);
         DECLARE_ALIGNED(uint32_t * pKeyStrArr[NUM_SSE_BUFS], 16) = { NULL };
-        uint8_t tag[NUM_SSE_BUFS][16];
-        const uint8_t *pIn8[NUM_SSE_BUFS] = { NULL };
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
-                pIn8[i] = (const uint8_t *) pBufferIn[i];
                 keys.pKeys[i] = pKey[i];
         }
 
@@ -314,38 +311,26 @@ _zuc_nia6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
         keygen_4(&state, pKeyStrArr, 16, use_gfni);
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
-                struct gcm_key_data gdata_key;
                 const IMB_JOB *job = job_in_lane[i];
+                DECLARE_ALIGNED(uint8_t hqp[3 * 16], 64);
+                DECLARE_ALIGNED(uint8_t tag[16], 64);
 
                 if (job == NULL)
                         continue;
 
-                memset(tag[i], 0, 16);
-
                 shuffle(H[i]);
-                /* Precompute hash keys from H */
-                polyval_pre_sse(H[i], &gdata_key);
-                /* Digest message bytes */
-                polyval_sse(&gdata_key, pIn8[i], lengthInBytes[i], tag[i]);
-
-                /* XOR 16-byte lengths array with previous digest and hash with Q */
-                uint64_t lengths[2] = { 0 };
-
-                lengths[1] = lengthInBytes[i] * 8;
-
-                uint64_t *tag64 = (uint64_t *) tag[i];
-                tag64[0] ^= lengths[0];
-                tag64[1] ^= lengths[1];
-
                 shuffle(Q[i]);
-                polyval_16B_sse(Q[i], tag64);
-
-                /* XOR tag with P */
                 shuffle(P[i]);
-                for (int j = 0; j < 16; j++)
-                        tag[i][j] ^= P[i][j];
+                memcpy(&hqp[0], H[i], 16);
+                memcpy(&hqp[16], Q[i], 16);
+                memcpy(&hqp[32], P[i], 16);
 
-                memcpy(pMacI[i], tag[i], job->auth_tag_output_len_in_bytes);
+                nia_clmul_sse(tag, hqp, pBufferIn[i], lengthInBytes[i]);
+                memcpy(pMacI[i], tag, job->auth_tag_output_len_in_bytes);
+
+#ifdef SAFE_DATA
+                clear_mem(hqp, sizeof(hqp));
+#endif
         }
 
 #ifdef SAFE_DATA
