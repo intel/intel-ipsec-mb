@@ -28,6 +28,7 @@
 %include "include/os.inc"
 %include "include/cet.inc"
 %include "include/align_sse.inc"
+%include "include/clear_regs.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -179,4 +180,7 @@ generate_hqp_aes_sse:
         movdqa  [hqp + 16], xcounter_q
         movdqa  [hqp + 16*2], xcounter_p
 
+%ifdef SAFE_DATA
+        clear_xmms_sse xcounter_h, xcounter_q, xcounter_p, xkeyA, xkeyB, xkeyC
+%endif
         ret
