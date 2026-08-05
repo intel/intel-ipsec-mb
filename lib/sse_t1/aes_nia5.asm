@@ -56,8 +56,6 @@ align 16
 add_2:
 dq      0x0000000000000000,0x0200000000000000
 
-extern byteswap_const
-
 section .text
 
 ;;
