@@ -81,8 +81,8 @@ hmac_sha_async_update(ALG_CTX *ctx, const unsigned char *in, const size_t len)
 
         memset(imb_job, 0, sizeof(*imb_job));
 
-        DECLARE_ALIGNED(uint8_t ipad_hash[ctx->md_size], 16);
-        DECLARE_ALIGNED(uint8_t opad_hash[ctx->md_size], 16);
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
 
         imb_hmac_ipad_opad(tlv->imb_mgr, ctx->hash_alg, ctx->key, ctx->keylen, ipad_hash,
                            opad_hash);

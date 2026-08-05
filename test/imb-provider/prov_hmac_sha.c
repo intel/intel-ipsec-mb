@@ -140,6 +140,22 @@ set_sha_ctx_params(ALG_CTX *ctx, const int bitlen)
                 ctx->hash_alg = IMB_AUTH_HMAC_SHA_512;
                 ctx->md_size = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
                 break;
+        case 3224:
+                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_224;
+                ctx->md_size = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
+                break;
+        case 3256:
+                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_256;
+                ctx->md_size = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
+                break;
+        case 3384:
+                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_384;
+                ctx->md_size = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
+                break;
+        case 3512:
+                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_512;
+                ctx->md_size = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
+                break;
         }
 }
 
@@ -357,6 +373,34 @@ prov_hmac_set_ctx_params(void *vctx, const OSSL_PARAM params[])
                         if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
                                                                OSSL_MAC_NAME_HMAC, NULL, SN_sha512,
                                                                hctx->libctx)) {
+                                return 0;
+                        }
+                } else if (strcasecmp(p->data, SN_sha3_224) == 0) {
+                        set_sha_ctx_params(hctx, 3224);
+                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
+                                                               OSSL_MAC_NAME_HMAC, NULL,
+                                                               SN_sha3_224, hctx->libctx)) {
+                                return 0;
+                        }
+                } else if (strcasecmp(p->data, SN_sha3_256) == 0) {
+                        set_sha_ctx_params(hctx, 3256);
+                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
+                                                               OSSL_MAC_NAME_HMAC, NULL,
+                                                               SN_sha3_256, hctx->libctx)) {
+                                return 0;
+                        }
+                } else if (strcasecmp(p->data, SN_sha3_384) == 0) {
+                        set_sha_ctx_params(hctx, 3384);
+                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
+                                                               OSSL_MAC_NAME_HMAC, NULL,
+                                                               SN_sha3_384, hctx->libctx)) {
+                                return 0;
+                        }
+                } else if (strcasecmp(p->data, SN_sha3_512) == 0) {
+                        set_sha_ctx_params(hctx, 3512);
+                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
+                                                               OSSL_MAC_NAME_HMAC, NULL,
+                                                               SN_sha3_512, hctx->libctx)) {
                                 return 0;
                         }
                 }

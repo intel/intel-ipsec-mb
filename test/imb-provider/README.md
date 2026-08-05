@@ -85,12 +85,16 @@ The `imb-provider` supports the following cryptographic algorithms:
 
 - **HMAC**:
     - HMAC-SHA1
-    - HMAC-SHA128
+    - HMAC-SHA224
     - HMAC-SHA256
     - HMAC-SHA384
     - HMAC-SHA512
+    - HMAC-SHA3-224
+    - HMAC-SHA3-256
+    - HMAC-SHA3-384
+    - HMAC-SHA3-512
 
-    To test the OpenSSL speed, use ```-hmac sha512``` option.
+    To test the OpenSSL speed, use ```-hmac sha512``` or ```-hmac SHA3-256``` option.
 
 - **Authentication & MAC**:
     - Poly1305
