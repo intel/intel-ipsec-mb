@@ -1664,7 +1664,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 break;
         case IMB_AUTH_AES_NIA5:
         case IMB_AUTH_SNOW5G_NIA4:
-        case IMB_AUTH_ZUC_NIA6:
                 if (job->u.NIA._key == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
@@ -1679,6 +1678,34 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->msg_len_to_hash_in_bytes == 0 ||
                     job->msg_len_to_hash_in_bytes > NIA_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_ZUC_NIA6:
+                if (job->u.NIA._key == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (job->u.NIA._iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes == 0 ||
+                    job->msg_len_to_hash_in_bytes > MB_MAX_LEN16) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
                         return 1;
                 }
