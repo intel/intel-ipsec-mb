@@ -809,8 +809,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }
-                /* Same key structure used for encrypt and decrypt */
-                if (cipher_direction == IMB_DIR_ENCRYPT && job->enc_keys == NULL) {
+                if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
@@ -844,8 +843,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }
-                /* Same key structure used for encrypt and decrypt */
-                if (cipher_direction == IMB_DIR_ENCRYPT && job->enc_keys == NULL) {
+                if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
@@ -879,8 +877,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }
-                /* Same key structure used for encrypt and decrypt */
-                if (cipher_direction == IMB_DIR_ENCRYPT && job->enc_keys == NULL) {
+                if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
