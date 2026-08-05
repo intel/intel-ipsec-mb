@@ -225,6 +225,10 @@ enum test_hash_alg_e {
         TEST_ZUC_NIA6,
         TEST_SNOW5G_NIA4,
         TEST_HASH_SNOW5G_NCA4,
+        TEST_SHA3_224_HMAC,
+        TEST_SHA3_256_HMAC,
+        TEST_SHA3_384_HMAC,
+        TEST_SHA3_512_HMAC,
         TEST_NUM_HASH_TESTS
 };
 
@@ -595,6 +599,30 @@ const struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = TEST_SNOW5G_NIA4
                 }
+        },
+        {
+                .name = "sha3-224-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_224_HMAC
+                }
+        },
+        {
+                .name = "sha3-256-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_256_HMAC
+                }
+        },
+        {
+                .name = "sha3-384-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_384_HMAC
+                }
+        },
+        {
+                .name = "sha3-512-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_512_HMAC
+                }
         }
 };
 
@@ -739,6 +767,10 @@ const uint32_t auth_tag_length_bytes[] = {
         4,                         /* ZUC-NCA6 */
         4,                         /* SNOW5G-NIA4 */
         4,                         /* SNOW5G-NCA4 */
+        28,                        /* IMB_AUTH_HMAC_SHA3_224 */
+        32,                        /* IMB_AUTH_HMAC_SHA3_256 */
+        48,                        /* IMB_AUTH_HMAC_SHA3_384 */
+        64,                        /* IMB_AUTH_HMAC_SHA3_512 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1738,6 +1770,18 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
         case TEST_SNOW5G_NIA4:
                 hash_alg = IMB_AUTH_SNOW5G_NIA4;
                 break;
+        case TEST_SHA3_224_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA3_224;
+                break;
+        case TEST_SHA3_256_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA3_256;
+                break;
+        case TEST_SHA3_384_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA3_384;
+                break;
+        case TEST_SHA3_512_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA3_512;
+                break;
         default:
                 break;
         }
@@ -2214,7 +2258,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         static uint32_t index = 0;
         static DECLARE_ALIGNED(imb_uint128_t iv, 16);
         static DECLARE_ALIGNED(imb_uint128_t auth_iv, 16);
-        static uint32_t ipad[5], opad[5], digest[3];
+        static uint32_t ipad[5], opad[5];
+        static DECLARE_ALIGNED(uint8_t digest[IMB_MAX_TAG_LEN], 16);
+        static DECLARE_ALIGNED(uint8_t sha3_hmac_ipad[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+        static DECLARE_ALIGNED(uint8_t sha3_hmac_opad[IMB_SHA3_MAX_BLOCK_SIZE], 16);
         static DECLARE_ALIGNED(uint32_t k1_expanded[11 * 4], 16);
         static DECLARE_ALIGNED(uint8_t k2[16], 16);
         static DECLARE_ALIGNED(uint8_t k3[16], 16);
@@ -2257,7 +2304,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         job_template.iv = (uint8_t *) &iv;
         job_template.iv_len_in_bytes = 16;
 
-        job_template.auth_tag_output = (uint8_t *) digest;
+        job_template.auth_tag_output = digest;
 
         /* Translating enum to the API's one */
         job_template.hash_alg = translate_hash_alg(params->hash_alg);
@@ -2332,6 +2379,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         case TEST_SM3_HMAC:
                 job_template.u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
                 job_template.u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) opad;
+                break;
+        case TEST_SHA3_224_HMAC:
+        case TEST_SHA3_256_HMAC:
+        case TEST_SHA3_384_HMAC:
+        case TEST_SHA3_512_HMAC:
+                job_template.u.HMAC._hashed_auth_key_xor_ipad = sha3_hmac_ipad;
+                job_template.u.HMAC._hashed_auth_key_xor_opad = sha3_hmac_opad;
                 break;
         default:
                 /* HMAC hash algorithm */
@@ -3626,7 +3680,11 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                      "ZUC_NCA6",
                                                                      "ZUC_NIA6",
                                                                      "SNOW5G_NIA4",
-                                                                     "SNOW5G_NCA4" };
+                                                                     "SNOW5G_NCA4",
+                                                                     "SHA3_224_HMAC",
+                                                                     "SHA3_256_HMAC",
+                                                                     "SHA3_384_HMAC",
+                                                                     "SHA3_512_HMAC" };
                 struct params_s par;
 
                 printf("ARCH");

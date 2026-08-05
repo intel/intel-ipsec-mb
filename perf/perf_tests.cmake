@@ -136,7 +136,11 @@ set(HASH_ALGOS
   shake-256
   aes-nia5
   zuc-nia6
-  snow5g-nia4)
+  snow5g-nia4
+  sha3-224-hmac
+  sha3-256-hmac
+  sha3-384-hmac
+  sha3-512-hmac)
 
 # hash smoke tests (burst API)
 foreach(ALGO ${HASH_ALGOS})
