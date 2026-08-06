@@ -65,9 +65,9 @@ rej_ntt_poly_mb(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t s
 }
 
 static void
-vector_expand_mask_mb(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_BYTES],
-                      const uint32_t kappa, const uint32_t gamma1, EVP_MD_CTX *h_ctx,
-                      const EVP_MD *md)
+vector_expand_mask_avx512(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_BYTES],
+                          const uint32_t kappa, const uint32_t gamma1, EVP_MD_CTX *h_ctx,
+                          const EVP_MD *md)
 {
         size_t i;
         const size_t num_polys = out->num_poly;
@@ -202,7 +202,7 @@ rej_bounded_poly_mb(COEFF_FROM_NIBBLE_FUNC *coef_from_nibble,
 }
 
 static int
-matrix_expand_A_mb(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, MATRIX *out)
+matrix_expand_A_avx512(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, MATRIX *out)
 {
         size_t b, idx;
         uint8_t derived_seeds[ML_DSA_SHAKE_X4_BATCH_SIZE][ML_DSA_RHO_BYTES + 2];
@@ -254,8 +254,8 @@ matrix_expand_A_mb(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, MATR
 }
 
 static int
-vector_expand_S_mb(EVP_MD_CTX *h_ctx, const EVP_MD *md, const int eta, const uint8_t *seed,
-                   VECTOR *s1, VECTOR *s2)
+vector_expand_S_avx512(EVP_MD_CTX *h_ctx, const EVP_MD *md, const int eta, const uint8_t *seed,
+                       VECTOR *s1, VECTOR *s2)
 {
         int ret = 0;
         size_t b, idx;
@@ -319,6 +319,3 @@ err:
         OPENSSL_cleanse(derived_seeds, sizeof(derived_seeds));
         return ret;
 }
-
-static const OSSL_ML_DSA_SAMPLE_OPS ml_dsa_sample_x86_64 = { matrix_expand_A_mb, vector_expand_S_mb,
-                                                             vector_expand_mask_mb };

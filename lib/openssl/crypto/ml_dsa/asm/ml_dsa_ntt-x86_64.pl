@@ -143,27 +143,8 @@ my $ZETA256_QINV_OFS = 256 * 4;
 # Used in assembly addressing as: base_reg + $ZETA16R_QINV_OFS
 my $ZETA16R_QINV_OFS = 16 * 32;
 
-if ($avx2>0) {{{
-
-# avx2 feature bit
-my $avx2_mask = (1<<5);
-
 $code .= <<___;
 .text
-
-.extern OPENSSL_ia32cap_P
-
-.globl  ml_dsa_ntt_avx2_capable
-.type   ml_dsa_ntt_avx2_capable,\@abi-omnipotent
-.align 32
-ml_dsa_ntt_avx2_capable:
-    endbranch
-    mov     OPENSSL_ia32cap_P+8(%rip), %rcx
-    xor     %eax, %eax
-    and     \$$avx2_mask, %ecx
-    cmovnz  %ecx, %eax
-    ret
-.size   ml_dsa_ntt_avx2_capable, .-ml_dsa_ntt_avx2_capable
 ___
 
 ###############################################################################
@@ -2267,17 +2248,9 @@ ___
 
 }}} else {{{
 # When AVX2 is not available, output stub functions
-# The capable function returns 0, and the operation functions trap if called
+# AVX2 entry points below trap if called on unsupported toolchains
 $code .= <<___;
 .text
-
-.globl  ml_dsa_ntt_avx2_capable
-.type   ml_dsa_ntt_avx2_capable,\@abi-omnipotent
-ml_dsa_ntt_avx2_capable:
-    endbranch
-    xor     %eax, %eax
-    ret
-.size   ml_dsa_ntt_avx2_capable, .-ml_dsa_ntt_avx2_capable
 
 .globl  ml_dsa_poly_ntt_mult_avx2
 .globl  ml_dsa_poly_ntt_avx2

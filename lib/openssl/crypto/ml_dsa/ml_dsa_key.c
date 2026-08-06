@@ -331,8 +331,8 @@ ossl_ml_dsa_key_has(const ML_DSA_KEY *key, int selection)
  * @returns 1 on success, or 0 on failure.
  */
 static int
-public_from_private(const ML_DSA_KEY *key, EVP_MD_CTX *md_ctx,
-                    const OSSL_ML_DSA_SAMPLE_OPS *sample_ops, VECTOR *t1, VECTOR *t0)
+public_from_private(const IMB_ML_DSA *self, const ML_DSA_KEY *key, EVP_MD_CTX *md_ctx, VECTOR *t1,
+                    VECTOR *t0)
 {
         int ret = 0;
         const ML_DSA_PARAMS *params = key->params;
@@ -351,15 +351,15 @@ public_from_private(const ML_DSA_KEY *key, EVP_MD_CTX *md_ctx,
         matrix_init(&a_ntt, s1_ntt.poly + l, k, l);
 
         /* Using rho generate A' = A in NTT form */
-        if (!sample_ops->matrix_expand_A(md_ctx, key->shake128_md, key->rho, &a_ntt))
+        if (!self->matrix_expand_A(md_ctx, key->shake128_md, key->rho, &a_ntt))
                 goto err;
 
         /* t = NTT_inv(A' * NTT(s1)) + s2 */
         vector_copy(&s1_ntt, &key->s1);
-        vector_ntt(&s1_ntt);
+        vector_ntt(self, &s1_ntt);
 
-        matrix_mult_vector(&a_ntt, &s1_ntt, &t);
-        vector_ntt_inverse(&t);
+        matrix_mult_vector(self, &a_ntt, &s1_ntt, &t);
+        vector_ntt_inverse(self, &t);
         vector_add(&t, &key->s2, &t);
 
         /* Compress t */
@@ -374,10 +374,9 @@ err:
 }
 
 int
-ossl_ml_dsa_key_public_from_private(ML_DSA_KEY *key)
+ossl_ml_dsa_key_public_from_private(const IMB_ML_DSA *self, ML_DSA_KEY *key)
 {
         int ret = 0;
-        const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
         VECTOR t0;
         EVP_MD_CTX *md_ctx = NULL;
 
@@ -385,7 +384,7 @@ ossl_ml_dsa_key_public_from_private(ML_DSA_KEY *key)
                 return 0;
         ret = ((md_ctx = EVP_MD_CTX_new()) != NULL) &&
               ossl_ml_dsa_key_pub_alloc(key) /* allocate space for t1 */
-              && public_from_private(key, md_ctx, sample_ops, &key->t1, &t0) &&
+              && public_from_private(self, key, md_ctx, &key->t1, &t0) &&
               vector_equal(&t0, &key->t0) /* compare the generated t0 to the expected */
               && ossl_ml_dsa_pk_encode(key) &&
               shake_xof(md_ctx, key->shake256_md, key->pub_encoding, key->params->pk_len, key->tr,
@@ -396,10 +395,9 @@ ossl_ml_dsa_key_public_from_private(ML_DSA_KEY *key)
 }
 
 int
-ossl_ml_dsa_key_pairwise_check(const ML_DSA_KEY *key)
+ossl_ml_dsa_key_pairwise_check(const IMB_ML_DSA *self, const ML_DSA_KEY *key)
 {
         int ret = 0;
-        const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
         VECTOR t1, t0;
         POLY *polys = NULL;
         uint32_t k = (uint32_t) key->params->k;
@@ -417,7 +415,7 @@ ossl_ml_dsa_key_pairwise_check(const ML_DSA_KEY *key)
 
         vector_init(&t1, polys, k);
         vector_init(&t0, polys + k, k);
-        if (!public_from_private(key, md_ctx, sample_ops, &t1, &t0))
+        if (!public_from_private(self, key, md_ctx, &t1, &t0))
                 goto err;
 
         ret = vector_equal(&t1, &key->t1) && vector_equal(&t0, &key->t0);
@@ -436,10 +434,9 @@ err:
  * @returns 1 on success or 0 on failure.
  */
 static int
-keygen_internal(ML_DSA_KEY *out)
+keygen_internal(const IMB_ML_DSA *self, ML_DSA_KEY *out)
 {
         int ret = 0;
-        const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
         uint8_t augmented_seed[ML_DSA_SEED_BYTES + 2];
         uint8_t expanded_seed[ML_DSA_RHO_BYTES + ML_DSA_PRIV_SEED_BYTES + ML_DSA_K_BYTES];
         const uint8_t *const rho = expanded_seed; /* p = Public Random Seed */
@@ -464,9 +461,9 @@ keygen_internal(ML_DSA_KEY *out)
         memcpy(out->rho, rho, sizeof(out->rho));
         memcpy(out->K, K, sizeof(out->K));
 
-        ret = sample_ops->vector_expand_S(md_ctx, out->shake256_md, params->eta, priv_seed,
-                                          &out->s1, &out->s2) &&
-              public_from_private(out, md_ctx, sample_ops, &out->t1, &out->t0) &&
+        ret = self->vector_expand_S(md_ctx, out->shake256_md, params->eta, priv_seed, &out->s1,
+                                    &out->s2) &&
+              public_from_private(self, out, md_ctx, &out->t1, &out->t0) &&
               ossl_ml_dsa_pk_encode(out) &&
               shake_xof(md_ctx, out->shake256_md, out->pub_encoding, out->params->pk_len, out->tr,
                         sizeof(out->tr)) &&
@@ -480,7 +477,7 @@ err:
 }
 
 int
-ossl_ml_dsa_generate_key(ML_DSA_KEY *out)
+ossl_ml_dsa_generate_key(const IMB_ML_DSA *self, ML_DSA_KEY *out)
 {
         size_t seed_len = ML_DSA_SEED_BYTES;
         uint8_t *sk;
@@ -499,9 +496,9 @@ ossl_ml_dsa_generate_key(ML_DSA_KEY *out)
         sk = out->priv_encoding;
         out->priv_encoding = NULL;
         if (sk == NULL) {
-                ret = keygen_internal(out);
+                ret = keygen_internal(self, out);
         } else {
-                if ((ret = keygen_internal(out)) != 0 &&
+                if ((ret = keygen_internal(self, out)) != 0 &&
                     memcmp(out->priv_encoding, sk, out->params->sk_len) != 0) {
                         ret = 0;
                         ossl_ml_dsa_key_reset(out);

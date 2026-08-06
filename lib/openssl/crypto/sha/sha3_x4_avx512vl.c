@@ -14,7 +14,7 @@
  * This file provides incremental API wrappers around the AVX-512VL
  * assembly implementations for processing 4 SHAKE instances in parallel.
  *
- * Callers should check SHA3_avx512vl_capable() before calling.
+ * Callers must only use these on an AVX512VL capable architecture.
  */
 
 #include "openssl_compat.h"

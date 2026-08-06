@@ -36,9 +36,9 @@ matrix_init(MATRIX *m, POLY *polys, size_t k, size_t l)
 }
 
 static ossl_inline ossl_unused void
-matrix_mult_vector(const MATRIX *a, const VECTOR *s, VECTOR *t)
+matrix_mult_vector(const IMB_ML_DSA *self, const MATRIX *a, const VECTOR *s, VECTOR *t)
 {
-        ossl_ml_dsa_matrix_mult_vector(a, s, t);
+        ossl_ml_dsa_matrix_mult_vector(self, a, s, t);
 }
 
 #endif /* !defined(OSSL_LIBCRYPTO_ML_DSA_ML_DSA_MATRIX_H) */

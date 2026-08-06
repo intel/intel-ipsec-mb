@@ -125,10 +125,6 @@ ossl_shake256_new(void);
         (defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)) &&      \
         !defined(OPENSSL_NO_ASM)
 
-/* Runtime capability check for AVX512VL */
-int
-SHA3_avx512vl_capable(void);
-
 /* Context for 4-way parallel SHAKE operations */
 typedef struct {
         /* 4 interleaved Keccak states (800 bytes)

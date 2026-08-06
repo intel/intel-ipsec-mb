@@ -102,7 +102,7 @@ op_keypair(IMB_ML_DSA *self, void *pk, void *sk, const void *xi_32_or_null)
         /* Seed the key with the caller-supplied 32-byte xi, then derive. */
         if (!ossl_ml_dsa_set_prekey(key, 0, 0, xi_32, ML_DSA_SEED_BYTES, NULL, 0))
                 goto end;
-        if (!ossl_ml_dsa_generate_key(key))
+        if (!ossl_ml_dsa_generate_key(self, key))
                 goto end;
 
         enc = ossl_ml_dsa_key_get_pub(key);
@@ -140,7 +140,7 @@ op_set_privkey(IMB_ML_DSA *self, const void *sk)
                 goto end;
 
         /* sk_decode also computes the public part and validates |tr|. */
-        if (!ossl_ml_dsa_sk_decode(key, sk, self->sk_len))
+        if (!ossl_ml_dsa_sk_decode(self, key, sk, self->sk_len))
                 goto end;
 
         key_unbind(self);
@@ -197,7 +197,7 @@ op_sign_ctx(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, size_
         const void *sign_ctx = msg_is_mu ? NULL : ctx;
         const size_t sign_ctx_len = msg_is_mu ? 0 : ctx_len;
 
-        if (!ossl_ml_dsa_sign(self->key, msg_is_mu, msg, msg_len, sign_ctx, sign_ctx_len, rnd,
+        if (!ossl_ml_dsa_sign(self, self->key, msg_is_mu, msg, msg_len, sign_ctx, sign_ctx_len, rnd,
                               sizeof(rnd), 1 /* encode */, sig, &out_len, self->sig_len))
                 goto end;
 
@@ -223,8 +223,8 @@ op_verify_ctx(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *ctx
         const void *verify_ctx = msg_is_mu ? NULL : ctx;
         const size_t verify_ctx_len = msg_is_mu ? 0 : ctx_len;
 
-        if (!ossl_ml_dsa_verify(self->key, msg_is_mu, msg, msg_len, verify_ctx, verify_ctx_len,
-                                1 /* encode */, sig, sig_len))
+        if (!ossl_ml_dsa_verify(self, self->key, msg_is_mu, msg, msg_len, verify_ctx,
+                                verify_ctx_len, 1 /* encode */, sig, sig_len))
                 return -1;
 
         return 0;
@@ -251,8 +251,8 @@ op_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, 
                 goto end;
 
         /* No context string, no message encoding: encode = 0. */
-        if (!ossl_ml_dsa_sign(self->key, 0 /* msg_is_mu */, msg, msg_len, NULL, 0, rnd, sizeof(rnd),
-                              0 /* encode */, sig, &out_len, self->sig_len))
+        if (!ossl_ml_dsa_sign(self, self->key, 0 /* msg_is_mu */, msg, msg_len, NULL, 0, rnd,
+                              sizeof(rnd), 0 /* encode */, sig, &out_len, self->sig_len))
                 goto end;
 
         if (sig_len != NULL)
@@ -271,8 +271,8 @@ op_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void
                 return -1;
 
         /* No context string, no message encoding: encode = 0. */
-        if (!ossl_ml_dsa_verify(self->key, 0 /* msg_is_mu */, msg, msg_len, NULL, 0, 0 /* encode */,
-                                sig, sig_len))
+        if (!ossl_ml_dsa_verify(self, self->key, 0 /* msg_is_mu */, msg, msg_len, NULL, 0,
+                                0 /* encode */, sig, sig_len))
                 return -1;
 
         return 0;
@@ -315,7 +315,7 @@ op_privkey_validate(IMB_ML_DSA *self, const void *sk)
          * sk_decode rebuilds the public key from the private key and checks
          * that the embedded |tr| matches, i.e. it is a full consistency check.
          */
-        if (!ossl_ml_dsa_sk_decode(key, sk, self->sk_len))
+        if (!ossl_ml_dsa_sk_decode(self, key, sk, self->sk_len))
                 goto end;
 
         rc = 0;
@@ -336,7 +336,7 @@ op_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, void *pk)
                 goto end;
 
         /* sk_decode computes and caches the encoded public key. */
-        if (!ossl_ml_dsa_sk_decode(key, sk, self->sk_len))
+        if (!ossl_ml_dsa_sk_decode(self, key, sk, self->sk_len))
                 goto end;
 
         enc = ossl_ml_dsa_key_get_pub(key);

@@ -12,43 +12,20 @@
 #include "ml_dsa_poly.h"
 
 /* Assembly function declarations for AVX2 implementations */
-#if !defined(OPENSSL_NO_ASM) &&                                                                    \
-        (defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64))
-#define ML_DSA_NTT_ASM
-int
-ml_dsa_ntt_avx2_capable(void);
 void
 ml_dsa_poly_ntt_avx2(uint32_t *p_coeff);
 void
 ml_dsa_poly_ntt_inverse_avx2(uint32_t *p_coeff);
 void
 ml_dsa_poly_ntt_mult_avx2(const uint32_t *a, const uint32_t *b, uint32_t *out);
-#endif
 
-/*
- * Function pointer types for NTT operations.
- * These allow selecting AVX2 or scalar implementations at initialization time.
- */
-typedef void (*ml_dsa_poly_ntt_fn)(POLY *p);
-typedef void (*ml_dsa_poly_ntt_inverse_fn)(POLY *p);
-typedef void (*ml_dsa_poly_ntt_mult_fn)(const POLY *lhs, const POLY *rhs, POLY *out);
-
-/* Forward declarations of scalar NTT functions */
+/* Forward declarations of the base (portable C) NTT implementations */
 static void
-poly_ntt_scalar(POLY *p);
+poly_ntt_base(POLY *p);
 static void
-poly_ntt_inverse_scalar(POLY *p);
+poly_ntt_inverse_base(POLY *p);
 static void
-poly_ntt_mult_scalar(const POLY *lhs, const POLY *rhs, POLY *out);
-
-/*
- * NTT function pointers - initialized to scalar implementations by default.
- */
-static ml_dsa_poly_ntt_fn poly_ntt_impl = poly_ntt_scalar;
-static ml_dsa_poly_ntt_inverse_fn poly_ntt_inverse_impl = poly_ntt_inverse_scalar;
-static ml_dsa_poly_ntt_mult_fn poly_ntt_mult_impl = poly_ntt_mult_scalar;
-
-static CRYPTO_ONCE ml_dsa_ntt_once = CRYPTO_ONCE_STATIC_INIT;
+poly_ntt_mult_base(const POLY *lhs, const POLY *rhs, POLY *out);
 
 /*
  * This file has multiple parts required for fast matrix multiplication,
@@ -139,7 +116,7 @@ reduce_montgomery(uint64_t a)
  * These are used when AVX2 is not available.
  */
 static void
-poly_ntt_mult_scalar(const POLY *lhs, const POLY *rhs, POLY *out)
+poly_ntt_mult_base(const POLY *lhs, const POLY *rhs, POLY *out)
 {
         int i;
 
@@ -149,7 +126,7 @@ poly_ntt_mult_scalar(const POLY *lhs, const POLY *rhs, POLY *out)
 }
 
 static void
-poly_ntt_scalar(POLY *p)
+poly_ntt_base(POLY *p)
 {
         int i, j, k;
         int step;
@@ -176,7 +153,7 @@ poly_ntt_scalar(POLY *p)
 }
 
 static void
-poly_ntt_inverse_scalar(POLY *p)
+poly_ntt_inverse_base(POLY *p)
 {
         /*
          * Step: 128, 64, 32, 16, ..., 1
@@ -215,84 +192,46 @@ poly_ntt_inverse_scalar(POLY *p)
 /*
  * AVX2 wrapper functions
  */
-#ifdef ML_DSA_NTT_ASM
 static void
-poly_ntt_mult_avx2_wrapper(const POLY *lhs, const POLY *rhs, POLY *out)
+poly_ntt_mult_avx2(const POLY *lhs, const POLY *rhs, POLY *out)
 {
         ml_dsa_poly_ntt_mult_avx2(&lhs->coeff[0], &rhs->coeff[0], &out->coeff[0]);
 }
 
 static void
-poly_ntt_avx2_wrapper(POLY *p)
+poly_ntt_avx2(POLY *p)
 {
         ml_dsa_poly_ntt_avx2(&p->coeff[0]);
 }
 
 static void
-poly_ntt_inverse_avx2_wrapper(POLY *p)
+poly_ntt_inverse_avx2(POLY *p)
 {
         ml_dsa_poly_ntt_inverse_avx2(&p->coeff[0]);
 }
-#endif
 
-/*
- * Initialize NTT function pointers to AVX2 implementations if available.
- * Scalar implementations are used by default.
+/**
+ * @brief Assign the base (portable C) NTT primitives to \a self.
+ *
+ * @param [in,out] self  ML-DSA context to initialise
  */
-static void
-ml_dsa_ntt_init(void)
+void
+ossl_ml_dsa_ntt_init_base(IMB_ML_DSA *self)
 {
-#ifdef ML_DSA_NTT_ASM
-        if (ml_dsa_ntt_avx2_capable()) {
-                poly_ntt_impl = poly_ntt_avx2_wrapper;
-                poly_ntt_inverse_impl = poly_ntt_inverse_avx2_wrapper;
-                poly_ntt_mult_impl = poly_ntt_mult_avx2_wrapper;
-        }
-#endif
+        self->poly_ntt = poly_ntt_base;
+        self->poly_ntt_inverse = poly_ntt_inverse_base;
+        self->poly_ntt_mult = poly_ntt_mult_base;
 }
 
 /*
- * @brief Multiply two polynomials in the number theoretically transformed state.
- * See FIPS 204, Algorithm 45, MultiplyNTT()
- * This function has been modified to use montgomery multiplication
+ * @brief Assign the AVX2 NTT primitives to \a self.
  *
- * @param lhs A polynomial multiplicand
- * @param rhs A polynomial multiplier
- * @param out The returned result of the polynomial multiply
+ * @param [in,out] self  ML-DSA context to initialise
  */
 void
-ossl_ml_dsa_poly_ntt_mult(const POLY *lhs, const POLY *rhs, POLY *out)
+ossl_ml_dsa_ntt_init_avx2(IMB_ML_DSA *self)
 {
-        (void) CRYPTO_THREAD_run_once(&ml_dsa_ntt_once, ml_dsa_ntt_init);
-        poly_ntt_mult_impl(lhs, rhs, out);
-}
-
-/*
- * In place number theoretic transform of a given polynomial.
- *
- * See FIPS 204, Algorithm 41, NTT()
- * This function uses montgomery multiplication.
- *
- * @param p a polynomial that is used as the input, that is replaced with
- *        the NTT of the polynomial
- */
-void
-ossl_ml_dsa_poly_ntt(POLY *p)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_dsa_ntt_once, ml_dsa_ntt_init);
-        poly_ntt_impl(p);
-}
-
-/*
- * @brief In place inverse number theoretic transform of a given polynomial.
- * See FIPS 204, Algorithm 42,  NTT^-1()
- *
- * @param p a polynomial that is used as the input, that is overwritten with
- *          the inverse of the NTT.
- */
-void
-ossl_ml_dsa_poly_ntt_inverse(POLY *p)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_dsa_ntt_once, ml_dsa_ntt_init);
-        poly_ntt_inverse_impl(p);
+        self->poly_ntt = poly_ntt_avx2;
+        self->poly_ntt_inverse = poly_ntt_inverse_avx2;
+        self->poly_ntt_mult = poly_ntt_mult_avx2;
 }

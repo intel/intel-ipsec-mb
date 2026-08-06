@@ -35,9 +35,9 @@ typedef int(COEFF_FROM_NIBBLE_FUNC)(uint32_t nibble, uint32_t *out);
 static COEFF_FROM_NIBBLE_FUNC coeff_from_nibble_4;
 static COEFF_FROM_NIBBLE_FUNC coeff_from_nibble_2;
 
-static ML_DSA_MATRIX_EXPAND_A_FN matrix_expand_A_scalar;
-static ML_DSA_VECTOR_EXPAND_S_FN vector_expand_S_scalar;
-static ML_DSA_VECTOR_EXPAND_MASK_FN vector_expand_mask_scalar;
+static ML_DSA_MATRIX_EXPAND_A_FN matrix_expand_A_base;
+static ML_DSA_VECTOR_EXPAND_S_FN vector_expand_S_base;
+static ML_DSA_VECTOR_EXPAND_MASK_FN vector_expand_mask_base;
 
 /**
  * @brief Combine 3 bytes to form an coefficient.
@@ -214,7 +214,7 @@ err:
  * @returns 1 if the matrix was generated, or 0 on error.
  */
 static int
-matrix_expand_A_scalar(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, MATRIX *out)
+matrix_expand_A_base(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, MATRIX *out)
 {
         int ret = 0;
         size_t i, j;
@@ -256,8 +256,8 @@ err:
  * @returns 1 if s1 and s2 were successfully generated, or 0 otherwise.
  */
 static int
-vector_expand_S_scalar(EVP_MD_CTX *h_ctx, const EVP_MD *md, int eta, const uint8_t *seed,
-                       VECTOR *s1, VECTOR *s2)
+vector_expand_S_base(EVP_MD_CTX *h_ctx, const EVP_MD *md, int eta, const uint8_t *seed, VECTOR *s1,
+                     VECTOR *s2)
 {
         int ret = 0;
         size_t i;
@@ -396,8 +396,8 @@ ossl_ml_dsa_poly_sample_in_ball(POLY *out_c, const uint8_t *seed, int seed_len, 
 }
 
 static void
-vector_expand_mask_scalar(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_BYTES],
-                          uint32_t kappa, uint32_t gamma1, EVP_MD_CTX *h_ctx, const EVP_MD *md)
+vector_expand_mask_base(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_BYTES],
+                        uint32_t kappa, uint32_t gamma1, EVP_MD_CTX *h_ctx, const EVP_MD *md)
 {
         size_t i;
         uint8_t derived_seed[ML_DSA_RHO_PRIME_BYTES + 2];
@@ -415,25 +415,36 @@ vector_expand_mask_scalar(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
         OPENSSL_cleanse(derived_seed, sizeof(derived_seed));
 }
 
-static const OSSL_ML_DSA_SAMPLE_OPS ml_dsa_sample_generic_meth = { matrix_expand_A_scalar,
-                                                                   vector_expand_S_scalar,
-                                                                   vector_expand_mask_scalar };
+/**
+ * @brief Assign the base (portable C, single-buffer SHAKE) sampling
+ *        primitives to \a self.
+ *
+ * @param [in,out] self  ML-DSA context to initialise
+ */
+void
+ossl_ml_dsa_sample_init_base(IMB_ML_DSA *self)
+{
+        self->matrix_expand_A = matrix_expand_A_base;
+        self->vector_expand_S = vector_expand_S_base;
+        self->vector_expand_mask = vector_expand_mask_base;
+}
 
-#if defined(KECCAK1600_ASM) &&                                                                     \
-        (defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)) &&      \
-        !defined(OPENSSL_NO_ASM)
+/*
+ * x4 (AVX512VL) SHAKE sampling helpers: matrix_expand_A_avx512() and friends.
+ * Included here, rather than at the top of the file, as it builds on the
+ * base helpers defined above.
+ */
 #include "ml_dsa_sample_hw_x86_64.h"
-const OSSL_ML_DSA_SAMPLE_OPS *
-ossl_ml_dsa_sample_ops(void)
+
+/*
+ * @brief Assign the AVX512 (x4 SHAKE) sampling primitives to \a self.
+ *
+ * @param [in,out] self  ML-DSA context to initialise
+ */
+void
+ossl_ml_dsa_sample_init_avx512(IMB_ML_DSA *self)
 {
-        if (SHA3_avx512vl_capable())
-                return &ml_dsa_sample_x86_64;
-        return &ml_dsa_sample_generic_meth;
+        self->matrix_expand_A = matrix_expand_A_avx512;
+        self->vector_expand_S = vector_expand_S_avx512;
+        self->vector_expand_mask = vector_expand_mask_avx512;
 }
-#else
-const OSSL_ML_DSA_SAMPLE_OPS *
-ossl_ml_dsa_sample_ops(void)
-{
-        return &ml_dsa_sample_generic_meth;
-}
-#endif

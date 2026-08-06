@@ -16,6 +16,9 @@
 #include "openssl_compat.h"
 #include <openssl/evp.h>
 
+/* IMB_ML_DSA holds the ISA specific primitives used by the functions below */
+#include "ml_dsa_internal.h"
+
 #define ML_DSA_MAX_CONTEXT_STRING_LEN 255
 #define ML_DSA_SEED_BYTES             32
 
@@ -96,9 +99,9 @@ ossl_ml_dsa_key_equal(const ML_DSA_KEY *key1, const ML_DSA_KEY *key2, int select
 __owur int
 ossl_ml_dsa_key_has(const ML_DSA_KEY *key, int selection);
 __owur int
-ossl_ml_dsa_key_pairwise_check(const ML_DSA_KEY *key);
+ossl_ml_dsa_key_pairwise_check(const IMB_ML_DSA *self, const ML_DSA_KEY *key);
 __owur int
-ossl_ml_dsa_generate_key(ML_DSA_KEY *out);
+ossl_ml_dsa_generate_key(const IMB_ML_DSA *self, ML_DSA_KEY *out);
 __owur const uint8_t *
 ossl_ml_dsa_key_get_pub(const ML_DSA_KEY *key);
 __owur size_t
@@ -128,11 +131,11 @@ OSSL_LIB_CTX *
 ossl_ml_dsa_key_get0_libctx(const ML_DSA_KEY *key);
 
 __owur int
-ossl_ml_dsa_key_public_from_private(ML_DSA_KEY *key);
+ossl_ml_dsa_key_public_from_private(const IMB_ML_DSA *self, ML_DSA_KEY *key);
 __owur int
 ossl_ml_dsa_pk_decode(ML_DSA_KEY *key, const uint8_t *in, size_t in_len);
 __owur int
-ossl_ml_dsa_sk_decode(ML_DSA_KEY *key, const uint8_t *in, size_t in_len);
+ossl_ml_dsa_sk_decode(const IMB_ML_DSA *self, ML_DSA_KEY *key, const uint8_t *in, size_t in_len);
 
 __owur EVP_MD_CTX *
 ossl_ml_dsa_mu_init(const ML_DSA_KEY *key, int encode, const uint8_t *ctx, size_t ctx_len);
@@ -146,12 +149,12 @@ __owur int
 ossl_ml_dsa_mu_finalize(EVP_MD_CTX *md_ctx, uint8_t *mu, size_t mu_len);
 
 __owur int
-ossl_ml_dsa_sign(const ML_DSA_KEY *priv, int msg_is_mu, const uint8_t *msg, size_t msg_len,
-                 const uint8_t *context, size_t context_len, const uint8_t *rand, size_t rand_len,
-                 int encode, unsigned char *sig, size_t *siglen, size_t sigsize);
+ossl_ml_dsa_sign(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, int msg_is_mu, const uint8_t *msg,
+                 size_t msg_len, const uint8_t *context, size_t context_len, const uint8_t *rand,
+                 size_t rand_len, int encode, unsigned char *sig, size_t *siglen, size_t sigsize);
 __owur int
-ossl_ml_dsa_verify(const ML_DSA_KEY *pub, int msg_is_mu, const uint8_t *msg, size_t msg_len,
-                   const uint8_t *context, size_t context_len, int encode, const uint8_t *sig,
-                   size_t sig_len);
+ossl_ml_dsa_verify(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, int msg_is_mu, const uint8_t *msg,
+                   size_t msg_len, const uint8_t *context, size_t context_len, int encode,
+                   const uint8_t *sig, size_t sig_len);
 
 #endif /* OSSL_CRYPTO_ML_DSA_H */

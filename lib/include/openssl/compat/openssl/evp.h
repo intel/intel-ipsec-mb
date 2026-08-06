@@ -40,8 +40,8 @@
  * understands SHAKE-128 and SHAKE-256, backed by the OpenSSL KECCAK1600_CTX
  * with the optimized keccak1600-x86_64 asm permutation.
  *
- * The x4 parallel SHAKE path (AVX512VL) is unchanged and continues to be
- * selected at run time via OPENSSL_ia32cap_P in the sampling layer.
+ * The x4 parallel SHAKE path (AVX512VL) is selected in the sampling layer,
+ * from the architecture the IMB_MGR was initialised with.
  */
 
 #ifndef IMB_ML_DSA_COMPAT_EVP_H
@@ -77,7 +77,7 @@
 #define NID_ML_KEM_1024 1456
 #endif
 
-typedef struct {
+typedef struct evp_md_st {
         int rate;    /* block size in bytes: 168 (SHAKE-128) or 136 (SHAKE-256) */
         int md_size; /* nominal output bytes: 16 or 32 */
         int bitlen;  /* security parameter: 128 or 256 */
@@ -85,7 +85,7 @@ typedef struct {
         const char *name;
 } EVP_MD;
 
-typedef struct {
+typedef struct evp_md_ctx_st {
         const EVP_MD *md;
         KECCAK1600_CTX sctx;
 } EVP_MD_CTX;

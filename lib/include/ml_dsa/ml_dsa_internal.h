@@ -59,7 +59,6 @@
 #include <stddef.h>
 
 #include <intel-ipsec-mb.h>
-#include "imb_ossl_ia32cap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,6 +75,32 @@ extern "C" {
  */
 struct ml_dsa_key_st;
 
+/**
+ * Opaque vendored OpenSSL types referenced by the ISA specific function
+ * pointers below.
+ */
+struct poly_st;
+struct vector_st;
+struct matrix_st;
+struct evp_md_st;
+struct evp_md_ctx_st;
+
+/* ISA specific sampling (SHAKE based) primitives */
+typedef int(ML_DSA_MATRIX_EXPAND_A_FN)(struct evp_md_ctx_st *g_ctx, const struct evp_md_st *md,
+                                       const uint8_t *rho, struct matrix_st *out);
+typedef int(ML_DSA_VECTOR_EXPAND_S_FN)(struct evp_md_ctx_st *h_ctx, const struct evp_md_st *md,
+                                       int eta, const uint8_t *seed, struct vector_st *s1,
+                                       struct vector_st *s2);
+typedef void(ML_DSA_VECTOR_EXPAND_MASK_FN)(struct vector_st *out, const uint8_t rho_prime[64],
+                                           uint32_t kappa, uint32_t gamma1,
+                                           struct evp_md_ctx_st *h_ctx, const struct evp_md_st *md);
+
+/* ISA specific NTT primitives */
+typedef void(ML_DSA_POLY_NTT_FN)(struct poly_st *p);
+typedef void(ML_DSA_POLY_NTT_INVERSE_FN)(struct poly_st *p);
+typedef void(ML_DSA_POLY_NTT_MULT_FN)(const struct poly_st *lhs, const struct poly_st *rhs,
+                                      struct poly_st *out);
+
 struct IMB_ML_DSA {
         IMB_MGR *mgr;
         IMB_ML_DSA_ALG alg;
@@ -88,6 +113,18 @@ struct IMB_ML_DSA {
 
         /* Cached decoded/generated key bound to this context (see above). */
         struct ml_dsa_key_st *key;
+
+        /*
+         * ISA specific primitives, selected once at context creation from the
+         * IMB_MGR architecture (mgr->used_arch), following the same init-time
+         * dispatch model used by IMB_MGR itself.
+         */
+        ML_DSA_MATRIX_EXPAND_A_FN *matrix_expand_A;
+        ML_DSA_VECTOR_EXPAND_S_FN *vector_expand_S;
+        ML_DSA_VECTOR_EXPAND_MASK_FN *vector_expand_mask;
+        ML_DSA_POLY_NTT_FN *poly_ntt;
+        ML_DSA_POLY_NTT_INVERSE_FN *poly_ntt_inverse;
+        ML_DSA_POLY_NTT_MULT_FN *poly_ntt_mult;
 
         /* Backend dispatch table. All ops return 0 on success, <0 on error. */
         int (*keypair)(IMB_ML_DSA *self, void *pk, void *sk, const void *xi_32_or_null);

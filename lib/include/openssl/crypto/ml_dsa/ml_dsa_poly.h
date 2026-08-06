@@ -70,18 +70,18 @@ poly_equal(const POLY *a, const POLY *b)
 }
 
 static ossl_inline ossl_unused void
-poly_ntt(POLY *p)
+poly_ntt(const IMB_ML_DSA *self, POLY *p)
 {
-        ossl_ml_dsa_poly_ntt(p);
+        self->poly_ntt(p);
 }
 
 static ossl_inline ossl_unused int
-poly_sample_in_ball_ntt(POLY *out, const uint8_t *seed, int seed_len, EVP_MD_CTX *h_ctx,
-                        const EVP_MD *md, uint32_t tau)
+poly_sample_in_ball_ntt(const IMB_ML_DSA *self, POLY *out, const uint8_t *seed, int seed_len,
+                        EVP_MD_CTX *h_ctx, const EVP_MD *md, uint32_t tau)
 {
         if (!ossl_ml_dsa_poly_sample_in_ball(out, seed, seed_len, h_ctx, md, tau))
                 return 0;
-        poly_ntt(out);
+        poly_ntt(self, out);
         return 1;
 }
 

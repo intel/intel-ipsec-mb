@@ -128,43 +128,43 @@ vector_sub(const VECTOR *lhs, const VECTOR *rhs, VECTOR *out)
 
 /* @brief convert a vector in place into NTT form */
 static ossl_inline ossl_unused void
-vector_ntt(VECTOR *va)
+vector_ntt(const IMB_ML_DSA *self, VECTOR *va)
 {
         size_t i;
 
         for (i = 0; i < va->num_poly; i++)
-                ossl_ml_dsa_poly_ntt(va->poly + i);
+                self->poly_ntt(va->poly + i);
 }
 
 /* @brief convert a vector in place into inverse NTT form */
 static ossl_inline ossl_unused void
-vector_ntt_inverse(VECTOR *va)
+vector_ntt_inverse(const IMB_ML_DSA *self, VECTOR *va)
 {
         size_t i;
 
         for (i = 0; i < va->num_poly; i++)
-                ossl_ml_dsa_poly_ntt_inverse(va->poly + i);
+                self->poly_ntt_inverse(va->poly + i);
 }
 
 /* @brief multiply a vector by a SCALAR polynomial */
 static ossl_inline ossl_unused void
-vector_mult_scalar(const VECTOR *lhs, const POLY *rhs, VECTOR *out)
+vector_mult_scalar(const IMB_ML_DSA *self, const VECTOR *lhs, const POLY *rhs, VECTOR *out)
 {
         size_t i;
 
         for (i = 0; i < lhs->num_poly; i++)
-                ossl_ml_dsa_poly_ntt_mult(lhs->poly + i, rhs, out->poly + i);
+                self->poly_ntt_mult(lhs->poly + i, rhs, out->poly + i);
 }
 
 /* Scale back previously rounded value */
 static ossl_inline ossl_unused void
-vector_scale_power2_round_ntt(const VECTOR *in, VECTOR *out)
+vector_scale_power2_round_ntt(const IMB_ML_DSA *self, const VECTOR *in, VECTOR *out)
 {
         size_t i;
 
         for (i = 0; i < in->num_poly; i++)
                 poly_scale_power2_round(in->poly + i, out->poly + i);
-        vector_ntt(out);
+        vector_ntt(self, out);
 }
 
 /*

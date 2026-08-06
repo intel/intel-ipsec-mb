@@ -112,22 +112,6 @@ my $avx512_mask = (1<<31)|(1<<30)|(1<<17)|(1<<16);  # AVX512VL|BW|DQ|F
 
 $code .= <<___;
 .text
-
-.extern OPENSSL_ia32cap_P
-
-.globl  SHA3_avx512vl_capable
-.type   SHA3_avx512vl_capable,\@abi-omnipotent
-.align 32
-SHA3_avx512vl_capable:
-    endbranch
-    mov     OPENSSL_ia32cap_P+8(%rip), %ecx
-    xor     %eax, %eax
-    # 1<<31|1<<30|1<<17|1<<16: AVX512VL|AVX512BW|AVX512DQ|AVX512F
-    and     \$$avx512_mask, %ecx
-    cmp     \$$avx512_mask, %ecx
-    cmove   %ecx, %eax
-    ret
-.size   SHA3_avx512vl_capable, .-SHA3_avx512vl_capable
 ___
 
 $code.=<<___;
@@ -2315,18 +2299,10 @@ ___
 }}} else {{{
 
 # When AVX512VL is not available, output stub functions
-# The capable function returns 0, and the operation functions are not defined (will use C fallback)
+# AVX512VL entry points below are stubs on unsupported toolchains
 
 $code .= <<___;
 .text
-
-.globl  SHA3_avx512vl_capable
-.type   SHA3_avx512vl_capable,\@abi-omnipotent
-SHA3_avx512vl_capable:
-    endbranch
-    xor     %eax, %eax
-    ret
-.size   SHA3_avx512vl_capable, .-SHA3_avx512vl_capable
 
 .globl  SHA3_shake128_x4_inc_absorb_avx512vl
 .globl  SHA3_shake256_x4_inc_absorb_avx512vl

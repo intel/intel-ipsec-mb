@@ -775,7 +775,7 @@ err:
  * @returns 1 if the private key was decoded successfully or 0 otherwise.
  */
 int
-ossl_ml_dsa_sk_decode(ML_DSA_KEY *key, const uint8_t *in, size_t in_len)
+ossl_ml_dsa_sk_decode(const IMB_ML_DSA *self, ML_DSA_KEY *key, const uint8_t *in, size_t in_len)
 {
         DECODE_FN *decode_fn;
         const ML_DSA_PARAMS *params = key->params;
@@ -828,7 +828,7 @@ ossl_ml_dsa_sk_decode(ML_DSA_KEY *key, const uint8_t *in, size_t in_len)
          * Computing the public key also computes its hash, which must be equal to
          * the |tr| value in the private key, else the key was corrupted.
          */
-        if (!ossl_ml_dsa_key_public_from_private(key) ||
+        if (!ossl_ml_dsa_key_public_from_private(self, key) ||
             memcmp(input_tr, key->tr, sizeof(input_tr)) != 0) {
                 ERR_raise_data(ERR_LIB_PROV, PROV_R_INVALID_KEY,
                                "%s private key does not match its pubkey part", key->params->alg);

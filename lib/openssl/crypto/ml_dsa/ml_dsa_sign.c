@@ -156,11 +156,10 @@ ossl_ml_dsa_mu_finalize(EVP_MD_CTX *md_ctx, uint8_t *mu, size_t mu_len)
  * @returns 1 on success, 0 on error
  */
 static int
-ml_dsa_sign_internal(const ML_DSA_KEY *priv, const uint8_t *mu, size_t mu_len, const uint8_t *rnd,
-                     size_t rnd_len, uint8_t *out_sig)
+ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8_t *mu,
+                     size_t mu_len, const uint8_t *rnd, size_t rnd_len, uint8_t *out_sig)
 {
         int ret = 0;
-        const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
         const ML_DSA_PARAMS *params = priv->params;
         EVP_MD_CTX *md_ctx = NULL;
         uint32_t k = (uint32_t) params->k, l = (uint32_t) params->l;
@@ -233,7 +232,7 @@ ml_dsa_sign_internal(const ML_DSA_KEY *priv, const uint8_t *mu, size_t mu_len, c
         CONSTTIME_SECRET_VECTOR(priv->s2);
         CONSTTIME_SECRET_VECTOR(priv->t0);
 
-        if (!sample_ops->matrix_expand_A(md_ctx, priv->shake128_md, priv->rho, &a_ntt))
+        if (!self->matrix_expand_A(md_ctx, priv->shake128_md, priv->rho, &a_ntt))
                 goto err;
 
         /*
@@ -247,11 +246,11 @@ ml_dsa_sign_internal(const ML_DSA_KEY *priv, const uint8_t *mu, size_t mu_len, c
                 goto err;
 
         vector_copy(&s1_ntt, &priv->s1);
-        vector_ntt(&s1_ntt);
+        vector_ntt(self, &s1_ntt);
         vector_copy(&s2_ntt, &priv->s2);
-        vector_ntt(&s2_ntt);
+        vector_ntt(self, &s2_ntt);
         vector_copy(&t0_ntt, &priv->t0);
-        vector_ntt(&t0_ntt);
+        vector_ntt(self, &t0_ntt);
 
         /*
          * kappa must not exceed 2^16. But the probability of it
@@ -263,13 +262,13 @@ ml_dsa_sign_internal(const ML_DSA_KEY *priv, const uint8_t *mu, size_t mu_len, c
                 VECTOR *ct0 = &w1;
                 uint32_t z_max, r0_max, ct0_max, h_ones;
 
-                sample_ops->vector_expand_mask(&y, rho_prime, (uint32_t) kappa, gamma1, md_ctx,
-                                               priv->shake256_md);
+                self->vector_expand_mask(&y, rho_prime, (uint32_t) kappa, gamma1, md_ctx,
+                                         priv->shake256_md);
                 vector_copy(y_ntt, &y);
-                vector_ntt(y_ntt);
+                vector_ntt(self, y_ntt);
 
-                matrix_mult_vector(&a_ntt, y_ntt, &w);
-                vector_ntt_inverse(&w);
+                matrix_mult_vector(self, &a_ntt, y_ntt, &w);
+                vector_ntt_inverse(self, &w);
 
                 vector_high_bits(&w, gamma2, &w1);
                 ossl_ml_dsa_w1_encode(&w1, gamma2, w1_encoded, w1_encoded_len);
@@ -278,14 +277,14 @@ ml_dsa_sign_internal(const ML_DSA_KEY *priv, const uint8_t *mu, size_t mu_len, c
                                  c_tilde, c_tilde_len))
                         break;
 
-                if (!poly_sample_in_ball_ntt(c_ntt, c_tilde, (int) c_tilde_len, md_ctx,
+                if (!poly_sample_in_ball_ntt(self, c_ntt, c_tilde, (int) c_tilde_len, md_ctx,
                                              priv->shake256_md, params->tau))
                         break;
 
-                vector_mult_scalar(&s1_ntt, c_ntt, &cs1);
-                vector_ntt_inverse(&cs1);
-                vector_mult_scalar(&s2_ntt, c_ntt, &cs2);
-                vector_ntt_inverse(&cs2);
+                vector_mult_scalar(self, &s1_ntt, c_ntt, &cs1);
+                vector_ntt_inverse(self, &cs1);
+                vector_mult_scalar(self, &s2_ntt, c_ntt, &cs2);
+                vector_ntt_inverse(self, &cs2);
 
                 vector_add(&y, &cs1, &sig.z);
 
@@ -307,8 +306,8 @@ ml_dsa_sign_internal(const ML_DSA_KEY *priv, const uint8_t *mu, size_t mu_len, c
                                                  constant_time_ge(r0_max, gamma2 - params->beta)))
                         continue;
 
-                vector_mult_scalar(&t0_ntt, c_ntt, ct0);
-                vector_ntt_inverse(ct0);
+                vector_mult_scalar(self, &t0_ntt, c_ntt, ct0);
+                vector_ntt_inverse(self, ct0);
                 vector_make_hint(ct0, &cs2, &w, gamma2, &sig.hint);
 
                 ct0_max = vector_max(ct0);
@@ -381,11 +380,10 @@ err:
  * @returns 1 on success, 0 on error
  */
 static int
-ml_dsa_verify_internal(const ML_DSA_KEY *pub, const uint8_t *mu, size_t mu_len,
-                       const uint8_t *sig_enc, size_t sig_enc_len)
+ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint8_t *mu,
+                       size_t mu_len, const uint8_t *sig_enc, size_t sig_enc_len)
 {
         int ret = 0;
-        const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
         uint8_t *alloc = NULL, *w1_encoded = NULL;
         void *alloc_freeptr = NULL;
         POLY *p, *c_ntt;
@@ -443,28 +441,28 @@ ml_dsa_verify_internal(const ML_DSA_KEY *pub, const uint8_t *mu, size_t mu_len,
         vector_init(&ct1_ntt, p + k, k);
 
         if (!ossl_ml_dsa_sig_decode(&sig, sig_enc, sig_enc_len, pub->params) ||
-            !sample_ops->matrix_expand_A(md_ctx, pub->shake128_md, pub->rho, &a_ntt))
+            !self->matrix_expand_A(md_ctx, pub->shake128_md, pub->rho, &a_ntt))
                 goto err;
 
         /* Compute verifiers challenge c_ntt = NTT(SampleInBall(c_tilde)) */
-        if (!poly_sample_in_ball_ntt(c_ntt, c_tilde_sig, (int) c_tilde_len, md_ctx,
+        if (!poly_sample_in_ball_ntt(self, c_ntt, c_tilde_sig, (int) c_tilde_len, md_ctx,
                                      pub->shake256_md, params->tau))
                 goto err;
 
         /* ct1_ntt = NTT(c) * NTT(t1 * 2^d) */
-        vector_scale_power2_round_ntt(&pub->t1, &ct1_ntt);
-        vector_mult_scalar(&ct1_ntt, c_ntt, &ct1_ntt);
+        vector_scale_power2_round_ntt(self, &pub->t1, &ct1_ntt);
+        vector_mult_scalar(self, &ct1_ntt, c_ntt, &ct1_ntt);
 
         /* compute z_max early in order to reuse sig.z */
         z_max = vector_max(&sig.z);
 
         /* w_approx = NTT_inverse(A * NTT(z) - ct1_ntt) */
         z_ntt = &sig.z;
-        vector_ntt(z_ntt);
-        matrix_mult_vector(&a_ntt, z_ntt, &az_ntt);
+        vector_ntt(self, z_ntt);
+        matrix_mult_vector(self, &a_ntt, z_ntt, &az_ntt);
         w_approx = &az_ntt;
         vector_sub(&az_ntt, &ct1_ntt, w_approx);
-        vector_ntt_inverse(w_approx);
+        vector_ntt_inverse(self, w_approx);
 
         /* compute w1_encoded */
         w1 = w_approx;
@@ -491,9 +489,9 @@ err:
  * @returns 1 on success, or 0 on error.
  */
 int
-ossl_ml_dsa_sign(const ML_DSA_KEY *priv, int msg_is_mu, const uint8_t *msg, size_t msg_len,
-                 const uint8_t *context, size_t context_len, const uint8_t *rand, size_t rand_len,
-                 int encode, unsigned char *sig, size_t *sig_len, size_t sig_size)
+ossl_ml_dsa_sign(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, int msg_is_mu, const uint8_t *msg,
+                 size_t msg_len, const uint8_t *context, size_t context_len, const uint8_t *rand,
+                 size_t rand_len, int encode, unsigned char *sig, size_t *sig_len, size_t sig_size)
 {
         EVP_MD_CTX *md_ctx = NULL;
         uint8_t mu[ML_DSA_MU_BYTES];
@@ -528,7 +526,7 @@ ossl_ml_dsa_sign(const ML_DSA_KEY *priv, int msg_is_mu, const uint8_t *msg, size
                         goto err;
         }
 
-        ret = ml_dsa_sign_internal(priv, mu_ptr, mu_len, rand, rand_len, sig);
+        ret = ml_dsa_sign_internal(self, priv, mu_ptr, mu_len, rand, rand_len, sig);
 
 err:
         EVP_MD_CTX_free(md_ctx);
@@ -540,9 +538,9 @@ err:
  * @returns 1 on success, or 0 on error.
  */
 int
-ossl_ml_dsa_verify(const ML_DSA_KEY *pub, int msg_is_mu, const uint8_t *msg, size_t msg_len,
-                   const uint8_t *context, size_t context_len, int encode, const uint8_t *sig,
-                   size_t sig_len)
+ossl_ml_dsa_verify(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, int msg_is_mu, const uint8_t *msg,
+                   size_t msg_len, const uint8_t *context, size_t context_len, int encode,
+                   const uint8_t *sig, size_t sig_len)
 {
         EVP_MD_CTX *md_ctx = NULL;
         uint8_t mu[ML_DSA_MU_BYTES];
@@ -568,7 +566,7 @@ ossl_ml_dsa_verify(const ML_DSA_KEY *pub, int msg_is_mu, const uint8_t *msg, siz
                         goto err;
         }
 
-        ret = ml_dsa_verify_internal(pub, mu_ptr, mu_len, sig, sig_len);
+        ret = ml_dsa_verify_internal(self, pub, mu_ptr, mu_len, sig, sig_len);
 err:
         EVP_MD_CTX_free(md_ctx);
         return ret;

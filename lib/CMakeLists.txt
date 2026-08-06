@@ -193,7 +193,8 @@ list(SORT SRC_FILES_ASM)
 
 # post-quantum: ML-DSA (FIPS 204) optimized asm kernels, generated from the
 # vendored OpenSSL perl-asm. The AVX2 NTT and the x4 AVX512VL Keccak/SHAKE
-# replace the portable-C baseline at run time (selected via OPENSSL_ia32cap_P).
+# replace the portable-C baseline, selected per ML-DSA context from the
+# architecture the IMB_MGR was initialised with.
 # On Linux the perl-asm emits GAS (.S, LANGUAGE ASM); on Windows it emits NASM
 # (.asm, LANGUAGE ASM_NASM) to match the imb_perlasm_flavour selection, and
 # avoid the MSVC_RUNTIME_LIBRARY configure error caused by GAS (as.exe from
@@ -315,12 +316,11 @@ target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})
 #                                    compat/internal/* provide remaining
 #                                    non-vendored OpenSSL type/constant shims)
 # Defining KECCAK1600_ASM (and leaving OPENSSL_NO_ASM undefined) enables the
-# asm-accelerated paths: ml_dsa_ntt.c selects the AVX2 NTT and ml_dsa_sample.c
-# pulls in the x4 AVX512VL SHAKE sampling, both chosen at run time via
-# OPENSSL_ia32cap_P (populated by the generic lib/x86_64/imb_ossl_ia32cap.c,
-# built unconditionally via SRC_FILES_X86_64, see above). ML-KEM reuses the
-# same vendored SHA-3/SHAKE implementation (lib/openssl/crypto/sha) so it needs
-# KECCAK1600_ASM too, for its compat EVP shim to resolve.
+# asm-accelerated paths: ml_dsa_ntt.c provides the AVX2 NTT and ml_dsa_sample.c
+# pulls in the x4 AVX512VL SHAKE sampling, both installed into the ML-DSA
+# context by imb_ml_dsa_new(), from the IMB_MGR architecture. These definitions
+# are applied to the ML-DSA sources only (sha3_x4_avx512vl.c needs
+# KECCAK1600_ASM).
 target_include_directories(
   ${LIB} PRIVATE ${DIR_INCLUDE}/ml_dsa ${DIR_INCLUDE}/ml_kem ${DIR_INCLUDE}/openssl
                  ${DIR_INCLUDE}/openssl/crypto/ml_dsa ${DIR_INCLUDE}/openssl/compat)
