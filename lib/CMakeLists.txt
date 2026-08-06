@@ -235,6 +235,25 @@ set_source_files_properties(${SRC_FILES_ML_DSA_ASM} PROPERTIES GENERATED TRUE
                                                                LANGUAGE ${ML_DSA_ASM_LANGUAGE})
 list(APPEND SRC_FILES_ASM ${SRC_FILES_ML_DSA_ASM})
 
+# post-quantum: ML-KEM (FIPS 203) optimized asm kernels, generated from the
+# vendored OpenSSL perl-asm. The AVX2 NTT replaces the portable-C baseline at
+# run time (selected via OPENSSL_ia32cap_P).
+if(WINDOWS)
+  set(MLKEM_NTT_S ${CMAKE_CURRENT_BINARY_DIR}/ml_kem_ntt-x86_64.asm)
+  set(ML_KEM_ASM_LANGUAGE ASM_NASM)
+else()
+  set(MLKEM_NTT_S ${CMAKE_CURRENT_BINARY_DIR}/ml_kem_ntt-x86_64.S)
+  set(ML_KEM_ASM_LANGUAGE ASM)
+endif()
+
+set(MLKEM_NTT_PL ${CMAKE_CURRENT_SOURCE_DIR}/openssl/crypto/ml_kem/asm/ml_kem_ntt-x86_64.pl)
+imb_add_perlasm(${MLKEM_NTT_PL} ${MLKEM_NTT_S})
+
+set(SRC_FILES_ML_KEM_ASM ${MLKEM_NTT_S})
+set_source_files_properties(${SRC_FILES_ML_KEM_ASM} PROPERTIES GENERATED TRUE
+  LANGUAGE ${ML_KEM_ASM_LANGUAGE})
+list(APPEND SRC_FILES_ASM ${SRC_FILES_ML_KEM_ASM})
+
 # ##############################################################################
 # set C compiler options
 # ##############################################################################

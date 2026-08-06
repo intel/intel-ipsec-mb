@@ -255,6 +255,24 @@ Table 3. Encryption and integrity algorithm combinations
 +-------------------------------------+---------------------------------------+
 ```
 
+Table 4. List of supported digital signature and key encapsulation Post-Quantum Cryptography (PQC) algorithms.
+```
++--------------------------------------------------------------------------------------------------------------+
+|                   |                             Implementation                                               |
+| Algorithm         +------------------------------------------------------------------------------------------|
+|                   | SSE    | SSE    | SSE    | AVX2   | AVX2   | AVX2   | AVX2   | AVX512 | AVX512  | AVX10  |
+|                   | Type 1 | Type 2 | Type 3 | Type 1 | Type 2 | Type 3 | Type 4 | Type 1 | Type 2  | Type 1 |
+|                   | [S1]   | [S2]   | [S3]   | [A2-1] | [A2-2] | [A2-3] | [A2-4] | [A3-1] | [A3-2]  | [A4-1] |
+|-------------------+--------+--------+--------+--------+--------+--------+--------+--------+---------|--------|
+| ML-DSA            | Y      |  <---  |  <---  | Y(1)   |  <---  |  <---  |  <---  | Y(2)   |  <---   |  <---  |
+| ML-KEM            | Y      |  <---  |  <---  | Y(3)   |  <---  |  <---  |  <---  |  <---  |  <---   |  <---  |
++--------------------------------------------------------------------------------------------------------------+
+```
+Notes:  
+(1)  - AVX2 optimized ML-DSA NTT.  
+(2)  - AVX512VL optimized Keccak1600 (x4 multi-buffer shake; single buffer shake and sha3).  
+(3)  - AVX2 optimized ML-KEM NTT.  
+
 ## 2. Processor Extensions and Architecture Types
 
 Table 4. Processor extensions used in the library

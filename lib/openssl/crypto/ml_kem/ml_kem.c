@@ -83,6 +83,22 @@ typedef struct ossl_ml_kem_scalar_st {
         uint16_t c[ML_KEM_DEGREE];
 } scalar;
 
+/* AVX2 optimized NTT operations */
+int
+ml_kem_ntt_avx2_capable(void);
+void
+ml_kem_ntt_avx2(scalar *s);
+void
+ml_kem_inverse_ntt_avx2(scalar *s);
+void
+ml_kem_add_avx2(scalar *lhs, const scalar *rhs);
+void
+ml_kem_sub_avx2(scalar *lhs, const scalar *rhs);
+void
+ml_kem_mul_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
+void
+ml_kem_mul_add_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
+
 /* Key material allocation layout */
 #define DECLARE_ML_KEM_PUBKEYDATA(name, rank)                                                      \
         struct name##_alloc {                                                                      \
@@ -372,19 +388,93 @@ sample_scalar(scalar *out, EVP_MD_CTX *mdctx)
         return 1;
 }
 
+/*
+ * Function pointer dispatch for NTT operations.
+ * Initialized to scalar (Barrett) implementations; updated to AVX2 variants
+ * at first use if the CPU supports AVX2.
+ */
 static CRYPTO_ONCE ml_kem_ntt_once = CRYPTO_ONCE_STATIC_INIT;
 
+typedef void (*ml_kem_ntt_fn)(scalar *s);
+typedef void (*ml_kem_arith_fn)(scalar *lhs, const scalar *rhs);
+typedef void (*ml_kem_mul_fn)(scalar *out, const scalar *lhs, const scalar *rhs);
+
 static void
-scalar_ntt(scalar *p);
+scalar_ntt_ref(scalar *p);
 static void
-scalar_inverse_ntt(scalar *p);
+scalar_inverse_ntt_ref(scalar *p);
+static void
+scalar_add_ref(scalar *lhs, const scalar *rhs);
+static void
+scalar_sub_ref(scalar *lhs, const scalar *rhs);
+static void
+scalar_mult_ref(scalar *out, const scalar *lhs, const scalar *rhs);
+static void
+scalar_mult_add_ref(scalar *out, const scalar *lhs, const scalar *rhs);
+
+static ml_kem_ntt_fn dispatch_ntt_impl = scalar_ntt_ref;
+static ml_kem_ntt_fn dispatch_intt_impl = scalar_inverse_ntt_ref;
+static ml_kem_arith_fn dispatch_add_impl = scalar_add_ref;
+static ml_kem_arith_fn dispatch_sub_impl = scalar_sub_ref;
+static ml_kem_mul_fn dispatch_mult_impl = scalar_mult_ref;
+static ml_kem_mul_fn dispatch_mult_add_impl = scalar_mult_add_ref;
 
 /*
- * NTT init hook retained for run-once wiring consistency.
+ * NTT init hook used to dispatch AVX2 optimized NTT
  */
 static void
 ml_kem_ntt_init(void)
 {
+        if (ml_kem_ntt_avx2_capable()) {
+                dispatch_ntt_impl = ml_kem_ntt_avx2;
+                dispatch_intt_impl = ml_kem_inverse_ntt_avx2;
+                dispatch_add_impl = ml_kem_add_avx2;
+                dispatch_sub_impl = ml_kem_sub_avx2;
+                dispatch_mult_impl = ml_kem_mul_avx2;
+                dispatch_mult_add_impl = ml_kem_mul_add_avx2;
+        }
+}
+
+static void
+scalar_ntt(scalar *s)
+{
+        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
+        dispatch_ntt_impl(s);
+}
+
+static void
+scalar_inverse_ntt(scalar *s)
+{
+        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
+        dispatch_intt_impl(s);
+}
+
+static void
+scalar_add(scalar *lhs, const scalar *rhs)
+{
+        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
+        dispatch_add_impl(lhs, rhs);
+}
+
+static void
+scalar_sub(scalar *lhs, const scalar *rhs)
+{
+        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
+        dispatch_sub_impl(lhs, rhs);
+}
+
+static void
+scalar_mult(scalar *out, const scalar *lhs, const scalar *rhs)
+{
+        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
+        dispatch_mult_impl(out, lhs, rhs);
+}
+
+static void
+scalar_mult_add(scalar *out, const scalar *lhs, const scalar *rhs)
+{
+        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
+        dispatch_mult_add_impl(out, lhs, rhs);
 }
 
 /*-
@@ -441,7 +531,7 @@ scalar_mult_const(scalar *s, uint16_t a)
  * consecutive entries in |s->c|.
  */
 static void
-scalar_ntt(scalar *s)
+scalar_ntt_ref(scalar *s)
 {
         const uint16_t *roots = kNTTRoots;
         uint16_t *end = s->c + DEGREE;
@@ -474,7 +564,7 @@ scalar_ntt(scalar *s)
  * using the precomputed 128 roots of unity stored in InverseNTTRoots.
  */
 static void
-scalar_inverse_ntt(scalar *s)
+scalar_inverse_ntt_ref(scalar *s)
 {
         const uint16_t *roots = kInverseNTTRoots;
         uint16_t *end = s->c + DEGREE;
@@ -501,7 +591,7 @@ scalar_inverse_ntt(scalar *s)
 
 /* Addition updating the LHS scalar in-place. */
 static void
-scalar_add(scalar *lhs, const scalar *rhs)
+scalar_add_ref(scalar *lhs, const scalar *rhs)
 {
         int i;
 
@@ -511,7 +601,7 @@ scalar_add(scalar *lhs, const scalar *rhs)
 
 /* Subtraction updating the LHS scalar in-place. */
 static void
-scalar_sub(scalar *lhs, const scalar *rhs)
+scalar_sub_ref(scalar *lhs, const scalar *rhs)
 {
         int i;
 
@@ -531,7 +621,7 @@ scalar_sub(scalar *lhs, const scalar *rhs)
  * even if an uint64_t could hold 3 multiplied numbers.
  */
 static void
-scalar_mult(scalar *out, const scalar *lhs, const scalar *rhs)
+scalar_mult_ref(scalar *out, const scalar *lhs, const scalar *rhs)
 {
         uint16_t *curr = out->c, *end = curr + DEGREE;
         const uint16_t *lc = lhs->c, *rc = rhs->c;
@@ -548,8 +638,8 @@ scalar_mult(scalar *out, const scalar *lhs, const scalar *rhs)
 }
 
 /* Above, but add the result to an existing scalar */
-static ossl_inline void
-scalar_mult_add(scalar *out, const scalar *lhs, const scalar *rhs)
+static void
+scalar_mult_add_ref(scalar *out, const scalar *lhs, const scalar *rhs)
 {
         uint16_t *curr = out->c, *end = curr + DEGREE;
         const uint16_t *lc = lhs->c, *rc = rhs->c;
@@ -1120,7 +1210,7 @@ gencbd_vector_ntt(scalar *out, CBD_FUNC cbd, uint8_t *counter,
  * |A| (our key->m, with the public key holding an expanded (16-bit per scalar
  * coefficient) key->t vector).
  *
- * Caller passes storage in |tmp| for for two temporary vectors.
+ * Caller passes storage in |tmp| for two temporary vectors.
  */
 static __owur int
 encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t message[DEGREE / 8],
