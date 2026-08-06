@@ -67,7 +67,6 @@
 #include <stddef.h>
 
 #include <intel-ipsec-mb.h>
-#include "imb_ossl_ia32cap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,6 +83,22 @@ extern "C" {
  */
 struct ossl_ml_kem_key_st;
 
+/**
+ * Opaque vendored OpenSSL polynomial type referenced by the ISA specific
+ * function pointers below. Only pointers to it are used here, so a forward
+ * declaration is enough and this header stays free of the vendored ML-KEM
+ * include tree.
+ */
+struct ossl_ml_kem_scalar_st;
+
+/* ISA specific polynomial (NTT domain) primitives */
+typedef void(ML_KEM_POLY_NTT_FN)(struct ossl_ml_kem_scalar_st *s);
+typedef void(ML_KEM_POLY_ARITH_FN)(struct ossl_ml_kem_scalar_st *lhs,
+                                   const struct ossl_ml_kem_scalar_st *rhs);
+typedef void(ML_KEM_POLY_MULT_FN)(struct ossl_ml_kem_scalar_st *out,
+                                  const struct ossl_ml_kem_scalar_st *lhs,
+                                  const struct ossl_ml_kem_scalar_st *rhs);
+
 struct IMB_ML_KEM {
         IMB_MGR *mgr;
         IMB_ML_KEM_ALG alg;
@@ -96,6 +111,18 @@ struct IMB_ML_KEM {
 
         /* Cached decoded/generated key bound to this context (see above). */
         struct ossl_ml_kem_key_st *key;
+
+        /*
+         * ISA specific primitives, selected once at context creation from the
+         * IMB_MGR architecture (mgr->used_arch), following the same init-time
+         * dispatch model used by IMB_MGR itself.
+         */
+        ML_KEM_POLY_NTT_FN *poly_ntt;
+        ML_KEM_POLY_NTT_FN *poly_ntt_inverse;
+        ML_KEM_POLY_ARITH_FN *poly_add;
+        ML_KEM_POLY_ARITH_FN *poly_sub;
+        ML_KEM_POLY_MULT_FN *poly_mult;
+        ML_KEM_POLY_MULT_FN *poly_mult_add;
 
         /**
          * Backend dispatch table (0 on success, <0 on error).

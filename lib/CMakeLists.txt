@@ -230,8 +230,9 @@ set_source_files_properties(${SRC_FILES_ML_DSA_ASM} PROPERTIES GENERATED TRUE
 list(APPEND SRC_FILES_ASM ${SRC_FILES_ML_DSA_ASM})
 
 # post-quantum: ML-KEM (FIPS 203) optimized asm kernels, generated from the
-# vendored OpenSSL perl-asm. The AVX2 NTT replaces the portable-C baseline at
-# run time (selected via OPENSSL_ia32cap_P).
+# vendored OpenSSL perl-asm. The AVX2 NTT replaces the portable-C baseline,
+# selected per ML-KEM context from the architecture the IMB_MGR was
+# initialised with.
 if(WINDOWS)
   set(MLKEM_NTT_S ${CMAKE_CURRENT_BINARY_DIR}/ml_kem_ntt-x86_64.asm)
   set(ML_KEM_ASM_LANGUAGE ASM_NASM)

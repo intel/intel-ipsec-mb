@@ -84,8 +84,6 @@ typedef struct ossl_ml_kem_scalar_st {
 } scalar;
 
 /* AVX2 optimized NTT operations */
-int
-ml_kem_ntt_avx2_capable(void);
 void
 ml_kem_ntt_avx2(scalar *s);
 void
@@ -388,93 +386,50 @@ sample_scalar(scalar *out, EVP_MD_CTX *mdctx)
         return 1;
 }
 
-/*
- * Function pointer dispatch for NTT operations.
- * Initialized to scalar (Barrett) implementations; updated to AVX2 variants
- * at first use if the CPU supports AVX2.
+/* Forward declarations of the base (portable C, Barrett) implementations */
+static void
+poly_ntt_base(scalar *p);
+static void
+poly_ntt_inverse_base(scalar *p);
+static void
+poly_add_base(scalar *lhs, const scalar *rhs);
+static void
+poly_sub_base(scalar *lhs, const scalar *rhs);
+static void
+poly_mult_base(scalar *out, const scalar *lhs, const scalar *rhs);
+static void
+poly_mult_add_base(scalar *out, const scalar *lhs, const scalar *rhs);
+
+/**
+ * @brief Assign the base (portable C) polynomial primitives to \a self.
+ *
+ * @param [in,out] self  ML-KEM context to initialise
  */
-static CRYPTO_ONCE ml_kem_ntt_once = CRYPTO_ONCE_STATIC_INIT;
+void
+ossl_ml_kem_poly_init_base(IMB_ML_KEM *self)
+{
+        self->poly_ntt = poly_ntt_base;
+        self->poly_ntt_inverse = poly_ntt_inverse_base;
+        self->poly_add = poly_add_base;
+        self->poly_sub = poly_sub_base;
+        self->poly_mult = poly_mult_base;
+        self->poly_mult_add = poly_mult_add_base;
+}
 
-typedef void (*ml_kem_ntt_fn)(scalar *s);
-typedef void (*ml_kem_arith_fn)(scalar *lhs, const scalar *rhs);
-typedef void (*ml_kem_mul_fn)(scalar *out, const scalar *lhs, const scalar *rhs);
-
-static void
-scalar_ntt_ref(scalar *p);
-static void
-scalar_inverse_ntt_ref(scalar *p);
-static void
-scalar_add_ref(scalar *lhs, const scalar *rhs);
-static void
-scalar_sub_ref(scalar *lhs, const scalar *rhs);
-static void
-scalar_mult_ref(scalar *out, const scalar *lhs, const scalar *rhs);
-static void
-scalar_mult_add_ref(scalar *out, const scalar *lhs, const scalar *rhs);
-
-static ml_kem_ntt_fn dispatch_ntt_impl = scalar_ntt_ref;
-static ml_kem_ntt_fn dispatch_intt_impl = scalar_inverse_ntt_ref;
-static ml_kem_arith_fn dispatch_add_impl = scalar_add_ref;
-static ml_kem_arith_fn dispatch_sub_impl = scalar_sub_ref;
-static ml_kem_mul_fn dispatch_mult_impl = scalar_mult_ref;
-static ml_kem_mul_fn dispatch_mult_add_impl = scalar_mult_add_ref;
-
-/*
- * NTT init hook used to dispatch AVX2 optimized NTT
+/**
+ * @brief Assign the AVX2 polynomial primitives to \a self.
+ *
+ * @param [in,out] self  ML-KEM context to initialise
  */
-static void
-ml_kem_ntt_init(void)
+void
+ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
 {
-        if (ml_kem_ntt_avx2_capable()) {
-                dispatch_ntt_impl = ml_kem_ntt_avx2;
-                dispatch_intt_impl = ml_kem_inverse_ntt_avx2;
-                dispatch_add_impl = ml_kem_add_avx2;
-                dispatch_sub_impl = ml_kem_sub_avx2;
-                dispatch_mult_impl = ml_kem_mul_avx2;
-                dispatch_mult_add_impl = ml_kem_mul_add_avx2;
-        }
-}
-
-static void
-scalar_ntt(scalar *s)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
-        dispatch_ntt_impl(s);
-}
-
-static void
-scalar_inverse_ntt(scalar *s)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
-        dispatch_intt_impl(s);
-}
-
-static void
-scalar_add(scalar *lhs, const scalar *rhs)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
-        dispatch_add_impl(lhs, rhs);
-}
-
-static void
-scalar_sub(scalar *lhs, const scalar *rhs)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
-        dispatch_sub_impl(lhs, rhs);
-}
-
-static void
-scalar_mult(scalar *out, const scalar *lhs, const scalar *rhs)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
-        dispatch_mult_impl(out, lhs, rhs);
-}
-
-static void
-scalar_mult_add(scalar *out, const scalar *lhs, const scalar *rhs)
-{
-        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
-        dispatch_mult_add_impl(out, lhs, rhs);
+        self->poly_ntt = ml_kem_ntt_avx2;
+        self->poly_ntt_inverse = ml_kem_inverse_ntt_avx2;
+        self->poly_add = ml_kem_add_avx2;
+        self->poly_sub = ml_kem_sub_avx2;
+        self->poly_mult = ml_kem_mul_avx2;
+        self->poly_mult_add = ml_kem_mul_add_avx2;
 }
 
 /*-
@@ -531,7 +486,7 @@ scalar_mult_const(scalar *s, uint16_t a)
  * consecutive entries in |s->c|.
  */
 static void
-scalar_ntt_ref(scalar *s)
+poly_ntt_base(scalar *s)
 {
         const uint16_t *roots = kNTTRoots;
         uint16_t *end = s->c + DEGREE;
@@ -564,7 +519,7 @@ scalar_ntt_ref(scalar *s)
  * using the precomputed 128 roots of unity stored in InverseNTTRoots.
  */
 static void
-scalar_inverse_ntt_ref(scalar *s)
+poly_ntt_inverse_base(scalar *s)
 {
         const uint16_t *roots = kInverseNTTRoots;
         uint16_t *end = s->c + DEGREE;
@@ -591,7 +546,7 @@ scalar_inverse_ntt_ref(scalar *s)
 
 /* Addition updating the LHS scalar in-place. */
 static void
-scalar_add_ref(scalar *lhs, const scalar *rhs)
+poly_add_base(scalar *lhs, const scalar *rhs)
 {
         int i;
 
@@ -601,7 +556,7 @@ scalar_add_ref(scalar *lhs, const scalar *rhs)
 
 /* Subtraction updating the LHS scalar in-place. */
 static void
-scalar_sub_ref(scalar *lhs, const scalar *rhs)
+poly_sub_base(scalar *lhs, const scalar *rhs)
 {
         int i;
 
@@ -621,7 +576,7 @@ scalar_sub_ref(scalar *lhs, const scalar *rhs)
  * even if an uint64_t could hold 3 multiplied numbers.
  */
 static void
-scalar_mult_ref(scalar *out, const scalar *lhs, const scalar *rhs)
+poly_mult_base(scalar *out, const scalar *lhs, const scalar *rhs)
 {
         uint16_t *curr = out->c, *end = curr + DEGREE;
         const uint16_t *lc = lhs->c, *rc = rhs->c;
@@ -639,7 +594,7 @@ scalar_mult_ref(scalar *out, const scalar *lhs, const scalar *rhs)
 
 /* Above, but add the result to an existing scalar */
 static void
-scalar_mult_add_ref(scalar *out, const scalar *lhs, const scalar *rhs)
+poly_mult_add_base(scalar *out, const scalar *lhs, const scalar *rhs)
 {
         uint16_t *curr = out->c, *end = curr + DEGREE;
         const uint16_t *lc = lhs->c, *rc = rhs->c;
@@ -927,10 +882,10 @@ scalar_decompress(scalar *s, int bits)
 
 /* Addition updating the LHS vector in-place. */
 static void
-vector_add(scalar *lhs, const scalar *rhs, int rank)
+vector_add(const IMB_ML_KEM *self, scalar *lhs, const scalar *rhs, int rank)
 {
         do {
-                scalar_add(lhs++, rhs++);
+                self->poly_add(lhs++, rhs++);
         } while (--rank > 0);
 }
 
@@ -958,14 +913,15 @@ vector_encode(uint8_t *out, const scalar *a, int bits, int rank)
  * ciphertext to decap() is simply syntactically invalid.
  */
 static void
-vector_decode_decompress_ntt(scalar *out, const uint8_t *in, int bits, int rank)
+vector_decode_decompress_ntt(const IMB_ML_KEM *self, scalar *out, const uint8_t *in, int bits,
+                             int rank)
 {
         int stride = bits * DEGREE / 8;
 
         for (; rank-- > 0; in += stride, ++out) {
                 scalar_decode(out, in, bits);
                 scalar_decompress(out, bits);
-                scalar_ntt(out);
+                self->poly_ntt(out);
         }
 }
 
@@ -992,11 +948,11 @@ vector_compress(scalar *a, int bits, int rank)
 
 /* The output scalar must not overlap with the inputs */
 static void
-inner_product(scalar *out, const scalar *lhs, const scalar *rhs, int rank)
+inner_product(const IMB_ML_KEM *self, scalar *out, const scalar *lhs, const scalar *rhs, int rank)
 {
-        scalar_mult(out, lhs, rhs);
+        self->poly_mult(out, lhs, rhs);
         while (--rank > 0)
-                scalar_mult_add(out, ++lhs, ++rhs);
+                self->poly_mult_add(out, ++lhs, ++rhs);
 }
 
 /*
@@ -1004,30 +960,31 @@ inner_product(scalar *out, const scalar *lhs, const scalar *rhs, int rank)
  * directly subjected to inverse NTT.
  */
 static void
-matrix_mult_intt(scalar *out, const scalar *m, const scalar *a, int rank)
+matrix_mult_intt(const IMB_ML_KEM *self, scalar *out, const scalar *m, const scalar *a, int rank)
 {
         const scalar *ar;
         int i, j;
 
         for (i = rank; i-- > 0; ++out) {
-                scalar_mult(out, m++, ar = a);
+                self->poly_mult(out, m++, ar = a);
                 for (j = rank - 1; j > 0; --j)
-                        scalar_mult_add(out, m++, ++ar);
-                scalar_inverse_ntt(out);
+                        self->poly_mult_add(out, m++, ++ar);
+                self->poly_ntt_inverse(out);
         }
 }
 
 /* Here, the output vector must not overlap with the inputs */
 static void
-matrix_mult_transpose_add(scalar *out, const scalar *m, const scalar *a, int rank)
+matrix_mult_transpose_add(const IMB_ML_KEM *self, scalar *out, const scalar *m, const scalar *a,
+                          int rank)
 {
         const scalar *mc = m, *mr, *ar;
         int i, j;
 
         for (i = rank; i-- > 0; ++out) {
-                scalar_mult_add(out, mr = mc++, ar = a);
+                self->poly_mult_add(out, mr = mc++, ar = a);
                 for (j = rank; --j > 0;)
-                        scalar_mult_add(out, (mr += rank), ++ar);
+                        self->poly_mult_add(out, (mr += rank), ++ar);
         }
 }
 
@@ -1177,7 +1134,7 @@ gencbd_vector(scalar *out, CBD_FUNC cbd, uint8_t *counter, const uint8_t seed[ML
  * As above plus NTT transform.
  */
 static __owur int
-gencbd_vector_ntt(scalar *out, CBD_FUNC cbd, uint8_t *counter,
+gencbd_vector_ntt(const IMB_ML_KEM *self, scalar *out, CBD_FUNC cbd, uint8_t *counter,
                   const uint8_t seed[ML_KEM_RANDOM_BYTES], int rank, EVP_MD_CTX *mdctx,
                   const ML_KEM_KEY *key)
 {
@@ -1188,7 +1145,7 @@ gencbd_vector_ntt(scalar *out, CBD_FUNC cbd, uint8_t *counter,
                 input[ML_KEM_RANDOM_BYTES] = (*counter)++;
                 if (!cbd(out, input, mdctx, key))
                         return 0;
-                scalar_ntt(out++);
+                self->poly_ntt(out++);
         } while (--rank > 0);
         return 1;
 }
@@ -1213,9 +1170,9 @@ gencbd_vector_ntt(scalar *out, CBD_FUNC cbd, uint8_t *counter,
  * Caller passes storage in |tmp| for two temporary vectors.
  */
 static __owur int
-encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t message[DEGREE / 8],
-            const uint8_t r[ML_KEM_RANDOM_BYTES], scalar *tmp, EVP_MD_CTX *mdctx,
-            const ML_KEM_KEY *key)
+encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
+            const uint8_t message[DEGREE / 8], const uint8_t r[ML_KEM_RANDOM_BYTES], scalar *tmp,
+            EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo = key->vinfo;
         CBD_FUNC cbd_1 = CBD1(vinfo->evp_type);
@@ -1231,18 +1188,18 @@ encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t message[DEGRE
         int dv = vinfo->dv;
 
         /* FIPS 203 "y" vector */
-        if (!gencbd_vector_ntt(y, cbd_1, &counter, r, rank, mdctx, key))
+        if (!gencbd_vector_ntt(self, y, cbd_1, &counter, r, rank, mdctx, key))
                 return 0;
         /* FIPS 203 "v" scalar */
-        inner_product(&v, key->t, y, rank);
-        scalar_inverse_ntt(&v);
+        inner_product(self, &v, key->t, y, rank);
+        self->poly_ntt_inverse(&v);
         /* FIPS 203 "u" vector */
-        matrix_mult_intt(u, key->m, y, rank);
+        matrix_mult_intt(self, u, key->m, y, rank);
 
         /* All done with |y|, now free to reuse tmp[0] for FIPS 203 |e1| */
         if (!gencbd_vector(e1, cbd_2, &counter, r, rank, mdctx, key))
                 return 0;
-        vector_add(u, e1, rank);
+        vector_add(self, u, e1, rank);
         vector_compress(u, du, rank);
         vector_encode(out, u, du, rank);
 
@@ -1251,7 +1208,7 @@ encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t message[DEGRE
         input[ML_KEM_RANDOM_BYTES] = counter;
         if (!cbd_2(e2, input, mdctx, key))
                 return 0;
-        scalar_add(&v, e2);
+        self->poly_add(&v, e2);
 
         /* Combine message with |v| */
         scalar_decode_decompress_add(&v, message);
@@ -1264,8 +1221,8 @@ encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t message[DEGRE
  * FIPS 203, Section 5.3, Algorithm 15: K-PKE.Decrypt.
  */
 static void
-decrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t *ctext, scalar *u,
-            const ML_KEM_KEY *key)
+decrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t *ctext,
+            scalar *u, const ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo = key->vinfo;
         scalar v, mask;
@@ -1273,12 +1230,12 @@ decrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t *ctext, scala
         int du = vinfo->du;
         int dv = vinfo->dv;
 
-        vector_decode_decompress_ntt(u, ctext, du, rank);
+        vector_decode_decompress_ntt(self, u, ctext, du, rank);
         scalar_decode(&v, ctext + vinfo->u_vector_bytes, dv);
         scalar_decompress(&v, dv);
-        inner_product(&mask, key->s, u, rank);
-        scalar_inverse_ntt(&mask);
-        scalar_sub(&v, &mask);
+        inner_product(self, &mask, key->s, u, rank);
+        self->poly_ntt_inverse(&mask);
+        self->poly_sub(&v, &mask);
         scalar_compress(&v, 1);
         scalar_encode_1(out, &v);
 }
@@ -1416,7 +1373,8 @@ parse_prvkey(const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
  * and correctly encoded) ciphertext inputs.
  */
 static __owur int
-genkey(const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX *mdctx, uint8_t *pubenc, ML_KEM_KEY *key)
+genkey(const IMB_ML_KEM *self, const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX *mdctx,
+       uint8_t *pubenc, ML_KEM_KEY *key)
 {
         uint8_t hashed[2 * ML_KEM_RANDOM_BYTES];
         const uint8_t *const sigma = hashed + ML_KEM_RANDOM_BYTES;
@@ -1441,12 +1399,12 @@ genkey(const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX *mdctx, uint8_t *pubenc
 
         /* FIPS 203 |e| vector is initial value of key->t */
         if (!matrix_expand(mdctx, key) ||
-            !gencbd_vector_ntt(key->s, cbd_1, &counter, sigma, rank, mdctx, key) ||
-            !gencbd_vector_ntt(key->t, cbd_1, &counter, sigma, rank, mdctx, key))
+            !gencbd_vector_ntt(self, key->s, cbd_1, &counter, sigma, rank, mdctx, key) ||
+            !gencbd_vector_ntt(self, key->t, cbd_1, &counter, sigma, rank, mdctx, key))
                 goto end;
 
         /* To |e| we now add the product of transpose |m| and |s|, giving |t|. */
-        matrix_mult_transpose_add(key->t, key->m, key->s, rank);
+        matrix_mult_transpose_add(self, key->t, key->m, key->s, rank);
         /* The |t| vector is public */
         CONSTTIME_DECLASSIFY(key->t, vinfo->rank * sizeof(scalar));
 
@@ -1488,7 +1446,7 @@ end:
  * of the provided key.
  */
 static int
-encap(uint8_t *ctext, uint8_t secret[ML_KEM_SHARED_SECRET_BYTES],
+encap(const IMB_ML_KEM *self, uint8_t *ctext, uint8_t secret[ML_KEM_SHARED_SECRET_BYTES],
       const uint8_t entropy[ML_KEM_RANDOM_BYTES], scalar *tmp, EVP_MD_CTX *mdctx,
       const ML_KEM_KEY *key)
 {
@@ -1500,7 +1458,7 @@ encap(uint8_t *ctext, uint8_t secret[ML_KEM_SHARED_SECRET_BYTES],
         memcpy(input, entropy, ML_KEM_RANDOM_BYTES);
         memcpy(input + ML_KEM_RANDOM_BYTES, key->pkhash, ML_KEM_PKHASH_BYTES);
         ret = hash_g(Kr, input, sizeof(input), mdctx, key) &&
-              encrypt_cpa(ctext, entropy, r, tmp, mdctx, key);
+              encrypt_cpa(self, ctext, entropy, r, tmp, mdctx, key);
         OPENSSL_cleanse((void *) input, sizeof(input));
 
         if (ret)
@@ -1547,8 +1505,8 @@ hash_kr(uint8_t *out, uint8_t *in, EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
  * of the key's ML-KEM variant.
  */
 static int
-decap(uint8_t secret[ML_KEM_SHARED_SECRET_BYTES], const uint8_t *ctext, uint8_t *tmp_ctext,
-      scalar *tmp, EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
+decap(const IMB_ML_KEM *self, uint8_t secret[ML_KEM_SHARED_SECRET_BYTES], const uint8_t *ctext,
+      uint8_t *tmp_ctext, scalar *tmp, EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
 {
         uint8_t buf[DECAP_BUFFER_SZ];
         uint8_t *failure_key = buf; /* Kbar */
@@ -1574,8 +1532,8 @@ decap(uint8_t secret[ML_KEM_SHARED_SECRET_BYTES], const uint8_t *ctext, uint8_t 
                                vinfo->algorithm_name);
                 return 0;
         }
-        decrypt_cpa(m, ctext, tmp, key);
-        if (!hash_kr(Kr, m, mdctx, key) || !encrypt_cpa(tmp_ctext, m, r, tmp, mdctx, key)) {
+        decrypt_cpa(self, m, ctext, tmp, key);
+        if (!hash_kr(Kr, m, mdctx, key) || !encrypt_cpa(self, tmp_ctext, m, r, tmp, mdctx, key)) {
                 ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
                                "internal error while performing %s decapsulation",
                                vinfo->algorithm_name);
@@ -1680,8 +1638,6 @@ ossl_ml_kem_key_reset(ML_KEM_KEY *key)
 const ML_KEM_VINFO *
 ossl_ml_kem_get_vinfo(int evp_type)
 {
-        (void) CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
-
         switch (evp_type) {
         case EVP_PKEY_ML_KEM_512:
                 return &vinfo_map[ML_KEM_512_VINFO];
@@ -1944,7 +1900,7 @@ ossl_ml_kem_parse_private_key(const uint8_t *in, size_t len, ML_KEM_KEY *key)
  * the RNG.
  */
 int
-ossl_ml_kem_genkey(uint8_t *pubenc, size_t publen, ML_KEM_KEY *key)
+ossl_ml_kem_genkey(const IMB_ML_KEM *self, uint8_t *pubenc, size_t publen, ML_KEM_KEY *key)
 {
         uint8_t seed[ML_KEM_SEED_BYTES];
         EVP_MD_CTX *mdctx = NULL;
@@ -1977,7 +1933,7 @@ ossl_ml_kem_genkey(uint8_t *pubenc, size_t publen, ML_KEM_KEY *key)
 
         if (add_storage(OPENSSL_malloc(vinfo->puballoc), OPENSSL_secure_malloc(vinfo->prvalloc), 1,
                         0, key))
-                ret = genkey(seed, mdctx, pubenc, key);
+                ret = genkey(self, seed, mdctx, pubenc, key);
         OPENSSL_cleanse(seed, sizeof(seed));
 
         /* Declassify secret inputs and derived outputs before returning control */
@@ -2000,8 +1956,8 @@ ossl_ml_kem_genkey(uint8_t *pubenc, size_t publen, ML_KEM_KEY *key)
  * This is the deterministic version with randomness supplied externally.
  */
 int
-ossl_ml_kem_encap_seed(uint8_t *ctext, size_t clen, uint8_t *shared_secret, size_t slen,
-                       const uint8_t *entropy, size_t elen, const ML_KEM_KEY *key)
+ossl_ml_kem_encap_seed(const IMB_ML_KEM *self, uint8_t *ctext, size_t clen, uint8_t *shared_secret,
+                       size_t slen, const uint8_t *entropy, size_t elen, const ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo;
         EVP_MD_CTX *mdctx;
@@ -2030,7 +1986,7 @@ ossl_ml_kem_encap_seed(uint8_t *ctext, size_t clen, uint8_t *shared_secret, size
         {                                                                                          \
                 scalar tmp[2 * ML_KEM_##bits##_RANK];                                              \
                                                                                                    \
-                ret = encap(ctext, shared_secret, entropy, tmp, mdctx, key);                       \
+                ret = encap(self, ctext, shared_secret, entropy, tmp, mdctx, key);                 \
                 OPENSSL_cleanse((void *) tmp, sizeof(tmp));                                        \
         }
         switch (vinfo->evp_type) {
@@ -2056,8 +2012,8 @@ ossl_ml_kem_encap_seed(uint8_t *ctext, size_t clen, uint8_t *shared_secret, size
 }
 
 int
-ossl_ml_kem_encap_rand(uint8_t *ctext, size_t clen, uint8_t *shared_secret, size_t slen,
-                       const ML_KEM_KEY *key)
+ossl_ml_kem_encap_rand(const IMB_ML_KEM *self, uint8_t *ctext, size_t clen, uint8_t *shared_secret,
+                       size_t slen, const ML_KEM_KEY *key)
 {
         uint8_t r[ML_KEM_RANDOM_BYTES];
 
@@ -2067,12 +2023,12 @@ ossl_ml_kem_encap_rand(uint8_t *ctext, size_t clen, uint8_t *shared_secret, size
         if (RAND_bytes_ex(key->libctx, r, ML_KEM_RANDOM_BYTES, key->vinfo->secbits) < 1)
                 return 0;
 
-        return ossl_ml_kem_encap_seed(ctext, clen, shared_secret, slen, r, sizeof(r), key);
+        return ossl_ml_kem_encap_seed(self, ctext, clen, shared_secret, slen, r, sizeof(r), key);
 }
 
 int
-ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen, const uint8_t *ctext, size_t clen,
-                  const ML_KEM_KEY *key)
+ossl_ml_kem_decap(const IMB_ML_KEM *self, uint8_t *shared_secret, size_t slen, const uint8_t *ctext,
+                  size_t clen, const ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo;
         EVP_MD_CTX *mdctx;
@@ -2112,7 +2068,7 @@ ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen, const uint8_t *ctext, siz
                 uint8_t cbuf[CTEXT_BYTES(bits)];                                                   \
                 scalar tmp[2 * ML_KEM_##bits##_RANK];                                              \
                                                                                                    \
-                ret = decap(shared_secret, ctext, cbuf, tmp, mdctx, key);                          \
+                ret = decap(self, shared_secret, ctext, cbuf, tmp, mdctx, key);                    \
                 OPENSSL_cleanse((void *) tmp, sizeof(tmp));                                        \
         }
         switch (vinfo->evp_type) {

@@ -101,7 +101,7 @@ op_keypair(IMB_ML_KEM *self, void *ek, void *dk, const void *seed_64_or_null)
             ossl_ml_kem_set_seed(seed_64_or_null, ML_KEM_SEED_D_Z_BYTES, key) == NULL)
                 goto end;
 
-        if (!ossl_ml_kem_genkey(ek, self->ek_len, key))
+        if (!ossl_ml_kem_genkey(self, ek, self->ek_len, key))
                 goto end;
 
         if (!ossl_ml_kem_encode_private_key(dk, self->dk_len, key))
@@ -179,13 +179,13 @@ op_encap(IMB_ML_KEM *self, void *ct, void *shared_secret, const void *m_32_or_nu
                 return -1;
 
         if (m_32_or_null != NULL)
-                return ossl_ml_kem_encap_seed(ct, self->ct_len, shared_secret,
+                return ossl_ml_kem_encap_seed(self, ct, self->ct_len, shared_secret,
                                               IMB_ML_KEM_SHARED_SECRET_BYTES, m_32_or_null,
                                               ML_KEM_M_BYTES, self->key)
                                ? 0
                                : -1;
 
-        return ossl_ml_kem_encap_rand(ct, self->ct_len, shared_secret,
+        return ossl_ml_kem_encap_rand(self, ct, self->ct_len, shared_secret,
                                       IMB_ML_KEM_SHARED_SECRET_BYTES, self->key)
                        ? 0
                        : -1;
@@ -208,7 +208,7 @@ op_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t ct_len)
          * through verbatim from the caller so that check can never be
          * bypassed - do not substitute self->ct_len here.
          */
-        return ossl_ml_kem_decap(shared_secret, IMB_ML_KEM_SHARED_SECRET_BYTES, ct, ct_len,
+        return ossl_ml_kem_decap(self, shared_secret, IMB_ML_KEM_SHARED_SECRET_BYTES, ct, ct_len,
                                  self->key)
                        ? 0
                        : -1;

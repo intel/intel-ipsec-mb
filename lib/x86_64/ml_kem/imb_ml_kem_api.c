@@ -29,10 +29,11 @@
  * Public IMB ML-KEM (FIPS 203) API: context lifecycle plus the exported
  * one-line wrappers. Each wrapper performs optional SAFE_PARAM validation
  * then forwards to the backend dispatch table installed at imb_ml_kem_new()
- * time. imb_ml_kem_new() reads mgr->used_arch (in addition to
- * imb_get_features()) to cap the ISA level exposed to the vendored OpenSSL
- * ML-KEM code at the dispatch level the caller selected via
- * init_mb_mgr_*().
+ * time. imb_ml_kem_new() reads mgr->used_arch to install the ISA specific
+ * primitives matching the dispatch level the caller selected via
+ * init_mb_mgr_*(). The selection is per context and read-only afterwards,
+ * so contexts created from different managers, on different threads, run
+ * independently.
  */
 
 #include <stdlib.h>
@@ -43,6 +44,7 @@
 #include <intel-ipsec-mb.h>
 
 #include "ml_kem_internal.h"
+#include "crypto/ml_kem.h"
 #include "mb_mgr.h"
 
 /* ------------------------------------------------------------------------- */
@@ -52,7 +54,6 @@ IMB_DLL_EXPORT int
 imb_ml_kem_new(IMB_MGR *mgr, IMB_ML_KEM_ALG alg, IMB_ML_KEM **new_self)
 {
         IMB_ML_KEM *self;
-        uint64_t features = 0;
 
 #ifdef SAFE_PARAM
         if (new_self == NULL)
@@ -66,34 +67,29 @@ imb_ml_kem_new(IMB_MGR *mgr, IMB_ML_KEM_ALG alg, IMB_ML_KEM **new_self)
         if (alg != IMB_ML_KEM_512 && alg != IMB_ML_KEM_768 && alg != IMB_ML_KEM_1024)
                 return IMB_ERR_PQC_ALG;
 
-        /*
-         * Features are queried so a future ISA-specific backend can be
-         * chosen here.
-         */
-        (void) imb_get_features(mgr, &features);
-
-        /*
-         * Cap the features passed to the OpenSSL ia32cap shim at the ISA
-         * level the caller explicitly selected via init_mb_mgr_*() (recorded
-         * in mgr->used_arch). Without this, an explicit init_mb_mgr_avx2()
-         * call would still let ML-KEM use AVX512 SHAKEx4 sampling on
-         * AVX512-capable hardware, since mgr->features reflects the raw CPU
-         * capability rather than the manager's selected dispatch level.
-         */
-        if (mgr->used_arch < IMB_ARCH_AVX512)
-                features &= ~(IMB_FEATURE_AVX512F | IMB_FEATURE_AVX512DQ | IMB_FEATURE_AVX512BW |
-                              IMB_FEATURE_AVX512VL);
-        if (mgr->used_arch < IMB_ARCH_AVX2)
-                features &= ~IMB_FEATURE_AVX2;
-
-        imb_ossl_ia32cap_init(features);
-
         self = (IMB_ML_KEM *) calloc(1, sizeof(*self));
         if (self == NULL)
                 return IMB_ERR_PQC_INIT;
 
         self->mgr = mgr;
         self->alg = alg;
+
+        /*
+         * Install the ISA specific primitives for the architecture the
+         * manager was initialized with (init_mb_mgr_*() has already checked
+         * that the CPU supports it).
+         */
+        switch ((IMB_ARCH) mgr->used_arch) {
+        case IMB_ARCH_AVX2:
+        case IMB_ARCH_AVX512:
+        case IMB_ARCH_AVX10:
+                ossl_ml_kem_poly_init_avx2(self);
+                break;
+        default:
+                ossl_ml_kem_poly_init_base(self);
+                break;
+        }
+
         if (imb_ml_kem_backend_init_portable(self) != 0) {
                 free(self);
                 return IMB_ERR_PQC_INIT;

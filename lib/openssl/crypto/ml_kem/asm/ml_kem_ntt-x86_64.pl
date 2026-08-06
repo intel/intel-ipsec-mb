@@ -827,38 +827,6 @@ $ZETA_L1  = "$ZETA_L2+4";           # level-1 slice (1 word)
 
 $code .= <<'___';
 .text
-.extern OPENSSL_ia32cap_P
-
-###############################################################################
-# ml_kem_ntt_avx2_capable
-#
-# Prototype:
-#   int ml_kem_ntt_avx2_capable(void)
-#
-# Arguments:
-#   none
-#
-# Returns:
-#   1 if AVX2 is available, 0 otherwise.
-#
-# Description:
-#   Reads OPENSSL_ia32cap_P[2] and checks bit 5 (AVX2 capability).
-#   This is used by ML-KEM runtime dispatch to select AVX2 assembly paths.
-###############################################################################
-.align 4
-.globl ml_kem_ntt_avx2_capable
-.type  ml_kem_ntt_avx2_capable,@abi-omnipotent
-# Detect AVX2 support from OPENSSL_ia32cap_P (bit 5 in capability word 2).
-# Returns 1 when AVX2 is available, otherwise 0.
-ml_kem_ntt_avx2_capable:
-.cfi_startproc
-    endbranch
-    mov            OPENSSL_ia32cap_P+8(%rip), %eax
-    shr            $5, %eax
-    and            $1, %eax
-    ret
-.cfi_endproc
-.size    ml_kem_ntt_avx2_capable, .-ml_kem_ntt_avx2_capable
 
 
 ###############################################################################
@@ -1757,16 +1725,9 @@ ___
 
 }}} else {{{
 # When AVX2 is not available in the assembler, output safe stubs.
+# AVX2 entry points below trap if called on unsupported toolchains
 $code .= <<___;
 .text
-
-.globl  ml_kem_ntt_avx2_capable
-.type   ml_kem_ntt_avx2_capable,\@abi-omnipotent
-ml_kem_ntt_avx2_capable:
-    endbranch
-    xor     %eax, %eax
-    ret
-.size   ml_kem_ntt_avx2_capable, .-ml_kem_ntt_avx2_capable
 
 .globl  ml_kem_ntt_avx2
 .type   ml_kem_ntt_avx2,\@abi-omnipotent

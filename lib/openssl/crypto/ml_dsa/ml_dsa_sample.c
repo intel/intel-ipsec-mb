@@ -436,7 +436,7 @@ ossl_ml_dsa_sample_init_base(IMB_ML_DSA *self)
  */
 #include "ml_dsa_sample_hw_x86_64.h"
 
-/*
+/**
  * @brief Assign the AVX512 (x4 SHAKE) sampling primitives to \a self.
  *
  * @param [in,out] self  ML-DSA context to initialise

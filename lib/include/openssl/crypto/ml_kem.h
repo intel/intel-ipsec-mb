@@ -14,6 +14,9 @@
 #include "openssl_compat.h"
 #include <openssl/evp.h>
 
+/* IMB_ML_KEM holds the ISA specific primitives used by the functions below */
+#include "ml_kem_internal.h"
+
 #define ML_KEM_DEGREE 256
 /*
  * With (q-1) an odd multiple of 256, and 17 ("zeta") as a primitive 256th root
@@ -253,7 +256,7 @@ ossl_ml_kem_parse_private_key(const uint8_t *in, size_t len, ML_KEM_KEY *key);
 ML_KEM_KEY *
 ossl_ml_kem_set_seed(const uint8_t *seed, size_t seedlen, ML_KEM_KEY *key);
 __owur int
-ossl_ml_kem_genkey(uint8_t *pubenc, size_t publen, ML_KEM_KEY *key);
+ossl_ml_kem_genkey(const IMB_ML_KEM *self, uint8_t *pubenc, size_t publen, ML_KEM_KEY *key);
 
 /*
  * Perform an ML-KEM operation with a given ML-KEM key.  The key can generally
@@ -268,14 +271,24 @@ __owur int
 ossl_ml_kem_encode_seed(uint8_t *out, size_t len, const ML_KEM_KEY *key);
 
 __owur int
-ossl_ml_kem_encap_seed(uint8_t *ctext, size_t clen, uint8_t *shared_secret, size_t slen,
-                       const uint8_t *entropy, size_t elen, const ML_KEM_KEY *key);
+ossl_ml_kem_encap_seed(const IMB_ML_KEM *self, uint8_t *ctext, size_t clen, uint8_t *shared_secret,
+                       size_t slen, const uint8_t *entropy, size_t elen, const ML_KEM_KEY *key);
 __owur int
-ossl_ml_kem_encap_rand(uint8_t *ctext, size_t clen, uint8_t *shared_secret, size_t slen,
-                       const ML_KEM_KEY *key);
+ossl_ml_kem_encap_rand(const IMB_ML_KEM *self, uint8_t *ctext, size_t clen, uint8_t *shared_secret,
+                       size_t slen, const ML_KEM_KEY *key);
 __owur int
-ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen, const uint8_t *ctext, size_t clen,
-                  const ML_KEM_KEY *key);
+ossl_ml_kem_decap(const IMB_ML_KEM *self, uint8_t *shared_secret, size_t slen, const uint8_t *ctext,
+                  size_t clen, const ML_KEM_KEY *key);
+
+/*
+ * ISA specific polynomial primitives are held as function pointers in
+ * IMB_ML_KEM (see ml_kem_internal.h) and are assigned by the init functions
+ * below, which the ipsec-mb glue calls once, at context creation.
+ */
+void
+ossl_ml_kem_poly_init_base(IMB_ML_KEM *self);
+void
+ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self);
 
 /* Compare the public key hashes of two keys */
 __owur int

@@ -223,7 +223,7 @@ ossl_ml_dsa_ntt_init_base(IMB_ML_DSA *self)
         self->poly_ntt_mult = poly_ntt_mult_base;
 }
 
-/*
+/**
  * @brief Assign the AVX2 NTT primitives to \a self.
  *
  * @param [in,out] self  ML-DSA context to initialise
