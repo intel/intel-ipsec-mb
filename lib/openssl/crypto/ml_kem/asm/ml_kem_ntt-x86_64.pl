@@ -852,6 +852,7 @@ $code .= <<'___';
 # Returns 1 when AVX2 is available, otherwise 0.
 ml_kem_ntt_avx2_capable:
 .cfi_startproc
+    endbranch
     mov            OPENSSL_ia32cap_P+8(%rip), %eax
     shr            $5, %eax
     and            $1, %eax
@@ -901,6 +902,7 @@ ml_kem_ntt_avx2_capable:
 # Applies 7 butterfly layers and a final normalization to [0, q-1].
 ml_kem_ntt_avx2:
 .cfi_startproc
+    endbranch
     push           %r14
     push           %r15
 ___
@@ -997,6 +999,7 @@ $code .= <<'___';
 # Applies inverse butterflies, scales by inverse degree, and normalizes to [0, q-1].
 ml_kem_inverse_ntt_avx2:
 .cfi_startproc
+    endbranch
     push           %r14
     push           %r15
 ___
@@ -1080,6 +1083,7 @@ $code .= <<'___';
 # Vectorized modular add: lhs[i] = reduce_once(lhs[i] + rhs[i]) for 256 coefficients.
 ml_kem_add_avx2:
 .cfi_startproc
+    endbranch
     vpbroadcastw   q(%rip), %ymm0
 ___
 
@@ -1137,6 +1141,7 @@ $code .= <<'___';
 # Vectorized modular subtract: lhs[i] = reduce_once(lhs[i] + q - rhs[i]) for 256 coefficients.
 ml_kem_sub_avx2:
 .cfi_startproc
+    endbranch
     vpbroadcastw   q(%rip), %ymm0
 ___
 
@@ -1192,6 +1197,7 @@ $code .= <<'___';
 .type  ml_kem_mul_avx2,@function,3
 ml_kem_mul_avx2:
 .cfi_startproc
+    endbranch
     push           %r14
     push           %r15
 ___
@@ -1264,6 +1270,7 @@ $code .= <<'___';
 .type  ml_kem_mul_add_avx2,@function,3
 ml_kem_mul_add_avx2:
 .cfi_startproc
+    endbranch
     push           %r14
     push           %r15
 ___
@@ -1756,6 +1763,7 @@ $code .= <<___;
 .globl  ml_kem_ntt_avx2_capable
 .type   ml_kem_ntt_avx2_capable,\@abi-omnipotent
 ml_kem_ntt_avx2_capable:
+    endbranch
     xor     %eax, %eax
     ret
 .size   ml_kem_ntt_avx2_capable, .-ml_kem_ntt_avx2_capable
@@ -1763,6 +1771,7 @@ ml_kem_ntt_avx2_capable:
 .globl  ml_kem_ntt_avx2
 .type   ml_kem_ntt_avx2,\@abi-omnipotent
 ml_kem_ntt_avx2:
+    endbranch
     .byte   0x0f,0x0b       # ud2
     ret
 .size   ml_kem_ntt_avx2, .-ml_kem_ntt_avx2
@@ -1770,6 +1779,7 @@ ml_kem_ntt_avx2:
 .globl  ml_kem_inverse_ntt_avx2
 .type   ml_kem_inverse_ntt_avx2,\@abi-omnipotent
 ml_kem_inverse_ntt_avx2:
+    endbranch
     .byte   0x0f,0x0b       # ud2
     ret
 .size   ml_kem_inverse_ntt_avx2, .-ml_kem_inverse_ntt_avx2
@@ -1777,6 +1787,7 @@ ml_kem_inverse_ntt_avx2:
 .globl  ml_kem_add_avx2
 .type   ml_kem_add_avx2,\@abi-omnipotent
 ml_kem_add_avx2:
+    endbranch
     .byte   0x0f,0x0b       # ud2
     ret
 .size   ml_kem_add_avx2, .-ml_kem_add_avx2
@@ -1784,6 +1795,7 @@ ml_kem_add_avx2:
 .globl  ml_kem_sub_avx2
 .type   ml_kem_sub_avx2,\@abi-omnipotent
 ml_kem_sub_avx2:
+    endbranch
     .byte   0x0f,0x0b       # ud2
     ret
 .size   ml_kem_sub_avx2, .-ml_kem_sub_avx2
@@ -1791,6 +1803,7 @@ ml_kem_sub_avx2:
 .globl  ml_kem_mul_avx2
 .type   ml_kem_mul_avx2,\@abi-omnipotent
 ml_kem_mul_avx2:
+    endbranch
     .byte   0x0f,0x0b       # ud2
     ret
 .size   ml_kem_mul_avx2, .-ml_kem_mul_avx2
@@ -1798,6 +1811,7 @@ ml_kem_mul_avx2:
 .globl  ml_kem_mul_add_avx2
 .type   ml_kem_mul_add_avx2,\@abi-omnipotent
 ml_kem_mul_add_avx2:
+    endbranch
     .byte   0x0f,0x0b       # ud2
     ret
 .size   ml_kem_mul_add_avx2, .-ml_kem_mul_add_avx2

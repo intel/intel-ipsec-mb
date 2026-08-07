@@ -100,6 +100,7 @@ $code .= <<___;
 .type   ml_dsa_ntt_avx2_capable,\@abi-omnipotent
 .align 32
 ml_dsa_ntt_avx2_capable:
+    endbranch
     mov     OPENSSL_ia32cap_P+8(%rip), %rcx
     xor     %eax, %eax
     and     \$$avx2_mask, %ecx
@@ -1593,6 +1594,7 @@ ml_dsa_inverse_degree_montgomery:
 .align 32
 ml_dsa_poly_ntt_mult_avx2:
 .cfi_startproc
+    endbranch
 ___
 $code .= <<___ if ($win64);
     lea     -168(%rax), %rsp
@@ -1691,6 +1693,7 @@ $code .= <<___;
 .align 32
 ml_dsa_poly_ntt_avx2:
 .cfi_startproc
+    endbranch
 ___
 $code .= <<___ if ($win64);
     lea     -168(%rax), %rsp
@@ -1805,6 +1808,7 @@ $code .= <<___;
 .align 32
 ml_dsa_poly_ntt_inverse_avx2:
 .cfi_startproc
+    endbranch
 ___
 $code .= <<___ if ($win64);
     lea     -168(%rax), %rsp
@@ -2016,6 +2020,7 @@ $code .= <<___;
 .globl  ml_dsa_ntt_avx2_capable
 .type   ml_dsa_ntt_avx2_capable,\@abi-omnipotent
 ml_dsa_ntt_avx2_capable:
+    endbranch
     xor     %eax, %eax
     ret
 .size   ml_dsa_ntt_avx2_capable, .-ml_dsa_ntt_avx2_capable
@@ -2027,6 +2032,7 @@ ml_dsa_ntt_avx2_capable:
 ml_dsa_poly_ntt_mult_avx2:
 ml_dsa_poly_ntt_avx2:
 ml_dsa_poly_ntt_inverse_avx2:
+    endbranch
     .byte   0x0f,0x0b       # ud2
     ret
 .size   ml_dsa_poly_ntt_mult_avx2, .-ml_dsa_poly_ntt_mult_avx2

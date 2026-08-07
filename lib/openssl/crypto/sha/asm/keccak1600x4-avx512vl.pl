@@ -119,6 +119,7 @@ $code .= <<___;
 .type   SHA3_avx512vl_capable,\@abi-omnipotent
 .align 32
 SHA3_avx512vl_capable:
+    endbranch
     mov     OPENSSL_ia32cap_P+8(%rip), %ecx
     xor     %eax, %eax
     # 1<<31|1<<30|1<<17|1<<16: AVX512VL|AVX512BW|AVX512DQ|AVX512F
@@ -761,6 +762,7 @@ keccak_1600_extract_bytes_x4:
 .align  32
 SHA3_shake128_x4_avx512vl:
 .cfi_startproc
+    endbranch
     push    %rbp
 .cfi_push       %rbp
     mov     %rsp, %rbp
@@ -929,8 +931,9 @@ $code.=<<___;
 .type   SHA3_shake128_x4_inc_absorb_avx512vl,\@function,6
 .align  32
 SHA3_shake128_x4_inc_absorb_avx512vl:
-.L_SHA3_shake128_x4_inc_absorb_avx512vl:
 .cfi_startproc
+    endbranch
+.L_SHA3_shake128_x4_inc_absorb_avx512vl:
         push    %rbp
 .cfi_push       %rbp
         push    %rbx
@@ -1129,8 +1132,9 @@ $code.=<<___;
 .type   SHA3_shake128_x4_inc_finalize_avx512vl,\@function,1
 .align  32
 SHA3_shake128_x4_inc_finalize_avx512vl:
-.L_SHA3_shake128_x4_inc_finalize_avx512vl:
 .cfi_startproc
+    endbranch
+.L_SHA3_shake128_x4_inc_finalize_avx512vl:
     mov         8*100($arg1), %r11 # load state offset from s[100]
     mov         %r11, %r10
     and         \$~7, %r10d        # offset to the state register
@@ -1191,8 +1195,9 @@ $code.=<<___;
 .type   SHA3_shake128_x4_inc_squeeze_avx512vl,\@function,6
 .align  32
 SHA3_shake128_x4_inc_squeeze_avx512vl:
-.L_SHA3_shake128_x4_inc_squeeze_avx512vl:
 .cfi_startproc
+    endbranch
+.L_SHA3_shake128_x4_inc_squeeze_avx512vl:
     push    %rbp
 .cfi_push       %rbp
     push    %rbx
@@ -1410,6 +1415,7 @@ $code.=<<___;
 .align  32
 SHA3_shake256_x4_avx512vl:
 .cfi_startproc
+    endbranch
     push    %rbp
 .cfi_push       %rbp
     mov     %rsp, %rbp
@@ -1578,8 +1584,9 @@ $code.=<<___;
 .type   SHA3_shake256_x4_inc_absorb_avx512vl,\@function,6
 .align  32
 SHA3_shake256_x4_inc_absorb_avx512vl:
-.L_SHA3_shake256_x4_inc_absorb_avx512vl:
 .cfi_startproc
+    endbranch
+.L_SHA3_shake256_x4_inc_absorb_avx512vl:
     push    %rbp
 .cfi_push       %rbp
     push    %rbx
@@ -1778,8 +1785,9 @@ $code.=<<___;
 .type   SHA3_shake256_x4_inc_finalize_avx512vl,\@function,1
 .align  32
 SHA3_shake256_x4_inc_finalize_avx512vl:
-.L_SHA3_shake256_x4_inc_finalize_avx512vl:
 .cfi_startproc
+    endbranch
+.L_SHA3_shake256_x4_inc_finalize_avx512vl:
     mov     8*100($arg1), %r11 # load state offset from s[100]
     mov     %r11, %r10
     and     \$~7, %r10d        # offset to the state register
@@ -1840,8 +1848,9 @@ $code.=<<___;
 .type   SHA3_shake256_x4_inc_squeeze_avx512vl,\@function,6
 .align  32
 SHA3_shake256_x4_inc_squeeze_avx512vl:
-.L_SHA3_shake256_x4_inc_squeeze_avx512vl:
 .cfi_startproc
+    endbranch
+.L_SHA3_shake256_x4_inc_squeeze_avx512vl:
     push    %rbp
 .cfi_push       %rbp
     push    %rbx
@@ -2314,6 +2323,7 @@ $code .= <<___;
 .globl  SHA3_avx512vl_capable
 .type   SHA3_avx512vl_capable,\@abi-omnipotent
 SHA3_avx512vl_capable:
+    endbranch
     xor     %eax, %eax
     ret
 .size   SHA3_avx512vl_capable, .-SHA3_avx512vl_capable
@@ -2335,6 +2345,7 @@ SHA3_shake128_x4_inc_squeeze_avx512vl:
 SHA3_shake256_x4_inc_squeeze_avx512vl:
 SHA3_shake128_x4_avx512vl:
 SHA3_shake256_x4_avx512vl:
+    endbranch
     .byte   0x0f,0x0b # ud2
     ret
 .size   SHA3_shake128_x4_inc_absorb_avx512vl, .-SHA3_shake128_x4_inc_absorb_avx512vl
