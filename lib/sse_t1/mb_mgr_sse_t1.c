@@ -225,8 +225,7 @@
 #define FLUSH_JOB_ZUC_NCA6  flush_job_zuc_nca6_no_gfni_sse
 
 /* SNOW5G */
-#define SUBMIT_JOB_SNOW5G      snow_5g_sse
-#define SUBMIT_JOB_SNOW5G_NIA4 snow_5g_nia4_sse
+#define SUBMIT_JOB_SNOW5G snow_5g_sse
 
 /* SNOW3G UE2 & UIA2 */
 static IMB_JOB *
