@@ -360,15 +360,17 @@ endmacro()
 function(imb_add_perlasm SRC_PL DST_ASM)
   imb_perlasm_flavour(_flavour)
   get_filename_component(_dst_dir ${DST_ASM} DIRECTORY)
-  # OpenSSL-style perl-asm probes $ENV{CC} to detect assembler feature support
-  # (e.g. AVX2 / AVX512VL); the full vectorised code path is only emitted when
-  # CC resolves to a capable compiler.  Forward the project C compiler so the
-  # generated assembly is complete (not a degraded stub).
+  # OpenSSL-style perl-asm probes $ENV{CC} (and $ENV{ASM} for the nasm flavour)
+  # to detect assembler feature support (e.g. AVX2 / AVX512VL) and aborts when
+  # the kernels cannot be encoded. Forward the project C compiler and assembler
+  # so the probe inspects the tools that actually build the generated output.
   add_custom_command(
     OUTPUT ${DST_ASM}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${_dst_dir}
-    COMMAND ${CMAKE_COMMAND} -E env "CC=${CMAKE_C_COMPILER}" ${PERL_EXECUTABLE}
-            ${SRC_PL} ${_flavour} ${DST_ASM}
+    COMMAND
+      ${CMAKE_COMMAND} -E env "CC=${CMAKE_C_COMPILER}"
+      "ASM=${CMAKE_ASM_NASM_COMPILER}" ${PERL_EXECUTABLE} ${SRC_PL} ${_flavour}
+      ${DST_ASM}
     DEPENDS ${SRC_PL} ${CMAKE_SOURCE_DIR}/lib/openssl/crypto/perlasm/x86_64-xlate.pl
             ${CMAKE_SOURCE_DIR}/lib/openssl/crypto/perlasm/x86_64-support.pl
     COMMENT "Generating ASM ${DST_ASM} from ${SRC_PL}"

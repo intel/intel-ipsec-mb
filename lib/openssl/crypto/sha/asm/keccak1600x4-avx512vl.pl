@@ -37,6 +37,10 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../../perlasm/x86_64-xlate.pl" and -f $xlate) or
 die "can't locate x86_64-xlate.pl";
 
+# Assembler used for the nasm flavour. The build forwards its choice via
+# $ENV{ASM} so the probe inspects the same nasm that assembles the output.
+my $nasm = $ENV{ASM} || "nasm";
+
 # Check for AVX512VL support in assembler
 if (`$ENV{CC} -Wa,-v -c -o /dev/null -x assembler /dev/null 2>&1` =~ /GNU assembler version (\d+)\.(\d+)/) {
   my ($gas_major, $gas_minor) = ($1, $2);
@@ -45,8 +49,8 @@ if (`$ENV{CC} -Wa,-v -c -o /dev/null -x assembler /dev/null 2>&1` =~ /GNU assemb
 
 if (!$avx512vl
   && $win64
-  && ($flavour =~ /nasm/ || $ENV{ASM} =~ /nasm/)
-  && `nasm -v 2>&1` =~ /NASM version ([2-9]\.[0-9]+)(?:\.([0-9]+))?/)
+  && ($flavour =~ /nasm/ || ($ENV{ASM} // "") =~ /nasm/)
+  && `"$nasm" -v 2>&1` =~ /NASM version ([2-9]\.[0-9]+)(?:\.([0-9]+))?/)
 {
   $avx512vl = ($1 >= 2.12);
 }
@@ -54,6 +58,11 @@ if (!$avx512vl
 if (!$avx512vl && `$ENV{CC} -v 2>&1` =~ /((?:clang|LLVM) version|.*based on LLVM) ([0-9]+\.[0-9]+)/) {
     $avx512vl = ($2>=3.9);
 }
+
+# The optimised kernels are mandatory: fail the build (rather than emit
+# trapping stubs) when the assembler cannot encode them.
+$avx512vl > 0
+    or die "AVX512VL support is required in the assembler to build the x4 Keccak-1600 kernels.\nMinimum assembler versions: GNU as 2.26, clang 3.9, nasm 2.12.\n";
 
 open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\""
     or die "can't call $xlate: $!";
@@ -106,7 +115,6 @@ ___
 ___
 }
 
-if ($avx512vl>0) {{{
 
 my $avx512_mask = (1<<31)|(1<<30)|(1<<17)|(1<<16);  # AVX512VL|BW|DQ|F
 
@@ -2296,37 +2304,6 @@ shake_msg_pad_x4:
 .asciz  "Keccak-1600 absorb and squeeze for AVX512VL, CRYPTOGAMS by <appro\@openssl.org>"
 ___
 
-}}} else {{{
-
-# When AVX512VL is not available, output stub functions
-# AVX512VL entry points below are stubs on unsupported toolchains
-
-$code .= <<___;
-.text
-
-.globl  SHA3_shake128_x4_inc_absorb_avx512vl
-.globl  SHA3_shake256_x4_inc_absorb_avx512vl
-.globl  SHA3_shake128_x4_inc_finalize_avx512vl
-.globl  SHA3_shake256_x4_inc_finalize_avx512vl
-.globl  SHA3_shake128_x4_inc_squeeze_avx512vl
-.globl  SHA3_shake256_x4_inc_squeeze_avx512vl
-.globl  SHA3_shake128_x4_avx512vl
-.globl  SHA3_shake256_x4_avx512vl
-.type   SHA3_shake128_x4_inc_absorb_avx512vl,\@abi-omnipotent
-SHA3_shake128_x4_inc_absorb_avx512vl:
-SHA3_shake256_x4_inc_absorb_avx512vl:
-SHA3_shake128_x4_inc_finalize_avx512vl:
-SHA3_shake256_x4_inc_finalize_avx512vl:
-SHA3_shake128_x4_inc_squeeze_avx512vl:
-SHA3_shake256_x4_inc_squeeze_avx512vl:
-SHA3_shake128_x4_avx512vl:
-SHA3_shake256_x4_avx512vl:
-    endbranch
-    .byte   0x0f,0x0b # ud2
-    ret
-.size   SHA3_shake128_x4_inc_absorb_avx512vl, .-SHA3_shake128_x4_inc_absorb_avx512vl
-___
-}}}
 
 print $code;
 close STDOUT or die "error closing STDOUT: $!";

@@ -39,6 +39,10 @@ $dir = $1;
     or ($xlate = "${dir}../../perlasm/x86_64-xlate.pl" and -f $xlate)
     or die "can't locate x86_64-xlate.pl";
 
+# Assembler used for the nasm flavour. The build forwards its choice via
+# $ENV{ASM} so the probe inspects the same nasm that assembles the output.
+my $nasm = $ENV{ASM} || "nasm";
+
 # Check for AVX2 support in assembler
 if (`$ENV{CC} -Wa,-v -c -o /dev/null -x assembler /dev/null 2>&1` =~ /GNU assembler version ([2-9]\.[0-9]+)/) {
   $avx2 = ($1 >= 2.22);
@@ -46,8 +50,8 @@ if (`$ENV{CC} -Wa,-v -c -o /dev/null -x assembler /dev/null 2>&1` =~ /GNU assemb
 
 if (!$avx2
   && $win64
-  && ($flavour =~ /nasm/ || $ENV{ASM} =~ /nasm/)
-  && `nasm -v 2>&1` =~ /NASM version ([2-9]\.[0-9]+)(?:\.([0-9]+))?/)
+  && ($flavour =~ /nasm/ || ($ENV{ASM} // "") =~ /nasm/)
+  && `"$nasm" -v 2>&1` =~ /NASM version ([2-9]\.[0-9]+)(?:\.([0-9]+))?/)
 {
   $avx2 = ($1 >= 2.10);
 }
@@ -55,6 +59,11 @@ if (!$avx2
 if (!$avx2 && `$ENV{CC} -v 2>&1` =~ /((?:clang|LLVM) version|.*based on LLVM) ([0-9]+\.[0-9]+)/) {
     $avx2 = ($2>=3.3); # minimal tested version for AVX2
 }
+
+# The optimised kernels are mandatory: fail the build (rather than emit
+# trapping stubs) when the assembler cannot encode them.
+$avx2 > 0
+    or die "AVX2 support is required in the assembler to build the ML-KEM NTT kernels.\nMinimum assembler versions: GNU as 2.22, clang 3.3, nasm 2.10.\n";
 
 open OUT, "| \"$^X\" \"$xlate\" $flavour \"$output\""
     or die "can't call $xlate: $!";
@@ -805,7 +814,6 @@ ___
     }
 }
 
-if ($avx2>0) {{{
 
 # Per-level byte offsets into a zeta table.
 #
@@ -1723,61 +1731,6 @@ basemul_R2lo:
 
 ___
 
-}}} else {{{
-# When AVX2 is not available in the assembler, output safe stubs.
-# AVX2 entry points below trap if called on unsupported toolchains
-$code .= <<___;
-.text
-
-.globl  ml_kem_ntt_avx2
-.type   ml_kem_ntt_avx2,\@abi-omnipotent
-ml_kem_ntt_avx2:
-    endbranch
-    .byte   0x0f,0x0b       # ud2
-    ret
-.size   ml_kem_ntt_avx2, .-ml_kem_ntt_avx2
-
-.globl  ml_kem_inverse_ntt_avx2
-.type   ml_kem_inverse_ntt_avx2,\@abi-omnipotent
-ml_kem_inverse_ntt_avx2:
-    endbranch
-    .byte   0x0f,0x0b       # ud2
-    ret
-.size   ml_kem_inverse_ntt_avx2, .-ml_kem_inverse_ntt_avx2
-
-.globl  ml_kem_add_avx2
-.type   ml_kem_add_avx2,\@abi-omnipotent
-ml_kem_add_avx2:
-    endbranch
-    .byte   0x0f,0x0b       # ud2
-    ret
-.size   ml_kem_add_avx2, .-ml_kem_add_avx2
-
-.globl  ml_kem_sub_avx2
-.type   ml_kem_sub_avx2,\@abi-omnipotent
-ml_kem_sub_avx2:
-    endbranch
-    .byte   0x0f,0x0b       # ud2
-    ret
-.size   ml_kem_sub_avx2, .-ml_kem_sub_avx2
-
-.globl  ml_kem_mul_avx2
-.type   ml_kem_mul_avx2,\@abi-omnipotent
-ml_kem_mul_avx2:
-    endbranch
-    .byte   0x0f,0x0b       # ud2
-    ret
-.size   ml_kem_mul_avx2, .-ml_kem_mul_avx2
-
-.globl  ml_kem_mul_add_avx2
-.type   ml_kem_mul_add_avx2,\@abi-omnipotent
-ml_kem_mul_add_avx2:
-    endbranch
-    .byte   0x0f,0x0b       # ud2
-    ret
-.size   ml_kem_mul_add_avx2, .-ml_kem_mul_add_avx2
-___
-}}}
 
 print $code;
 close STDOUT or die "error closing STDOUT: $!";

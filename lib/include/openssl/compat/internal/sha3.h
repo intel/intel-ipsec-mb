@@ -121,9 +121,6 @@ KECCAK1600_CTX *
 ossl_shake256_new(void);
 
 /* Multi-buffer (x4) Keccak-f[1600] context and API */
-#if defined(KECCAK1600_ASM) &&                                                                     \
-        (defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)) &&      \
-        !defined(OPENSSL_NO_ASM)
 
 /* Context for 4-way parallel SHAKE operations */
 typedef struct {
@@ -177,7 +174,5 @@ void
 ossl_sha3_shake256_x4_avx512vl(void *out0, void *out1, void *out2, void *out3, size_t outlen,
                                const void *in0, const void *in1, const void *in2, const void *in3,
                                size_t inlen);
-
-#endif /* KECCAK1600_ASM && x86_64 && !OPENSSL_NO_ASM */
 
 #endif /* IMB_ML_DSA_COMPAT_INTERNAL_SHA3_H */

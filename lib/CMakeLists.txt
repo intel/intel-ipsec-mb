@@ -316,17 +316,16 @@ target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})
 #                                    directly; compat/openssl/* and
 #                                    compat/internal/* provide remaining
 #                                    non-vendored OpenSSL type/constant shims)
-# Defining KECCAK1600_ASM (and leaving OPENSSL_NO_ASM undefined) enables the
-# asm-accelerated paths: ml_dsa_ntt.c provides the AVX2 NTT and ml_dsa_sample.c
-# pulls in the x4 AVX512VL SHAKE sampling, both installed into the ML-DSA
-# context by imb_ml_dsa_new(), from the IMB_MGR architecture. These definitions
-# are applied to the ML-DSA sources only (sha3_x4_avx512vl.c needs
-# KECCAK1600_ASM).
+# The asm-accelerated paths are always built: ml_dsa_ntt.c provides the AVX2 NTT
+# and ml_dsa_sample.c pulls in the x4 AVX512VL SHAKE sampling, both installed
+# into the ML-DSA context by imb_ml_dsa_new(), from the IMB_MGR architecture.
+# The library is x86_64 only and the perl-asm aborts the build if the assembler
+# cannot encode these kernels, so no OpenSSL-style build-time capability gates
+# are needed.
 target_include_directories(
   ${LIB} PRIVATE ${DIR_INCLUDE}/ml_dsa ${DIR_INCLUDE}/ml_kem ${DIR_INCLUDE}/openssl
                  ${DIR_INCLUDE}/openssl/crypto/ml_dsa ${DIR_INCLUDE}/openssl/compat)
 foreach(FILE ${SRC_FILES_OPENSSL})
-  set_source_files_properties(
-    ${FILE} PROPERTIES COMPILE_DEFINITIONS
-                       "${LIB_DEFINES};KECCAK1600_ASM")
+  set_source_files_properties(${FILE} PROPERTIES COMPILE_DEFINITIONS
+                                                 "${LIB_DEFINES}")
 endforeach()

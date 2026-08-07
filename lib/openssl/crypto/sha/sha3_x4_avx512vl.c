@@ -21,10 +21,6 @@
 #include "internal/sha3.h"
 #include <string.h>
 
-#if defined(KECCAK1600_ASM) &&                                                                     \
-        (defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)) &&      \
-        !defined(OPENSSL_NO_ASM)
-
 /* External assembly function declarations */
 extern void
 SHA3_shake128_x4_inc_absorb_avx512vl(uint64_t *state, const void *in0, const void *in1,
@@ -185,5 +181,3 @@ ossl_sha3_shake256_x4_avx512vl(void *out0, void *out1, void *out2, void *out3, s
 {
         SHA3_shake256_x4_avx512vl(out0, out1, out2, out3, outlen, in0, in1, in2, in3, inlen);
 }
-
-#endif /* KECCAK1600_ASM && x86_64 && !OPENSSL_NO_ASM */

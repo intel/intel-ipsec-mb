@@ -165,7 +165,7 @@ constant_time_lt_64(uint64_t a, uint64_t b)
 static ossl_inline BN_ULONG
 value_barrier_bn(BN_ULONG a)
 {
-#if !defined(OPENSSL_NO_ASM) && defined(__GNUC__)
+#if defined(__GNUC__)
         BN_ULONG r;
         __asm__("" : "=r"(r) : "0"(a));
 #else
@@ -305,7 +305,7 @@ constant_time_eq_int_8(int a, int b)
 static ossl_inline unsigned int
 value_barrier(unsigned int a)
 {
-#if !defined(OPENSSL_NO_ASM) && defined(__GNUC__)
+#if defined(__GNUC__)
         unsigned int r;
         __asm__("" : "=r"(r) : "0"(a));
 #else
@@ -318,7 +318,7 @@ value_barrier(unsigned int a)
 static ossl_inline uint32_t
 value_barrier_32(uint32_t a)
 {
-#if !defined(OPENSSL_NO_ASM) && defined(__GNUC__)
+#if defined(__GNUC__)
         uint32_t r;
         __asm__("" : "=r"(r) : "0"(a));
 #else
@@ -331,7 +331,7 @@ value_barrier_32(uint32_t a)
 static ossl_inline uint64_t
 value_barrier_64(uint64_t a)
 {
-#if !defined(OPENSSL_NO_ASM) && defined(__GNUC__)
+#if defined(__GNUC__)
         uint64_t r;
         __asm__("" : "=r"(r) : "0"(a));
 #else
@@ -344,7 +344,7 @@ value_barrier_64(uint64_t a)
 static ossl_inline size_t
 value_barrier_s(size_t a)
 {
-#if !defined(OPENSSL_NO_ASM) && defined(__GNUC__)
+#if defined(__GNUC__)
         size_t r;
         __asm__("" : "=r"(r) : "0"(a));
 #else
@@ -357,7 +357,7 @@ value_barrier_s(size_t a)
 static ossl_inline unsigned char
 value_barrier_8(unsigned char a)
 {
-#if !defined(OPENSSL_NO_ASM) && defined(__GNUC__)
+#if defined(__GNUC__)
         unsigned char r;
         __asm__("" : "=r"(r) : "0"(a));
 #else
