@@ -188,8 +188,39 @@ align_label
         ;; Phase 2: extra full blocks for the longer lane
         test    DWORD(%%len0), DWORD(%%len0)
         jz      %%phase2_done
+
+        ;; The two lanes have different block counts, so phase 2 will advance
+        ;; both %%offset and the shared keystream past the end of the shorter
+        ;; lane.  Emit the shorter lane's partial tail here, while %%offset and
+        ;; the pending keystream still belong to it, and clear its remainder so
+        ;; that the common tail below only handles the longer lane.
+        vpaddw  TEMP1, LFSR_B_HDQ_L01, FSM_R1_L01
+        vpxord  TEMP1, TEMP1, FSM_R2_L01
+        lea     rax, [rel byte_len_to_mask_table_nca4]
+
         test    DWORD(%%longer_lane), DWORD(%%longer_lane)
-        jnz     %%phase2_lane1
+        jnz     %%short_tail_lane0
+
+        ;; lane 0 is the longer lane, so lane 1 holds the short tail
+        kmovw           k1, [rax + %%rem1*2]
+        vextracti32x4   XWORD(TEMP0), TEMP1, 1
+        vmovdqu8        XWORD(TEMP2){k1}{z}, [r10 + %%offset]
+        vpxord          XWORD(TEMP2), XWORD(TEMP0), XWORD(TEMP2)
+        vmovdqu8        [rbp + %%offset]{k1}, XWORD(TEMP2)
+        xor             DWORD(%%rem1), DWORD(%%rem1)
+        kxord           k1, k1, k1
+        jmp             %%phase2_lane0
+
+align_label
+%%short_tail_lane0:
+        ;; lane 1 is the longer lane, so lane 0 holds the short tail
+        kmovw           k1, [rax + %%rem0*2]
+        vmovdqu8        XWORD(TEMP2){k1}{z}, [r8 + %%offset]
+        vpxord          XWORD(TEMP2), XWORD(TEMP1), XWORD(TEMP2)
+        vmovdqu8        [r9 + %%offset]{k1}, XWORD(TEMP2)
+        xor             DWORD(%%rem0), DWORD(%%rem0)
+        kxord           k1, k1, k1
+        jmp             %%phase2_lane1
 align_loop
 %%phase2_lane0:
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
