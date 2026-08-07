@@ -153,4 +153,9 @@ flush_job_aes256_ccm_auth_vaes_avx2(MB_MGR_CCM_OOO *state);
 IMB_DLL_EXPORT void
 set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
 
+/* CRC */
+uint32_t
+crc32_vclmul_avx2(const uint32_t init_crc, const void *msg, const uint64_t len,
+                  const void *const_ptr);
+
 #endif /* IMB_ASM_AVX2_T2_H */
