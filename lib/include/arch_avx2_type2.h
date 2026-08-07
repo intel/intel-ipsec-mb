@@ -157,5 +157,25 @@ set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
 uint32_t
 crc32_vclmul_avx2(const uint32_t init_crc, const void *msg, const uint64_t len,
                   const void *const_ptr);
+uint32_t
+crc32_sctp_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc24_lte_a_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc24_lte_b_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc16_fp_data_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc11_fp_header_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc7_fp_header_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc10_iuup_data_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc6_iuup_header_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc32_wimax_ofdma_data_avx2(const void *msg, const uint64_t len);
+uint32_t
+crc8_wimax_ofdma_hcs_avx2(const void *msg, const uint64_t len);
 
 #endif /* IMB_ASM_AVX2_T2_H */

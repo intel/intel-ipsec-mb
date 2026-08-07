@@ -448,16 +448,16 @@ init_mb_mgr_avx2_t4_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->crc32_ethernet_fcs = ethernet_fcs_avx;
         state->crc16_x25 = crc16_x25_avx;
-        state->crc32_sctp = crc32_sctp_avx;
-        state->crc24_lte_a = crc24_lte_a_avx;
-        state->crc24_lte_b = crc24_lte_b_avx;
-        state->crc16_fp_data = crc16_fp_data_avx;
-        state->crc11_fp_header = crc11_fp_header_avx;
-        state->crc7_fp_header = crc7_fp_header_avx;
-        state->crc10_iuup_data = crc10_iuup_data_avx;
-        state->crc6_iuup_header = crc6_iuup_header_avx;
-        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
-        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
+        state->crc32_sctp = crc32_sctp_avx2;
+        state->crc24_lte_a = crc24_lte_a_avx2;
+        state->crc24_lte_b = crc24_lte_b_avx2;
+        state->crc16_fp_data = crc16_fp_data_avx2;
+        state->crc11_fp_header = crc11_fp_header_avx2;
+        state->crc7_fp_header = crc7_fp_header_avx2;
+        state->crc10_iuup_data = crc10_iuup_data_avx2;
+        state->crc6_iuup_header = crc6_iuup_header_avx2;
+        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx2;
+        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx2;
 
 #ifdef AVX_IFMA
         state->chacha20_poly1305_init = init_chacha20_poly1305_fma_avx2;
