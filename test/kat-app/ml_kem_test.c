@@ -158,7 +158,7 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        keygen_params.seed_d_z = (const uint8_t *) v->seed;
+        keygen_params.seed_d_z = v->seed;
         rc = imb_ml_kem_keypair(self, exp_ek, exp_dk, &keygen_params);
         if (rc != 0 ||
             (v->hasEk && (v->ekLen != ek_bytes || memcmp(exp_ek, v->ek, ek_bytes) != 0))) {
@@ -167,7 +167,7 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
                 goto exit;
         }
 
-        rc = imb_ml_kem_decap(self, buf_ss, (const uint8_t *) v->c, v->cLen, NULL);
+        rc = imb_ml_kem_decap(self, buf_ss, v->c, v->cLen, NULL);
         if (rc != 0 || memcmp(buf_ss, v->K, ML_KEM_K_BYTES) != 0) {
                 printf("ML-KEM decap KAT mismatch (%s tcId=%zu rc=%d)\n", ml_kem_alg_name(alg),
                        v->tcId, rc);
@@ -206,9 +206,9 @@ ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const str
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        set_rc = (v->ekLen == ek_bytes) ? imb_ml_kem_set_pubkey(self, (const uint8_t *) v->ek) : -1;
+        set_rc = (v->ekLen == ek_bytes) ? imb_ml_kem_set_pubkey(self, v->ek) : -1;
         if (set_rc == 0) {
-                encap_params.m_32 = (const uint8_t *) v->m;
+                encap_params.m_32 = v->m;
                 rc = imb_ml_kem_encap(self, buf_ct, buf_ss, &encap_params);
         }
 
@@ -264,7 +264,7 @@ ml_kem_keygen_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg,
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        keygen_params.seed_d_z = (const uint8_t *) v->seed;
+        keygen_params.seed_d_z = v->seed;
         rc = imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params);
 
         if (v->resultValid) {
@@ -318,9 +318,9 @@ ml_kem_semi_expanded_decaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG 
                 return 1;
 
         if (v->dkLen == dk_bytes) {
-                set_rc = imb_ml_kem_set_privkey(self, (const uint8_t *) v->dk);
+                set_rc = imb_ml_kem_set_privkey(self, v->dk);
                 if (set_rc == 0)
-                        rc = imb_ml_kem_decap(self, buf_ss, (const uint8_t *) v->c, v->cLen, NULL);
+                        rc = imb_ml_kem_decap(self, buf_ss, v->c, v->cLen, NULL);
         }
 
         if (v->resultValid) {

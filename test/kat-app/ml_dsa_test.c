@@ -130,8 +130,8 @@ ml_dsa_ctx_for_alg(const IMB_ML_DSA_ALG alg, struct test_suite_context ctxs[3])
 }
 
 static int
-ml_dsa_build_mprime(const uint8_t *msg, const size_t msg_len, const uint8_t *ctx,
-                    const size_t ctx_len, size_t *mprime_len)
+ml_dsa_build_mprime(const void *msg, const size_t msg_len, const void *ctx, const size_t ctx_len,
+                    size_t *mprime_len)
 {
         if (ctx_len > 255 || (2 + ctx_len + msg_len) > sizeof(buf_mprime))
                 return -1;
@@ -149,10 +149,9 @@ ml_dsa_build_mprime(const uint8_t *msg, const size_t msg_len, const uint8_t *ctx
 
 static int
 ml_dsa_check_internal_sign(IMB_ML_DSA *self, const IMB_ML_DSA_ALG alg, const size_t tcId,
-                           const uint8_t *msg, const size_t msg_len, const uint8_t *ctx,
-                           const size_t ctx_len, const uint8_t *rnd_ptr,
-                           const uint8_t *expected_sig, const size_t expected_sig_len,
-                           const int expect_valid)
+                           const void *msg, const size_t msg_len, const void *ctx,
+                           const size_t ctx_len, const void *rnd_ptr, const void *expected_sig,
+                           const size_t expected_sig_len, const int expect_valid)
 {
         size_t sig_len = 0;
         size_t mprime_len = 0;
@@ -187,8 +186,8 @@ ml_dsa_check_internal_sign(IMB_ML_DSA *self, const IMB_ML_DSA_ALG alg, const siz
 
 static int
 ml_dsa_check_internal_verify(IMB_ML_DSA *self, const IMB_ML_DSA_ALG alg, const size_t tcId,
-                             const uint8_t *msg, const size_t msg_len, const uint8_t *ctx,
-                             const size_t ctx_len, const uint8_t *sig, const size_t sig_len,
+                             const void *msg, const size_t msg_len, const void *ctx,
+                             const size_t ctx_len, const void *sig, const size_t sig_len,
                              const int external_rc)
 {
         size_t mprime_len = 0;
@@ -216,13 +215,13 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                         const struct sig_sign_test *v)
 {
         size_t pk_bytes, sk_bytes, sig_bytes;
-        const uint8_t *ctx_ptr = NULL;
+        const void *ctx_ptr = NULL;
         /*
          * A vector without an explicit "rnd" field is a deterministic test
          * case (implied all-zero randomizer); default to zero_rnd rather
          * than NULL since imb_ml_dsa_sign()'s NULL means auto-random.
          */
-        const uint8_t *rnd_ptr = zero_rnd;
+        const void *rnd_ptr = zero_rnd;
         IMB_ML_DSA *self = NULL;
         size_t sig_len = 0;
         int rc;
@@ -237,10 +236,10 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         if (v->hasRnd) {
                 if (v->rndLen != ML_DSA_RND_BYTES)
                         return 1;
-                rnd_ptr = (const uint8_t *) v->rnd;
+                rnd_ptr = v->rnd;
         }
         if (v->hasCtx)
-                ctx_ptr = (const uint8_t *) v->ctx;
+                ctx_ptr = v->ctx;
 
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
@@ -248,7 +247,7 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         {
                 IMB_ML_DSA_KEYGEN_PARAMS keygen_params;
 
-                keygen_params.xi_32 = (const uint8_t *) v->privateSeed;
+                keygen_params.xi_32 = v->privateSeed;
                 rc = imb_ml_dsa_keypair(self, buf_pk, buf_sk, &keygen_params);
         }
         if (rc != 0 || (v->publicKey != NULL && memcmp(buf_pk, v->publicKey, pk_bytes) != 0)) {
@@ -263,8 +262,7 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
                 sign_params.rnd_32 = rnd_ptr;
-                rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, (const uint8_t *) v->msg, v->msgLen,
-                                     &sign_params);
+                rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, v->msg, v->msgLen, &sign_params);
         }
         if (v->resultValid) {
                 IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
@@ -279,15 +277,15 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                         }
                         verify_params.ctx = ctx_ptr;
                         verify_params.ctx_len = v->ctxLen;
-                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->msg, v->msgLen, buf_sig,
-                                              sig_len, &verify_params) != 0) {
+                        if (imb_ml_dsa_verify(self, v->msg, v->msgLen, buf_sig, sig_len,
+                                              &verify_params) != 0) {
                                 printf("ML-DSA sigGen verify failed (%s tcId=%zu)\n",
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
                         }
-                        if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
-                                                       v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
-                                                       (const uint8_t *) v->sig, v->sigLen, 1) != 0)
+                        if (ml_dsa_check_internal_sign(self, alg, v->tcId, v->msg, v->msgLen,
+                                                       ctx_ptr, v->ctxLen, rnd_ptr, v->sig,
+                                                       v->sigLen, 1) != 0)
                                 goto exit;
                 }
 
@@ -309,16 +307,16 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
                         }
-                        if (imb_ml_dsa_sign(self, buf_sig, &mu_sig_len, (const uint8_t *) v->mu,
-                                            v->muLen, &mu_params) != 0 ||
+                        if (imb_ml_dsa_sign(self, buf_sig, &mu_sig_len, v->mu, v->muLen,
+                                            &mu_params) != 0 ||
                             mu_sig_len != sig_bytes || memcmp(buf_sig, v->sig, sig_bytes) != 0) {
                                 printf("ML-DSA sigGen msg_is_mu mismatch (%s tcId=%zu)\n",
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
                         }
                         mu_verify_params.msg_is_mu = 1;
-                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->mu, v->muLen, buf_sig,
-                                              mu_sig_len, &mu_verify_params) != 0) {
+                        if (imb_ml_dsa_verify(self, v->mu, v->muLen, buf_sig, mu_sig_len,
+                                              &mu_verify_params) != 0) {
                                 printf("ML-DSA sigGen msg_is_mu verify failed (%s tcId=%zu)\n",
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
@@ -331,9 +329,8 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                         goto exit;
                 }
                 if (v->msg != NULL &&
-                    ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
-                                               v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
-                                               (const uint8_t *) v->sig, v->sigLen, 0) != 0)
+                    ml_dsa_check_internal_sign(self, alg, v->tcId, v->msg, v->msgLen, ctx_ptr,
+                                               v->ctxLen, rnd_ptr, v->sig, v->sigLen, 0) != 0)
                         goto exit;
         }
 
@@ -348,13 +345,13 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                           const struct sig_sign_test *v)
 {
         size_t pk_bytes, sk_bytes, sig_bytes;
-        const uint8_t *ctx_ptr = NULL;
+        const void *ctx_ptr = NULL;
         /*
          * A vector without an explicit "rnd" field is a deterministic test
          * case (implied all-zero randomizer); default to zero_rnd rather
          * than NULL since imb_ml_dsa_sign()'s NULL means auto-random.
          */
-        const uint8_t *rnd_ptr = zero_rnd;
+        const void *rnd_ptr = zero_rnd;
         IMB_ML_DSA *self = NULL;
         size_t sig_len = 0;
         int set_rc;
@@ -370,23 +367,22 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         if (v->hasRnd) {
                 if (v->rndLen != ML_DSA_RND_BYTES)
                         return 1;
-                rnd_ptr = (const uint8_t *) v->rnd;
+                rnd_ptr = v->rnd;
         }
         if (v->hasCtx)
-                ctx_ptr = (const uint8_t *) v->ctx;
+                ctx_ptr = v->ctx;
 
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        set_rc = imb_ml_dsa_set_privkey(self, (const uint8_t *) v->privateKey);
+        set_rc = imb_ml_dsa_set_privkey(self, v->privateKey);
         if (set_rc == 0 && v->msg != NULL) {
                 IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
 
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
                 sign_params.rnd_32 = rnd_ptr;
-                rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, (const uint8_t *) v->msg, v->msgLen,
-                                     &sign_params);
+                rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, v->msg, v->msgLen, &sign_params);
         }
 
         if (v->resultValid) {
@@ -403,15 +399,15 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                         }
                         verify_params.ctx = ctx_ptr;
                         verify_params.ctx_len = v->ctxLen;
-                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->msg, v->msgLen, buf_sig,
-                                              sig_len, &verify_params) != 0) {
+                        if (imb_ml_dsa_verify(self, v->msg, v->msgLen, buf_sig, sig_len,
+                                              &verify_params) != 0) {
                                 printf("ML-DSA sigGen verify failed (%s tcId=%zu)\n",
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
                         }
-                        if (ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
-                                                       v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
-                                                       (const uint8_t *) v->sig, v->sigLen, 1) != 0)
+                        if (ml_dsa_check_internal_sign(self, alg, v->tcId, v->msg, v->msgLen,
+                                                       ctx_ptr, v->ctxLen, rnd_ptr, v->sig,
+                                                       v->sigLen, 1) != 0)
                                 goto exit;
                 }
 
@@ -433,16 +429,16 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
                         }
-                        if (imb_ml_dsa_sign(self, buf_sig, &mu_sig_len, (const uint8_t *) v->mu,
-                                            v->muLen, &mu_params) != 0 ||
+                        if (imb_ml_dsa_sign(self, buf_sig, &mu_sig_len, v->mu, v->muLen,
+                                            &mu_params) != 0 ||
                             mu_sig_len != sig_bytes || memcmp(buf_sig, v->sig, sig_bytes) != 0) {
                                 printf("ML-DSA sigGen msg_is_mu mismatch (%s tcId=%zu)\n",
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
                         }
                         mu_verify_params.msg_is_mu = 1;
-                        if (imb_ml_dsa_verify(self, (const uint8_t *) v->mu, v->muLen, buf_sig,
-                                              mu_sig_len, &mu_verify_params) != 0) {
+                        if (imb_ml_dsa_verify(self, v->mu, v->muLen, buf_sig, mu_sig_len,
+                                              &mu_verify_params) != 0) {
                                 printf("ML-DSA sigGen msg_is_mu verify failed (%s tcId=%zu)\n",
                                        ml_dsa_alg_name(alg), v->tcId);
                                 goto exit;
@@ -455,9 +451,8 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                         goto exit;
                 }
                 if (v->msg != NULL &&
-                    ml_dsa_check_internal_sign(self, alg, v->tcId, (const uint8_t *) v->msg,
-                                               v->msgLen, ctx_ptr, v->ctxLen, rnd_ptr,
-                                               (const uint8_t *) v->sig, v->sigLen, 0) != 0)
+                    ml_dsa_check_internal_sign(self, alg, v->tcId, v->msg, v->msgLen, ctx_ptr,
+                                               v->ctxLen, rnd_ptr, v->sig, v->sigLen, 0) != 0)
                         goto exit;
         }
 
@@ -472,7 +467,7 @@ ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                      const struct sig_verify_test *v)
 {
         size_t pk_bytes, sk_bytes, sig_bytes;
-        const uint8_t *ctx_ptr = NULL;
+        const void *ctx_ptr = NULL;
         IMB_ML_DSA *self = NULL;
         int set_rc;
         int rc;
@@ -485,19 +480,18 @@ ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         if (v->publicKeyLen != pk_bytes)
                 return v->resultValid ? 1 : 0;
         if (v->hasCtx)
-                ctx_ptr = (const uint8_t *) v->ctx;
+                ctx_ptr = v->ctx;
 
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        set_rc = imb_ml_dsa_set_pubkey(self, (const uint8_t *) v->publicKey);
+        set_rc = imb_ml_dsa_set_pubkey(self, v->publicKey);
         if (set_rc == 0) {
                 IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
 
                 verify_params.ctx = ctx_ptr;
                 verify_params.ctx_len = v->ctxLen;
-                rc = imb_ml_dsa_verify(self, (const uint8_t *) v->msg, v->msgLen,
-                                       (const uint8_t *) v->sig, v->sigLen, &verify_params);
+                rc = imb_ml_dsa_verify(self, v->msg, v->msgLen, v->sig, v->sigLen, &verify_params);
         } else {
                 rc = -1;
         }
@@ -507,9 +501,8 @@ ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                        ml_dsa_alg_name(alg), v->tcId, v->resultValid, set_rc, rc);
                 goto exit;
         }
-        if (ml_dsa_check_internal_verify(self, alg, v->tcId, (const uint8_t *) v->msg, v->msgLen,
-                                         ctx_ptr, v->ctxLen, (const uint8_t *) v->sig, v->sigLen,
-                                         rc) != 0)
+        if (ml_dsa_check_internal_verify(self, alg, v->tcId, v->msg, v->msgLen, ctx_ptr, v->ctxLen,
+                                         v->sig, v->sigLen, rc) != 0)
                 goto exit;
 
         ret = 0;
