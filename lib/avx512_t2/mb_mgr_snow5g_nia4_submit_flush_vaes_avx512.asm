@@ -136,20 +136,20 @@ endstruc
 
         mov     rax, [%%STATE + _snow5g_job_in_lane + 0*8]
         test    rax, rax
-        jz      .check_lane1
+        jz      %%.check_lane1
 
         PROCESS_NIA4_LANE %%STATE, 0, xmm0, k1
 
 align_label
-.check_lane1:
+%%.check_lane1:
         mov     rax, [%%STATE + _snow5g_job_in_lane + 1*8]
         test    rax, rax
-        jz      .auth_done
+        jz      %%.auth_done
 
         PROCESS_NIA4_LANE %%STATE, 1, xmm0, k1
 
 align_label
-.auth_done:
+%%.auth_done:
 
 %ifdef SAFE_DATA
         vpxorq  xmm0, xmm0, xmm0
