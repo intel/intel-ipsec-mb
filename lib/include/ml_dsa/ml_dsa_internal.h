@@ -90,27 +90,27 @@ struct IMB_ML_DSA {
         struct ml_dsa_key_st *key;
 
         /* Backend dispatch table. All ops return 0 on success, <0 on error. */
-        int (*keypair)(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk, const uint8_t xi_32_or_null[32]);
-        int (*set_privkey)(IMB_ML_DSA *self, const uint8_t *sk);
-        int (*set_pubkey)(IMB_ML_DSA *self, const uint8_t *pk);
-        int (*sign_ctx)(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                        size_t msg_len, const uint8_t *ctx, size_t ctx_len,
-                        const uint8_t *rnd_32_or_null, int msg_is_mu);
-        int (*verify_ctx)(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *ctx,
-                          size_t ctx_len, const uint8_t *sig, size_t sig_len, int msg_is_mu);
+        int (*keypair)(IMB_ML_DSA *self, void *pk, void *sk, const void *xi_32_or_null);
+        int (*set_privkey)(IMB_ML_DSA *self, const void *sk);
+        int (*set_pubkey)(IMB_ML_DSA *self, const void *pk);
+        int (*sign_ctx)(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
+                        size_t msg_len, const void *ctx, size_t ctx_len, const void *rnd_32_or_null,
+                        int msg_is_mu);
+        int (*verify_ctx)(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *ctx,
+                          size_t ctx_len, const void *sig, size_t sig_len, int msg_is_mu);
         /**
          * FIPS 204 internal interface (ML-DSA.Sign_internal /
          * ML-DSA.Verify_internal): no context string, no message encoding
          * (equivalent to sign_ctx/verify_ctx with ctx = NULL, ctx_len = 0 and
          * encode = 0).
          */
-        int (*sign_internal)(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                             size_t msg_len, const uint8_t *rnd_32_or_null);
-        int (*verify_internal)(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len,
-                               const uint8_t *sig, size_t sig_len);
-        int (*pubkey_validate)(IMB_ML_DSA *self, const uint8_t *pk);
-        int (*privkey_validate)(IMB_ML_DSA *self, const uint8_t *sk);
-        int (*pubkey_from_privkey)(IMB_ML_DSA *self, const uint8_t *sk, uint8_t *pk);
+        int (*sign_internal)(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
+                             size_t msg_len, const void *rnd_32_or_null);
+        int (*verify_internal)(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
+                               size_t sig_len);
+        int (*pubkey_validate)(IMB_ML_DSA *self, const void *pk);
+        int (*privkey_validate)(IMB_ML_DSA *self, const void *sk);
+        int (*pubkey_from_privkey)(IMB_ML_DSA *self, const void *sk, void *pk);
 };
 
 /**

@@ -84,7 +84,7 @@ imb_ml_kem_backend_free_key(IMB_ML_KEM *self)
 /* Key generation                                                            */
 /* ------------------------------------------------------------------------- */
 static int
-op_keypair(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk, const uint8_t seed_64_or_null[64])
+op_keypair(IMB_ML_KEM *self, void *ek, void *dk, const void *seed_64_or_null)
 {
         ML_KEM_KEY *key = NULL;
         int rc = -1;
@@ -121,7 +121,7 @@ end:
 /* Key binding (decode once, cache, reuse for every subsequent operation)    */
 /* ------------------------------------------------------------------------- */
 static int
-op_set_privkey(IMB_ML_KEM *self, const uint8_t *dk)
+op_set_privkey(IMB_ML_KEM *self, const void *dk)
 {
         ML_KEM_KEY *key = NULL;
         int rc = -1;
@@ -146,7 +146,7 @@ end:
 }
 
 static int
-op_set_pubkey(IMB_ML_KEM *self, const uint8_t *ek)
+op_set_pubkey(IMB_ML_KEM *self, const void *ek)
 {
         ML_KEM_KEY *key = NULL;
         int rc = -1;
@@ -173,7 +173,7 @@ end:
 /* Encapsulation                                                             */
 /* ------------------------------------------------------------------------- */
 static int
-op_encap(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret, const uint8_t m_32_or_null[32])
+op_encap(IMB_ML_KEM *self, void *ct, void *shared_secret, const void *m_32_or_null)
 {
         if (self->key == NULL || !ossl_ml_kem_have_pubkey(self->key))
                 return -1;
@@ -195,7 +195,7 @@ op_encap(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret, const uint8_t m_
 /* Decapsulation                                                             */
 /* ------------------------------------------------------------------------- */
 static int
-op_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, size_t ct_len)
+op_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t ct_len)
 {
         if (self->key == NULL || !ossl_ml_kem_have_prvkey(self->key))
                 return -1;
@@ -218,7 +218,7 @@ op_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, size_t ct_
 /* Key validation (stateless: do not touch self->key)                       */
 /* ------------------------------------------------------------------------- */
 static int
-op_pubkey_validate(IMB_ML_KEM *self, const uint8_t *ek)
+op_pubkey_validate(IMB_ML_KEM *self, const void *ek)
 {
         ML_KEM_KEY *key = NULL;
         int rc = -1;
@@ -237,7 +237,7 @@ end:
 }
 
 static int
-op_privkey_validate(IMB_ML_KEM *self, const uint8_t *dk)
+op_privkey_validate(IMB_ML_KEM *self, const void *dk)
 {
         ML_KEM_KEY *key = NULL;
         int rc = -1;

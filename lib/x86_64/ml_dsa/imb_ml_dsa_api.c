@@ -121,8 +121,7 @@ imb_ml_dsa_free(IMB_ML_DSA *self)
 /* Key generation                                                            */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
-                   const IMB_ML_DSA_KEYGEN_PARAMS *params)
+imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN_PARAMS *params)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -130,7 +129,7 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
         if (pk == NULL || sk == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
-        const uint8_t *xi_32 = (params != NULL) ? params->xi_32 : NULL;
+        const void *xi_32 = (params != NULL) ? params->xi_32 : NULL;
         const int rc = self->keypair(self, pk, sk, xi_32);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
@@ -140,7 +139,7 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
 /* Key binding                                                               */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const uint8_t *sk)
+imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -154,7 +153,7 @@ imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const uint8_t *sk)
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const uint8_t *pk)
+imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -171,12 +170,12 @@ imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const uint8_t *pk)
 /* Signing                                                                   */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg, size_t msg_len,
+imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, size_t msg_len,
                 const IMB_ML_DSA_SIGN_PARAMS *params)
 {
-        const uint8_t *ctx = NULL;
+        const void *ctx = NULL;
         size_t ctx_len = 0;
-        const uint8_t *rnd_32 = NULL;
+        const void *rnd_32 = NULL;
         int msg_is_mu = 0;
 
         if (params != NULL) {
@@ -215,8 +214,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
  * ------------------------------------------------------------------------
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                         size_t msg_len, const uint8_t *rnd_32_or_null)
+imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
+                         size_t msg_len, const void *rnd_32_or_null)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -237,10 +236,10 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const 
 /* Verification                                                              */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *sig,
+imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
                   size_t sig_len, const IMB_ML_DSA_VERIFY_PARAMS *params)
 {
-        const uint8_t *ctx = NULL;
+        const void *ctx = NULL;
         size_t ctx_len = 0;
         int msg_is_mu = 0;
 
@@ -269,7 +268,7 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const ui
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *sig,
+imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
                            size_t sig_len)
 {
 #ifdef SAFE_PARAM
@@ -291,7 +290,7 @@ imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len,
 /* Key validation and derivation                                             */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const uint8_t *pk)
+imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -305,7 +304,7 @@ imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const uint8_t *pk)
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk)
+imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -319,7 +318,7 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk)
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const uint8_t *sk, uint8_t *pk)
+imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, void *pk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)

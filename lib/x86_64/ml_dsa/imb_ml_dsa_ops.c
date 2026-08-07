@@ -80,7 +80,7 @@ imb_ml_dsa_backend_free_key(IMB_ML_DSA *self)
 /* Key generation                                                            */
 /* ------------------------------------------------------------------------- */
 static int
-op_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk, const uint8_t xi_32_or_null[32])
+op_keypair(IMB_ML_DSA *self, void *pk, void *sk, const void *xi_32_or_null)
 {
         ML_DSA_KEY *key = NULL;
         uint8_t xi[ML_DSA_RND_BYTES] = { 0 };
@@ -130,7 +130,7 @@ end:
 /* Key binding (decode once, cache, reuse for every subsequent operation)    */
 /* ------------------------------------------------------------------------- */
 static int
-op_set_privkey(IMB_ML_DSA *self, const uint8_t *sk)
+op_set_privkey(IMB_ML_DSA *self, const void *sk)
 {
         ML_DSA_KEY *key = NULL;
         int rc = -1;
@@ -153,7 +153,7 @@ end:
 }
 
 static int
-op_set_pubkey(IMB_ML_DSA *self, const uint8_t *pk)
+op_set_pubkey(IMB_ML_DSA *self, const void *pk)
 {
         ML_DSA_KEY *key = NULL;
         int rc = -1;
@@ -178,8 +178,8 @@ end:
 /* Signing                                                                   */
 /* ------------------------------------------------------------------------- */
 static int
-op_sign_ctx(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg, size_t msg_len,
-            const uint8_t *ctx, size_t ctx_len, const uint8_t *rnd_32_or_null, int msg_is_mu)
+op_sign_ctx(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, size_t msg_len,
+            const void *ctx, size_t ctx_len, const void *rnd_32_or_null, int msg_is_mu)
 {
         uint8_t rnd[ML_DSA_RND_BYTES] = { 0 };
         size_t out_len = 0;
@@ -194,7 +194,7 @@ op_sign_ctx(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
                 goto end;
 
         /* When msg_is_mu=1, ctx is already baked into mu - pass NULL/0. */
-        const uint8_t *sign_ctx = msg_is_mu ? NULL : ctx;
+        const void *sign_ctx = msg_is_mu ? NULL : ctx;
         const size_t sign_ctx_len = msg_is_mu ? 0 : ctx_len;
 
         if (!ossl_ml_dsa_sign(self->key, msg_is_mu, msg, msg_len, sign_ctx, sign_ctx_len, rnd,
@@ -213,14 +213,14 @@ end:
 /* Verification                                                              */
 /* ------------------------------------------------------------------------- */
 static int
-op_verify_ctx(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *ctx,
-              size_t ctx_len, const uint8_t *sig, size_t sig_len, int msg_is_mu)
+op_verify_ctx(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *ctx, size_t ctx_len,
+              const void *sig, size_t sig_len, int msg_is_mu)
 {
         if (self->key == NULL || ossl_ml_dsa_key_get_pub(self->key) == NULL)
                 return -1;
 
         /* When msg_is_mu=1, ctx is already baked into mu - pass NULL/0. */
-        const uint8_t *verify_ctx = msg_is_mu ? NULL : ctx;
+        const void *verify_ctx = msg_is_mu ? NULL : ctx;
         const size_t verify_ctx_len = msg_is_mu ? 0 : ctx_len;
 
         if (!ossl_ml_dsa_verify(self->key, msg_is_mu, msg, msg_len, verify_ctx, verify_ctx_len,
@@ -234,8 +234,8 @@ op_verify_ctx(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_
 /* FIPS 204 internal interface (Sign_internal / Verify_internal)             */
 /* ------------------------------------------------------------------------- */
 static int
-op_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                 size_t msg_len, const uint8_t *rnd_32_or_null)
+op_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, size_t msg_len,
+                 const void *rnd_32_or_null)
 {
         uint8_t rnd[ML_DSA_RND_BYTES] = { 0 };
         size_t out_len = 0;
@@ -264,7 +264,7 @@ end:
 }
 
 static int
-op_verify_internal(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *sig,
+op_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
                    size_t sig_len)
 {
         if (self->key == NULL || ossl_ml_dsa_key_get_pub(self->key) == NULL)
@@ -282,7 +282,7 @@ op_verify_internal(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const u
 /* Key validation and derivation (stateless: do not touch self->key)        */
 /* ------------------------------------------------------------------------- */
 static int
-op_pubkey_validate(IMB_ML_DSA *self, const uint8_t *pk)
+op_pubkey_validate(IMB_ML_DSA *self, const void *pk)
 {
         ML_DSA_KEY *key = NULL;
         int rc = -1;
@@ -302,7 +302,7 @@ end:
 }
 
 static int
-op_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk)
+op_privkey_validate(IMB_ML_DSA *self, const void *sk)
 {
         ML_DSA_KEY *key = NULL;
         int rc = -1;
@@ -325,7 +325,7 @@ end:
 }
 
 static int
-op_pubkey_from_privkey(IMB_ML_DSA *self, const uint8_t *sk, uint8_t *pk)
+op_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, void *pk)
 {
         ML_DSA_KEY *key = NULL;
         const uint8_t *enc;

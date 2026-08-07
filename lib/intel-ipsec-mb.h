@@ -1693,7 +1693,7 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
          * Non-NULL uses the supplied 32 bytes verbatim, producing a
          * deterministic key pair.
          */
-        const uint8_t *xi_32;
+        const void *xi_32;
 } IMB_ML_DSA_KEYGEN_PARAMS;
 
 /**
@@ -1715,8 +1715,7 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
  * @retval IMB_ERR_PQC_KEYOP key generation operation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
-                   const IMB_ML_DSA_KEYGEN_PARAMS *params);
+imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN_PARAMS *params);
 
 /**
  * @brief Bind an encoded ML-DSA private key to the context, replacing any
@@ -1736,7 +1735,7 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, uint8_t *pk, uint8_t *sk,
  * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const uint8_t *sk);
+imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk);
 
 /**
  * @brief Bind an encoded ML-DSA public key to the context, replacing any
@@ -1754,7 +1753,7 @@ imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const uint8_t *sk);
  * @retval IMB_ERR_PQC_KEYOP key decode failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const uint8_t *pk);
+imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk);
 
 /**
  * Optional parameters for imb_ml_dsa_sign(). A NULL \a params pointer is
@@ -1766,7 +1765,7 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * Optional context string (FIPS 204 ctx) for domain separation.
          * NULL together with ctx_len = 0 means no context string.
          */
-        const uint8_t *ctx;
+        const void *ctx;
         /** Context string length in bytes (0..255) */
         size_t ctx_len;
         /**
@@ -1777,7 +1776,7 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * buffer yields deterministic signing, any other value supplies
          * caller-controlled entropy.
          */
-        const uint8_t *rnd_32;
+        const void *rnd_32;
         /**
          * If non-zero, \a msg is a pre-computed \mu value (exactly 64 bytes)
          * and the SHAKE hashing step H(tr || M') is skipped entirely.
@@ -1795,7 +1794,7 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
          * Optional context string (FIPS 204 ctx) for domain separation.
          * NULL together with ctx_len = 0 means no context string.
          */
-        const uint8_t *ctx;
+        const void *ctx;
         /** Context string length in bytes (0..255) */
         size_t ctx_len;
         /**
@@ -1829,7 +1828,7 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg, size_t msg_len,
+imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, size_t msg_len,
                 const IMB_ML_DSA_SIGN_PARAMS *params);
 
 /**
@@ -1856,7 +1855,7 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *
  *         could not be performed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *sig,
+imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
                   size_t sig_len, const IMB_ML_DSA_VERIFY_PARAMS *params);
 
 /**
@@ -1871,7 +1870,7 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const ui
  * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const uint8_t *pk);
+imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk);
 
 /**
  * @brief Validate an encoded ML-DSA private key (decodes and checks consistency).
@@ -1885,7 +1884,7 @@ imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const uint8_t *pk);
  * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk);
+imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk);
 
 /**
  * @brief Derive an encoded public key from an encoded private key.
@@ -1901,7 +1900,7 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const uint8_t *sk);
  * @retval IMB_ERR_PQC_KEYOP derivation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const uint8_t *sk, uint8_t *pk);
+imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, void *pk);
 
 /*
  * =========================================================
@@ -1995,7 +1994,7 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
          * Non-NULL uses the supplied 64 bytes verbatim, producing a
          * deterministic key pair.
          */
-        const uint8_t *seed_d_z;
+        const void *seed_d_z;
 } IMB_ML_KEM_KEYGEN_PARAMS;
 
 /**
@@ -2018,8 +2017,7 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
  * @retval IMB_ERR_PQC_KEYOP key generation operation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_keypair(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk,
-                   const IMB_ML_KEM_KEYGEN_PARAMS *params);
+imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN_PARAMS *params);
 
 /**
  * @brief Bind an encoded ML-KEM decapsulation (private) key to the context,
@@ -2040,7 +2038,7 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk,
  * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_set_privkey(IMB_ML_KEM *self, const uint8_t *dk);
+imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk);
 
 /**
  * @brief Bind an encoded ML-KEM encapsulation (public) key to the context,
@@ -2060,7 +2058,7 @@ imb_ml_kem_set_privkey(IMB_ML_KEM *self, const uint8_t *dk);
  * @retval IMB_ERR_PQC_KEYOP key decode failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const uint8_t *ek);
+imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek);
 
 /**
  * Optional parameters for imb_ml_kem_encap(). A NULL \a params pointer is
@@ -2076,7 +2074,7 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
          * deterministic encapsulation output (e.g. for ACVP conformance
          * testing).
          */
-        const uint8_t *m_32;
+        const void *m_32;
 } IMB_ML_KEM_ENCAP_PARAMS;
 
 /**
@@ -2100,7 +2098,7 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
  * @retval IMB_ERR_PQC_KEMOP encapsulation operation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_encap(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret,
+imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, void *shared_secret,
                  const IMB_ML_KEM_ENCAP_PARAMS *params);
 
 /**
@@ -2140,7 +2138,7 @@ typedef struct IMB_ML_KEM_DECAP_PARAMS IMB_ML_KEM_DECAP_PARAMS;
  * @retval IMB_ERR_PQC_KEMOP decapsulation failed (e.g. \a ct_len mismatch)
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, size_t ct_len,
+imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t ct_len,
                  const IMB_ML_KEM_DECAP_PARAMS *params);
 
 /**
@@ -2155,7 +2153,7 @@ imb_ml_kem_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, si
  * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const uint8_t *ek);
+imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek);
 
 /**
  * @brief Validate an encoded ML-KEM decapsulation (private) key (decodes and
@@ -2170,7 +2168,7 @@ imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const uint8_t *ek);
  * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const uint8_t *dk);
+imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk);
 
 /*
  * =========================================================

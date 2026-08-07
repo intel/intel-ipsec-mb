@@ -96,8 +96,8 @@ extern "C" {
  * header directly from the source tree.
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const uint8_t *msg,
-                         size_t msg_len, const uint8_t *rnd_32_or_null);
+imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
+                         size_t msg_len, const void *rnd_32_or_null);
 
 /**
  * @brief Verify a signature over a message using the FIPS 204 internal interface
@@ -128,7 +128,7 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, uint8_t *sig, size_t *sig_len, const 
  * header directly from the source tree.
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const uint8_t *msg, size_t msg_len, const uint8_t *sig,
+imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
                            size_t sig_len);
 
 #ifdef __cplusplus

@@ -102,12 +102,10 @@ struct IMB_ML_KEM {
          * keypair()/encap() accept optional randomness (NULL = internal RNG).
          * decap() takes no randomness input.
          */
-        int (*keypair)(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk,
-                       const uint8_t seed_64_or_null[64]);
-        int (*set_privkey)(IMB_ML_KEM *self, const uint8_t *dk);
-        int (*set_pubkey)(IMB_ML_KEM *self, const uint8_t *ek);
-        int (*encap)(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret,
-                     const uint8_t m_32_or_null[32]);
+        int (*keypair)(IMB_ML_KEM *self, void *ek, void *dk, const void *seed_64_or_null);
+        int (*set_privkey)(IMB_ML_KEM *self, const void *dk);
+        int (*set_pubkey)(IMB_ML_KEM *self, const void *ek);
+        int (*encap)(IMB_ML_KEM *self, void *ct, void *shared_secret, const void *m_32_or_null);
         /**
          * FIPS 203 Section 7.3 mandates the ciphertext-length ("ciphertext
          * type") check be performed on every single call, unlike the
@@ -119,9 +117,9 @@ struct IMB_ML_KEM {
          * unconditional check (already implemented, unconditionally, inside
          * the vendored ossl_ml_kem_decap()) is never bypassed.
          */
-        int (*decap)(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, size_t ct_len);
-        int (*pubkey_validate)(IMB_ML_KEM *self, const uint8_t *ek);
-        int (*privkey_validate)(IMB_ML_KEM *self, const uint8_t *dk);
+        int (*decap)(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t ct_len);
+        int (*pubkey_validate)(IMB_ML_KEM *self, const void *ek);
+        int (*privkey_validate)(IMB_ML_KEM *self, const void *dk);
 };
 
 /**

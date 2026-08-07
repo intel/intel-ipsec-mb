@@ -118,10 +118,9 @@ imb_ml_kem_free(IMB_ML_KEM *self)
 /* Key generation                                                            */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_kem_keypair(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk,
-                   const IMB_ML_KEM_KEYGEN_PARAMS *params)
+imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN_PARAMS *params)
 {
-        const uint8_t *seed_d_z = (params != NULL) ? params->seed_d_z : NULL;
+        const void *seed_d_z = (params != NULL) ? params->seed_d_z : NULL;
 
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -138,7 +137,7 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, uint8_t *ek, uint8_t *dk,
 /* Key binding                                                               */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_kem_set_privkey(IMB_ML_KEM *self, const uint8_t *dk)
+imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -152,7 +151,7 @@ imb_ml_kem_set_privkey(IMB_ML_KEM *self, const uint8_t *dk)
 }
 
 IMB_DLL_EXPORT int
-imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const uint8_t *ek)
+imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -169,10 +168,10 @@ imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const uint8_t *ek)
 /* Encapsulation                                                             */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_kem_encap(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret,
+imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, void *shared_secret,
                  const IMB_ML_KEM_ENCAP_PARAMS *params)
 {
-        const uint8_t *m_32 = (params != NULL) ? params->m_32 : NULL;
+        const void *m_32 = (params != NULL) ? params->m_32 : NULL;
 
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -191,7 +190,7 @@ imb_ml_kem_encap(IMB_ML_KEM *self, uint8_t *ct, uint8_t *shared_secret,
 /* Decapsulation                                                             */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_kem_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, size_t ct_len,
+imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t ct_len,
                  const IMB_ML_KEM_DECAP_PARAMS *params)
 {
         (void) params; /* reserved for future use; decap has no randomness input */
@@ -220,7 +219,7 @@ imb_ml_kem_decap(IMB_ML_KEM *self, uint8_t *shared_secret, const uint8_t *ct, si
 /* Key validation                                                            */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const uint8_t *ek)
+imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -234,7 +233,7 @@ imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const uint8_t *ek)
 }
 
 IMB_DLL_EXPORT int
-imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const uint8_t *dk)
+imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
