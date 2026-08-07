@@ -280,7 +280,6 @@ _zuc_args_KS     equ    _zuc_args + _zucarg_KS
 START_FIELDS    ; SNOW5G_ARGS
 ;;      name                    size    align
 FIELD   _snow5g_arg_IV,          2*16,   32      ; array of 2 x 128-bit IVs
-FIELD   _snow5g_arg_digest,      2*16,   32      ; array of 2 x 128-bit digests
 FIELD   _snow5g_arg_LFSRA_LO,    2*16,   32      ; 2*128-bit LFSR A lower registers
 FIELD   _snow5g_arg_LFSRA_HI,    2*16,   32      ; 2*128-bit LFSR A higher registers
 FIELD   _snow5g_arg_LFSRB_LO,    2*16,   32      ; 2*128-bit LFSR B lower registers
@@ -288,8 +287,6 @@ FIELD   _snow5g_arg_LFSRB_HI,    2*16,   32      ; 2*128-bit LFSR B higher regis
 FIELD   _snow5g_arg_FSM_1,       2*16,   32      ; 2*128-bit FSM 1 registers
 FIELD   _snow5g_arg_FSM_2,       2*16,   32      ; 2*128-bit FSM 2 registers
 FIELD   _snow5g_arg_FSM_3,       2*16,   32      ; 2*128-bit FSM 3 registers
-FIELD   _snow5g_arg_T1,          2*16,   32      ; 2*128-bit T1 tap registers
-FIELD   _snow5g_arg_T2,          2*16,   32      ; 2*128-bit T2 tap registers
 FIELD   _snow5g_arg_byte_length, 2*8,    8       ; array of 2 x 64-bit original lengths (in bytes)
 FIELD   _snow5g_arg_in,          2*8,    8       ; array of 2 pointers to in text
 FIELD   _snow5g_arg_out,         2*8,    8       ; array of 2 pointers to out text
@@ -307,7 +304,6 @@ START_FIELDS    ; MB_MGR_SNOW5G_OOO
 FIELD   _snow5g_args,           _SNOW5G_ARGS_size,      _SNOW5G_ARGS_align
 FIELD   _snow5g_lens_dqw,       2*4,                    4       ; 2 x 32-bit (NEA4: dqword count, NIA4: byte length)
 FIELD   _snow5g_job_in_lane,    2*8,                    8       ; 2 x 64-bit job pointers
-FIELD   _snow5g_bits_fixup,     2*4,                    4       ; 2 x 32-bit bit fixup values
 FIELD   _snow5g_INIT_MASK,      8,                      8       ; 64-bit initialization mask
 FIELD   _snow5g_unused_lanes,   8,                      8       ; 64-bit unused lanes queue
 FIELD   _snow5g_lanes_in_use,   8,                      8       ; 64-bit number of lanes in use

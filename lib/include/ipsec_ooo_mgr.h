@@ -229,20 +229,16 @@ typedef struct {
  *      Structure to store the Snow5G state for 2 packets (1 lane pair).
  *****************************************************************************/
 typedef struct {
-        DECLARE_ALIGNED(uint8_t iv[2][16], 32);     /* array of 2 x 128-bit IVs */
-        DECLARE_ALIGNED(uint8_t digest[2][16], 32); /* array of 2 x 128-bit digests */
+        DECLARE_ALIGNED(uint8_t iv[2][16], 32); /* array of 2 x 128-bit IVs */
         /* LFSR state for 2 lanes - each lane uses 128-bit registers */
         DECLARE_ALIGNED(uint8_t LFSR_A_LO[2][16], 32); /* 2*128-bit LFSR A lower registers */
         DECLARE_ALIGNED(uint8_t LFSR_A_HI[2][16], 32); /* 2*128-bit LFSR A higher registers */
         DECLARE_ALIGNED(uint8_t LFSR_B_LO[2][16], 32); /* 2*128-bit LFSR B lower registers */
         DECLARE_ALIGNED(uint8_t LFSR_B_HI[2][16], 32); /* 2*128-bit LFSR B higher registers */
         /* FSM state for 2 lanes - each lane uses 128-bit registers */
-        DECLARE_ALIGNED(uint8_t FSM_R1[2][16], 32); /* 2*128-bit FSM 1 registers */
-        DECLARE_ALIGNED(uint8_t FSM_R2[2][16], 32); /* 2*128-bit FSM 2 registers */
-        DECLARE_ALIGNED(uint8_t FSM_R3[2][16], 32); /* 2*128-bit FSM 3 registers */
-        /* Tap registers for 2 lanes - each lane uses 128-bit registers */
-        DECLARE_ALIGNED(uint8_t T1[2][16], 32);      /* 2*128-bit T1 tap registers */
-        DECLARE_ALIGNED(uint8_t T2[2][16], 32);      /* 2*128-bit T2 tap registers */
+        DECLARE_ALIGNED(uint8_t FSM_R1[2][16], 32);  /* 2*128-bit FSM 1 registers */
+        DECLARE_ALIGNED(uint8_t FSM_R2[2][16], 32);  /* 2*128-bit FSM 2 registers */
+        DECLARE_ALIGNED(uint8_t FSM_R3[2][16], 32);  /* 2*128-bit FSM 3 registers */
         DECLARE_ALIGNED(uint64_t byte_length[2], 8); /* array of 2 x 64-bit original lengths */
         void *in[2];                                 /* array of 2 pointers to in text */
         void *out[2];                                /* array of 2 pointers to out text */
@@ -366,11 +362,9 @@ typedef struct {
         DECLARE_ALIGNED(SNOW5G_ARGS args, 32);
         DECLARE_ALIGNED(uint32_t lens[2], 4);
         IMB_JOB *job_in_lane[2];
-        uint32_t bits_fixup[2];
         uint64_t init_mask;
         uint64_t unused_lanes;
         uint64_t num_lanes_inuse;
-        uint64_t init_done;
         uint64_t road_block;
 } MB_MGR_SNOW5G_OOO;
 

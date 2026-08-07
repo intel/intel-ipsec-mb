@@ -30,7 +30,6 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx512.inc"
 %include "include/imb_job.inc"
-%include "include/constant_lookup.inc"
 %include "include/align_avx512.inc"
 %include "include/cet.inc"
 %include "include/clear_regs.inc"
@@ -38,33 +37,6 @@
 
 mksection .rodata
 default rel
-
-align 64
-const_byte_shuff_mask:
-        times 4 dq 0x0405060700010203, 0x0c0d0e0f08090a0b
-
-align 64
-const_fixup_mask:
-        times 8 dq 0x7272727272727272
-
-align 64
-const_transf_map:
-        dq 0x08A7BE0D0A8FA6C2, 0x9F11D2135945991D
-        dq 0xC1588D92A4D4E6AE, 0x3BBC4F9D84C897D0
-        dq 0xEEE34E725327EB2D, 0xDB442F5C4DAA7FDA
-        dq 0x4C166AC3C5673A3E, 0x19F26270DDD7CC38
-        dq 0x0386C9614B980910, 0x8C5D546E335A6BA8
-        dq 0x80F8C682F6F71A41, 0xBA7B2C65B3FEC7C0
-        dq 0x5FF5730C222AFCB4, 0x143524B2942E6864
-        dq 0x0743EDDE48BFFB78, 0x46577D74BDE432B6
-        dq 0x55F38A51B7C4373C, 0x93E1A377AB79CF6C
-        dq 0x8B7E9A2B5B816DD5, 0x5247A191D385B504
-        dq 0xF0268720BBD6ECA5, 0x50CB25CEF4894AAF
-        dq 0xA93D219042D93F00, 0xCDFA5E36F10129E7
-        dq 0x76A09EFD051B31E5, 0x1CEA569BB075B130
-        dq 0xFF1588957A6906EF, 0x0B280FD8230EACCA
-        dq 0x9C3966831E63F918, 0xA27C34D1E81F49E2
-        dq 0x71ADDFE91202E0B9, 0xDC176040B86F8E96
 
 align 64
 sigma:
