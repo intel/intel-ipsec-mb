@@ -18,7 +18,7 @@
 int
 ml_dsa_ntt_avx2_capable(void);
 void
-ml_dsa_poly_ntt_avx2(uint32_t *p_coeff, const uint32_t *p_zetas);
+ml_dsa_poly_ntt_avx2(uint32_t *p_coeff);
 void
 ml_dsa_poly_ntt_inverse_avx2(uint32_t *p_coeff);
 void
@@ -225,7 +225,7 @@ poly_ntt_mult_avx2_wrapper(const POLY *lhs, const POLY *rhs, POLY *out)
 static void
 poly_ntt_avx2_wrapper(POLY *p)
 {
-        ml_dsa_poly_ntt_avx2(&p->coeff[0], zetas_montgomery);
+        ml_dsa_poly_ntt_avx2(&p->coeff[0]);
 }
 
 static void
