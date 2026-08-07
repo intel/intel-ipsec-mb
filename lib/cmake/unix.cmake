@@ -85,8 +85,8 @@ endif()
 set_source_files_properties(
   ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
   PROPERTIES COMPILE_FLAGS "${SSE_MARCH_FLAG} -maes -mpclmul")
-set_source_files_properties(${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS
-                                                           "-msse4.2")
+set_source_files_properties(${SRC_FILES_X86_64} ${SRC_FILES_OPENSSL}
+  PROPERTIES COMPILE_FLAGS "-msse4.2")
 
 # ##############################################################################
 # add library target

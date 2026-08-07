@@ -70,17 +70,8 @@ set_source_files_properties(
 
 set_source_files_properties(
   ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
-  ${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS "/arch:SSE4.2 $<$<CONFIG:RELEASE>:/Oi /O2>")
-
-# post-quantum: ML-DSA (FIPS 204) sources are globbed separately from
-# SRC_FILES_X86_64 (see lib/CMakeLists.txt) so they miss the optimization
-# flags set above. Without this, CMAKE_C_FLAGS_RELEASE being cleared in
-# utils.cmake leaves every ML-DSA C file (portable NTT/sampling/encoding C
-# code plus the ipsec-mb glue) built at the MSVC default optimization level
-# (i.e. unoptimized) in Release builds, even though the hand-written AVX2 NTT
-# and AVX512VL x4 SHAKE asm kernels are dispatched correctly at run time.
-set_source_files_properties(${SRC_FILES_ML_DSA} ${SRC_FILES_ML_KEM}
-                            PROPERTIES COMPILE_FLAGS "$<$<CONFIG:RELEASE>:/Oi /O2>")
+  ${SRC_FILES_X86_64} ${SRC_FILES_OPENSSL}
+  PROPERTIES COMPILE_FLAGS "/arch:SSE4.2 $<$<CONFIG:RELEASE>:/Oi /O2>")
 
 # generate windows DEF file
 if(NOT AVX_IFMA)

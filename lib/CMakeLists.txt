@@ -168,23 +168,16 @@ if(SMX_NI)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T4})
 endif()
 
-# post-quantum: ML-DSA (FIPS 204) C sources. Vendored OpenSSL sources (the core
-# ML-DSA algorithm and the shared SHA-3/SHAKE implementation, including the x4
-# AVX512VL wrapper sha3_x4_avx512vl.c) live under lib/openssl/crypto; the
-# ipsec-mb glue (public API and internal ops) stays in lib/x86_64/ml_dsa. The
-# OPENSSL_ia32cap_P provider that drives vendored-OpenSSL asm kernels
-# (lib/x86_64/imb_ossl_ia32cap.c) is not ML-DSA specific - it is picked up
-# unconditionally via SRC_FILES_X86_64 above so any future vendored-OpenSSL
-# port (e.g. ML-KEM) can reuse it too.
-file(GLOB SRC_FILES_ML_DSA "${DIR_X86_64}/ml_dsa/*.c" "${DIR_CURRENT}/openssl/crypto/ml_dsa/*.c"
-     "${DIR_CURRENT}/openssl/crypto/sha/*.c")
-list(APPEND SRC_FILES_C ${SRC_FILES_ML_DSA})
-
-# post-quantum: ML-KEM (FIPS 203) C sources. Vendored OpenSSL code lives in
-# lib/openssl/crypto/ml_kem; ipsec-mb glue stays in lib/x86_64/ml_kem and
-# reuses the shared SHA-3/SHAKE sources above.
-file(GLOB SRC_FILES_ML_KEM "${DIR_X86_64}/ml_kem/*.c" "${DIR_CURRENT}/openssl/crypto/ml_kem/*.c")
-list(APPEND SRC_FILES_C ${SRC_FILES_ML_KEM})
+# post-quantum: ML-DSA (FIPS 204) and ML-KEM (FIPS 203) C sources. Vendored
+# OpenSSL sources (the core ML-DSA/ML-KEM algorithms and the shared SHA-3/SHAKE
+# implementation, including the x4 AVX512VL wrapper sha3_x4_avx512vl.c) live
+# under lib/openssl/crypto; the ipsec-mb glue (public API and internal ops)
+# stays in lib/x86_64/ml_dsa and lib/x86_64/ml_kem.
+file(GLOB SRC_FILES_OPENSSL "${DIR_X86_64}/ml_dsa/*.c" "${DIR_X86_64}/ml_kem/*.c"
+    "${DIR_CURRENT}/openssl/crypto/ml_dsa/*.c"
+    "${DIR_CURRENT}/openssl/crypto/ml_kem/*.c"
+    "${DIR_CURRENT}/openssl/crypto/sha/*.c")
+list(APPEND SRC_FILES_C ${SRC_FILES_OPENSSL})
 
 list(SORT SRC_FILES_C)
 
@@ -308,11 +301,12 @@ endforeach()
 target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})
 
 # ##############################################################################
-# ML-DSA (FIPS 204) build wiring
+# ML-DSA (FIPS 204) and ML-KEM (FIPS 203) build wiring
 # ##############################################################################
-# The vendored OpenSSL ML-DSA sources compile against a self-contained compat
-# include tree rooted at include/openssl:
-#   include/openssl/crypto        - genuine ported OpenSSL headers (e.g. crypto/ml_dsa.h)
+# The vendored OpenSSL sources compile against a self-contained compat include
+# tree rooted at include/openssl:
+#   include/openssl/crypto        - genuine ported OpenSSL headers
+#                                    (e.g. crypto/ml_dsa.h, crypto/ml_kem.h)
 #   include/openssl/crypto/ml_dsa - genuine ported OpenSSL ML-DSA headers
 #   include/openssl/internal      - genuine ported OpenSSL internal headers
 #   include/openssl/compat        - ipsec-mb compatibility helpers
@@ -324,35 +318,13 @@ target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})
 # asm-accelerated paths: ml_dsa_ntt.c selects the AVX2 NTT and ml_dsa_sample.c
 # pulls in the x4 AVX512VL SHAKE sampling, both chosen at run time via
 # OPENSSL_ia32cap_P (populated by the generic lib/x86_64/imb_ossl_ia32cap.c,
-# built unconditionally via SRC_FILES_X86_64, see above). These definitions
-# are applied to the ML-DSA sources only (sha3_x4_avx512vl.c needs
-# KECCAK1600_ASM).
+# built unconditionally via SRC_FILES_X86_64, see above). ML-KEM reuses the
+# same vendored SHA-3/SHAKE implementation (lib/openssl/crypto/sha) so it needs
+# KECCAK1600_ASM too, for its compat EVP shim to resolve.
 target_include_directories(
-  ${LIB} PRIVATE ${DIR_INCLUDE}/ml_dsa ${DIR_INCLUDE}/openssl
+  ${LIB} PRIVATE ${DIR_INCLUDE}/ml_dsa ${DIR_INCLUDE}/ml_kem ${DIR_INCLUDE}/openssl
                  ${DIR_INCLUDE}/openssl/crypto/ml_dsa ${DIR_INCLUDE}/openssl/compat)
-foreach(FILE ${SRC_FILES_ML_DSA})
-  set_source_files_properties(
-    ${FILE} PROPERTIES COMPILE_DEFINITIONS
-                       "${LIB_DEFINES};KECCAK1600_ASM")
-endforeach()
-
-# ##############################################################################
-# ML-KEM (FIPS 203) build wiring
-# ##############################################################################
-# The vendored OpenSSL ML-KEM source compiles against the same self-contained
-# compat include tree used by ML-DSA:
-#   include/openssl/crypto - genuine ported OpenSSL headers (e.g. crypto/ml_kem.h)
-#   include/openssl/compat - ipsec-mb compatibility headers and helpers
-#                            (vendored sources include openssl_compat.h
-#                            directly; compat/openssl/* and compat/internal/*
-#                            provide the remaining non-vendored OpenSSL
-#                            type/constant shims)
-# ML-KEM reuses the same vendored SHA-3/SHAKE implementation as ML-DSA
-# (lib/openssl/crypto/sha, already on SRC_FILES_ML_DSA above), so also needs
-# KECCAK1600_ASM defined for its compat EVP shim to resolve.
-target_include_directories(${LIB} PRIVATE ${DIR_INCLUDE}/ml_kem ${DIR_INCLUDE}/openssl
-                                           ${DIR_INCLUDE}/openssl/compat)
-foreach(FILE ${SRC_FILES_ML_KEM})
+foreach(FILE ${SRC_FILES_OPENSSL})
   set_source_files_properties(
     ${FILE} PROPERTIES COMPILE_DEFINITIONS
                        "${LIB_DEFINES};KECCAK1600_ASM")
