@@ -407,6 +407,123 @@ done:
         }
 }
 
+/* Per-vector context used to verify completed jobs */
+struct seq_job_ctx {
+        const struct aead_test *v;
+        uint8_t *out;
+        uint8_t *tag;
+};
+
+static void
+verify_seq_job(IMB_JOB *job, struct test_suite_context *ts)
+{
+        struct seq_job_ctx *ctx = (struct seq_job_ctx *) job->user_data;
+        const struct aead_test *v = ctx->v;
+        const uint64_t msg_len = v->msgSize / 8;
+        const uint64_t tag_len = v->tagSize / 8;
+        int err = 0;
+
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "sequential: job failed, status:%d\n", job->status);
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+
+        if (msg_len > 0)
+                err |= check_data(ctx->out, (const uint8_t *) v->ct, msg_len, "sequential out");
+        err |= check_data(ctx->tag, (const uint8_t *) v->tag, tag_len, "sequential tag");
+        test_suite_update(ts, err == 0, err != 0);
+}
+
+/* Test submitting all vectors without flushing between them, then flush the remaining ones
+ * verifying the jobs as the complete */
+static void
+test_snow5g_nca4_submit_all_vectors(IMB_MGR *mb_mgr, struct test_suite_context *ts,
+                                    const struct aead_test *vectors)
+{
+        /* Count vectors */
+        size_t n_vec = 0;
+        const struct aead_test *v;
+
+        for (v = vectors; v->msg != NULL; v++)
+                n_vec++;
+
+        struct seq_job_ctx *ctxs = calloc(n_vec, sizeof(*ctxs));
+
+        if (!ctxs) {
+                fprintf(stderr, "failed to allocate context array\n");
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+
+        if (!quiet_mode)
+                printf("SNOW5G-NCA4 sequential all-vectors test:\n");
+
+        /* Submit all vectors without flushing between them */
+        size_t idx = 0;
+
+        for (v = vectors; v->msg != NULL; v++, idx++) {
+                const uint64_t msg_len = v->msgSize / 8;
+                const uint64_t tag_len = v->tagSize / 8;
+                struct seq_job_ctx *ctx = &ctxs[idx];
+                IMB_JOB *job;
+
+                if (!quiet_mode) {
+#ifdef DEBUG
+                        printf("Vector %zu  Keylen:%zu IVlen:%zu "
+                               "PTLen:%zu AADlen:%zu Tlen:%zu\n",
+                               v->tcId, v->keySize / 8, v->ivSize / 8, msg_len, v->aadSize / 8,
+                               tag_len);
+#else
+                        printf(".");
+#endif
+                }
+
+                ctx->v = v;
+                ctx->out = malloc(msg_len > 0 ? msg_len : 1);
+                ctx->tag = malloc(tag_len);
+                if (!ctx->out || !ctx->tag) {
+                        fprintf(stderr, "failed to allocate memory\n");
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+                memset(ctx->out, 0, msg_len > 0 ? msg_len : 1);
+                memset(ctx->tag, 0, tag_len);
+
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (!job) {
+                        fprintf(stderr, "failed to get job\n");
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+
+                fill_nca4_job(job, v, IMB_DIR_ENCRYPT, (const uint8_t *) v->msg, ctx->out,
+                              ctx->tag);
+                job->user_data = ctx;
+                job = IMB_SUBMIT_JOB(mb_mgr);
+
+                /* Collect any job that completed immediately during submit */
+                if (job != NULL)
+                        verify_seq_job(job, ts);
+        }
+
+        /* Flush and verify remaining in-flight jobs */
+        IMB_JOB *job;
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                verify_seq_job(job, ts);
+
+        if (!quiet_mode)
+                printf("\n");
+
+done:
+        for (size_t i = 0; i < n_vec; i++) {
+                free(ctxs[i].out);
+                free(ctxs[i].tag);
+        }
+        free(ctxs);
+}
+
 int
 snow5g_nca4_test(IMB_MGR *p_mgr)
 {
@@ -427,6 +544,8 @@ snow5g_nca4_test(IMB_MGR *p_mgr)
                         test_snow5g_nca4_submit_flush(p_mgr, &ts, v);
                         test_snow5g_nca4_mixed_submit_flush(p_mgr, &ts, v);
                 }
+
+        test_snow5g_nca4_submit_all_vectors(p_mgr, &ts, snow5g_nca4_vectors);
 
         errors += test_suite_end(&ts);
 
