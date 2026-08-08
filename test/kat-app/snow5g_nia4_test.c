@@ -195,6 +195,119 @@ test_snow5g_nia4_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *
                 printf("\n");
 }
 
+/* Per-vector context used to verify completed jobs */
+struct nia4_seq_job_ctx {
+        const struct mac_test *v;
+        uint8_t *auth_buf; /* padded auth buffer: [padding | tag | padding] */
+};
+
+static void
+verify_nia4_seq_job(struct IMB_JOB *job, struct test_suite_context *ctx)
+{
+        uint8_t padding[16];
+        struct nia4_seq_job_ctx *jctx = (struct nia4_seq_job_ctx *) job->user_data;
+        const struct mac_test *v = jctx->v;
+
+        memset((void *) padding, -1, sizeof(padding));
+
+        if (!snow5g_nia4_job_ok(v, job, jctx->auth_buf, padding, sizeof(padding)))
+                test_suite_update(ctx, 0, 1);
+        else
+                test_suite_update(ctx, 1, 0);
+}
+
+/* Test submitting all vectors without flushing between them, then flush the remaining ones
+ * verifying the jobs as the complete */
+static void
+test_snow5g_nia4_submit_all_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
+                                    const struct mac_test *vectors)
+{
+        /* Count vectors */
+        size_t n_vec = 0;
+        const struct mac_test *v;
+
+        for (v = vectors; v->msg != NULL; v++)
+                n_vec++;
+
+        struct nia4_seq_job_ctx *jctxs = calloc(n_vec, sizeof(*jctxs));
+
+        if (!jctxs) {
+                fprintf(stderr, "failed to allocate context array\n");
+                test_suite_update(ctx, 0, 1);
+                return;
+        }
+
+        if (!quiet_mode)
+                printf("SNOW5G-NIA4 sequential all-vectors test:\n");
+
+        /* Submit all vectors without flushing between them */
+        size_t idx = 0;
+
+        for (v = vectors; v->msg != NULL; v++, idx++) {
+                struct nia4_seq_job_ctx *jctx = &jctxs[idx];
+                struct IMB_JOB *job;
+
+                if (!quiet_mode) {
+#ifdef DEBUG
+                        printf("Vector %zu  Keylen:%zu PTLen:%zu Tlen:%zu\n", v->tcId,
+                               v->keySize / 8, v->msgSize / 8, v->tagSize / 8);
+#else
+                        printf(".");
+#endif
+                }
+
+                jctx->v = v;
+                /* auth_buf layout: [16-byte head padding | tag | 16-byte tail padding] */
+                jctx->auth_buf = malloc(16 + v->tagSize / 8 + 16);
+                if (!jctx->auth_buf) {
+                        fprintf(stderr, "failed to allocate auth buffer\n");
+                        test_suite_update(ctx, 0, 1);
+                        goto done;
+                }
+                memset(jctx->auth_buf, -1, 16 + v->tagSize / 8 + 16);
+
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (!job) {
+                        fprintf(stderr, "failed to get job\n");
+                        test_suite_update(ctx, 0, 1);
+                        goto done;
+                }
+
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = IMB_AUTH_SNOW5G_NIA4;
+                job->msg_len_to_hash_in_bytes = v->msgSize / 8;
+                job->u.NIA._key = (const void *) v->key;
+                job->u.NIA._iv = (const void *) v->iv;
+                job->src = (const void *) v->msg;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->auth_tag_output = jctx->auth_buf + 16;
+                job->auth_tag_output_len_in_bytes = v->tagSize / 8;
+                job->user_data = jctx;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+
+                /* Collect any job that completed immediately during submit */
+                if (job != NULL)
+                        verify_nia4_seq_job(job, ctx);
+        }
+
+        /* Flush and verify remaining in-flight jobs */
+        struct IMB_JOB *job;
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                verify_nia4_seq_job(job, ctx);
+
+        if (!quiet_mode)
+                printf("\n");
+
+done:
+        for (size_t i = 0; i < n_vec; i++)
+                free(jctxs[i].auth_buf);
+        free(jctxs);
+}
+
 int
 snow5g_nia4_test(struct IMB_MGR *mb_mgr)
 {
@@ -210,6 +323,7 @@ snow5g_nia4_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx, "SNOW5G-NIA4");
         for (size_t i = 0; i < test_num_jobs_size; i++)
                 test_snow5g_nia4_std_vectors(mb_mgr, &ctx, test_num_jobs[i]);
+        test_snow5g_nia4_submit_all_vectors(mb_mgr, &ctx, snow5g_nia4_vectors);
         errors += test_suite_end(&ctx);
 
         free_snow5g_nia4_vectors(jctx);
