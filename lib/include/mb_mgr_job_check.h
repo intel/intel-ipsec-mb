@@ -33,10 +33,11 @@
 #include "include/kasumi_interface.h"
 #include "include/zuc_internal.h"
 
-#define SNOW3G_MAX_BYTELEN (UINT32_MAX / BYTESIZE)
-#define NIA_MAX_BYTELEN    ((UINT32_MAX - 1) / BYTESIZE)
-#define NCA_MAX_BYTELEN    NIA_MAX_BYTELEN
-#define MB_MAX_LEN16       ((1 << 16) - 2)
+#define SNOW3G_MAX_BYTELEN  (UINT32_MAX / BYTESIZE)
+#define NIA_MAX_BYTELEN     ((UINT32_MAX - 1) / BYTESIZE)
+#define NCA_MAX_BYTELEN     NIA_MAX_BYTELEN
+#define MB_MAX_LEN16        ((1 << 16) - 2)
+#define NCA_AAD_MAX_BYTELEN ((UINT32_MAX - 1) / BYTESIZE)
 
 /* used to validate template job structure before computing session_id */
 static inline int
@@ -821,6 +822,14 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
                         return 1;
                 }
+                if (job->u.NCA.aad == NULL && job->u.NCA.aad_len_in_bytes > 0) {
+                        imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
+                        return 1;
+                }
+                if (job->u.NCA.aad_len_in_bytes > NCA_AAD_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
+                        return 1;
+                }
                 break;
         case IMB_CIPHER_ZUC_NCA6:
                 if (job->msg_len_to_cipher_in_bytes > MB_MAX_LEN16) {
@@ -855,6 +864,14 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
                         return 1;
                 }
+                if (job->u.NCA.aad == NULL && job->u.NCA.aad_len_in_bytes > 0) {
+                        imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
+                        return 1;
+                }
+                if (job->u.NCA.aad_len_in_bytes > NCA_AAD_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
+                        return 1;
+                }
                 break;
         case IMB_CIPHER_SNOW5G_NCA4:
                 if (job->msg_len_to_cipher_in_bytes > NCA_MAX_BYTELEN) {
@@ -887,6 +904,14 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (hash_alg != IMB_AUTH_SNOW5G_NCA4) {
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                if (job->u.NCA.aad == NULL && job->u.NCA.aad_len_in_bytes > 0) {
+                        imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
+                        return 1;
+                }
+                if (job->u.NCA.aad_len_in_bytes > NCA_AAD_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
                         return 1;
                 }
                 break;
