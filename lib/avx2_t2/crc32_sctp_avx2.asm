@@ -83,9 +83,6 @@ end_param_check:
 
         call            crc32_vclmul_avx2
 
-%ifdef SAFE_DATA
-        clear_scratch_ymms_asm
-%endif
         ret
 
 %ifdef SAFE_PARAM

@@ -85,9 +85,6 @@ align_label
 
         not             eax
 
-%ifdef SAFE_DATA
-        clear_scratch_ymms_asm
-%endif
         ret
 
 %ifdef SAFE_PARAM
@@ -140,9 +137,6 @@ align_label
 
         shr             eax, 24          ; adjust for 8-bit poly
 
-%ifdef SAFE_DATA
-        clear_scratch_ymms_asm
-%endif
         ret
 
 %ifdef SAFE_PARAM

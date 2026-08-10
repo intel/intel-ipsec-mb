@@ -371,8 +371,13 @@ align_label
 
 align_label
 ._cleanup:
-%ifndef LINUX
+%ifdef SAFE_DATA
+        clear_scratch_ymms_asm
+%else
         vzeroupper
+%endif
+
+%ifndef LINUX
         vmovdqu         xmm6,  [rsp + 16*0]
         vmovdqu         xmm7,  [rsp + 16*1]
         vmovdqu         xmm8,  [rsp + 16*2]
