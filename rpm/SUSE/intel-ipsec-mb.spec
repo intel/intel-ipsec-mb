@@ -31,7 +31,7 @@ Name:               intel-ipsec-mb
 Summary:            IPSec cryptography library optimized for Intel Architecture
 Release:            0
 Version:            %{major}.%{minor}.%{patch}
-License:            BSD-3-Clause
+License:            BSD-3-Clause AND Apache-2.0
 Group:              Development/Libraries/C and C++
 URL:                https://github.com/intel/%{name}
 Source0:            https://github.com/intel/%{name}/archive/v%{githubver}.tar.gz#/%{githubfull}.tar.gz
@@ -47,6 +47,7 @@ and primarily targeted at packet processing applications.
 
 %package devel
 Summary:            Headers for the Intel IPSec cryptographic library
+License:            BSD-3-Clause
 Requires:           %{rpm_name}%{major}%{?_isa} = %{version}-%{release}
 Group:              Development/Libraries/C and C++
 
@@ -85,7 +86,7 @@ ln -s libIPSec_MB.so.%{version} libIPSec_MB.so.%{major}
 ln -s libIPSec_MB.so.%{version} libIPSec_MB.so
 
 %files -n %{rpm_name}%{major}
-%license LICENSE
+%license LICENSE LICENSE.OpenSSL
 %{_libdir}/libIPSec_MB.so.%{version}
 %{_libdir}/libIPSec_MB.so.%{major}
 

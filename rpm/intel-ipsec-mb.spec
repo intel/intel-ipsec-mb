@@ -41,7 +41,7 @@ Summary:            IPSEC cryptography library optimized for Intel Architecture
 Name:               %{githubname}
 Release:            1%{?dist}
 Version:            %{fullversion}
-License:            BSD
+License:            BSD-3-Clause AND Apache-2.0
 Group:              Development/Tools
 ExclusiveArch:      x86_64
 Source0:            https://github.com/intel/%{githubname}/archive/v%{githubver}.tar.gz#/%{githubfull}.tar.gz
@@ -56,7 +56,7 @@ IPSEC cryptography library optimized for Intel Architecture
 
 %package -n intel-ipsec-mb-devel
 Summary:            IPSEC cryptography library optimized for Intel Architecture
-License:            BSD
+License:            BSD-3-Clause
 Requires:           %{name}%{?_isa} = %{version}-%{release}
 Group:              Development/Tools
 ExclusiveArch:      x86_64
@@ -97,7 +97,7 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 
 %files
 
-%license LICENSE
+%license LICENSE LICENSE.OpenSSL
 %doc README ReleaseNotes.txt
 
 %{_libdir}/libIPSec_MB.so.%{fullversion}

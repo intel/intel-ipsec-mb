@@ -58,6 +58,9 @@ ML-KEM-512, ML-KEM-768 and ML-KEM-1024 (FIPS 203) through the opaque
 `IMB_ML_KEM` handle and the `imb_ml_kem_*` API.
 The ML-DSA and ML-KEM implementations are derived from OpenSSL and are
 licensed under the Apache License 2.0 (see LICENSE.OpenSSL).
+The library as a whole is BSD 3-Clause licensed except where individual files
+state otherwise; see the Licenses section of [CONTRIBUTING](CONTRIBUTING) for
+the licensing model (effective SPDX expression: `BSD-3-Clause AND Apache-2.0`).
 
 Table 1. List of supported cipher algorithms and their implementations.
 ```

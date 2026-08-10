@@ -1,4 +1,4 @@
-Copyright (c) 2012-2024, Intel Corporation
+Copyright (c) 2012-2026, Intel Corporation
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -22,13 +22,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
---------------------------------------------------------------------------------
-
-Third-party components
-
-The ML-DSA (FIPS 204) implementation under lib/x86_64/ml_dsa/ and
-lib/include/ml_dsa/ is derived from the OpenSSL project and is licensed under
-the Apache License 2.0. The full text of that license is provided in the
-LICENSE.OpenSSL file. The relevant source files retain their original
-Apache-2.0 copyright headers.

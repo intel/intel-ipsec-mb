@@ -316,4 +316,30 @@ git config --global user.email "your_email@youremail.com"
 Licenses
 ========
 
-The code in this repository is licensed under BSD license (see LICENSE file).
+This repository is a mixed-license project: the license that applies to a file
+is determined by that file's own copyright header, not by the repository as a
+whole.
+
+  - Project default: BSD 3-Clause (see LICENSE). This covers all original
+    intel-ipsec-mb code.
+  - Vendored OpenSSL code under lib/openssl/ and lib/include/openssl/:
+    Apache License 2.0 (see LICENSE.OpenSSL). This code was originally ported
+    from the OpenSSL project (commit: 626ff8fd9344eb46e50464960ce84dcbacf5a4dd).
+
+Rules for contributors
+----------------------
+
+1. New original code uses the standard BSD 3-Clause header used throughout
+   the project. Add your own copyright line to files you create.
+
+2. When you modify a vendored OpenSSL file, keep the existing OpenSSL
+   copyright and Apache-2.0 header, and add your own copyright.
+
+3. Copying OpenSSL logic into a new file makes that file a derivative work.
+   It must carry both the OpenSSL and your own copyright, and the Apache-2.0 header.
+
+By contributing, you agree that your contribution is licensed under the
+license that applies to the file you are changing, as described above.
+
+Any redistribution of this project, in source or binary form, must include
+LICENSE and LICENSE.OpenSSL.
