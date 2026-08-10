@@ -48,11 +48,6 @@ default rel
 %define arg4            r9
 %endif
 
-struc STACK_FRAME
-_xmm_save:      resq    10 * 2
-_rsp_save:      resq    1
-endstruc
-
 mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -81,22 +76,6 @@ crc32_wimax_ofdma_data_avx2:
 align_label
 .end_param_check:
 %endif
-%ifndef LINUX
-        mov             rax, rsp
-        sub             rsp, STACK_FRAME_size
-        and             rsp, -16
-        mov             [rsp + _rsp_save], rax
-        vmovdqa         [rsp + _xmm_save + 16*0], xmm6
-        vmovdqa         [rsp + _xmm_save + 16*1], xmm7
-        vmovdqa         [rsp + _xmm_save + 16*2], xmm8
-        vmovdqa         [rsp + _xmm_save + 16*3], xmm9
-        vmovdqa         [rsp + _xmm_save + 16*4], xmm10
-        vmovdqa         [rsp + _xmm_save + 16*5], xmm11
-        vmovdqa         [rsp + _xmm_save + 16*6], xmm12
-        vmovdqa         [rsp + _xmm_save + 16*7], xmm13
-        vmovdqa         [rsp + _xmm_save + 16*8], xmm14
-        vmovdqa         [rsp + _xmm_save + 16*9], xmm15
-%endif
         lea             arg4, [rel crc32_wimax_ofdma_data_const]
         mov             arg3, arg2
         mov             arg2, arg1
@@ -108,19 +87,6 @@ align_label
 
 %ifdef SAFE_DATA
         clear_scratch_ymms_asm
-%endif
-%ifndef LINUX
-        vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
-        vmovdqa         xmm7,  [rsp + _xmm_save + 16*1]
-        vmovdqa         xmm8,  [rsp + _xmm_save + 16*2]
-        vmovdqa         xmm9,  [rsp + _xmm_save + 16*3]
-        vmovdqa         xmm10, [rsp + _xmm_save + 16*4]
-        vmovdqa         xmm11, [rsp + _xmm_save + 16*5]
-        vmovdqa         xmm12, [rsp + _xmm_save + 16*6]
-        vmovdqa         xmm13, [rsp + _xmm_save + 16*7]
-        vmovdqa         xmm14, [rsp + _xmm_save + 16*8]
-        vmovdqa         xmm15, [rsp + _xmm_save + 16*9]
-        mov             rsp, [rsp + _rsp_save]
 %endif
         ret
 
@@ -156,30 +122,14 @@ crc8_wimax_ofdma_hcs_avx2:
 
         ;; Check len == 0
         or              arg2, arg2
-        jz              end_param_check
+        jz              .end_param_check
 
         ;; Check in == NULL (invalid if len != 0)
         or              arg1, arg1
-        jz              wrong_param
+        jz              .wrong_param
 
 align_label
-end_param_check:
-%endif
-%ifndef LINUX
-        mov             rax, rsp
-        sub             rsp, STACK_FRAME_size
-        and             rsp, -16
-        mov             [rsp + _rsp_save], rax
-        vmovdqa         [rsp + _xmm_save + 16*0], xmm6
-        vmovdqa         [rsp + _xmm_save + 16*1], xmm7
-        vmovdqa         [rsp + _xmm_save + 16*2], xmm8
-        vmovdqa         [rsp + _xmm_save + 16*3], xmm9
-        vmovdqa         [rsp + _xmm_save + 16*4], xmm10
-        vmovdqa         [rsp + _xmm_save + 16*5], xmm11
-        vmovdqa         [rsp + _xmm_save + 16*6], xmm12
-        vmovdqa         [rsp + _xmm_save + 16*7], xmm13
-        vmovdqa         [rsp + _xmm_save + 16*8], xmm14
-        vmovdqa         [rsp + _xmm_save + 16*9], xmm15
+.end_param_check:
 %endif
         lea             arg4, [rel crc32_wimax_ofdma_hcs8_const]
         mov             arg3, arg2
@@ -193,24 +143,11 @@ end_param_check:
 %ifdef SAFE_DATA
         clear_scratch_ymms_asm
 %endif
-%ifndef LINUX
-        vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
-        vmovdqa         xmm7,  [rsp + _xmm_save + 16*1]
-        vmovdqa         xmm8,  [rsp + _xmm_save + 16*2]
-        vmovdqa         xmm9,  [rsp + _xmm_save + 16*3]
-        vmovdqa         xmm10, [rsp + _xmm_save + 16*4]
-        vmovdqa         xmm11, [rsp + _xmm_save + 16*5]
-        vmovdqa         xmm12, [rsp + _xmm_save + 16*6]
-        vmovdqa         xmm13, [rsp + _xmm_save + 16*7]
-        vmovdqa         xmm14, [rsp + _xmm_save + 16*8]
-        vmovdqa         xmm15, [rsp + _xmm_save + 16*9]
-        mov             rsp, [rsp + _rsp_save]
-%endif
         ret
 
 %ifdef SAFE_PARAM
 align_label
-wrong_param:
+.wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
 

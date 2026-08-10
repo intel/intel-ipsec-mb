@@ -52,19 +52,10 @@ default rel
 %define arg4            r9        ; const pointer
 %endif
 
-%define init_crc        arg1
+%define init_crc        DWORD(arg1)
 %define msg_ptr         arg2
 %define msg_len         arg3
 %define const_ptr       arg4
-%define msg_ptr_64      arg2
-%define msg_len_64      arg3
-%define const_ptr_64    arg4
-%define init_crc_32     DWORD(arg1)
-
-struc STACK_FRAME
-_xmm_save:      resq    8 * 2
-_rsp_save:      resq    1
-endstruc
 
 mksection .text
 
@@ -84,11 +75,22 @@ mksection .text
 align_function
 MKGLOBAL(crc32_vclmul_avx2, function, internal)
 crc32_vclmul_avx2:
-        ; r10 holds the const pointer
-        mov             r10, const_ptr_64
-        mov             eax, init_crc_32
+%ifndef LINUX
+        sub             rsp, 16*10
+        vmovdqu         [rsp + 16*0], xmm6
+        vmovdqu         [rsp + 16*1], xmm7
+        vmovdqu         [rsp + 16*2], xmm8
+        vmovdqu         [rsp + 16*3], xmm9
+        vmovdqu         [rsp + 16*4], xmm10
+        vmovdqu         [rsp + 16*5], xmm11
+        vmovdqu         [rsp + 16*6], xmm12
+        vmovdqu         [rsp + 16*7], xmm13
+        vmovdqu         [rsp + 16*8], xmm14
+        vmovdqu         [rsp + 16*9], xmm15
+%endif
+        mov             eax, init_crc
 
-        cmp             msg_len_64, 256
+        cmp             msg_len, 256
         jb              ._less_than_256
 
         ;; --- fast path: >= 256 bytes ---
@@ -98,10 +100,10 @@ crc32_vclmul_avx2:
         vpslldq         xmm10, 12
         vbroadcasti128  ymm11, [rel bswap_shuf_mask]
 
-        vmovdqu         ymm0, [msg_ptr_64 + 16*0]
-        vmovdqu         ymm1, [msg_ptr_64 + 16*2]
-        vmovdqu         ymm2, [msg_ptr_64 + 16*4]
-        vmovdqu         ymm3, [msg_ptr_64 + 16*6]
+        vmovdqu         ymm0, [msg_ptr + 16*0]
+        vmovdqu         ymm1, [msg_ptr + 16*2]
+        vmovdqu         ymm2, [msg_ptr + 16*4]
+        vmovdqu         ymm3, [msg_ptr + 16*6]
 
         vpshufb         ymm0, ymm11
         vpxor           ymm0, ymm10
@@ -109,95 +111,95 @@ crc32_vclmul_avx2:
         vpshufb         ymm2, ymm11
         vpshufb         ymm3, ymm11
 
-        vbroadcasti128  ymm10, [r10 + crc32_const_fold_8x128b]
+        vbroadcasti128  ymm10, [const_ptr + crc32_const_fold_8x128b]
 
-        sub             msg_len_64, 256
-        cmp             msg_len_64, 256
+        sub             msg_len, 256
+        cmp             msg_len, 256
         jb              ._fold_128_B_loop
 
         ;; >= 512B remaining: load another 256B into ymm8,9,12,13 and
         ;; use fold-by-16x128b constants to halve register pressure.
 
-        vmovdqu         ymm8, [msg_ptr_64 + 16*8]
-        vmovdqu         ymm9, [msg_ptr_64 + 16*10]
-        vmovdqu         ymm12, [msg_ptr_64 + 16*12]
-        vmovdqu         ymm13, [msg_ptr_64 + 16*14]
+        vmovdqu         ymm8, [msg_ptr + 16*8]
+        vmovdqu         ymm9, [msg_ptr + 16*10]
+        vmovdqu         ymm12, [msg_ptr + 16*12]
+        vmovdqu         ymm13, [msg_ptr + 16*14]
 
         vpshufb         ymm8, ymm11
         vpshufb         ymm9, ymm11
         vpshufb         ymm12, ymm11
         vpshufb         ymm13, ymm11
 
-        vbroadcasti128  ymm15, [r10 + crc32_const_fold_16x128b]
-        sub             msg_len_64, 256
+        vbroadcasti128  ymm15, [const_ptr + crc32_const_fold_16x128b]
+        sub             msg_len, 256
 
 align_loop
 ._fold_256_B_loop:
         ;; Fold 8 YMM pairs (512B) per iteration using fold-by-16x128b.
-        add             msg_ptr_64, 256
+        add             msg_ptr, 256
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*0]
+        vmovdqu         ymm14, [msg_ptr + 16*0]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm4, ymm0, ymm15, 0x0
         vpclmulqdq      ymm0, ymm0, ymm15, 0x11
         vpxor           ymm0, ymm14
         vpxor           ymm0, ymm4
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*2]
+        vmovdqu         ymm14, [msg_ptr + 16*2]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm5, ymm1, ymm15, 0x0
         vpclmulqdq      ymm1, ymm1, ymm15, 0x11
         vpxor           ymm1, ymm14
         vpxor           ymm1, ymm5
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*4]
+        vmovdqu         ymm14, [msg_ptr + 16*4]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm4, ymm2, ymm15, 0x0
         vpclmulqdq      ymm2, ymm2, ymm15, 0x11
         vpxor           ymm2, ymm14
         vpxor           ymm2, ymm4
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*6]
+        vmovdqu         ymm14, [msg_ptr + 16*6]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm5, ymm3, ymm15, 0x0
         vpclmulqdq      ymm3, ymm3, ymm15, 0x11
         vpxor           ymm3, ymm14
         vpxor           ymm3, ymm5
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*8]
+        vmovdqu         ymm14, [msg_ptr + 16*8]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm6, ymm8, ymm15, 0x0
         vpclmulqdq      ymm8, ymm8, ymm15, 0x11
         vpxor           ymm8, ymm14
         vpxor           ymm8, ymm6
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*10]
+        vmovdqu         ymm14, [msg_ptr + 16*10]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm7, ymm9, ymm15, 0x0
         vpclmulqdq      ymm9, ymm9, ymm15, 0x11
         vpxor           ymm9, ymm14
         vpxor           ymm9, ymm7
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*12]
+        vmovdqu         ymm14, [msg_ptr + 16*12]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm6, ymm12, ymm15, 0x0
         vpclmulqdq      ymm12, ymm12, ymm15, 0x11
         vpxor           ymm12, ymm14
         vpxor           ymm12, ymm6
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*14]
+        vmovdqu         ymm14, [msg_ptr + 16*14]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm7, ymm13, ymm15, 0x0
         vpclmulqdq      ymm13, ymm13, ymm15, 0x11
         vpxor           ymm13, ymm14
         vpxor           ymm13, ymm7
 
-        sub             msg_len_64, 256
+        sub             msg_len, 256
         jge             ._fold_256_B_loop
 
         ;; Merge ymm8,9,12,13 into ymm0-3 using fold-by-8x128b, then
         ;; fall through to fold the remaining < 512B.
-        add             msg_ptr_64, 128
+        add             msg_ptr, 128
         vpclmulqdq      ymm4, ymm0, ymm10, 0x0
         vpclmulqdq      ymm0, ymm0, ymm10, 0x11
         vpxor           ymm0, ymm4
@@ -218,44 +220,44 @@ align_loop
         vpxor           ymm3, ymm5
         vpxor           ymm3, ymm13
 
-        add             msg_len_64, 128
-        cmp             msg_len_64, 128
-        jl              ._fold_less_than_128_B
+        add             msg_len, 128
+        cmp             msg_len, 128
+        jl              ._fold_less_than_128_B  ; msg_len may be negative after sub loop
 
 align_loop
 ._fold_128_B_loop:
         ;; Fold 4 YMM registers (256B) per iteration using fold-by-8x128b.
-        add             msg_ptr_64, 128
+        add             msg_ptr, 128
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*0]
+        vmovdqu         ymm14, [msg_ptr + 16*0]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm4, ymm0, ymm10, 0x0
         vpclmulqdq      ymm0, ymm0, ymm10, 0x11
         vpxor           ymm0, ymm14
         vpxor           ymm0, ymm4
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*2]
+        vmovdqu         ymm14, [msg_ptr + 16*2]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm5, ymm1, ymm10, 0x0
         vpclmulqdq      ymm1, ymm1, ymm10, 0x11
         vpxor           ymm1, ymm14
         vpxor           ymm1, ymm5
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*4]
+        vmovdqu         ymm14, [msg_ptr + 16*4]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm4, ymm2, ymm10, 0x0
         vpclmulqdq      ymm2, ymm2, ymm10, 0x11
         vpxor           ymm2, ymm14
         vpxor           ymm2, ymm4
 
-        vmovdqu         ymm14, [msg_ptr_64 + 16*6]
+        vmovdqu         ymm14, [msg_ptr + 16*6]
         vpshufb         ymm14, ymm11
         vpclmulqdq      ymm5, ymm3, ymm10, 0x0
         vpclmulqdq      ymm3, ymm3, ymm10, 0x11
         vpxor           ymm3, ymm14
         vpxor           ymm3, ymm5
 
-        sub             msg_len_64, 128
+        sub             msg_len, 128
         jge             ._fold_128_B_loop
 
 align_label
@@ -263,28 +265,28 @@ align_label
         ;; Reduce ymm0-3 down to a single XMM. Extract the upper lane of ymm3
         ;; into xmm7 (the running accumulator), then fold ymm0-2 and xmm3 into
         ;; ymm12 using per-distance constants, and merge with xmm7.
-        add             msg_ptr_64, 128
+        add             msg_ptr, 128
 
         vextracti128    xmm7, ymm3, 1
 
-        vmovdqu         ymm10, [r10 + crc32_const_fold_7x128b]  ; lo=fold_7, hi=fold_6 for ymm0 lanes
+        vmovdqu         ymm10, [const_ptr + crc32_const_fold_7x128b]  ; lo=fold_7, hi=fold_6 for ymm0 lanes
         vpclmulqdq      ymm4, ymm0, ymm10, 0x0
         vpclmulqdq      ymm12, ymm0, ymm10, 0x11
         vpxor           ymm12, ymm4
 
-        vmovdqu         ymm10, [r10 + crc32_const_fold_5x128b]  ; lo=fold_5, hi=fold_4 for ymm1 lanes
+        vmovdqu         ymm10, [const_ptr + crc32_const_fold_5x128b]  ; lo=fold_5, hi=fold_4 for ymm1 lanes
         vpclmulqdq      ymm4, ymm1, ymm10, 0x0
         vpclmulqdq      ymm5, ymm1, ymm10, 0x11
         vpxor           ymm12, ymm4
         vpxor           ymm12, ymm5
 
-        vmovdqu         ymm10, [r10 + crc32_const_fold_3x128b]  ; lo=fold_3, hi=fold_2 for ymm2 lanes
+        vmovdqu         ymm10, [const_ptr + crc32_const_fold_3x128b]  ; lo=fold_3, hi=fold_2 for ymm2 lanes
         vpclmulqdq      ymm4, ymm2, ymm10, 0x0
         vpclmulqdq      ymm5, ymm2, ymm10, 0x11
         vpxor           ymm12, ymm4
         vpxor           ymm12, ymm5
 
-        vmovdqa         xmm10, [r10 + crc32_const_fold_1x128b]
+        vmovdqa         xmm10, [const_ptr + crc32_const_fold_1x128b]
         vpclmulqdq      xmm4, xmm3, xmm10, 0x0
         vpclmulqdq      xmm5, xmm3, xmm10, 0x11
         vpxor           ymm12, ymm4
@@ -294,8 +296,8 @@ align_label
         vpxor           xmm7, xmm4
         vpxor           xmm7, xmm12
 
-        add             msg_len_64, 128 - 16
-        jl              ._final_reduction_for_128
+        add             msg_len, 128 - 16
+        jl              ._final_reduction_for_128  ; msg_len may be negative
 
 align_loop
 ._16B_reduction_loop:
@@ -304,16 +306,16 @@ align_loop
         vpclmulqdq      xmm7, xmm10, 0x11
         vpclmulqdq      xmm8, xmm10, 0x0
         vpxor           xmm7, xmm8
-        vmovdqu         xmm0, [msg_ptr_64]
+        vmovdqu         xmm0, [msg_ptr]
         vpshufb         xmm0, xmm11
         vpxor           xmm7, xmm0
-        add             msg_ptr_64, 16
-        sub             msg_len_64, 16
+        add             msg_ptr, 16
+        sub             msg_len, 16
         jge             ._16B_reduction_loop
 
 align_label
 ._final_reduction_for_128:
-        add             msg_len_64, 16
+        add             msg_len, 16
         je              ._128_done
 
 align_label
@@ -322,11 +324,11 @@ align_label
         ;; PSHUFB-based shift to blend residual bytes into xmm7.
         vmovdqa         xmm2, xmm7
 
-        vmovdqu         xmm1, [msg_ptr_64 - 16 + msg_len_64]
+        vmovdqu         xmm1, [msg_ptr - 16 + msg_len]
         vpshufb         xmm1, xmm11
 
         lea             rax, [rel pshufb_shf_table + 16]
-        sub             rax, msg_len_64
+        sub             rax, msg_len
         vmovdqu         xmm0, [rax]
 
         vpshufb         xmm2, xmm0
@@ -344,15 +346,13 @@ align_label
 align_label
 ._128_done:
         ;; Fold 128 bits down to 64 bits.
-        vmovdqa         xmm10, [r10 + crc32_const_fold_128b_to_64b]
-        vmovdqa         xmm0, xmm7
+        vmovdqa         xmm10, [const_ptr + crc32_const_fold_128b_to_64b]
+        vpslldq         xmm0, xmm7, 8
 
         vpclmulqdq      xmm7, xmm10, 0x1
-        vpslldq         xmm0, 8
         vpxor           xmm7, xmm0
 
-        vmovdqa         xmm0, xmm7
-        vpand           xmm0, [rel mask2]
+        vpand           xmm0, xmm7, [rel mask2]
         vpsrldq         xmm7, 12
         vpclmulqdq      xmm7, xmm10, 0x10
         vpxor           xmm7, xmm0
@@ -360,7 +360,7 @@ align_label
 align_label
 ._barrett:
         ;; Barrett reduction: fold 64 bits down to 32 bits and extract result.
-        vmovdqa         xmm10, [r10 + crc32_const_reduce_64b_to_32b]
+        vmovdqa         xmm10, [const_ptr + crc32_const_reduce_64b_to_32b]
         vmovdqa         xmm0, xmm7
         vpclmulqdq      xmm7, xmm10, 0x01
         vpslldq         xmm7, 4
@@ -371,68 +371,80 @@ align_label
 
 align_label
 ._cleanup:
+%ifndef LINUX
+        vzeroupper
+        vmovdqu         xmm6,  [rsp + 16*0]
+        vmovdqu         xmm7,  [rsp + 16*1]
+        vmovdqu         xmm8,  [rsp + 16*2]
+        vmovdqu         xmm9,  [rsp + 16*3]
+        vmovdqu         xmm10, [rsp + 16*4]
+        vmovdqu         xmm11, [rsp + 16*5]
+        vmovdqu         xmm12, [rsp + 16*6]
+        vmovdqu         xmm13, [rsp + 16*7]
+        vmovdqu         xmm14, [rsp + 16*8]
+        vmovdqu         xmm15, [rsp + 16*9]
+        add             rsp, 16*10
+%endif
         ret
 
 align_label
 ._less_than_256:
         ;; Slow path: < 256 bytes. Use XMM-only folding.
-        cmp             msg_len_64, 32
+        cmp             msg_len, 32
         jb              ._less_than_32
         vmovdqa         xmm11, [rel bswap_shuf_mask]
 
-        vmovdqa         xmm10, [r10 + crc32_const_fold_1x128b]
-        mov             ecx, init_crc_32        ; ecx = init value
-        vmovd           xmm0, ecx                  ; move from ecx to xmm0
+        vmovdqa         xmm10, [const_ptr + crc32_const_fold_1x128b]
+        vmovd           xmm0, init_crc
         vpslldq         xmm0, 12
-        vmovdqu         xmm7, [msg_ptr_64]
+        vmovdqu         xmm7, [msg_ptr]
         vpshufb         xmm7, xmm11
         vpxor           xmm7, xmm0
 
-        add             msg_ptr_64, 16
-        sub             msg_len_64, 32
+        add             msg_ptr, 16
+        sub             msg_len, 32
         jmp             ._16B_reduction_loop
 
 align_label
 ._less_than_32:
-        mov             eax, init_crc_32
-        test            msg_len_64, msg_len_64
+        mov             eax, init_crc
+        test            msg_len, msg_len
         je              ._cleanup
 
         vmovdqa         xmm11, [rel bswap_shuf_mask]
-        mov             ecx, init_crc_32        ; ecx = init value
-        vmovd           xmm0, ecx                  ; move from ecx to xmm0
+        vmovd           xmm0, init_crc
         vpslldq         xmm0, 12
 
-        cmp             msg_len_64, 16
+        cmp             msg_len, 16
         je              ._exact_16_left
         jb              ._less_than_16_left
 
-        vmovdqu         xmm7, [msg_ptr_64]
+        vmovdqu         xmm7, [msg_ptr]
         vpshufb         xmm7, xmm11
         vpxor           xmm7, xmm0
-        add             msg_ptr_64, 16
-        sub             msg_len_64, 16
-        vmovdqa         xmm10, [r10 + crc32_const_fold_1x128b]
+        add             msg_ptr, 16
+        sub             msg_len, 16
+        vmovdqa         xmm10, [const_ptr + crc32_const_fold_1x128b]
         jmp             ._get_last_two_xmms
 
 align_label
 ._exact_16_left:
-        vmovdqu         xmm7, [msg_ptr_64]
+        vmovdqu         xmm7, [msg_ptr]
         vpshufb         xmm7, xmm11
         vpxor           xmm7, xmm0
         jmp             ._128_done
 
 align_label
 ._less_than_16_left:
-        simd_load_avx_15_1 xmm7, msg_ptr_64, msg_len_64
+        simd_load_avx_15_1 xmm7, msg_ptr, msg_len
         vpshufb         xmm7, xmm11
         vpxor           xmm7, xmm0
 
-        cmp             msg_len_64, 4
+        cmp             msg_len, 4
         jb              ._only_less_than_4
 
         lea             rax, [rel pshufb_shf_table + 16]
-        sub             rax, msg_len_64
+        sub             rax, msg_len
         vmovdqu         xmm0, [rax]
         vpxor           xmm0, [rel mask1]
         vpshufb         xmm7, xmm0
@@ -440,14 +452,14 @@ align_label
 
 align_label
 ._only_less_than_4:
-        cmp             msg_len_64, 3
+        cmp             msg_len, 3
         jb              ._only_less_than_3
         vpsrldq         xmm7, 5
         jmp             ._barrett
 
 align_label
 ._only_less_than_3:
-        cmp             msg_len_64, 2
+        cmp             msg_len, 2
         jb              ._only_less_than_2
         vpsrldq         xmm7, 6
         jmp             ._barrett
