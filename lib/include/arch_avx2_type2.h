@@ -158,6 +158,11 @@ uint32_t
 crc32_vclmul_avx2(const uint32_t init_crc, const void *msg, const uint64_t len,
                   const void *const_ptr);
 uint32_t
+crc32_refl_vclmul_avx2(const uint32_t init_crc, const void *msg, const uint64_t len,
+                       const void *const_ptr);
+uint32_t
+crc16_x25_avx2(const void *msg, const uint64_t len);
+uint32_t
 crc32_sctp_avx2(const void *msg, const uint64_t len);
 uint32_t
 crc24_lte_a_avx2(const void *msg, const uint64_t len);
@@ -177,5 +182,10 @@ uint32_t
 crc32_wimax_ofdma_data_avx2(const void *msg, const uint64_t len);
 uint32_t
 crc8_wimax_ofdma_hcs_avx2(const void *msg, const uint64_t len);
+
+uint32_t
+ethernet_fcs_avx2(const void *msg, const uint64_t len);
+uint32_t
+ethernet_fcs_avx2_local(const void *msg, const uint64_t len, const void *tag_ouput);
 
 #endif /* IMB_ASM_AVX2_T2_H */

@@ -40,6 +40,7 @@ Library
 - Added ML-DSA (FIPS 204) support for ML-DSA-44, ML-DSA-65 and ML-DSA-87.
 - Added ML-KEM (FIPS 203) support for ML-KEM-512, ML-KEM-768 and ML-KEM-1024.
 - Added AVX2 NTT optimization for ML-KEM (FIPS 203).
+- Added AVX2 Type 2 CRC implementations using VPCLMULQDQ 256-bit polynomial folding for all CRC types.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.

@@ -31,6 +31,7 @@
 ;; functions
 extern crc32_refl_by8_sse
 extern crc32_refl_by8_avx
+extern crc32_refl_vclmul_avx2
 extern crc32_refl_by16_vclmul_avx512
 
 ;; structures with constants

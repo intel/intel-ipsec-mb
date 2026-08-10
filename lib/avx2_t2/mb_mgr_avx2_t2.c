@@ -445,8 +445,8 @@ init_mb_mgr_avx2_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->hec_32 = hec_32_avx;
         state->hec_64 = hec_64_avx;
 
-        state->crc32_ethernet_fcs = ethernet_fcs_avx;
-        state->crc16_x25 = crc16_x25_avx;
+        state->crc32_ethernet_fcs = ethernet_fcs_avx2;
+        state->crc16_x25 = crc16_x25_avx2;
         state->crc32_sctp = crc32_sctp_avx2;
         state->crc24_lte_a = crc24_lte_a_avx2;
         state->crc24_lte_b = crc24_lte_b_avx2;
