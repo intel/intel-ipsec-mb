@@ -508,12 +508,12 @@ endstruc
 
         ;; Compute offset increment values: 16 if lane in WORK mode (mask != 0), else 0
         xor             DWORD(%%TGP0), DWORD(%%TGP0)
-        ktest           k2, k2
+        ktestw          k2, k2
         setne           BYTE(%%TGP0)
         shl             %%TGP0, 4                   ; %%TGP0 = 16 or 0
         mov             [rsp + _offset0_inc], %%TGP0
         xor             DWORD(%%TGP1), DWORD(%%TGP1)
-        ktest           k3, k3
+        ktestw          k3, k3
         setne           BYTE(%%TGP1)
         shl             %%TGP1, 4                   ; %%TGP1 = 16 or 0
         mov             [rsp + _offset1_inc], %%TGP1
