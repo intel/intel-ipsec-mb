@@ -55,9 +55,8 @@
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
 #define CRC(func, state, job)                                                                      \
-        *((uint32_t *) job->auth_tag_output) =                                                     \
-                func(state, job->src + job->hash_start_src_offset_in_bytes,                        \
-                     job->msg_len_to_hash_in_bytes)
+        *((uint32_t *) job->auth_tag_output) = state->func(                                        \
+                job->src + job->hash_start_src_offset_in_bytes, job->msg_len_to_hash_in_bytes)
 
 /* ========================================================================= */
 /* AES-CBC */
@@ -2827,51 +2826,51 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC32_ETHERNET_FCS:
-                CRC(IMB_CRC32_ETHERNET_FCS, state, job);
+                CRC(crc32_ethernet_fcs, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC32_SCTP:
-                CRC(IMB_CRC32_SCTP, state, job);
+                CRC(crc32_sctp, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC32_WIMAX_OFDMA_DATA:
-                CRC(IMB_CRC32_WIMAX_OFDMA_DATA, state, job);
+                CRC(crc32_wimax_ofdma_data, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC24_LTE_A:
-                CRC(IMB_CRC24_LTE_A, state, job);
+                CRC(crc24_lte_a, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC24_LTE_B:
-                CRC(IMB_CRC24_LTE_B, state, job);
+                CRC(crc24_lte_b, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC16_X25:
-                CRC(IMB_CRC16_X25, state, job);
+                CRC(crc16_x25, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC16_FP_DATA:
-                CRC(IMB_CRC16_FP_DATA, state, job);
+                CRC(crc16_fp_data, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC11_FP_HEADER:
-                CRC(IMB_CRC11_FP_HEADER, state, job);
+                CRC(crc11_fp_header, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC10_IUUP_DATA:
-                CRC(IMB_CRC10_IUUP_DATA, state, job);
+                CRC(crc10_iuup_data, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
-                CRC(IMB_CRC8_WIMAX_OFDMA_HCS, state, job);
+                CRC(crc8_wimax_ofdma_hcs, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC7_FP_HEADER:
-                CRC(IMB_CRC7_FP_HEADER, state, job);
+                CRC(crc7_fp_header, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_CRC6_IUUP_HEADER:
-                CRC(IMB_CRC6_IUUP_HEADER, state, job);
+                CRC(crc6_iuup_header, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_GHASH:

@@ -73,7 +73,7 @@ imb_set_session(IMB_MGR *state, IMB_JOB *job)
         extract.cipher_dir = (uint16_t) job->cipher_direction;
         extract.counter = atomic_uint64_inc(&counter);
 
-        const uint32_t id = IMB_CRC32_WIMAX_OFDMA_DATA(state, &extract, sizeof(extract));
+        const uint32_t id = state->crc32_wimax_ofdma_data(&extract, sizeof(extract));
 
         job->session_id = id;
         return id;
