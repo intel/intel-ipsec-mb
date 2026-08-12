@@ -27,11 +27,8 @@
 
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
-%include "include/clear_regs.inc"
 %include "include/crc32_refl_const.inc"
-%include "include/crc32_refl.inc"
 %include "include/cet.inc"
-%include "include/error.inc"
 %include "include/align_avx512.inc"
 
 %ifndef LINUX
@@ -49,7 +46,6 @@
 struc STACK_FRAME
 _gpr_save:      resq    1
 _rsp_save:      resq    1
-_xmm_save:      resq    8 * 2
 endstruc
 
 mksection .text
@@ -64,36 +60,6 @@ align_function
 MKGLOBAL(ethernet_fcs_avx512, function,)
 ethernet_fcs_avx512:
         endbranch64
-%ifdef SAFE_PARAM
-
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check len == 0
-        or              arg2, arg2
-        jz              end_param_check
-
-        ;; Check in == NULL (invalid if len != 0)
-        or              arg1, arg1
-        jz              wrong_param
-
-align_label
-end_param_check:
-%endif
-        mov             rax, rsp
-        sub             rsp, STACK_FRAME_size
-        and             rsp, -16
-        mov             [rsp + _rsp_save], rax
-%ifndef LINUX
-        vmovdqa         [rsp + _xmm_save + 16*0], xmm6
-        vmovdqa         [rsp + _xmm_save + 16*1], xmm7
-        vmovdqa         [rsp + _xmm_save + 16*2], xmm8
-        vmovdqa         [rsp + _xmm_save + 16*3], xmm9
-        vmovdqa         [rsp + _xmm_save + 16*4], xmm10
-        vmovdqa         [rsp + _xmm_save + 16*5], xmm11
-        vmovdqa         [rsp + _xmm_save + 16*6], xmm12
-        vmovdqa         [rsp + _xmm_save + 16*7], xmm13
-%endif
         lea             arg4, [rel crc32_ethernet_fcs_const]
         mov             arg3, arg2
         mov             arg2, arg1
@@ -101,39 +67,7 @@ end_param_check:
 
         call            crc32_refl_by16_vclmul_avx512
 
-%ifdef SAFE_DATA
-        clear_scratch_zmms_asm
-%else
-        vzeroupper
-%endif
-%ifndef LINUX
-        vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
-        vmovdqa         xmm7,  [rsp + _xmm_save + 16*1]
-        vmovdqa         xmm8,  [rsp + _xmm_save + 16*2]
-        vmovdqa         xmm9,  [rsp + _xmm_save + 16*3]
-        vmovdqa         xmm10, [rsp + _xmm_save + 16*4]
-        vmovdqa         xmm11, [rsp + _xmm_save + 16*5]
-        vmovdqa         xmm12, [rsp + _xmm_save + 16*6]
-        vmovdqa         xmm13, [rsp + _xmm_save + 16*7]
-%endif
-        mov             rsp, [rsp + _rsp_save]
-
         ret
-
-%ifdef SAFE_PARAM
-align_label
-wrong_param:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check in != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_SRC
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-
-        ret
-%endif
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

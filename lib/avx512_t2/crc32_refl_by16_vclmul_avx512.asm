@@ -40,7 +40,6 @@
 %include "include/clear_regs.inc"
 %include "include/crc32_refl.inc"
 %include "include/cet.inc"
-%include "include/clear_regs.inc"
 %include "include/align_avx512.inc"
 
 [bits 64]
@@ -76,6 +75,18 @@ align_function
 MKGLOBAL(crc32_refl_by16_vclmul_avx512,function,internal)
 crc32_refl_by16_vclmul_avx512:
         endbranch64
+%ifndef LINUX
+        sub             rsp, 16*9
+        vmovdqu         [rsp + 16*0], xmm6
+        vmovdqu         [rsp + 16*1], xmm7
+        vmovdqu         [rsp + 16*2], xmm8
+        vmovdqu         [rsp + 16*3], xmm9
+        vmovdqu         [rsp + 16*4], xmm10
+        vmovdqu         [rsp + 16*5], xmm11
+        vmovdqu         [rsp + 16*6], xmm12
+        vmovdqu         [rsp + 16*7], xmm13
+        vmovdqu         [rsp + 16*8], xmm14
+%endif
         not             DWORD(arg1)
 
         ;; check if smaller than 256B
@@ -295,6 +306,18 @@ align_label
         vzeroupper
 %endif
         not             eax
+%ifndef LINUX
+        vmovdqu         xmm6,  [rsp + 16*0]
+        vmovdqu         xmm7,  [rsp + 16*1]
+        vmovdqu         xmm8,  [rsp + 16*2]
+        vmovdqu         xmm9,  [rsp + 16*3]
+        vmovdqu         xmm10, [rsp + 16*4]
+        vmovdqu         xmm11, [rsp + 16*5]
+        vmovdqu         xmm12, [rsp + 16*6]
+        vmovdqu         xmm13, [rsp + 16*7]
+        vmovdqu         xmm14, [rsp + 16*8]
+        add             rsp, 16*9
+%endif
         ret
 
 align_label
