@@ -70,6 +70,17 @@ mksection .text
 align_function
 MKGLOBAL(crc32_refl_by8_avx,function,internal)
 crc32_refl_by8_avx:
+%ifndef LINUX
+        sub             rsp, 16*8
+        vmovdqu         [rsp + 16*0], xmm6
+        vmovdqu         [rsp + 16*1], xmm7
+        vmovdqu         [rsp + 16*2], xmm8
+        vmovdqu         [rsp + 16*3], xmm9
+        vmovdqu         [rsp + 16*4], xmm10
+        vmovdqu         [rsp + 16*5], xmm11
+        vmovdqu         [rsp + 16*6], xmm12
+        vmovdqu         [rsp + 16*7], xmm13
+%endif
         not             DWORD(arg1)
 
         ;; check if smaller than 256B
@@ -297,6 +308,20 @@ align_label
 .cleanup:
 %ifdef SAFE_DATA
         clear_all_xmms_avx_asm
+%else
+        vzeroupper
+%endif
+
+%ifndef LINUX
+        vmovdqu         xmm6,  [rsp + 16*0]
+        vmovdqu         xmm7,  [rsp + 16*1]
+        vmovdqu         xmm8,  [rsp + 16*2]
+        vmovdqu         xmm9,  [rsp + 16*3]
+        vmovdqu         xmm10, [rsp + 16*4]
+        vmovdqu         xmm11, [rsp + 16*5]
+        vmovdqu         xmm12, [rsp + 16*6]
+        vmovdqu         xmm13, [rsp + 16*7]
+        add             rsp, 16*8
 %endif
         not             eax
         ret
