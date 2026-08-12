@@ -8,13 +8,17 @@
  * https://www.openssl.org/source/license.html
  */
 
+/*
+ * AVX2 accelerated ML-DSA sampling helpers (x4 SHAKE via sha3_x4_avx2.c).
+ */
+
 #include "ml_dsa_sample_x4_defs.h"
 
 static ossl_unused int
-rej_ntt_poly_mb(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t seed_len,
-                POLY *outs[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t count)
+rej_ntt_poly_mb_avx2(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t seed_len,
+                     POLY *outs[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t count)
 {
-        KECCAK1600_X4_AVX512VL_CTX ctx;
+        KECCAK1600_X4_AVX2_CTX ctx;
         uint8_t blocks[ML_DSA_SHAKE_X4_BATCH_SIZE][SHAKE128_BLOCKSIZE];
         int coeff_idx[ML_DSA_SHAKE_X4_BATCH_SIZE] = { 0, 0, 0, 0 };
         size_t done_mask = 0;
@@ -23,13 +27,13 @@ rej_ntt_poly_mb(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t s
         for (lane = count; lane < ML_DSA_SHAKE_X4_BATCH_SIZE; lane++)
                 done_mask |= ((size_t) 1 << lane);
 
-        ossl_sha3_shake128_x4_inc_init_avx512vl(&ctx);
-        ossl_sha3_shake128_x4_inc_absorb_avx512vl(&ctx, seeds[0], seeds[1], seeds[2], seeds[3],
-                                                  seed_len);
+        ossl_sha3_shake128_x4_inc_init_avx2(&ctx);
+        ossl_sha3_shake128_x4_inc_absorb_avx2(&ctx, seeds[0], seeds[1], seeds[2], seeds[3],
+                                              seed_len);
 
         while (done_mask != ML_DSA_SHAKE_X4_DONE_MASK) {
-                ossl_sha3_shake128_x4_inc_squeeze_avx512vl(blocks[0], blocks[1], blocks[2],
-                                                           blocks[3], SHAKE128_BLOCKSIZE, &ctx);
+                ossl_sha3_shake128_x4_inc_squeeze_avx2(blocks[0], blocks[1], blocks[2],
+                                                       blocks[3], SHAKE128_BLOCKSIZE, &ctx);
 
                 for (lane = 0; lane < ML_DSA_SHAKE_X4_BATCH_SIZE; lane++) {
                         if (done_mask & ((size_t) 1 << lane))
@@ -54,9 +58,9 @@ rej_ntt_poly_mb(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t s
 }
 
 static void
-vector_expand_mask_avx512(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_BYTES],
-                          const uint32_t kappa, const uint32_t gamma1, EVP_MD_CTX *h_ctx,
-                          const EVP_MD *md)
+vector_expand_mask_avx2(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_BYTES],
+                        const uint32_t kappa, const uint32_t gamma1, EVP_MD_CTX *h_ctx,
+                        const EVP_MD *md)
 {
         size_t i;
         const size_t num_polys = out->num_poly;
@@ -82,9 +86,9 @@ vector_expand_mask_avx512(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
                         derived_seeds[b][ML_DSA_RHO_PRIME_BYTES + 1] = (index >> 8) & 0xFF;
                 }
 
-                ossl_sha3_shake256_x4_avx512vl(buffers[0], buffers[1], buffers[2], buffers[3],
-                                               buf_size, derived_seeds[0], derived_seeds[1],
-                                               derived_seeds[2], derived_seeds[3], seed_len);
+                ossl_sha3_shake256_x4_avx2(buffers[0], buffers[1], buffers[2], buffers[3],
+                                           buf_size, derived_seeds[0], derived_seeds[1],
+                                           derived_seeds[2], derived_seeds[3], seed_len);
 
                 ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 0], buffers[0], buf_size,
                                                     gamma1);
@@ -97,10 +101,8 @@ vector_expand_mask_avx512(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
         }
 
         /*
-         * num_polys is always 4 (ML-DSA-44), 5 (ML-DSA-65), or 7 (ML-DSA-87), so the
-         * above loops will always runs at least once, initializing derived_seeds.
-         * As a result, 'left' below will be 0, 1, or 3, meaning the 4 way shake will
-         * recalculate values that are not used.
+         * num_polys is always 4 (ML-DSA-44), 5 (ML-DSA-65), or 7 (ML-DSA-87).
+         * The tail handles the 0, 1, or 3 remaining polys.
          */
         if (i < num_polys) {
                 const size_t left = num_polys - i;
@@ -113,9 +115,9 @@ vector_expand_mask_avx512(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
                         derived_seeds[b][ML_DSA_RHO_PRIME_BYTES + 1] = (uint8_t) (index >> 8);
                 }
 
-                ossl_sha3_shake256_x4_avx512vl(buffers[0], buffers[1], buffers[2], buffers[3],
-                                               buf_size, derived_seeds[0], derived_seeds[1],
-                                               derived_seeds[2], derived_seeds[3], seed_len);
+                ossl_sha3_shake256_x4_avx2(buffers[0], buffers[1], buffers[2], buffers[3],
+                                           buf_size, derived_seeds[0], derived_seeds[1],
+                                           derived_seeds[2], derived_seeds[3], seed_len);
 
                 ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 0], buffers[0], buf_size,
                                                     gamma1);
@@ -134,11 +136,11 @@ vector_expand_mask_avx512(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
 }
 
 static ossl_unused int
-rej_bounded_poly_mb(COEFF_FROM_NIBBLE_FUNC *coef_from_nibble,
-                    const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t seed_len,
-                    POLY *outs[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t count)
+rej_bounded_poly_mb_avx2(COEFF_FROM_NIBBLE_FUNC *coef_from_nibble,
+                          const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t seed_len,
+                          POLY *outs[ML_DSA_SHAKE_X4_BATCH_SIZE], const size_t count)
 {
-        KECCAK1600_X4_AVX512VL_CTX ctx;
+        KECCAK1600_X4_AVX2_CTX ctx;
         uint8_t blocks[ML_DSA_SHAKE_X4_BATCH_SIZE][SHAKE256_BLOCKSIZE];
         int coeff_idx[ML_DSA_SHAKE_X4_BATCH_SIZE] = { 0, 0, 0, 0 };
         size_t done_mask = 0;
@@ -147,13 +149,13 @@ rej_bounded_poly_mb(COEFF_FROM_NIBBLE_FUNC *coef_from_nibble,
         for (lane = count; lane < ML_DSA_SHAKE_X4_BATCH_SIZE; lane++)
                 done_mask |= ((size_t) 1 << lane);
 
-        ossl_sha3_shake256_x4_inc_init_avx512vl(&ctx);
-        ossl_sha3_shake256_x4_inc_absorb_avx512vl(&ctx, seeds[0], seeds[1], seeds[2], seeds[3],
-                                                  seed_len);
+        ossl_sha3_shake256_x4_inc_init_avx2(&ctx);
+        ossl_sha3_shake256_x4_inc_absorb_avx2(&ctx, seeds[0], seeds[1], seeds[2], seeds[3],
+                                              seed_len);
 
         while (done_mask != ML_DSA_SHAKE_X4_DONE_MASK) {
-                ossl_sha3_shake256_x4_inc_squeeze_avx512vl(blocks[0], blocks[1], blocks[2],
-                                                           blocks[3], SHAKE256_BLOCKSIZE, &ctx);
+                ossl_sha3_shake256_x4_inc_squeeze_avx2(blocks[0], blocks[1], blocks[2],
+                                                       blocks[3], SHAKE256_BLOCKSIZE, &ctx);
 
                 for (lane = 0; lane < ML_DSA_SHAKE_X4_BATCH_SIZE; lane++) {
                         if (done_mask & ((size_t) 1 << lane))
@@ -186,12 +188,12 @@ rej_bounded_poly_mb(COEFF_FROM_NIBBLE_FUNC *coef_from_nibble,
         }
 
         OPENSSL_cleanse(blocks, sizeof(blocks));
-        ossl_sha3_shake256_x4_inc_cleanup_avx512vl(&ctx);
+        ossl_sha3_shake256_x4_inc_cleanup_avx2(&ctx);
         return 1;
 }
 
 static int
-matrix_expand_A_avx512(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, MATRIX *out)
+matrix_expand_A_avx2(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, MATRIX *out)
 {
         size_t b, idx;
         uint8_t derived_seeds[ML_DSA_SHAKE_X4_BATCH_SIZE][ML_DSA_RHO_BYTES + 2];
@@ -219,7 +221,7 @@ matrix_expand_A_avx512(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, 
                         polys[b] = &poly[idx + b];
                 }
 
-                if (!rej_ntt_poly_mb(seeds, seed_len, polys, 4))
+                if (!rej_ntt_poly_mb_avx2(seeds, seed_len, polys, 4))
                         return 0;
         }
 
@@ -235,7 +237,7 @@ matrix_expand_A_avx512(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, 
                         polys[b] = &poly[idx + b];
                 }
 
-                if (!rej_ntt_poly_mb(seeds, seed_len, polys, left))
+                if (!rej_ntt_poly_mb_avx2(seeds, seed_len, polys, left))
                         return 0;
         }
 
@@ -243,8 +245,8 @@ matrix_expand_A_avx512(EVP_MD_CTX *g_ctx, const EVP_MD *md, const uint8_t *rho, 
 }
 
 static int
-vector_expand_S_avx512(EVP_MD_CTX *h_ctx, const EVP_MD *md, const int eta, const uint8_t *seed,
-                       VECTOR *s1, VECTOR *s2)
+vector_expand_S_avx2(EVP_MD_CTX *h_ctx, const EVP_MD *md, const int eta, const uint8_t *seed,
+                     VECTOR *s1, VECTOR *s2)
 {
         int ret = 0;
         size_t b, idx;
@@ -279,8 +281,8 @@ vector_expand_S_avx512(EVP_MD_CTX *h_ctx, const EVP_MD *md, const int eta, const
                                 polys[b] = &s2->poly[poly_idx - l];
                 }
 
-                if (!rej_bounded_poly_mb(coef_from_nibble_fn, seeds, seed_len, polys,
-                                         ML_DSA_SHAKE_X4_BATCH_SIZE))
+                if (!rej_bounded_poly_mb_avx2(coef_from_nibble_fn, seeds, seed_len, polys,
+                                              ML_DSA_SHAKE_X4_BATCH_SIZE))
                         goto err;
         }
 
@@ -299,7 +301,8 @@ vector_expand_S_avx512(EVP_MD_CTX *h_ctx, const EVP_MD *md, const int eta, const
                                 polys[b] = &s2->poly[poly_idx - l];
                 }
 
-                if (!rej_bounded_poly_mb(coef_from_nibble_fn, seeds, seed_len, polys, batch_count))
+                if (!rej_bounded_poly_mb_avx2(coef_from_nibble_fn, seeds, seed_len, polys,
+                                              batch_count))
                         goto err;
         }
 

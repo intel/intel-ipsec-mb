@@ -448,3 +448,23 @@ ossl_ml_dsa_sample_init_avx512(IMB_ML_DSA *self)
         self->vector_expand_S = vector_expand_S_avx512;
         self->vector_expand_mask = vector_expand_mask_avx512;
 }
+
+/*
+ * x4 (AVX2) SHAKE sampling helpers: matrix_expand_A_avx2() and friends.
+ * Uses the C-implemented SHAKE x4 over keccak_f1600_x4_avx2; no perlasm
+ * required.
+ */
+#include "ml_dsa_sample_hw_x86_64_avx2.h"
+
+/**
+ * @brief Assign the AVX2 (x4 SHAKE) sampling primitives to \a self.
+ *
+ * @param [in,out] self  ML-DSA context to initialise
+ */
+void
+ossl_ml_dsa_sample_init_avx2(IMB_ML_DSA *self)
+{
+        self->matrix_expand_A = matrix_expand_A_avx2;
+        self->vector_expand_S = vector_expand_S_avx2;
+        self->vector_expand_mask = vector_expand_mask_avx2;
+}

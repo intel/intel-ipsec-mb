@@ -94,7 +94,7 @@ imb_ml_dsa_new(IMB_MGR *mgr, IMB_ML_DSA_ALG alg, IMB_ML_DSA **new_self)
                 ossl_ml_dsa_ntt_init_avx2(self);
                 break;
         case IMB_ARCH_AVX2:
-                ossl_ml_dsa_sample_init_base(self);
+                ossl_ml_dsa_sample_init_avx2(self);
                 ossl_ml_dsa_ntt_init_avx2(self);
                 break;
         default:

@@ -69,6 +69,8 @@ ossl_ml_dsa_sample_init_base(IMB_ML_DSA *self);
 void
 ossl_ml_dsa_sample_init_avx512(IMB_ML_DSA *self);
 void
+ossl_ml_dsa_sample_init_avx2(IMB_ML_DSA *self);
+void
 ossl_ml_dsa_ntt_init_base(IMB_ML_DSA *self);
 void
 ossl_ml_dsa_ntt_init_avx2(IMB_ML_DSA *self);

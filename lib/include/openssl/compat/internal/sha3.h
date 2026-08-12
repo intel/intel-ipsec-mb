@@ -101,7 +101,12 @@ ossl_shake256_new(void);
 
 /* Multi-buffer (x4) Keccak-f[1600] context and API */
 
-/* Context for 4-way parallel SHAKE operations */
+/*
+ * Context for 4-way parallel SHAKE operations.
+ * Layout is identical for both the AVX2 and AVX-512VL variants:
+ *   A[w*4+lane]  (w=0..24, lane=0..3) — interleaved Keccak-f[1600] state
+ *   A[100]       — working byte position within the current rate block
+ */
 typedef struct {
         /* 4 interleaved Keccak states (800 bytes)
            plus 8 bytes to store the number of
@@ -110,6 +115,9 @@ typedef struct {
         size_t rate;        /* Rate in bytes: 168 (SHAKE-128) or 136 (SHAKE-256) */
         unsigned finalized; /* Has finalize been called? 0=no, 1=yes */
 } KECCAK1600_X4_AVX512VL_CTX;
+
+/* AVX2 variant — same memory layout, different permutation kernel */
+typedef KECCAK1600_X4_AVX512VL_CTX KECCAK1600_X4_AVX2_CTX;
 
 /* SHAKE-128 x4 incremental API */
 void
@@ -153,5 +161,50 @@ void
 ossl_sha3_shake256_x4_avx512vl(void *out0, void *out1, void *out2, void *out3, size_t outlen,
                                const void *in0, const void *in1, const void *in2, const void *in3,
                                size_t inlen);
+
+/* ---- AVX2 x4 SHAKE API (C implementation over keccak_f1600_x4_avx2) ---- */
+
+/* SHAKE-128 x4 incremental API — AVX2 */
+void
+ossl_sha3_shake128_x4_inc_init_avx2(KECCAK1600_X4_AVX2_CTX *ctx);
+
+void
+ossl_sha3_shake128_x4_inc_absorb_avx2(KECCAK1600_X4_AVX2_CTX *ctx, const void *in0,
+                                      const void *in1, const void *in2, const void *in3,
+                                      size_t inlen);
+
+void
+ossl_sha3_shake128_x4_inc_cleanup_avx2(KECCAK1600_X4_AVX2_CTX *ctx);
+
+void
+ossl_sha3_shake128_x4_inc_squeeze_avx2(void *out0, void *out1, void *out2, void *out3,
+                                       size_t outlen, KECCAK1600_X4_AVX2_CTX *ctx);
+
+/* SHAKE-256 x4 incremental API — AVX2 */
+void
+ossl_sha3_shake256_x4_inc_init_avx2(KECCAK1600_X4_AVX2_CTX *ctx);
+
+void
+ossl_sha3_shake256_x4_inc_absorb_avx2(KECCAK1600_X4_AVX2_CTX *ctx, const void *in0,
+                                      const void *in1, const void *in2, const void *in3,
+                                      size_t inlen);
+
+void
+ossl_sha3_shake256_x4_inc_cleanup_avx2(KECCAK1600_X4_AVX2_CTX *ctx);
+
+void
+ossl_sha3_shake256_x4_inc_squeeze_avx2(void *out0, void *out1, void *out2, void *out3,
+                                       size_t outlen, KECCAK1600_X4_AVX2_CTX *ctx);
+
+/* Single-call SHAKE x4 APIs — AVX2 */
+void
+ossl_sha3_shake128_x4_avx2(void *out0, void *out1, void *out2, void *out3, size_t outlen,
+                            const void *in0, const void *in1, const void *in2, const void *in3,
+                            size_t inlen);
+
+void
+ossl_sha3_shake256_x4_avx2(void *out0, void *out1, void *out2, void *out3, size_t outlen,
+                            const void *in0, const void *in1, const void *in2, const void *in3,
+                            size_t inlen);
 
 #endif /* IMB_ML_DSA_COMPAT_INTERNAL_SHA3_H */
