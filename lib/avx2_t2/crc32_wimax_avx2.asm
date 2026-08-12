@@ -28,9 +28,7 @@
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/crc32_const.inc"
-%include "include/clear_regs.inc"
 %include "include/cet.inc"
-%include "include/error.inc"
 %include "include/align_avx.inc"
 
 [bits 64]
@@ -60,22 +58,6 @@ align_function
 MKGLOBAL(crc32_wimax_ofdma_data_avx2, function,)
 crc32_wimax_ofdma_data_avx2:
         endbranch64
-%ifdef SAFE_PARAM
-
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check len == 0
-        or              arg2, arg2
-        jz              .end_param_check
-
-        ;; Check in == NULL (invalid if len != 0)
-        or              arg1, arg1
-        jz              .wrong_param
-
-align_label
-.end_param_check:
-%endif
         lea             arg4, [rel crc32_wimax_ofdma_data_const]
         mov             arg3, arg2
         mov             arg2, arg1
@@ -87,21 +69,6 @@ align_label
 
         ret
 
-%ifdef SAFE_PARAM
-align_label
-.wrong_param:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check in != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_SRC
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-
-        ret
-%endif
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -112,22 +79,6 @@ align_function
 MKGLOBAL(crc8_wimax_ofdma_hcs_avx2, function,)
 crc8_wimax_ofdma_hcs_avx2:
         endbranch64
-%ifdef SAFE_PARAM
-
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check len == 0
-        or              arg2, arg2
-        jz              .end_param_check
-
-        ;; Check in == NULL (invalid if len != 0)
-        or              arg1, arg1
-        jz              .wrong_param
-
-align_label
-.end_param_check:
-%endif
         lea             arg4, [rel crc32_wimax_ofdma_hcs8_const]
         mov             arg3, arg2
         mov             arg2, arg1
@@ -138,20 +89,5 @@ align_label
         shr             eax, 24          ; adjust for 8-bit poly
 
         ret
-
-%ifdef SAFE_PARAM
-align_label
-.wrong_param:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check in != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_SRC
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-
-        ret
-%endif
 
 mksection stack-noexec
