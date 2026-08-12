@@ -74,6 +74,17 @@ mksection .text
 MKGLOBAL(CRC32_FN,function,internal)
 align_function
 CRC32_FN:
+%ifndef LINUX
+        sub             rsp, 16*8
+        movdqu          [rsp + 16*0], xmm6
+        movdqu          [rsp + 16*1], xmm7
+        movdqu          [rsp + 16*2], xmm8
+        movdqu          [rsp + 16*3], xmm9
+        movdqu          [rsp + 16*4], xmm10
+        movdqu          [rsp + 16*5], xmm11
+        movdqu          [rsp + 16*6], xmm12
+        movdqu          [rsp + 16*7], xmm13
+%endif
         ;; check if smaller than 256B
         cmp             arg3, 256
         jl              .less_than_256
@@ -344,6 +355,18 @@ align_label
 .cleanup:
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
+%endif
+
+%ifndef LINUX
+        movdqu          xmm6,  [rsp + 16*0]
+        movdqu          xmm7,  [rsp + 16*1]
+        movdqu          xmm8,  [rsp + 16*2]
+        movdqu          xmm9,  [rsp + 16*3]
+        movdqu          xmm10, [rsp + 16*4]
+        movdqu          xmm11, [rsp + 16*5]
+        movdqu          xmm12, [rsp + 16*6]
+        movdqu          xmm13, [rsp + 16*7]
+        add             rsp, 16*8
 %endif
         ret
 
