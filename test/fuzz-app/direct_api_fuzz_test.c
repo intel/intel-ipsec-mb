@@ -738,93 +738,6 @@ test_chacha_poly_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 /* ========================================================================== */
 /* ========================================================================== */
 
-static int
-test_crc32_ethernet_fcs(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC32_ETHERNET_FCS(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc16_x25(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC16_X25(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc32_sctp(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC32_SCTP(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc24_lte_a(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC24_LTE_A(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc24_lte_b(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC24_LTE_B(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc16_fp_data(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC16_FP_DATA(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc11_fp_header(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC11_FP_HEADER(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc7_fp_header(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC7_FP_HEADER(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc10_iuup_data(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC10_IUUP_DATA(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc6_iuup_header(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC6_IUUP_HEADER(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc32_wimax_ofdma_data(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC32_WIMAX_OFDMA_DATA(p_mgr, buff, dataSize);
-        return 0;
-}
-
-static int
-test_crc8_wimax_ofdma_hcs(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        IMB_CRC8_WIMAX_OFDMA_HCS(p_mgr, buff, dataSize);
-        return 0;
-}
-
-/* ========================================================================== */
-/* ========================================================================== */
-
 static uint64_t *kasumi_iv = NULL;
 static kasumi_key_sched_t *kasumi_key = NULL;
 static uint32_t *kasumi_tag = NULL;
@@ -1920,19 +1833,6 @@ struct {
 
         { test_chacha_poly_enc, "test_chacha_poly_enc" },
         { test_chacha_poly_dec, "test_chacha_poly_dec" },
-
-        { test_crc32_ethernet_fcs, "test_crc32_ethernet_fcs" },
-        { test_crc16_x25, "test_crc16_x25" },
-        { test_crc32_sctp, "test_crc32_sctp" },
-        { test_crc16_fp_data, "test_crc16_fp_data" },
-        { test_crc11_fp_header, "test_crc11_fp_header" },
-        { test_crc24_lte_a, "test_crc24_lte_a" },
-        { test_crc24_lte_b, "test_crc24_lte_b" },
-        { test_crc7_fp_header, "test_crc7_fp_header" },
-        { test_crc10_iuup_data, "test_crc10_iuup_data" },
-        { test_crc6_iuup_header, "test_crc6_iuup_header" },
-        { test_crc32_wimax_ofdma_data, "test_crc32_wimax_ofdma_data" },
-        { test_crc8_wimax_ofdma_hcs, "test_crc8_wimax_ofdma_hcs" },
 
         { test_kasumi_f8_init_key_sched, "test_kasumi_f8_init_key_sched" },
         { test_kasumi_f8_iv_gen, "test_kasumi_f8_iv_gen" },

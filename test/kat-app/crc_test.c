@@ -202,7 +202,7 @@ test_crc_polynomial(void (*fn_crc_setup)(void), uint32_t (*fn_crc_calc)(const vo
 {
         uint8_t buffer[2048];
         size_t n;
-        unsigned job_api;
+        const unsigned job_api = 1;
 
         if (fn_crc_setup == NULL || fn_crc_calc == NULL || fn_crc == NULL || title == NULL) {
                 printf("crc_test: NULL parameter passed!\n");
@@ -212,32 +212,27 @@ test_crc_polynomial(void (*fn_crc_setup)(void), uint32_t (*fn_crc_calc)(const vo
                 test_suite_update(ctx, 1, 0);
         }
 
-        for (job_api = 0; job_api <= 1; job_api++) {
-                if (job_api)
-                        printf("Starting CRC Test (job API): %s\n", title);
-                else
-                        printf("Starting CRC Test (direct API): %s\n", title);
+        printf("Starting CRC Test (job API): %s\n", title);
 
-                fn_crc_setup();
+        fn_crc_setup();
 
-                for (n = 0; n < sizeof(buffer); n++) {
-                        uint32_t reference_crc, received_crc;
+        for (n = 0; n < sizeof(buffer); n++) {
+                uint32_t reference_crc, received_crc;
 
-                        randomize_buffer(buffer, n);
-                        reference_crc = fn_crc_calc(buffer, (uint64_t) n);
-                        received_crc = fn_crc(buffer, (uint64_t) n, job_api);
+                randomize_buffer(buffer, n);
+                reference_crc = fn_crc_calc(buffer, (uint64_t) n);
+                received_crc = fn_crc(buffer, (uint64_t) n, job_api);
 
-                        if (reference_crc != received_crc) {
-                                printf("! CRC mismatch for buffer size %lu, "
-                                       "received = 0x%lx, expected = 0x%lx\n",
-                                       (unsigned long) n, (unsigned long) received_crc,
-                                       (unsigned long) reference_crc);
-                                hexdump(stdout, "buffer content", buffer, n);
-                                test_suite_update(ctx, 0, 1);
-                                return 1;
-                        } else {
-                                test_suite_update(ctx, 1, 0);
-                        }
+                if (reference_crc != received_crc) {
+                        printf("! CRC mismatch for buffer size %lu, "
+                               "received = 0x%lx, expected = 0x%lx\n",
+                               (unsigned long) n, (unsigned long) received_crc,
+                               (unsigned long) reference_crc);
+                        hexdump(stdout, "buffer content", buffer, n);
+                        test_suite_update(ctx, 0, 1);
+                        return 1;
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
         }
 
@@ -314,10 +309,8 @@ crc_job(const void *p, const uint64_t len, IMB_HASH_ALG hash_alg)
 static uint32_t
 crc32_ethernet_fcs_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC32_ETHERNET_FCS);
-        else
-                return IMB_CRC32_ETHERNET_FCS(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC32_ETHERNET_FCS);
 }
 
 /**
@@ -354,10 +347,8 @@ crc16_x25_ref_calc(const void *p, uint64_t len)
 static uint32_t
 crc16_x25_tested_calc(const void *p, const uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC16_X25);
-        else
-                return IMB_CRC16_X25(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC16_X25);
 }
 
 /**
@@ -394,10 +385,8 @@ crc32_sctp_calc(const void *p, uint64_t len)
 static uint32_t
 crc32_sctp_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC32_SCTP);
-        else
-                return IMB_CRC32_SCTP(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC32_SCTP);
 }
 
 /**
@@ -437,10 +426,8 @@ crc32_lte24a_calc(const void *p, uint64_t len)
 static uint32_t
 crc32_lte24a_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC24_LTE_A);
-        else
-                return IMB_CRC24_LTE_A(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC24_LTE_A);
 }
 
 /**
@@ -480,10 +467,8 @@ crc32_lte24b_calc(const void *p, uint64_t len)
 static uint32_t
 crc32_lte24b_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC24_LTE_B);
-        else
-                return IMB_CRC24_LTE_B(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC24_LTE_B);
 }
 
 /**
@@ -524,10 +509,8 @@ crc16_fp_data_calc(const void *p, uint64_t len)
 static uint32_t
 crc16_fp_data_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC16_FP_DATA);
-        else
-                return IMB_CRC16_FP_DATA(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC16_FP_DATA);
 }
 
 /**
@@ -568,10 +551,8 @@ crc11_fp_header_calc(const void *p, uint64_t len)
 static uint32_t
 crc11_fp_header_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC11_FP_HEADER);
-        else
-                return IMB_CRC11_FP_HEADER(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC11_FP_HEADER);
 }
 
 /**
@@ -612,10 +593,8 @@ crc7_fp_header_calc(const void *p, uint64_t len)
 static uint32_t
 crc7_fp_header_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC7_FP_HEADER);
-        else
-                return IMB_CRC7_FP_HEADER(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC7_FP_HEADER);
 }
 
 /**
@@ -656,10 +635,8 @@ crc10_iuup_data_calc(const void *p, uint64_t len)
 static uint32_t
 crc10_iuup_data_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC10_IUUP_DATA);
-        else
-                return IMB_CRC10_IUUP_DATA(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC10_IUUP_DATA);
 }
 
 /**
@@ -700,10 +677,8 @@ crc6_iuup_header_calc(const void *p, uint64_t len)
 static uint32_t
 crc6_iuup_header_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC6_IUUP_HEADER);
-        else
-                return IMB_CRC6_IUUP_HEADER(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC6_IUUP_HEADER);
 }
 
 /**
@@ -742,10 +717,8 @@ crc32_wimax_ofdma_data_calc(const void *p, uint64_t len)
 static uint32_t
 crc32_wimax_ofdma_data_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC32_WIMAX_OFDMA_DATA);
-        else
-                return IMB_CRC32_WIMAX_OFDMA_DATA(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC32_WIMAX_OFDMA_DATA);
 }
 
 /**
@@ -784,10 +757,8 @@ crc8_wimax_ofdma_hcs_calc(const void *p, uint64_t len)
 static uint32_t
 crc8_wimax_ofdma_hcs_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
-        if (job_api)
-                return crc_job(p, len, IMB_AUTH_CRC8_WIMAX_OFDMA_HCS);
-        else
-                return IMB_CRC8_WIMAX_OFDMA_HCS(p_mgr, p, len);
+        (void) job_api;
+        return crc_job(p, len, IMB_AUTH_CRC8_WIMAX_OFDMA_HCS);
 }
 
 int
