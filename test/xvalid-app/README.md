@@ -13,9 +13,9 @@ randomly generated data with one architectural implementation and decrypting wit
 The decrypted data is verified by comparing against the original. By default, the
 tool will cross validate all algorithms across all combinations of architectures.
 
-For release builds of the library with the SAFE_DATA option enabled (default setting),
-the cross validation application can be used to check all sensitive data has been cleared
-from processor registers and memory.
+To check that sensitive data is cleared from processor registers and memory,
+use the safe check application (see
+[safe-check-app](../safe-check-app/README.md)).
 
 
 ## Usage
@@ -36,9 +36,6 @@ To validate AES-CBC-128 AVX algorithm implementation against SSE:
 To validate AES-GCM-128 using only 512 byte buffers:  
 `./imb-xvalid --aead-algo aes-gcm-128 --job-size 512`  
 
-To check for sensitive data left in registers or memory:  
-`./imb-xvalid --safe-check` 
-
 To display an extensive help page:  
 `./imb-xvalid --help`   
 
@@ -54,9 +51,6 @@ To validate AES-CBC-128 AVX algorithm implementation against SSE:
 
 To validate AES-GCM-128 using only 512 byte buffers:  
 `imb-xvalid.exe --aead-algo aes-gcm-128 --job-size 512`  
-
-To check for sensitive data left in registers or memory:  
-`imb-xvalid.exe --safe-check` 
 
 To display an extensive help page:  
 `imb-xvalid.exe --help`  

@@ -21,7 +21,7 @@ set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 # ##############################################################################
 set(XVALID_APP_SRC_FILES_C ${CMAKE_CURRENT_SOURCE_DIR}/ipsec_xvalid.c
                            ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c)
-set(XVALID_APP_SRC_FILES_ASM ${CMAKE_CURRENT_SOURCE_DIR}/misc.asm)
+set(XVALID_APP_SRC_FILES_ASM ${CMAKE_CURRENT_SOURCE_DIR}/../common/misc.asm)
 
 # ##############################################################################
 # setup NASM

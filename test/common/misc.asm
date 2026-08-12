@@ -44,11 +44,6 @@
 %define arg4d   r9d
 %endif
 
-;; External symbols
-extern pattern8_cipher_key
-extern pattern8_auth_key
-extern pattern8_plain_text
-
 ;; Data section
 section .data
 default rel
@@ -70,6 +65,19 @@ gps:            resq    14
 MKGLOBAL(simd_regs,data,)
 alignb 64
 simd_regs:      resb    32*64
+
+;; Sensitive data search patterns
+MKGLOBAL(pattern8_cipher_key,data,)
+alignb 8
+pattern8_cipher_key:    resq    1
+
+MKGLOBAL(pattern8_auth_key,data,)
+alignb 8
+pattern8_auth_key:      resq    1
+
+MKGLOBAL(pattern8_plain_text,data,)
+alignb 8
+pattern8_plain_text:    resq    1
 
 section .text
 

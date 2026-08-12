@@ -20,6 +20,11 @@
 extern uint8_t gps[GP_MEM_SIZE];
 extern uint8_t simd_regs[ZMM_MEM_SIZE];
 
+/* Sensitive data search patterns used by mem_search_avx2() */
+extern uint64_t pattern8_cipher_key;
+extern uint64_t pattern8_auth_key;
+extern uint64_t pattern8_plain_text;
+
 /* Read RSP pointer */
 void *
 rdrsp(void);
