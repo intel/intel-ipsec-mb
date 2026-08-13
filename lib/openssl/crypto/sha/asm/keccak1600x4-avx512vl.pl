@@ -138,45 +138,16 @@ $code.=<<___;
 # $tblptr       [clobbered] used for access to SHA3 constant table
 .extern keccak1600_block_64bit
 
-# Initialize YMM registers 0-24 to zero
-# Intel 2026: the Keccak x4 internal helpers below (init_state and the *_x4
-# routines) are kept file-local (no .globl) so they neither clash with
-# ipsec-mb's own keccak_1600_init_state (avx512_t1/sha3_avx512.asm) nor leak
-# into the library's exported symbol table. They are only called within this
-# module via direct calls, so local linkage is sufficient.
-.type   keccak_1600_init_state,\@abi-omnipotent
-.align  32
-keccak_1600_init_state:
-.cfi_startproc
-    vpxorq      %ymm0, %ymm0, %ymm0
-    vmovdqa64   %ymm0, %ymm1
-    vmovdqa64   %ymm0, %ymm2
-    vmovdqa64   %ymm0, %ymm3
-    vmovdqa64   %ymm0, %ymm4
-    vmovdqa64   %ymm0, %ymm5
-    vmovdqa64   %ymm0, %ymm6
-    vmovdqa64   %ymm0, %ymm7
-    vmovdqa64   %ymm0, %ymm8
-    vmovdqa64   %ymm0, %ymm9
-    vmovdqa64   %ymm0, %ymm10
-    vmovdqa64   %ymm0, %ymm11
-    vmovdqa64   %ymm0, %ymm12
-    vmovdqa64   %ymm0, %ymm13
-    vmovdqa64   %ymm0, %ymm14
-    vmovdqa64   %ymm0, %ymm15
-    vmovdqa64   %ymm0, %ymm16
-    vmovdqa64   %ymm0, %ymm17
-    vmovdqa64   %ymm0, %ymm18
-    vmovdqa64   %ymm0, %ymm19
-    vmovdqa64   %ymm0, %ymm20
-    vmovdqa64   %ymm0, %ymm21
-    vmovdqa64   %ymm0, %ymm22
-    vmovdqa64   %ymm0, %ymm23
-    vmovdqa64   %ymm0, %ymm24
-    ret
-.cfi_endproc
-.size   keccak_1600_init_state,.-keccak_1600_init_state
+# Initialize YMM registers 0-24 to zero.
+#
+# Provided by ipsec-mb (lib/avx512_t1/sha3_avx512.asm) and shared with this
+# module to avoid duplicating the state initialisation.
+.extern keccak_1600_init_state
 
+# Intel 2026: the Keccak x4 internal helpers below (the *_x4 routines) are
+# kept file-local (no .globl) so they do not leak into the library's exported
+# symbol table. They are only called within this module via direct calls, so
+# local linkage is sufficient.
 .type   keccak_1600_load_state_x4,\@abi-omnipotent
 .align  32
 keccak_1600_load_state_x4:
