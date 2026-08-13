@@ -125,246 +125,18 @@ ___
 $code.=<<___;
 .text
 
-# Perform Keccak permutation
+# Keccak-f[1600] permutation.
 #
-# YMM registers 0 to 24 are used as Keccak state registers.
-# This function, as is, can work on 1 to 4 independent states at the same time.
-#
-# There is no clear boundary between Theta, Rho, Pi, Chi and Iota steps.
-# Instructions corresponding to these steps overlap for better efficiency.
+# Provided by ipsec-mb (lib/avx512_t1/sha3_avx512.asm) and shared with this
+# module to avoid duplicating the permutation. It operates on ymm0-ymm24 and
+# so works on 1 to 4 independent states at the same time.
 #
 # Arguments:
 # ymm0-ymm24    [in/out]    Keccak state registers (one SIMD per one state register)
 # ymm25-ymm31   [clobbered] temporary SIMD registers
 # $roundn       [clobbered] used for round tracking
 # $tblptr       [clobbered] used for access to SHA3 constant table
-.type keccak_1600_permute,\@abi-omnipotent
-.align  32
-keccak_1600_permute:
-.cfi_startproc
-    mov     \$24, $roundn        # 24 rounds
-    lea     iotas(%rip), $tblptr # Load the address of the SHA3 round constants
-
-.align  32
-.Lkeccak_rnd_loop:
-    # Theta step
-
-    # Compute column parities
-    # C[5] = [0, 0, 0, 0, 0]
-    # for x in 0 to 4:
-    #     C[x] = state[x][0] XOR state[x][1] XOR state[x][2] XOR state[x][3] XOR state[x][4]
-
-    vmovdqa64   %ymm0, %ymm25
-    vpternlogq  \$0x96, %ymm5, %ymm10, %ymm25
-    vmovdqa64   %ymm1, %ymm26
-    vpternlogq  \$0x96, %ymm11, %ymm6, %ymm26
-    vmovdqa64   %ymm2, %ymm27
-    vpternlogq  \$0x96, %ymm12, %ymm7, %ymm27
-
-    vmovdqa64   %ymm3, %ymm28
-    vpternlogq  \$0x96, %ymm13, %ymm8, %ymm28
-    vmovdqa64   %ymm4, %ymm29
-    vpternlogq  \$0x96, %ymm14, %ymm9, %ymm29
-    vpternlogq  \$0x96, %ymm20, %ymm15, %ymm25
-
-    vpternlogq  \$0x96, %ymm21, %ymm16, %ymm26
-    vpternlogq  \$0x96, %ymm22, %ymm17, %ymm27
-    vpternlogq  \$0x96, %ymm23, %ymm18, %ymm28
-
-    # Start computing D values and keep computing column parity
-    # D[5] = [0, 0, 0, 0, 0]
-    # for x in 0 to 4:
-    #     D[x] = C[(x+4) mod 5] XOR ROTATE_LEFT(C[(x+1) mod 5], 1)
-
-    vprolq      \$1, %ymm26, %ymm30
-    vprolq      \$1, %ymm27, %ymm31
-    vpternlogq  \$0x96, %ymm24, %ymm19, %ymm29
-
-    # Continue computing D values and apply Theta
-    # for x in 0 to 4:
-    #     for y in 0 to 4:
-    #         state[x][y] = state[x][y] XOR D[x]
-
-    vpternlogq  \$0x96, %ymm30, %ymm29, %ymm0
-    vpternlogq  \$0x96, %ymm30, %ymm29, %ymm10
-    vpternlogq  \$0x96, %ymm30, %ymm29, %ymm20
-
-    vpternlogq  \$0x96, %ymm30, %ymm29, %ymm5
-    vpternlogq  \$0x96, %ymm30, %ymm29, %ymm15
-    vprolq      \$1, %ymm28, %ymm30
-
-    vpternlogq  \$0x96, %ymm31, %ymm25, %ymm6
-    vpternlogq  \$0x96, %ymm31, %ymm25, %ymm16
-    vpternlogq  \$0x96, %ymm31, %ymm25, %ymm1
-
-    vpternlogq  \$0x96, %ymm31, %ymm25, %ymm11
-    vpternlogq  \$0x96, %ymm31, %ymm25, %ymm21
-    vprolq      \$1, %ymm29, %ymm31
-
-    vpbroadcastq    ($tblptr), %ymm29 # Load the round constant into ymm29 (Iota)
-    add         \$8, $tblptr          # Increment the pointer to the next round constant
-
-    vpternlogq  \$0x96, %ymm30, %ymm26, %ymm12
-    vpternlogq  \$0x96, %ymm30, %ymm26, %ymm7
-    vpternlogq  \$0x96, %ymm30, %ymm26, %ymm22
-
-    vpternlogq  \$0x96, %ymm30, %ymm26, %ymm17
-    vpternlogq  \$0x96, %ymm30, %ymm26, %ymm2
-    vprolq      \$1, %ymm25, %ymm30
-
-    # Rho step
-    # Keep applying Theta and start Rho step
-    #
-    # ROTATION_OFFSETS[5][5] = [
-    #     [0, 1, 62, 28, 27],
-    #     [36, 44, 6, 55, 20],
-    #     [3, 10, 43, 25, 39],
-    #     [41, 45, 15, 21, 8],
-    #     [18, 2, 61, 56, 14] ]
-    #
-    # for x in 0 to 4:
-    #     for y in 0 to 4:
-    #         state[x][y] = ROTATE_LEFT(state[x][y], ROTATION_OFFSETS[x][y])
-
-    vpternlogq  \$0x96, %ymm31, %ymm27, %ymm3
-    vpternlogq  \$0x96, %ymm31, %ymm27, %ymm13
-    vpternlogq  \$0x96, %ymm31, %ymm27, %ymm23
-
-    vprolq      \$44, %ymm6, %ymm6
-    vpternlogq  \$0x96, %ymm31, %ymm27, %ymm18
-    vpternlogq  \$0x96, %ymm31, %ymm27, %ymm8
-
-    vprolq      \$43, %ymm12, %ymm12
-    vprolq      \$21, %ymm18, %ymm18
-    vpternlogq  \$0x96, %ymm30, %ymm28, %ymm24
-
-    vprolq      \$14, %ymm24, %ymm24
-    vprolq      \$28, %ymm3, %ymm3
-    vpternlogq  \$0x96, %ymm30, %ymm28, %ymm9
-
-    vprolq      \$20, %ymm9, %ymm9
-    vprolq      \$3, %ymm10, %ymm10
-    vpternlogq  \$0x96, %ymm30, %ymm28, %ymm19
-
-    vprolq      \$45, %ymm16, %ymm16
-    vprolq      \$61, %ymm22, %ymm22
-    vpternlogq  \$0x96, %ymm30, %ymm28, %ymm4
-
-    vprolq      \$1, %ymm1, %ymm1
-    vprolq      \$6, %ymm7, %ymm7
-    vpternlogq  \$0x96, %ymm30, %ymm28, %ymm14
-
-    # Continue with Rho and start Pi and Chi steps at the same time
-    # Ternary logic 0xD2 is used for Chi step
-    #
-    # for x in 0 to 4:
-    #     for y in 0 to 4:
-    #         state[x][y] = state[x][y] XOR ((NOT state[(x+1) mod 5][y]) AND state[(x+2) mod 5][y])
-
-    vprolq      \$25, %ymm13, %ymm13
-    vprolq      \$8, %ymm19, %ymm19
-    vmovdqa64   %ymm0, %ymm30
-    vpternlogq  \$0xD2, %ymm12, %ymm6, %ymm30
-
-    vprolq      \$18, %ymm20, %ymm20
-    vprolq      \$27, %ymm4, %ymm4
-    vpxorq      %ymm29, %ymm30, %ymm30 # Iota step
-
-    vprolq      \$36, %ymm5, %ymm5
-    vprolq      \$10, %ymm11, %ymm11
-    vmovdqa64   %ymm6, %ymm31
-    vpternlogq  \$0xD2, %ymm18, %ymm12, %ymm31
-
-    vprolq      \$15, %ymm17, %ymm17
-    vprolq      \$56, %ymm23, %ymm23
-    vpternlogq  \$0xD2, %ymm24, %ymm18, %ymm12
-
-    vprolq      \$62, %ymm2, %ymm2
-    vprolq      \$55, %ymm8, %ymm8
-    vpternlogq  \$0xD2, %ymm0, %ymm24, %ymm18
-
-    vprolq      \$39, %ymm14, %ymm14
-    vprolq      \$41, %ymm15, %ymm15
-    vpternlogq  \$0xD2, %ymm6, %ymm0, %ymm24
-    vmovdqa64   %ymm30, %ymm0
-    vmovdqa64   %ymm31, %ymm6
-
-    vprolq      \$2, %ymm21, %ymm21
-    vmovdqa64   %ymm3, %ymm30
-    vpternlogq  \$0xD2, %ymm10, %ymm9, %ymm30
-    vmovdqa64   %ymm9, %ymm31
-    vpternlogq  \$0xD2, %ymm16, %ymm10, %ymm31
-
-    vpternlogq  \$0xD2, %ymm22, %ymm16, %ymm10
-    vpternlogq  \$0xD2, %ymm3, %ymm22, %ymm16
-    vpternlogq  \$0xD2, %ymm9, %ymm3, %ymm22
-    vmovdqa64   %ymm30, %ymm3
-    vmovdqa64   %ymm31, %ymm9
-
-    vmovdqa64   %ymm1, %ymm30
-    vpternlogq  \$0xD2, %ymm13, %ymm7, %ymm30
-    vmovdqa64   %ymm7, %ymm31
-    vpternlogq  \$0xD2, %ymm19, %ymm13, %ymm31
-    vpternlogq  \$0xD2, %ymm20, %ymm19, %ymm13
-
-    vpternlogq  \$0xD2, %ymm1, %ymm20, %ymm19
-    vpternlogq  \$0xD2, %ymm7, %ymm1, %ymm20
-    vmovdqa64   %ymm30, %ymm1
-    vmovdqa64   %ymm31, %ymm7
-    vmovdqa64   %ymm4, %ymm30
-    vpternlogq  \$0xD2, %ymm11, %ymm5, %ymm30
-
-    vmovdqa64   %ymm5, %ymm31
-    vpternlogq  \$0xD2, %ymm17, %ymm11, %ymm31
-    vpternlogq  \$0xD2, %ymm23, %ymm17, %ymm11
-    vpternlogq  \$0xD2, %ymm4, %ymm23, %ymm17
-
-    vpternlogq  \$0xD2, %ymm5, %ymm4, %ymm23
-    vmovdqa64   %ymm30, %ymm4
-    vmovdqa64   %ymm31, %ymm5
-    vmovdqa64   %ymm2, %ymm30
-    vpternlogq  \$0xD2, %ymm14, %ymm8, %ymm30
-    vmovdqa64   %ymm8, %ymm31
-    vpternlogq  \$0xD2, %ymm15, %ymm14, %ymm31
-
-    vpternlogq  \$0xD2, %ymm21, %ymm15, %ymm14
-    vpternlogq  \$0xD2, %ymm2, %ymm21, %ymm15
-    vpternlogq  \$0xD2, %ymm8, %ymm2, %ymm21
-    vmovdqa64   %ymm30, %ymm2
-    vmovdqa64   %ymm31, %ymm8
-
-    # Complete the steps and get updated state registers in ymm0 to ymm24
-    vmovdqa64   %ymm3,  %ymm30
-    vmovdqa64   %ymm18, %ymm3
-    vmovdqa64   %ymm17, %ymm18
-    vmovdqa64   %ymm11, %ymm17
-    vmovdqa64   %ymm7,  %ymm11
-    vmovdqa64   %ymm10, %ymm7
-    vmovdqa64   %ymm1,  %ymm10
-    vmovdqa64   %ymm6,  %ymm1
-    vmovdqa64   %ymm9,  %ymm6
-    vmovdqa64   %ymm22, %ymm9
-    vmovdqa64   %ymm14, %ymm22
-    vmovdqa64   %ymm20, %ymm14
-    vmovdqa64   %ymm2,  %ymm20
-    vmovdqa64   %ymm12, %ymm2
-    vmovdqa64   %ymm13, %ymm12
-    vmovdqa64   %ymm19, %ymm13
-    vmovdqa64   %ymm23, %ymm19
-    vmovdqa64   %ymm15, %ymm23
-    vmovdqa64   %ymm4,  %ymm15
-    vmovdqa64   %ymm24, %ymm4
-    vmovdqa64   %ymm21, %ymm24
-    vmovdqa64   %ymm8,  %ymm21
-    vmovdqa64   %ymm16, %ymm8
-    vmovdqa64   %ymm5,  %ymm16
-    vmovdqa64   %ymm30, %ymm5
-
-    dec         $roundn           # Decrement the round counter
-    jnz         .Lkeccak_rnd_loop # Jump to the start of the loop if r13d is not zero
-    ret
-.cfi_endproc
-.size   keccak_1600_permute,.-keccak_1600_permute
+.extern keccak1600_block_64bit
 
 # Initialize YMM registers 0-24 to zero
 # Intel 2026: the Keccak x4 internal helpers below (init_state and the *_x4
@@ -976,7 +748,7 @@ $code.=<<___;
 
     call    keccak_1600_load_state_x4
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     movq    \$0, 8*100($arg1) # clear s[100]
     jmp     .Lshake128_absorb_partial_block_done
@@ -996,7 +768,7 @@ $code.=<<___;
 
     call    keccak_1600_load_state_x4
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     call    keccak_1600_save_state_x4
 
@@ -1035,7 +807,7 @@ ___
 $code.=<<___;
     sub     \$168, %r11         # Subtract the rate from the remaining length
     add     \$168, %r12         # Adjust offset to next block
-    call    keccak_1600_permute # Perform the Keccak permutation
+    call    keccak1600_block_64bit # Perform the Keccak permutation
 
     jmp     .Lshake128_absorb_while_loop
 
@@ -1272,7 +1044,7 @@ $code.=<<___;
     cmp     \$168, $arg5 # outlen > SHAKE128_RATE
     jb      .Lshake128_squeeze_final_extract
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     # Extract SHAKE128 rate bytes (168 bytes = 21 x 8 bytes) inline
 ___
@@ -1309,7 +1081,7 @@ $code.=<<___;
     sub     $arg5, %r15
     mov     %r15, 8*100($arg6) # s[100] = capacity
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     mov     $arg1, %r14
     mov     $arg6, $arg1
@@ -1629,7 +1401,7 @@ $code.=<<___;
 
     call    keccak_1600_load_state_x4
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     movq    \$0, 8*100($arg1) # clear s[100]
     jmp     .Lshake256_absorb_partial_block_done
@@ -1649,7 +1421,7 @@ $code.=<<___;
 
     call    keccak_1600_load_state_x4
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     call    keccak_1600_save_state_x4
 
@@ -1688,7 +1460,7 @@ ___
 $code.=<<___;
     sub     \$136, %r11         # Subtract the rate from the remaining length
     add     \$136, %r12         # Adjust offset to next block
-    call    keccak_1600_permute # Perform the Keccak permutation
+    call    keccak1600_block_64bit # Perform the Keccak permutation
 
     jmp     .Lshake256_absorb_while_loop
 
@@ -1925,7 +1697,7 @@ $code.=<<___;
     cmp     \$136, $arg5 # outlen > SHAKE256_RATE
     jb      .Lshake256_squeeze_final_extract
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     # Extract SHAKE256 rate bytes (136 bytes = 17 x 8 bytes) inline
 ___
@@ -1962,7 +1734,7 @@ $code.=<<___;
     sub     $arg5, %r15
     mov     %r15, 8*100($arg6) # s[100] = capacity
 
-    call    keccak_1600_permute
+    call    keccak1600_block_64bit
 
     mov     $arg1, %r14
     mov     $arg6, $arg1
@@ -2253,34 +2025,6 @@ ___
 $code.=<<___;
 
 .section .rodata align=128
-.align  128
-.type   iotas,\@object
-iotas:
-    .quad   0x0000000000000001
-    .quad   0x0000000000008082
-    .quad   0x800000000000808a
-    .quad   0x8000000080008000
-    .quad   0x000000000000808b
-    .quad   0x0000000080000001
-    .quad   0x8000000080008081
-    .quad   0x8000000000008009
-    .quad   0x000000000000008a
-    .quad   0x0000000000000088
-    .quad   0x0000000080008009
-    .quad   0x000000008000000a
-    .quad   0x000000008000808b
-    .quad   0x800000000000008b
-    .quad   0x8000000000008089
-    .quad   0x8000000000008003
-    .quad   0x8000000000008002
-    .quad   0x8000000000000080
-    .quad   0x000000000000800a
-    .quad   0x800000008000000a
-    .quad   0x8000000080008081
-    .quad   0x8000000000008080
-    .quad   0x0000000080000001
-    .quad   0x8000000080008008
-.size   iotas,.-iotas
 
 .align  8
 byte_kmask_0_to_7:
