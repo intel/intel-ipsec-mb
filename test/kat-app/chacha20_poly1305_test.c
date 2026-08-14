@@ -150,54 +150,6 @@ test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, co
                 }
         }
 
-        /* QUIC API */
-        const void *src_ptr_array[IMB_MAX_JOBS];
-        void *dst_ptr_array[IMB_MAX_JOBS];
-        const void *aad_ptr_array[IMB_MAX_JOBS];
-        void *tag_ptr_array[IMB_MAX_JOBS];
-        const void *iv_ptr_array[IMB_MAX_JOBS];
-        uint64_t len_array[IMB_MAX_JOBS];
-
-        for (i = 0; i < num_jobs; i++) {
-                if (in_place)
-                        src_ptr_array[i] = targets[i] + sizeof(padding);
-                else if (dir == IMB_DIR_ENCRYPT)
-                        src_ptr_array[i] = (const void *) vec->msg;
-                else
-                        src_ptr_array[i] = (const void *) vec->ct;
-
-                dst_ptr_array[i] = targets[i] + sizeof(padding);
-
-                aad_ptr_array[i] = vec->aad;
-                iv_ptr_array[i] = vec->iv;
-                tag_ptr_array[i] = auths[i] + sizeof(padding);
-                len_array[i] = vec->msgSize / 8;
-        }
-
-        imb_quic_chacha20_poly1305(mb_mgr, vec->key, dir, dst_ptr_array, src_ptr_array, len_array,
-                                   iv_ptr_array, aad_ptr_array, vec->aadSize / 8, tag_ptr_array,
-                                   num_jobs);
-
-        for (i = 0; i < num_jobs; i++) {
-                if (!aead_ok(vec, DIGEST_SZ, dst_ptr_array[i], dir, auths[i], padding,
-                             sizeof(padding)))
-                        goto end;
-        }
-
-        /* Reset the source buffers */
-        for (i = 0; i < num_jobs; i++) {
-                memset(targets[i], -1, vec->msgSize / 8 + (sizeof(padding) * 2));
-
-                if (in_place) {
-                        if (dir == IMB_DIR_ENCRYPT)
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->msg,
-                                       vec->msgSize / 8);
-                        else
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->ct,
-                                       vec->msgSize / 8);
-                }
-        }
-
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 

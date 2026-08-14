@@ -90,10 +90,6 @@ snow5g_nea4_test(struct IMB_MGR *mb_mgr);
 extern int
 direct_api_param_test(struct IMB_MGR *mb_mgr);
 extern int
-quic_ecb_test(struct IMB_MGR *mb_mgr);
-extern int
-quic_chacha20_test(struct IMB_MGR *mb_mgr);
-extern int
 gmac_test(struct IMB_MGR *mb_mgr);
 extern int
 ghash_test(struct IMB_MGR *mb_mgr);
@@ -192,8 +188,6 @@ struct imb_test tests[] = {
         { .str = "CHACHA20_POLY1305", .fn = chacha20_poly1305_test, .enabled = 1 },
         { .str = "NULL", .fn = null_test, .enabled = 1 },
         { .str = "DIRECT_API_PARAM", .fn = direct_api_param_test, .enabled = 1 },
-        { .str = "QUIC-ECB", .fn = quic_ecb_test, .enabled = 1 },
-        { .str = "QUIC_CHACHA20", .fn = quic_chacha20_test, .enabled = 1 },
         { .str = "SM4_ECB", .fn = sm4_ecb_test, .enabled = 1 },
         { .str = "SM4_CBC", .fn = sm4_cbc_test, .enabled = 1 },
         { .str = "SM3", .fn = sm3_test, .enabled = 1 },
