@@ -111,12 +111,6 @@ typedef uint64_t (*hec_64_t)(const uint8_t *);
 
 typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 
-typedef void (*aes_ecb_quic_t)(const void *, const void *, void *out, uint64_t);
-
-typedef IMB_JOB *(*chacha20_poly1305_quic_t)(struct IMB_MGR *, IMB_JOB *);
-
-typedef void (*chacha20_hp_quic_t)(const void *, const void *const *, void **, const uint64_t);
-
 typedef void (*sm4_keyexp_t)(const void *, void *, void *);
 
 #define IMB_MAX_JOBS (IMB_MAX_BURST_SIZE * 2)
@@ -253,13 +247,7 @@ struct IMB_MGR {
         submit_hash_burst_t submit_hash_burst_nocheck;
         aes_cfb_t aes256_cfb_one;
 
-        aes_ecb_quic_t aes_ecb_128_quic;
-        aes_ecb_quic_t aes_ecb_256_quic;
-
         void (*set_suite_id)(struct IMB_MGR *, IMB_JOB *);
-
-        chacha20_poly1305_quic_t chacha20_poly1305_quic;
-        chacha20_hp_quic_t chacha20_hp_quic;
 
         sm4_keyexp_t sm4_keyexp;
 

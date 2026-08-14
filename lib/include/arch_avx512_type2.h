@@ -69,11 +69,6 @@ aes_ecb_dec_192_vaes_avx512(const void *in, const void *keys, void *out, uint64_
 void
 aes_ecb_dec_128_vaes_avx512(const void *in, const void *keys, void *out, uint64_t len_bytes);
 
-void
-aes_ecb_quic_enc_128_vaes_avx512(const void *in, const void *keys, void *out, uint64_t num_buffers);
-void
-aes_ecb_quic_enc_256_vaes_avx512(const void *in, const void *keys, void *out, uint64_t num_buffers);
-
 /* AES-CFB */
 void
 aes_cfb_dec_128_vaes_avx512(const void *out, const void *in, const void *IV, const void *keys,
