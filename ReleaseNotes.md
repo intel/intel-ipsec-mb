@@ -41,6 +41,7 @@ Library
 - Added ML-KEM (FIPS 203) support for ML-KEM-512, ML-KEM-768 and ML-KEM-1024.
 - Added AVX2 NTT optimization for ML-KEM (FIPS 203).
 - Added AVX2 Type 2 CRC implementations using VPCLMULQDQ 256-bit polynomial folding for all CRC types.
+- Added constant time library build based on Valgrind memory check.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.

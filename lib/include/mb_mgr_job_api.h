@@ -47,6 +47,7 @@
 #include "intel-ipsec-mb.h"
 #include "mb_mgr.h"
 #include "include/error.h"
+#include "include/job_api_ct.h"
 #include "include/snow3g_submit.h"
 #include "include/job_api_gcm.h"
 #include "include/job_api_kasumi.h"
@@ -4247,10 +4248,14 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
                         job->status = IMB_STATUS_INVALID_ARGS;
                 } else {
                         job->status = IMB_STATUS_BEING_PROCESSED;
+                        /* mark job secrets before handing over for processing */
+                        imb_ct_job_classify(job);
                         job = submit_new_job(state, job);
                 }
         } else {
                 job->status = IMB_STATUS_BEING_PROCESSED;
+                /* mark job secrets before handing over for processing */
+                imb_ct_job_classify(job);
                 job = submit_new_job(state, job);
         }
 
@@ -4281,6 +4286,8 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
 
         ADV_JOBS(&state->earliest_job);
 exit:
+        /* release public outputs of the completed job (no-op if job is NULL) */
+        imb_ct_job_declassify(job);
 
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -4329,6 +4336,9 @@ FLUSH_JOB(IMB_MGR *state)
 
         if (state->earliest_job == state->next_job)
                 state->earliest_job = -1; /* becomes empty */
+
+        /* release public outputs of the completed job */
+        imb_ct_job_declassify(job);
 
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -4496,6 +4506,9 @@ GET_COMPLETED_JOB(IMB_MGR *state)
 
         if (state->earliest_job == state->next_job)
                 state->earliest_job = -1;
+
+        /* release public outputs of the completed job */
+        imb_ct_job_declassify(job);
 
         return job;
 }

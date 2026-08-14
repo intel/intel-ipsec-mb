@@ -49,6 +49,20 @@ project(
 # add testing support
 include(CTest)
 
+# configure CTest/Valgrind memcheck for constant-time validation builds
+if(CONSTANT_TIME_VALIDATION)
+  find_program(VALGRIND_EXECUTABLE valgrind)
+  if(VALGRIND_EXECUTABLE)
+    set(MEMORYCHECK_COMMAND "${VALGRIND_EXECUTABLE}")
+    set(MEMORYCHECK_COMMAND_OPTIONS
+        "--tool=memcheck --error-exitcode=1 --errors-for-leak-kinds=all")
+  else()
+    message(WARNING
+      "CONSTANT_TIME_VALIDATION=ON but valgrind executable not found in PATH. "
+      "'ctest -T memcheck' will not be available.")
+  endif()
+endif()
+
 # set binary output directory if specified
 imb_set_binary_dir()
 

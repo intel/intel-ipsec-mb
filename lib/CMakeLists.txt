@@ -278,6 +278,51 @@ if(SMX_NI)
 endif()
 
 # ##############################################################################
+# Constant-time validation (CT) build support
+# ##############################################################################
+# When CONSTANT_TIME_VALIDATION=ON, secret data is marked "undefined" for
+# Valgrind's memcheck tool, which then reports any control-flow branch or
+# memory index that depends on it - i.e. a potential timing side-channel.
+#
+# Two independent sets of annotations are enabled:
+#   IMB_CONSTANT_TIME_VALIDATION     - JOB API secret marking for AEAD and
+#                                      cipher modes (include/imb_ct.h and
+#                                      include/job_api_ct.h).  Applied to all
+#                                      library C sources via LIB_DEFINES below.
+#   OPENSSL_CONSTANT_TIME_VALIDATION - CONSTTIME_SECRET/DECLASSIFY in the
+#                                      vendored ML-DSA / ML-KEM sources.
+#                                      Applied further down to SRC_FILES_OPENSSL.
+#
+# Because Valgrind tracks definedness at machine-instruction level, marking
+# performed here in C propagates automatically through the hand-written NASM
+# implementations - the assembly sources need no changes.
+#
+# Build (the option is independent of CMAKE_BUILD_TYPE; Debug is merely
+# convenient because it keeps symbol names in the valgrind stack traces):
+#   cmake -DCONSTANT_TIME_VALIDATION=ON ..
+#   make
+#
+# Run CT checks (example):
+#   valgrind --tool=memcheck --error-exitcode=1 ./test/kat-app/imb-kat
+#   ctest -T memcheck
+if(CONSTANT_TIME_VALIDATION)
+  if(WINDOWS)
+    message(FATAL_ERROR
+      "CONSTANT_TIME_VALIDATION is not supported on Windows (requires Valgrind)")
+  endif()
+  find_path(VALGRIND_INCLUDE_DIR valgrind/memcheck.h
+            PATHS /usr/include /usr/local/include)
+  if(NOT VALGRIND_INCLUDE_DIR)
+    message(FATAL_ERROR
+      "CONSTANT_TIME_VALIDATION=ON but valgrind/memcheck.h was not found. "
+      "Install the valgrind development headers (e.g. valgrind-devel / "
+      "valgrind) and re-run CMake.")
+  endif()
+  message(STATUS "Valgrind headers...        ${VALGRIND_INCLUDE_DIR}")
+  list(APPEND LIB_DEFINES IMB_CONSTANT_TIME_VALIDATION)
+endif()
+
+# ##############################################################################
 # add OS specific options
 # ##############################################################################
 if(WINDOWS)
@@ -329,3 +374,11 @@ foreach(FILE ${SRC_FILES_OPENSSL})
   set_source_files_properties(${FILE} PROPERTIES COMPILE_DEFINITIONS
                                                  "${LIB_DEFINES}")
 endforeach()
+
+# ML-DSA / ML-KEM constant-time annotations (see CT section above)
+if(CONSTANT_TIME_VALIDATION)
+  foreach(FILE ${SRC_FILES_OPENSSL})
+    set_property(SOURCE ${FILE} APPEND PROPERTY COMPILE_DEFINITIONS
+                 OPENSSL_CONSTANT_TIME_VALIDATION)
+  endforeach()
+endif()

@@ -78,6 +78,9 @@ macro(imb_set_proj_defaults)
   option(BUILD_SHARED_LIBS "Build shared library" ON)
   option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
   option(BUILD_LIBRARY_ONLY "Build library only without applications" OFF)
+  option(CONSTANT_TIME_VALIDATION
+         "Enable constant-time validation of ML-DSA/ML-KEM and the JOB API via Valgrind memcheck (requires valgrind/memcheck.h)"
+         OFF)
   set(EXTRA_CFLAGS
       ""
       CACHE STRING "Extra compiler flags")
@@ -101,6 +104,7 @@ macro(imb_set_proj_defaults)
       BUILD_LIBRARY_ONLY
       BUILD_SHARED_LIBS
       CMAKE_VERBOSE_MAKEFILE
+      CONSTANT_TIME_VALIDATION
       EXTRA_CFLAGS)
 
   # clear default release build C Compiler Flags
@@ -142,6 +146,7 @@ macro(imb_set_proj_defaults)
   message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
   message(STATUS "BUILD_LIBRARY_ONLY...      ${BUILD_LIBRARY_ONLY}")
   message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
+  message(STATUS "CONSTANT_TIME_VALIDATION... ${CONSTANT_TIME_VALIDATION}")
   message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
   if(${CMAKE_GENERATOR_PLATFORM})
     message(STATUS "GENERATOR PLATFORM...      ${CMAKE_GENERATOR_PLATFORM}")

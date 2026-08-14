@@ -259,6 +259,8 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
 
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
+        static DECLARE_ALIGNED(uint8_t key_bin[2048], 64);
+        static DECLARE_ALIGNED(uint8_t iv_bin[2048], 64);
         static void *ks_ptrs[3];
         const uint64_t msg_len_to_cipher = 32;
         const uint64_t msg_len_to_hash = 48;
@@ -271,6 +273,8 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
          * Fill buffer with invalid data
          */
         memset(dust_bin, 0xff, sizeof(dust_bin));
+        memset(key_bin, 0xff, sizeof(key_bin));
+        memset(iv_bin, 0xff, sizeof(iv_bin));
 
         memset(job, 0, sizeof(*job));
         job->chain_order = chain_order;
@@ -279,9 +283,9 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
         job->cipher_direction = cipher_direction;
         job->src = dust_bin;
         job->dst = dust_bin;
-        job->enc_keys = dust_bin;
-        job->dec_keys = dust_bin;
-        job->iv = dust_bin;
+        job->enc_keys = key_bin;
+        job->dec_keys = key_bin;
+        job->iv = iv_bin;
         job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
 
         job->auth_tag_output = dust_bin;

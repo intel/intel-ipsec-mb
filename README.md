@@ -379,6 +379,63 @@ Refer to the installation section of the [INSTALL](https://github.com/intel/inte
 
 Refer to the [SECURITY](https://github.com/intel/intel-ipsec-mb/blob/main/SECURITY.md#security-considerations--options-for-increased-security) file for security related information.
 
+### Constant-Time Validation
+
+The library can be built with optional instrumentation that detects
+secret-dependent branches and secret-dependent memory accesses at run time -
+the two behaviours that leak key material through timing and cache side
+channels.
+
+**How it works.** Secret data is marked as "undefined" for the Valgrind
+memcheck tool. Memcheck then reports an error if the program ever branches on,
+or indexes memory with, a value derived from that data. Because memcheck
+tracks definedness at the machine-instruction level, annotations applied in C
+propagate automatically into the hand-written assembly implementations. The
+library code is therefore covered without any change to the `.asm` sources.
+
+**Coverage.** Two independent sets of annotations are enabled by the same build
+option:
+- the vendored OpenSSL ML-DSA/ML-KEM sources are compiled with
+  `-DOPENSSL_CONSTANT_TIME_VALIDATION`, activating their existing
+  `CONSTTIME_SECRET` / `CONSTTIME_DECLASSIFY` annotations;
+- the library is compiled with `-DIMB_CONSTANT_TIME_VALIDATION`, which marks
+  job secrets in the JOB API (see `lib/include/job_api_ct.h`).
+
+| Area | Scope | Secrets marked |
+|------|-------|----------------|
+| ML-DSA (FIPS 204), ML-KEM (FIPS 203) | full, from the vendored OpenSSL implementation | private/decapsulation keys and intermediate values |
+| JOB API AEAD: AES-GCM (incl. SGL), SM4-GCM, AES-CCM, ChaCha20-Poly1305 (incl. SGL) | cipher and authentication path | expanded key schedule including the pre-computed GHASH sub-key powers, plain text |
+| JOB API cipher: AES-CBC, AES-CTR, AES-ECB, AES-CFB, DOCSIS-SEC-BPI, PON-AES-CTR, SM4-ECB, SM4-CBC, SM4-CTR, ChaCha20, DES, 3DES, DOCSIS-DES | cipher path | encrypt key schedule and, where the mode uses it, the decrypt key schedule; plain text |
+| JOB API wireless cipher: ZUC-EEA3, ZUC-NEA6/NCA6, SNOW3G-UEA2, SNOW5G-NEA4/NCA4, KASUMI-UEA1, AES-NEA5/NCA5 | cipher path | cipher key or key schedule, plain text |
+| JOB API authentication: HMAC (MD5, SHA-1, SHA-2, SHA-3, SM3), AES-GMAC-128/192/256, GHASH, Poly1305, AES-XCBC, AES-CMAC-128/256, ZUC-EIA3, SNOW3G-UIA2, KASUMI-UIA1, SNOW5G-NIA4/NCA4, ZUC-NIA6/NCA6, AES-NIA5/NCA5 | authentication path | authentication key, HMAC ipad/opad key state or expanded key together with the derived sub-keys; message of a MAC-only job |
+| JOB API: unkeyed digests (SHA-1, SHA-2, SHA-3, SHAKE, SM3), CRC variants, PON-CRC-BIP, DOCSIS-CRC32 | not applicable | none - these take no key and run over public data |
+
+IVs, nonces, AAD, message lengths and offsets are treated as public, which
+matches the usual threat model for these algorithms.  The cipher message data
+is marked over the cipher range of encrypt operations only: on decrypt the
+source buffer holds cipher text, which is already public.  The authenticated
+message is marked only for a keyed MAC job that does no ciphering - when a
+cipher is chained with a MAC the authenticated range covers cipher text, and
+for the AEAD algorithms it covers the AAD and the cipher text, all of which are
+public.  Secrets are released when the job is returned to the application, so
+the poisoned window is exactly the job.  The destination buffer and the tag
+output are released at the same point, because they are written using poisoned
+inputs and the application has to be able to read and compare them.  Jobs
+rejected by the argument checks are never marked.
+
+**Limitations.** Only the JOB API is instrumented; the burst API and the direct
+API are not covered yet. A clean run therefore means "no leak was found in
+the covered surface", not that the whole library has been proven constant-time.
+Note also that the checks are dynamic: they only observe the code paths that
+the test vectors actually exercise.
+
+The option is off by default and generates no code when disabled, so normal
+builds are unaffected. Enabling it requires the Valgrind development headers,
+and execution under Valgrind is considerably slower than a native run.
+
+See [INSTALL](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md) for
+how to enable the build and run the checks.
+
 ## 9. Backwards compatibility
 
 In version 1.4, backward compile time symbol compatibility with

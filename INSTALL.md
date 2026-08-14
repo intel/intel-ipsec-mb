@@ -119,6 +119,32 @@ cmake -DSAFE_DATA=OFF -DSAFE_PARAM=OFF -DSAFE_LOOKUP=OFF ..
   required at configure time to generate assembly from the vendored
   OpenSSL-style scripts.
 
+- To enable constant-time validation using Valgrind memcheck (Linux only):
+```
+cmake -DCONSTANT_TIME_VALIDATION=ON ..
+```
+  The option is independent of `CMAKE_BUILD_TYPE` and works with any of them.
+  This single option turns on two complementary sets of annotations, which mark
+  secret data as "undefined" so that Valgrind reports any branch or memory
+  index taken on it.
+
+  Requires `valgrind/memcheck.h` at build time (e.g. `valgrind-devel` /
+  `valgrind` package).  When the option is off, no annotation code is generated
+  at all, so default builds are unaffected.  Run the test applications under
+  Valgrind to exercise the checks:
+```
+valgrind --tool=memcheck --error-exitcode=1 ./test/kat-app/imb-kat --test-type ML_KEM
+valgrind --tool=memcheck --error-exitcode=1 ./test/kat-app/imb-kat --test-type ML_DSA
+valgrind --tool=memcheck --error-exitcode=1 ./test/kat-app/imb-kat --test-type GCM
+```
+  Or via CTest:
+```
+ctest -T memcheck
+```
+  Any "Conditional jump or move depends on uninitialised value" error reported
+  by Valgrind in this mode should be treated as a potential constant-time violation
+  (or a real uninitialised-memory bug) and investigated.
+
 ## Creating Installation Packages
 
 ### Linux Packages (DEB and RPM)
