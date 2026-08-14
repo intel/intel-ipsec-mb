@@ -59,7 +59,7 @@ SHA3_shake256_x4_avx512vl(void *out0, void *out1, void *out2, void *out3, size_t
  */
 
 void
-ossl_sha3_shake128_x4_inc_init_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
+ossl_sha3_shake128_x4_inc_init_avx512vl(KECCAK1600_X4_CTX *ctx)
 {
         memset(ctx->A, 0, sizeof(ctx->A));
         ctx->rate = SHA3_BLOCKSIZE(128);
@@ -67,9 +67,8 @@ ossl_sha3_shake128_x4_inc_init_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
 }
 
 void
-ossl_sha3_shake128_x4_inc_absorb_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx, const void *in0,
-                                          const void *in1, const void *in2, const void *in3,
-                                          size_t inlen)
+ossl_sha3_shake128_x4_inc_absorb_avx512vl(KECCAK1600_X4_CTX *ctx, const void *in0, const void *in1,
+                                          const void *in2, const void *in3, size_t inlen)
 {
         if (ctx->finalized) {
                 /* Error: cannot absorb after finalize */
@@ -80,13 +79,13 @@ ossl_sha3_shake128_x4_inc_absorb_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx, const
 }
 
 void
-ossl_sha3_shake128_x4_inc_cleanup_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
+ossl_sha3_shake128_x4_inc_cleanup_avx512vl(KECCAK1600_X4_CTX *ctx)
 {
         OPENSSL_cleanse(ctx, sizeof(*ctx));
 }
 
 static void
-ossl_sha3_shake128_x4_inc_finalize_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
+ossl_sha3_shake128_x4_inc_finalize_avx512vl(KECCAK1600_X4_CTX *ctx)
 {
         if (ctx->finalized) {
                 return; /* Already finalized */
@@ -98,7 +97,7 @@ ossl_sha3_shake128_x4_inc_finalize_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
 
 void
 ossl_sha3_shake128_x4_inc_squeeze_avx512vl(void *out0, void *out1, void *out2, void *out3,
-                                           size_t outlen, KECCAK1600_X4_AVX512VL_CTX *ctx)
+                                           size_t outlen, KECCAK1600_X4_CTX *ctx)
 {
         if (!ctx->finalized) {
                 /* Auto-finalize on first squeeze */
@@ -113,7 +112,7 @@ ossl_sha3_shake128_x4_inc_squeeze_avx512vl(void *out0, void *out1, void *out2, v
  */
 
 void
-ossl_sha3_shake256_x4_inc_init_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
+ossl_sha3_shake256_x4_inc_init_avx512vl(KECCAK1600_X4_CTX *ctx)
 {
         memset(ctx->A, 0, sizeof(ctx->A));
         ctx->rate = SHA3_BLOCKSIZE(256);
@@ -121,9 +120,8 @@ ossl_sha3_shake256_x4_inc_init_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
 }
 
 void
-ossl_sha3_shake256_x4_inc_absorb_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx, const void *in0,
-                                          const void *in1, const void *in2, const void *in3,
-                                          size_t inlen)
+ossl_sha3_shake256_x4_inc_absorb_avx512vl(KECCAK1600_X4_CTX *ctx, const void *in0, const void *in1,
+                                          const void *in2, const void *in3, size_t inlen)
 {
         if (ctx->finalized) {
                 /* Error: cannot absorb after finalize */
@@ -134,13 +132,13 @@ ossl_sha3_shake256_x4_inc_absorb_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx, const
 }
 
 void
-ossl_sha3_shake256_x4_inc_cleanup_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
+ossl_sha3_shake256_x4_inc_cleanup_avx512vl(KECCAK1600_X4_CTX *ctx)
 {
         OPENSSL_cleanse(ctx, sizeof(*ctx));
 }
 
 static void
-ossl_sha3_shake256_x4_inc_finalize_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
+ossl_sha3_shake256_x4_inc_finalize_avx512vl(KECCAK1600_X4_CTX *ctx)
 {
         if (ctx->finalized) {
                 return; /* Already finalized */
@@ -152,7 +150,7 @@ ossl_sha3_shake256_x4_inc_finalize_avx512vl(KECCAK1600_X4_AVX512VL_CTX *ctx)
 
 void
 ossl_sha3_shake256_x4_inc_squeeze_avx512vl(void *out0, void *out1, void *out2, void *out3,
-                                           size_t outlen, KECCAK1600_X4_AVX512VL_CTX *ctx)
+                                           size_t outlen, KECCAK1600_X4_CTX *ctx)
 {
         if (!ctx->finalized) {
                 /* Auto-finalize on first squeeze */

@@ -1,5 +1,6 @@
 /*
- * Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2026 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright (c) 2026, Intel Corporation.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -16,91 +17,11 @@
 #include "internal/sha3.h"
 #include "internal/packet.h"
 
-#define SHAKE128_BLOCKSIZE SHA3_BLOCKSIZE(128)
-#define SHAKE256_BLOCKSIZE SHA3_BLOCKSIZE(256)
-
-/*
- * This is a constant time version of n % 5
- * Note that 0xFFFF / 5 = 0x3333, 2 is added to make an over-estimate of 1/5
- * and then we divide by (0xFFFF + 1)
- */
-#define MOD5(n) ((n) - 5 * (0x3335 * (n) >> 16))
-
-#if SHAKE128_BLOCKSIZE % 3 != 0
-#error "rej_ntt_poly() requires SHAKE128_BLOCKSIZE to be a multiple of 3"
-#endif
-
-typedef int(COEFF_FROM_NIBBLE_FUNC)(uint32_t nibble, uint32_t *out);
-
-static COEFF_FROM_NIBBLE_FUNC coeff_from_nibble_4;
-static COEFF_FROM_NIBBLE_FUNC coeff_from_nibble_2;
+#include "ml_dsa_sample_helpers.h"
 
 static ML_DSA_MATRIX_EXPAND_A_FN matrix_expand_A_base;
 static ML_DSA_VECTOR_EXPAND_S_FN vector_expand_S_base;
 static ML_DSA_VECTOR_EXPAND_MASK_FN vector_expand_mask_base;
-
-/**
- * @brief Combine 3 bytes to form an coefficient.
- * See FIPS 204, Algorithm 14, CoeffFromThreeBytes()
- *
- * This is not constant time as it is used to generate the matrix A which is public.
- *
- * @param s A byte array of 3 uniformly distributed bytes.
- * @param out The returned coefficient in the range 0..q-1.
- * @returns 1 if the value is less than q or 0 otherwise.
- *          This is used for rejection sampling.
- */
-static ossl_inline int
-coeff_from_three_bytes(const uint8_t *s, uint32_t *out)
-{
-        /* Zero out the top bit of the 3rd byte to get a value in the range 0..2^23-1) */
-        *out = (uint32_t) s[0] | ((uint32_t) s[1] << 8) | (((uint32_t) s[2] & 0x7f) << 16);
-        return *out < ML_DSA_Q;
-}
-
-/**
- * @brief Generate a value in the range (q-4..0..4)
- * See FIPS 204, Algorithm 15, CoeffFromHalfByte() where eta = 4
- * Note the FIPS 204 code uses the range -4..4 (whereas this code adds q to the
- * negative numbers).
- *
- * @param nibble A value in the range 0..15
- * @param out The returned value if the range (q-4)..0..4 if nibble is < 9
- * @returns 1 nibble was in range, or 0 if the nibble was rejected.
- */
-static ossl_inline int
-coeff_from_nibble_4(uint32_t nibble, uint32_t *out)
-{
-        /*
-         * This is not constant time but will not leak any important info since
-         * the value is either chosen or thrown away.
-         */
-        if (value_barrier_32(nibble < 9)) {
-                *out = mod_sub(4, nibble);
-                return 1;
-        }
-        return 0;
-}
-
-/**
- * @brief Generate a value in the range (q-2..0..2)
- * See FIPS 204, Algorithm 15, CoeffFromHalfByte() where eta = 2
- * Note the FIPS 204 code uses the range -2..2 (whereas this code adds q to the
- * negative numbers).
- *
- * @param nibble A value in the range 0..15
- * @param out The returned value if the range (q-2)..0..2 if nibble is < 15
- * @returns 1 nibble was in range, or 0 if the nibble was rejected.
- */
-static ossl_inline int
-coeff_from_nibble_2(uint32_t nibble, uint32_t *out)
-{
-        if (value_barrier_32(nibble < 15)) {
-                *out = mod_sub(2, MOD5(nibble));
-                return 1;
-        }
-        return 0;
-}
 
 /**
  * @brief Use a seed value to generate a polynomial with coefficients in the
@@ -427,44 +348,4 @@ ossl_ml_dsa_sample_init_base(IMB_ML_DSA *self)
         self->matrix_expand_A = matrix_expand_A_base;
         self->vector_expand_S = vector_expand_S_base;
         self->vector_expand_mask = vector_expand_mask_base;
-}
-
-/*
- * x4 (AVX512VL) SHAKE sampling helpers: matrix_expand_A_avx512() and friends.
- * Included here, rather than at the top of the file, as it builds on the
- * base helpers defined above.
- */
-#include "ml_dsa_sample_hw_x86_64.h"
-
-/**
- * @brief Assign the AVX512 (x4 SHAKE) sampling primitives to \a self.
- *
- * @param [in,out] self  ML-DSA context to initialise
- */
-void
-ossl_ml_dsa_sample_init_avx512(IMB_ML_DSA *self)
-{
-        self->matrix_expand_A = matrix_expand_A_avx512;
-        self->vector_expand_S = vector_expand_S_avx512;
-        self->vector_expand_mask = vector_expand_mask_avx512;
-}
-
-/*
- * x4 (AVX2) SHAKE sampling helpers: matrix_expand_A_avx2() and friends.
- * Uses the C-implemented SHAKE x4 over keccak_f1600_x4_avx2; no perlasm
- * required.
- */
-#include "ml_dsa_sample_hw_x86_64_avx2.h"
-
-/**
- * @brief Assign the AVX2 (x4 SHAKE) sampling primitives to \a self.
- *
- * @param [in,out] self  ML-DSA context to initialise
- */
-void
-ossl_ml_dsa_sample_init_avx2(IMB_ML_DSA *self)
-{
-        self->matrix_expand_A = matrix_expand_A_avx2;
-        self->vector_expand_S = vector_expand_S_avx2;
-        self->vector_expand_mask = vector_expand_mask_avx2;
 }

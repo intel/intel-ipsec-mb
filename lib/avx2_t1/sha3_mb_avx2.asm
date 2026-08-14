@@ -952,6 +952,54 @@ kf1600_x4_avx2_loop:
 
         ret
 
+; ============================================================
+; keccak_f1600_x4_avx2_ossl - C/OpenSSL-callable wrapper
+;
+; keccak_f1600_x4_avx2 uses a private calling convention:
+;   arg1 in rdi, freely clobbers rsi and ymm0-ymm15.
+; This wrapper makes it safe to call from C:
+;   Linux: just calls the inner function and issues vzeroupper
+;   Win64: also translates arg1 rcx->rdi and saves/restores
+;          rsi and ymm6-ymm15 (callee-saved on Windows)
+; ============================================================
+align_function
+MKGLOBAL(keccak_f1600_x4_avx2_ossl,function,internal)
+keccak_f1600_x4_avx2_ossl:
+%ifndef LINUX
+        push    rdi
+        push    rsi
+        sub     rsp, 10*32 + 8              ; 10 ymm regs + 8B alignment pad
+        vmovdqu [rsp + 0*32], ymm6
+        vmovdqu [rsp + 1*32], ymm7
+        vmovdqu [rsp + 2*32], ymm8
+        vmovdqu [rsp + 3*32], ymm9
+        vmovdqu [rsp + 4*32], ymm10
+        vmovdqu [rsp + 5*32], ymm11
+        vmovdqu [rsp + 6*32], ymm12
+        vmovdqu [rsp + 7*32], ymm13
+        vmovdqu [rsp + 8*32], ymm14
+        vmovdqu [rsp + 9*32], ymm15
+        mov     rdi, rcx                    ; translate Windows arg1 -> Linux arg1
+%endif
+        call    keccak_f1600_x4_avx2
+%ifndef LINUX
+        vmovdqu ymm6,  [rsp + 0*32]
+        vmovdqu ymm7,  [rsp + 1*32]
+        vmovdqu ymm8,  [rsp + 2*32]
+        vmovdqu ymm9,  [rsp + 3*32]
+        vmovdqu ymm10, [rsp + 4*32]
+        vmovdqu ymm11, [rsp + 5*32]
+        vmovdqu ymm12, [rsp + 6*32]
+        vmovdqu ymm13, [rsp + 7*32]
+        vmovdqu ymm14, [rsp + 8*32]
+        vmovdqu ymm15, [rsp + 9*32]
+        add     rsp, 10*32 + 8
+        pop     rsi
+        pop     rdi
+%endif
+        vzeroupper
+        ret
+
 SHA3_OOO_SUBMIT_FLUSH_FN submit_job_sha3_224_avx2, SHA3_224_RATE, SHA3_224_DIGEST_SZ, SHA3_MRATE_PADDING, 0, 1
 SHA3_OOO_SUBMIT_FLUSH_FN flush_job_sha3_224_avx2,  SHA3_224_RATE, SHA3_224_DIGEST_SZ, SHA3_MRATE_PADDING, 0, 0
 SHA3_OOO_SUBMIT_FLUSH_FN submit_job_sha3_256_avx2, SHA3_256_RATE, SHA3_256_DIGEST_SZ, SHA3_MRATE_PADDING, 0, 1
