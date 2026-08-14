@@ -102,6 +102,8 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN
                 return IMB_ERR_NULL_CTX;
         if (ek == NULL || dk == NULL)
                 return IMB_ERR_NULL_KEY;
+        if (params != NULL && params->size != sizeof(*params))
+                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         const int rc = self->keypair(self, ek, dk, seed_d_z);
 
@@ -155,6 +157,8 @@ imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, void *shared_secret,
                 return IMB_ERR_NULL_DST;
         if (self->key == NULL)
                 return IMB_ERR_PQC_NO_KEY;
+        if (params != NULL && params->size != sizeof(*params))
+                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         const int rc = self->encap(self, ct, shared_secret, m_32);
 

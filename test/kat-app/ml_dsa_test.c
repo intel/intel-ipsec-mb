@@ -226,6 +226,7 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         {
                 IMB_ML_DSA_KEYGEN_PARAMS keygen_params;
 
+                IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
                 keygen_params.xi_32 = v->privateSeed;
                 rc = imb_ml_dsa_keypair(self, buf_pk, buf_sk, &keygen_params);
         }
@@ -236,7 +237,9 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         }
 
         if (v->msg != NULL) {
-                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
+                IMB_ML_DSA_SIGN_PARAMS sign_params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
 
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
@@ -245,7 +248,9 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, v->msg, v->msgLen, &sign_params);
         }
         if (v->resultValid) {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
+                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
 
                 if (v->msg != NULL) {
                         if (v->sigLen != sig_bytes || rc != 0 || sig_len != sig_bytes ||
@@ -271,9 +276,12 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
                 /* msg_is_mu path: sign pre-computed mu directly, expect same sig */
                 if (v->hasMu) {
-                        IMB_ML_DSA_SIGN_PARAMS mu_params = { 0 };
-                        IMB_ML_DSA_VERIFY_PARAMS mu_verify_params = { 0 };
+                        IMB_ML_DSA_SIGN_PARAMS mu_params;
+                        IMB_ML_DSA_VERIFY_PARAMS mu_verify_params;
                         size_t mu_sig_len = sizeof(buf_sig);
+
+                        IMB_ML_DSA_SIGN_PARAMS_INIT(&mu_params);
+                        IMB_ML_DSA_VERIFY_PARAMS_INIT(&mu_verify_params);
 
                         if (v->muLen != ML_DSA_MU_BYTES) {
                                 printf("ML-DSA sigGen mu wrong length (%s tcId=%zu)\n",
@@ -357,7 +365,9 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
         set_rc = imb_ml_dsa_set_privkey(self, v->privateKey);
         if (set_rc == 0 && v->msg != NULL) {
-                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
+                IMB_ML_DSA_SIGN_PARAMS sign_params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
 
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
@@ -367,7 +377,9 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         }
 
         if (v->resultValid) {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
+                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
 
                 if (v->msg != NULL) {
                         if (set_rc != 0 || v->sigLen != sig_bytes || rc != 0 ||
@@ -394,9 +406,12 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
                 /* msg_is_mu path: sign pre-computed mu directly, expect same sig */
                 if (v->hasMu) {
-                        IMB_ML_DSA_SIGN_PARAMS mu_params = { 0 };
-                        IMB_ML_DSA_VERIFY_PARAMS mu_verify_params = { 0 };
+                        IMB_ML_DSA_SIGN_PARAMS mu_params;
+                        IMB_ML_DSA_VERIFY_PARAMS mu_verify_params;
                         size_t mu_sig_len = sizeof(buf_sig);
+
+                        IMB_ML_DSA_SIGN_PARAMS_INIT(&mu_params);
+                        IMB_ML_DSA_VERIFY_PARAMS_INIT(&mu_verify_params);
 
                         if (v->muLen != ML_DSA_MU_BYTES) {
                                 printf("ML-DSA sigGen mu wrong length (%s tcId=%zu)\n",
@@ -468,7 +483,9 @@ ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
 
         set_rc = imb_ml_dsa_set_pubkey(self, v->publicKey);
         if (set_rc == 0) {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
+                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
 
                 verify_params.ctx = ctx_ptr;
                 verify_params.ctx_len = v->ctxLen;
@@ -629,7 +646,9 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
         /* hedged sign with context, then verify */
         {
-                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
+                IMB_ML_DSA_SIGN_PARAMS sign_params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
 
                 sign_params.ctx = ctx;
                 sign_params.ctx_len = ctx_len;
@@ -639,7 +658,9 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
                         goto exit;
         }
         {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
+                IMB_ML_DSA_VERIFY_PARAMS verify_params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
 
                 verify_params.ctx = ctx;
                 verify_params.ctx_len = ctx_len;
@@ -659,7 +680,9 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
         /* deterministic signing is reproducible (explicit all-zero rnd_32) */
         {
-                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
+                IMB_ML_DSA_SIGN_PARAMS sign_params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
 
                 sign_params.ctx = NULL;
                 sign_params.ctx_len = 0;

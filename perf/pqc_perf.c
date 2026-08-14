@@ -202,8 +202,9 @@ static int
 ml_dsa_op_keygen(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
-        IMB_ML_DSA_KEYGEN_PARAMS params = { 0 };
+        IMB_ML_DSA_KEYGEN_PARAMS params;
 
+        IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
         fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
         params.xi_32 = c->seed_buf;
         /* Also binds the freshly generated key to c->handle. */
@@ -214,10 +215,11 @@ static int
 ml_dsa_op_sign(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
-        IMB_ML_DSA_SIGN_PARAMS params = { 0 };
+        IMB_ML_DSA_SIGN_PARAMS params;
         size_t sig_len = c->sig_cap;
         int ret;
 
+        IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
         fill_random_buf(&c->prng, c->rnd, sizeof(c->rnd));
         params.ctx = NULL;
         params.ctx_len = 0;
@@ -232,8 +234,9 @@ static int
 ml_dsa_op_verify(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
-        IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
+        IMB_ML_DSA_VERIFY_PARAMS params;
 
+        IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
         params.ctx = NULL;
         params.ctx_len = 0;
         /* Verifies against the key bound to c->handle by ml_dsa_op_keygen(). */
@@ -372,6 +375,7 @@ ml_kem_op_keygen(void *arg)
         IMB_ML_KEM_KEYGEN_PARAMS params;
 
         fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
         params.seed_d_z = c->seed_buf;
         /* Also binds the freshly generated key to c->handle. */
         return imb_ml_kem_keypair(c->handle, c->ek, c->dk, &params);
@@ -384,6 +388,7 @@ ml_kem_op_encap(void *arg)
         IMB_ML_KEM_ENCAP_PARAMS params;
 
         fill_random_buf(&c->prng, c->m_buf, sizeof(c->m_buf));
+        IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
         params.m_32 = c->m_buf;
         /* Encapsulates against the key bound to c->handle by ml_kem_op_keygen(). */
         return imb_ml_kem_encap(c->handle, c->ct, c->ss_encap, &params);

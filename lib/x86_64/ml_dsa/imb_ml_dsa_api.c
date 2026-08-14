@@ -108,6 +108,8 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
                 return IMB_ERR_NULL_CTX;
         if (pk == NULL || sk == NULL)
                 return IMB_ERR_NULL_KEY;
+        if (params != NULL && params->size != sizeof(*params))
+                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         const void *xi_32 = (params != NULL) ? params->xi_32 : NULL;
         const int rc = self->keypair(self, pk, sk, xi_32);
@@ -177,6 +179,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
+        if (params != NULL && params->size != sizeof(*params))
+                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         /*
          * *sig_len is [in,out]: on entry it must hold the caller's buffer
@@ -256,6 +260,8 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
+        if (params != NULL && params->size != sizeof(*params))
+                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len, msg_is_mu);
 

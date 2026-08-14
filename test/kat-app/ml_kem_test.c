@@ -137,6 +137,7 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.seed_d_z = v->seed;
         rc = imb_ml_kem_keypair(self, exp_ek, exp_dk, &keygen_params);
         if (rc != 0 ||
@@ -187,6 +188,7 @@ ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const str
 
         set_rc = (v->ekLen == ek_bytes) ? imb_ml_kem_set_pubkey(self, v->ek) : -1;
         if (set_rc == 0) {
+                IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
                 encap_params.m_32 = v->m;
                 rc = imb_ml_kem_encap(self, buf_ct, buf_ss, &encap_params);
         }
@@ -243,6 +245,7 @@ ml_kem_keygen_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg,
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.seed_d_z = v->seed;
         rc = imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params);
 
@@ -515,6 +518,7 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
                 IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
                 static const uint8_t zero_seed[ML_KEM_SEED_BYTES] = { 0 };
 
+                IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
                 keygen_params.seed_d_z = zero_seed;
                 if (imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params) != 0)
                         goto exit;
@@ -530,6 +534,7 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
                 static const uint8_t zero_m[ML_KEM_M_BYTES] = { 0 };
                 uint8_t ss2[ML_KEM_K_BYTES];
 
+                IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
                 encap_params.m_32 = zero_m;
                 if (imb_ml_kem_encap(self, buf_ct, buf_ss, &encap_params) != 0)
                         goto exit;

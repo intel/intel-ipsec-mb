@@ -2052,6 +2052,7 @@ ml_dsa_keygen_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
+        IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.xi_32 = tc->seed;
         if (imb_ml_dsa_keypair(handle, tc->pub_key, tc->secret_key, &keygen_params) != 0) {
                 fprintf(stderr, "ML-DSA key generation failed\n");
@@ -2126,8 +2127,9 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
         }
 
         if (tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL) {
-                IMB_ML_DSA_SIGN_PARAMS params = { 0 };
+                IMB_ML_DSA_SIGN_PARAMS params;
 
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
                 params.ctx = tc->context;
                 params.ctx_len = (size_t) tc->context_len;
                 params.rnd_32 = rnd;
@@ -2135,8 +2137,9 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
                 sign_rc = imb_ml_dsa_sign(handle, tc->sig, &sig_len, tc->msg, (size_t) tc->msg_len,
                                           &params);
         } else if (tc->is_mu_external) {
-                IMB_ML_DSA_SIGN_PARAMS params = { 0 };
+                IMB_ML_DSA_SIGN_PARAMS params;
 
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
                 params.rnd_32 = rnd;
                 params.msg_is_mu = 1;
                 sig_len = v.sig_len;
@@ -2205,15 +2208,17 @@ ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
         if (imb_ml_dsa_set_pubkey(handle, tc->pub_key) != 0) {
                 verify_rc = -1;
         } else if (tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL) {
-                IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
+                IMB_ML_DSA_VERIFY_PARAMS params;
 
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
                 params.ctx = tc->context;
                 params.ctx_len = (size_t) tc->context_len;
                 verify_rc = imb_ml_dsa_verify(handle, tc->msg, (size_t) tc->msg_len, tc->sig,
                                               (size_t) tc->sig_len, &params);
         } else if (tc->is_mu_external) {
-                IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
+                IMB_ML_DSA_VERIFY_PARAMS params;
 
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
                 params.msg_is_mu = 1;
                 verify_rc = imb_ml_dsa_verify(handle, tc->mu, (size_t) tc->mu_len, tc->sig,
                                               (size_t) tc->sig_len, &params);
@@ -2302,6 +2307,7 @@ ml_kem_keygen_handler(ACVP_TEST_CASE *test_case)
 
         memcpy(seed_d_z, tc->d, ML_KEM_SEED_BYTES);
         memcpy(seed_d_z + ML_KEM_SEED_BYTES, tc->z, ML_KEM_SEED_BYTES);
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
         params.seed_d_z = seed_d_z;
 
         if (imb_ml_kem_keypair(handle, tc->ek, tc->dk, &params) != 0) {
@@ -2356,6 +2362,7 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         fprintf(stderr, "ML-KEM encapsulation key binding failed\n");
                         goto exit;
                 }
+                IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
                 encap_params.m_32 = tc->m;
                 if (imb_ml_kem_encap(handle, tc->c, tc->k, &encap_params) != 0) {
                         fprintf(stderr, "ML-KEM encapsulation failed\n");
@@ -2379,6 +2386,7 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                            tc->z_len == ML_KEM_SEED_BYTES) {
                         memcpy(seed_d_z, tc->d, ML_KEM_SEED_BYTES);
                         memcpy(seed_d_z + ML_KEM_SEED_BYTES, tc->z, ML_KEM_SEED_BYTES);
+                        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
                         keygen_params.seed_d_z = seed_d_z;
                         if (imb_ml_kem_keypair(handle, tmp_ek, tmp_dk, &keygen_params) != 0) {
                                 fprintf(stderr, "ML-KEM key generation from seeds failed\n");

@@ -3266,29 +3266,27 @@ self_test_ml_dsa(IMB_MGR *p_mgr, const struct self_test_ml_dsa_vector *v)
         if (imb_ml_dsa_set_privkey(handle, v->sk) != 0)
                 goto end;
 
-        {
-                IMB_ML_DSA_SIGN_PARAMS sign_params = { 0 };
+        IMB_ML_DSA_SIGN_PARAMS sign_params;
 
-                sign_params.ctx = v->ctx;
-                sign_params.ctx_len = v->ctx_len;
-                sign_params.rnd_32 = zero_rnd;
+        IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
+        sign_params.ctx = v->ctx;
+        sign_params.ctx_len = v->ctx_len;
+        sign_params.rnd_32 = zero_rnd;
 
-                if (imb_ml_dsa_sign(handle, sig, &sig_len, msg, v->msg_len, &sign_params) != 0)
-                        goto end;
-        }
+        if (imb_ml_dsa_sign(handle, sig, &sig_len, msg, v->msg_len, &sign_params) != 0)
+                goto end;
 
         if (sig_len != v->sig_len || memcmp(sig, v->sig, v->sig_len) != 0)
                 goto end;
 
-        {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params = { 0 };
+        IMB_ML_DSA_VERIFY_PARAMS verify_params;
 
-                verify_params.ctx = v->ctx;
-                verify_params.ctx_len = v->ctx_len;
+        IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
+        verify_params.ctx = v->ctx;
+        verify_params.ctx_len = v->ctx_len;
 
-                if (imb_ml_dsa_verify(handle, msg, v->msg_len, sig, sig_len, &verify_params) != 0)
-                        goto end;
-        }
+        if (imb_ml_dsa_verify(handle, msg, v->msg_len, sig, sig_len, &verify_params) != 0)
+                goto end;
 
         ret = 1;
 end:
@@ -3651,14 +3649,13 @@ self_test_ml_kem(IMB_MGR *p_mgr, const struct self_test_ml_kem_vector *v)
         if (imb_ml_kem_new(p_mgr, v->alg, &handle) != 0)
                 return 0;
 
-        {
-                IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
+        IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
 
-                keygen_params.seed_d_z = v->seed;
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
+        keygen_params.seed_d_z = v->seed;
 
-                if (imb_ml_kem_keypair(handle, ek, dk, &keygen_params) != 0)
-                        goto end;
-        }
+        if (imb_ml_kem_keypair(handle, ek, dk, &keygen_params) != 0)
+                goto end;
 
         if (imb_ml_kem_decap(handle, ss, ct, v->ct_len, NULL) != 0)
                 goto end;

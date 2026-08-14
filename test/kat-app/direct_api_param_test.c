@@ -2919,6 +2919,8 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
                 IMB_ML_DSA_KEYGEN_PARAMS params;
                 int r;
 
+                IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
+
                 /* fresh-random path: xi_32 == NULL */
                 params.xi_32 = NULL;
                 r = imb_ml_dsa_keypair(ap->self, ap->pk, ap->sk, &params);
@@ -2934,6 +2936,17 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
                         ret = 1;
                         break;
                 }
+        }
+
+        /* struct-size mismatch: only meaningful for a valid self/pk/sk combo */
+        {
+                IMB_ML_DSA_KEYGEN_PARAMS params;
+
+                IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
+                params.size = sizeof(params) - 1;
+                if (ml_dsa_param_err(imb_ml_dsa_keypair(self, pk, sk, &params),
+                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_keypair (params size)"))
+                        ret = 1;
         }
         imb_ml_dsa_free(self);
         return ret;
@@ -2993,9 +3006,10 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
 
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
-                IMB_ML_DSA_SIGN_PARAMS params = { 0 };
+                IMB_ML_DSA_SIGN_PARAMS params;
                 int r;
 
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
                 params.ctx = ap->ctx;
                 params.ctx_len = ap->ctx_len;
 
@@ -3014,6 +3028,18 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
                         ret = 1;
                         break;
                 }
+        }
+
+        /* struct-size mismatch: only meaningful for a valid, fully-formed call */
+        if (ret == 0) {
+                IMB_ML_DSA_SIGN_PARAMS params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
+                params.size = sizeof(params) + 1;
+                sig_len = sizeof(sig);
+                if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
+                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_sign (params size)"))
+                        ret = 1;
         }
 exit:
         imb_ml_dsa_free(self);
@@ -3067,9 +3093,10 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
 
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
-                IMB_ML_DSA_VERIFY_PARAMS params = { 0 };
+                IMB_ML_DSA_VERIFY_PARAMS params;
                 int r;
 
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
                 params.ctx = ap->ctx;
                 params.ctx_len = ap->ctx_len;
                 r = imb_ml_dsa_verify(ap->self, ap->msg, ap->msg_len, ap->sig, BUFF_SIZE, &params);
@@ -3078,6 +3105,18 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
                         ret = 1;
                         break;
                 }
+        }
+
+        /* struct-size mismatch: only meaningful for a valid, fully-formed call */
+        if (ret == 0) {
+                IMB_ML_DSA_VERIFY_PARAMS params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
+                params.size = 0;
+                if (ml_dsa_param_err(
+                            imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
+                            IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_verify (params size)"))
+                        ret = 1;
         }
 exit:
         imb_ml_dsa_free(self);
@@ -3272,6 +3311,8 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
                 IMB_ML_KEM_KEYGEN_PARAMS params;
                 int r;
 
+                IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
+
                 /* fresh-random path: seed_d_z == NULL */
                 params.seed_d_z = NULL;
                 r = imb_ml_kem_keypair(ap->self, ap->ek, ap->dk, &params);
@@ -3287,6 +3328,17 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
                         ret = 1;
                         break;
                 }
+        }
+
+        /* struct-size mismatch: only meaningful for a valid self/ek/dk combo */
+        {
+                IMB_ML_KEM_KEYGEN_PARAMS params;
+
+                IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
+                params.size = sizeof(params) - 1;
+                if (ml_kem_param_err(imb_ml_kem_keypair(self, ek, dk, &params),
+                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_kem_keypair (params size)"))
+                        ret = 1;
         }
         imb_ml_kem_free(self);
         return ret;
@@ -3339,6 +3391,8 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
                 IMB_ML_KEM_ENCAP_PARAMS params;
                 int r;
 
+                IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
+
                 /* random path: m_32 == NULL */
                 params.m_32 = NULL;
                 r = imb_ml_kem_encap(ap->self, ap->ct, ap->ss, &params);
@@ -3354,6 +3408,17 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
                         ret = 1;
                         break;
                 }
+        }
+
+        /* struct-size mismatch: only meaningful for a valid, fully-formed call */
+        if (ret == 0) {
+                IMB_ML_KEM_ENCAP_PARAMS params;
+
+                IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
+                params.size = sizeof(params) + 1;
+                if (ml_kem_param_err(imb_ml_kem_encap(self, ct, ss, &params),
+                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_kem_encap (params size)"))
+                        ret = 1;
         }
 exit:
         imb_ml_kem_free(self);

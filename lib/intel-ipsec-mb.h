@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <errno.h>
 
 #ifdef __cplusplus
@@ -363,6 +364,8 @@ typedef enum {
                                         be cryptographically invalid */
         IMB_ERR_PQC_BUFFER_TOO_SMALL, /**< PQC output buffer too small for the operation
                                            requested */
+        IMB_ERR_PQC_PARAMS_SIZE,      /**< PQC optional-params struct's size field does not match
+                                           the size expected by this build of the library */
         IMB_ERR_MAX                   /* don't move this one */
 } IMB_ERR;
 
@@ -1593,6 +1596,24 @@ imb_sha512_one_block(const void *src, void *digest, IMB_MGR *state);
 IMB_DLL_EXPORT void
 imb_sha512(const void *src, const uint64_t length, void *digest, IMB_MGR *state);
 
+/**
+ * @brief Zero-initialize \a p and set its \a size field to sizeof(*p).
+ *
+ * Generic initializer shared by all ML-DSA/ML-KEM optional-parameters
+ * structs (each of which starts with a \a size field - see e.g.
+ * IMB_ML_DSA_KEYGEN_PARAMS below). Always use this macro, or one of its
+ * type-specific aliases (IMB_ML_DSA_KEYGEN_PARAMS_INIT(),
+ * IMB_ML_DSA_SIGN_PARAMS_INIT(), IMB_ML_DSA_VERIFY_PARAMS_INIT(),
+ * IMB_ML_KEM_KEYGEN_PARAMS_INIT(), IMB_ML_KEM_ENCAP_PARAMS_INIT()), instead
+ * of a bare `= { 0 }` initializer, so the library can validate the struct's
+ * layout.
+ */
+#define IMB_PQC_PARAMS_INIT(p)                                                                     \
+        do {                                                                                       \
+                memset((p), 0, sizeof(*(p)));                                                      \
+                (p)->size = sizeof(*(p));                                                          \
+        } while (0)
+
 /*
  * =========================================================
  * =========================================================
@@ -1669,8 +1690,22 @@ imb_ml_dsa_free(IMB_ML_DSA *self);
  * Optional parameters for imb_ml_dsa_keypair(). A NULL \a params pointer is
  * equivalent to a zero-initialized structure: fresh-random key generation -
  * the common-case default.
+ *
+ * Always initialize instances of this structure with
+ * IMB_ML_DSA_KEYGEN_PARAMS_INIT() (or otherwise ensure \a size is set to
+ * sizeof(IMB_ML_DSA_KEYGEN_PARAMS)) - see \a size below.
  */
 typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
+        /**
+         * Struct size in bytes: must be set to
+         * sizeof(IMB_ML_DSA_KEYGEN_PARAMS) as compiled by the caller. Enables
+         * the library to detect a struct-layout mismatch between the
+         * caller and this build of the library (e.g. an older caller built
+         * against a struct that predates a field added in a newer library),
+         * rather than silently reading uninitialized/out-of-bounds memory.
+         * Set automatically by IMB_ML_DSA_KEYGEN_PARAMS_INIT().
+         */
+        size_t size;
         /**
          * Optional 32-byte key generation seed (FIPS 204 xi).
          * NULL requests fresh-random key generation: the library generates
@@ -1682,14 +1717,28 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
 } IMB_ML_DSA_KEYGEN_PARAMS;
 
 /**
+ * @brief Zero-initialize \a p (an IMB_ML_DSA_KEYGEN_PARAMS pointer) and set its
+ *        \a size field to sizeof(IMB_ML_DSA_KEYGEN_PARAMS). Always use this macro
+ *        (or otherwise set \a size explicitly) instead of a bare `= { 0 }`
+ *        initializer, so the library can validate the struct's layout.
+ */
+#define IMB_ML_DSA_KEYGEN_PARAMS_INIT(p) IMB_PQC_PARAMS_INIT(p)
+
+/**
  * @brief Generate an ML-DSA key pair (FIPS 204 KeyGen) and bind it to \a self,
  *        replacing any previously bound key. The generated key carries both
  *        private and public components, so \a self may be used with both the sign
  *        and verify functions immediately afterwards.
  *
  * @param [in]  self    ML-DSA context
- * @param [out] pk      Encoded public key buffer (variant PUBKEY_BYTES)
- * @param [out] sk      Encoded private key buffer (variant PRIVKEY_BYTES)
+ * @param [out] pk      Encoded public key buffer (fixed size: variant
+ *                      PUBKEY_BYTES, e.g. IMB_ML_DSA_65_PUBKEY_BYTES for
+ *                      IMB_ML_DSA_65 - see the IMB_ML_DSA_*_PUBKEY_BYTES
+ *                      macros above)
+ * @param [out] sk      Encoded private key buffer (fixed size: variant
+ *                      PRIVKEY_BYTES, e.g. IMB_ML_DSA_65_PRIVKEY_BYTES for
+ *                      IMB_ML_DSA_65 - see the IMB_ML_DSA_*_PRIVKEY_BYTES
+ *                      macros above)
  * @param [in]  params  Optional key generation parameters, or NULL for
  *                      fresh-random key generation
  *
@@ -1697,6 +1746,8 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk or \a sk pointer
+ * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ *         sizeof(IMB_ML_DSA_KEYGEN_PARAMS)
  * @retval IMB_ERR_PQC_KEYOP key generation operation failed
  */
 IMB_DLL_EXPORT int
@@ -1744,8 +1795,22 @@ imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk);
  * Optional parameters for imb_ml_dsa_sign(). A NULL \a params pointer is
  * equivalent to a zero-initialized structure: no context string, hedged
  * (fresh-random) signing - the common-case default.
+ *
+ * Always initialize instances of this structure with
+ * IMB_ML_DSA_SIGN_PARAMS_INIT() (or otherwise ensure \a size is set to
+ * sizeof(IMB_ML_DSA_SIGN_PARAMS)) - see \a size below.
  */
 typedef struct IMB_ML_DSA_SIGN_PARAMS {
+        /**
+         * Struct size in bytes: must be set to sizeof(IMB_ML_DSA_SIGN_PARAMS)
+         * as compiled by the caller. Enables the library to detect a
+         * struct-layout mismatch between the caller and this build of the
+         * library (e.g. an older caller built against a struct that
+         * predates a field added in a newer library), rather than silently
+         * reading uninitialized/out-of-bounds memory. Set automatically by
+         * IMB_ML_DSA_SIGN_PARAMS_INIT().
+         */
+        size_t size;
         /**
          * Optional context string (FIPS 204 ctx) for domain separation.
          * NULL together with ctx_len = 0 means no context string.
@@ -1770,16 +1835,38 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
         int msg_is_mu;
         /**
          * Reserved for future use (e.g. HashML-DSA pre-hash support).
-         * Must be zero-initialized.
+         * Must be zero-initialized - use IMB_ML_DSA_SIGN_PARAMS_INIT().
          */
         uint8_t reserved[8];
 } IMB_ML_DSA_SIGN_PARAMS;
 
 /**
+ * @brief Zero-initialize \a p (an IMB_ML_DSA_SIGN_PARAMS pointer) and set its
+ *        \a size field to sizeof(IMB_ML_DSA_SIGN_PARAMS). Always use this macro
+ *        (or otherwise set \a size explicitly) instead of a bare `= { 0 }`
+ *        initializer, so the library can validate the struct's layout.
+ */
+#define IMB_ML_DSA_SIGN_PARAMS_INIT(p) IMB_PQC_PARAMS_INIT(p)
+
+/**
  * Optional parameters for imb_ml_dsa_verify(). A NULL \a params pointer is
  * equivalent to a zero-initialized structure: no context string.
+ *
+ * Always initialize instances of this structure with
+ * IMB_ML_DSA_VERIFY_PARAMS_INIT() (or otherwise ensure \a size is set to
+ * sizeof(IMB_ML_DSA_VERIFY_PARAMS)) - see \a size below.
  */
 typedef struct IMB_ML_DSA_VERIFY_PARAMS {
+        /**
+         * Struct size in bytes: must be set to
+         * sizeof(IMB_ML_DSA_VERIFY_PARAMS) as compiled by the caller. Enables
+         * the library to detect a struct-layout mismatch between the
+         * caller and this build of the library (e.g. an older caller built
+         * against a struct that predates a field added in a newer library),
+         * rather than silently reading uninitialized/out-of-bounds memory.
+         * Set automatically by IMB_ML_DSA_VERIFY_PARAMS_INIT().
+         */
+        size_t size;
         /**
          * Optional context string (FIPS 204 ctx) for domain separation.
          * NULL together with ctx_len = 0 means no context string.
@@ -1795,10 +1882,19 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
         int msg_is_mu;
         /**
          * Reserved for future use (e.g. HashML-DSA pre-hash support).
-         * Must be zero-initialized.
+         * Must be zero-initialized - use IMB_ML_DSA_VERIFY_PARAMS_INIT().
          */
         uint8_t reserved[8];
 } IMB_ML_DSA_VERIFY_PARAMS;
+
+/**
+ * @brief Zero-initialize \a p (an IMB_ML_DSA_VERIFY_PARAMS pointer) and set its
+ *        \a size field to sizeof(IMB_ML_DSA_VERIFY_PARAMS). Always use this
+ *        macro (or otherwise set \a size explicitly) instead of a bare
+ *        `= { 0 }` initializer, so the library can validate the struct's
+ *        layout.
+ */
+#define IMB_ML_DSA_VERIFY_PARAMS_INIT(p) IMB_PQC_PARAMS_INIT(p)
 
 /**
  * @brief Sign a message. Requires a private key to have been bound to \a self via
@@ -1824,6 +1920,8 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
  * @retval IMB_ERR_PQC_BUFFER_TOO_SMALL \a *sig_len on entry is smaller than
  *         the variant's SIG_BYTES
+ * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ *         sizeof(IMB_ML_DSA_SIGN_PARAMS)
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  */
 IMB_DLL_EXPORT int
@@ -1852,6 +1950,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
  * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
  * @retval IMB_ERR_PQC_VERIFY_FAILED the signature is cryptographically
  *         invalid (or malformed)
+ * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ *         sizeof(IMB_ML_DSA_VERIFY_PARAMS)
  * @retval IMB_ERR_PQC_SIGNOP verification could not be performed (an
  *         operational failure unrelated to the signature's validity)
  */
@@ -1985,8 +2085,22 @@ imb_ml_kem_free(IMB_ML_KEM *self);
  * Optional parameters for imb_ml_kem_keypair(). A NULL \a params pointer is
  * equivalent to a zero-initialized structure: fresh-random key generation -
  * the common-case default.
+ *
+ * Always initialize instances of this structure with
+ * IMB_ML_KEM_KEYGEN_PARAMS_INIT() (or otherwise ensure \a size is set to
+ * sizeof(IMB_ML_KEM_KEYGEN_PARAMS)) - see \a size below.
  */
 typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
+        /**
+         * Struct size in bytes: must be set to
+         * sizeof(IMB_ML_KEM_KEYGEN_PARAMS) as compiled by the caller. Enables
+         * the library to detect a struct-layout mismatch between the
+         * caller and this build of the library (e.g. an older caller built
+         * against a struct that predates a field added in a newer library),
+         * rather than silently reading uninitialized/out-of-bounds memory.
+         * Set automatically by IMB_ML_KEM_KEYGEN_PARAMS_INIT().
+         */
+        size_t size;
         /**
          * Optional 64-byte key generation seed: the FIPS 203 "d" (first 32
          * bytes) concatenated with "z" (last 32 bytes).
@@ -1999,15 +2113,29 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
 } IMB_ML_KEM_KEYGEN_PARAMS;
 
 /**
+ * @brief Zero-initialize \a p (an IMB_ML_KEM_KEYGEN_PARAMS pointer) and set its
+ *        \a size field to sizeof(IMB_ML_KEM_KEYGEN_PARAMS). Always use this
+ *        macro (or otherwise set \a size explicitly) instead of a bare
+ *        `= { 0 }` initializer, so the library can validate the struct's
+ *        layout.
+ */
+#define IMB_ML_KEM_KEYGEN_PARAMS_INIT(p) IMB_PQC_PARAMS_INIT(p)
+
+/**
  * @brief Generate an ML-KEM key pair (FIPS 203 KeyGen) and bind it to \a self,
  *        replacing any previously bound key. The generated key carries both
  *        private and public components, so \a self may be used with both the
  *        encapsulate and decapsulate functions immediately afterwards.
  *
  * @param [in]  self    ML-KEM context
- * @param [out] ek      Encoded encapsulation key buffer (variant PUBKEY_BYTES)
- * @param [out] dk      Encoded decapsulation key buffer (variant
- *                      PRIVKEY_BYTES)
+ * @param [out] ek      Encoded encapsulation key buffer (fixed size: variant
+ *                      PUBKEY_BYTES, e.g. IMB_ML_KEM_768_PUBKEY_BYTES for
+ *                      IMB_ML_KEM_768 - see the IMB_ML_KEM_*_PUBKEY_BYTES
+ *                      macros above)
+ * @param [out] dk      Encoded decapsulation key buffer (fixed size: variant
+ *                      PRIVKEY_BYTES, e.g. IMB_ML_KEM_768_PRIVKEY_BYTES for
+ *                      IMB_ML_KEM_768 - see the IMB_ML_KEM_*_PRIVKEY_BYTES
+ *                      macros above)
  * @param [in]  params  Optional key generation parameters, or NULL for
  *                      fresh-random key generation
  *
@@ -2015,6 +2143,8 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek or \a dk pointer
+ * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ *         sizeof(IMB_ML_KEM_KEYGEN_PARAMS)
  * @retval IMB_ERR_PQC_KEYOP key generation operation failed
  */
 IMB_DLL_EXPORT int
@@ -2065,8 +2195,22 @@ imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek);
  * Optional parameters for imb_ml_kem_encap(). A NULL \a params pointer is
  * equivalent to a zero-initialized structure: fresh-random encapsulation -
  * the common-case default.
+ *
+ * Always initialize instances of this structure with
+ * IMB_ML_KEM_ENCAP_PARAMS_INIT() (or otherwise ensure \a size is set to
+ * sizeof(IMB_ML_KEM_ENCAP_PARAMS)) - see \a size below.
  */
 typedef struct IMB_ML_KEM_ENCAP_PARAMS {
+        /**
+         * Struct size in bytes: must be set to
+         * sizeof(IMB_ML_KEM_ENCAP_PARAMS) as compiled by the caller. Enables
+         * the library to detect a struct-layout mismatch between the
+         * caller and this build of the library (e.g. an older caller built
+         * against a struct that predates a field added in a newer library),
+         * rather than silently reading uninitialized/out-of-bounds memory.
+         * Set automatically by IMB_ML_KEM_ENCAP_PARAMS_INIT().
+         */
+        size_t size;
         /**
          * Optional 32-byte randomness (FIPS 203 "m").
          * NULL requests fresh-random encapsulation: the library generates a
@@ -2077,6 +2221,15 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
          */
         const void *m_32;
 } IMB_ML_KEM_ENCAP_PARAMS;
+
+/**
+ * @brief Zero-initialize \a p (an IMB_ML_KEM_ENCAP_PARAMS pointer) and set its
+ *        \a size field to sizeof(IMB_ML_KEM_ENCAP_PARAMS). Always use this
+ *        macro (or otherwise set \a size explicitly) instead of a bare
+ *        `= { 0 }` initializer, so the library can validate the struct's
+ *        layout.
+ */
+#define IMB_ML_KEM_ENCAP_PARAMS_INIT(p) IMB_PQC_PARAMS_INIT(p)
 
 /**
  * @brief Encapsulate, producing a ciphertext and shared secret. Requires an
@@ -2096,6 +2249,8 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a ct or \a shared_secret pointer
  * @retval IMB_ERR_PQC_NO_KEY no encapsulation key bound to \a self
+ * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ *         sizeof(IMB_ML_KEM_ENCAP_PARAMS)
  * @retval IMB_ERR_PQC_KEMOP encapsulation operation failed
  */
 IMB_DLL_EXPORT int
