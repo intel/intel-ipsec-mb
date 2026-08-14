@@ -2131,6 +2131,7 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
                 params.ctx = tc->context;
                 params.ctx_len = (size_t) tc->context_len;
                 params.rnd_32 = rnd;
+                sig_len = v.sig_len;
                 sign_rc = imb_ml_dsa_sign(handle, tc->sig, &sig_len, tc->msg, (size_t) tc->msg_len,
                                           &params);
         } else if (tc->is_mu_external) {
@@ -2138,9 +2139,11 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
 
                 params.rnd_32 = rnd;
                 params.msg_is_mu = 1;
+                sig_len = v.sig_len;
                 sign_rc = imb_ml_dsa_sign(handle, tc->sig, &sig_len, tc->mu, (size_t) tc->mu_len,
                                           &params);
         } else {
+                sig_len = v.sig_len;
                 sign_rc = imb_ml_dsa_sign_internal(handle, tc->sig, &sig_len, tc->msg,
                                                    (size_t) tc->msg_len, rnd);
         }

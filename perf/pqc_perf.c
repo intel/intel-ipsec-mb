@@ -191,6 +191,7 @@ struct ml_dsa_ctx {
         uint8_t *pk;          /**< public key buffer */
         uint8_t *sk;          /**< private key buffer */
         uint8_t *sig;         /**< signature output buffer */
+        size_t sig_cap;       /**< capacity of the sig buffer in bytes */
         size_t sig_len;       /**< length of last produced signature in bytes */
         uint64_t prng;        /**< splitmix64 PRNG state for deterministic randomisation */
         uint8_t seed_buf[32]; /**< keygen seed (xi), refreshed per call */
@@ -214,7 +215,7 @@ ml_dsa_op_sign(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
         IMB_ML_DSA_SIGN_PARAMS params = { 0 };
-        size_t sig_len = 0;
+        size_t sig_len = c->sig_cap;
         int ret;
 
         fill_random_buf(&c->prng, c->rnd, sizeof(c->rnd));
@@ -263,6 +264,7 @@ measure_ml_dsa(struct IMB_MGR *mgr, const struct ml_dsa_variant *v, const double
         ctx.pk = malloc(v->pubkey_bytes);
         ctx.sk = malloc(v->privkey_bytes);
         ctx.sig = malloc(v->sig_bytes);
+        ctx.sig_cap = v->sig_bytes;
         ctx.prng = prng_init;
 
         if (ctx.pk == NULL || ctx.sk == NULL || ctx.sig == NULL) {

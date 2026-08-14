@@ -77,7 +77,8 @@ IMB_DLL_LOCAL const int imb_errno_types[] = { IMB_ERR_NULL_MBMGR,
                                               IMB_ERR_PQC_NO_KEY,
                                               IMB_ERR_PQC_ALG,
                                               IMB_ERR_PQC_INIT,
-                                              IMB_ERR_PQC_KEMOP };
+                                              IMB_ERR_PQC_KEMOP,
+                                              IMB_ERR_PQC_BUFFER_TOO_SMALL };
 
 int
 imb_get_errno(IMB_MGR *mb_mgr)
@@ -223,6 +224,8 @@ imb_get_strerror(int errnum)
                 return "PQC context allocation or initialization failure";
         case IMB_ERR_PQC_KEMOP:
                 return "PQC key-encapsulation encap/decap operation failure";
+        case IMB_ERR_PQC_BUFFER_TOO_SMALL:
+                return "PQC output buffer too small for the operation requested";
         default:
                 return strerror(errnum);
         }

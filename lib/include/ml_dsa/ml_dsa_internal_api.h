@@ -48,22 +48,26 @@ extern "C" {
  *        Requires a private key to have been bound to \a self via
  *        imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
  *
- * @param [in]  self           ML-DSA context with a bound private key
- * @param [out] sig            Signature buffer (variant SIG_BYTES)
- * @param [out] sig_len        Produced signature length in bytes
- * @param [in]  msg            Message buffer
- * @param [in]  msg_len        Message length in bytes
- * @param [in]  rnd_32_or_null 32-byte randomizer, or NULL to have a fresh
- *                             randomizer generated internally (hedged
- *                             signing). Pass 32 zero bytes for FIPS 204
- *                             deterministic signing (e.g. ACVP conformance
- *                             testing).
+ * @param [in]      self           ML-DSA context with a bound private key
+ * @param [out]     sig            Signature buffer (variant SIG_BYTES)
+ * @param [in,out]  sig_len        On entry, the capacity of \a sig in bytes.
+ *                                 On success, overwritten with the produced
+ *                                 signature length in bytes (variant SIG_BYTES).
+ * @param [in]      msg            Message buffer
+ * @param [in]      msg_len        Message length in bytes
+ * @param [in]      rnd_32_or_null 32-byte randomizer, or NULL to have a fresh
+ *                                 randomizer generated internally (hedged
+ *                                 signing). Pass 32 zero bytes for FIPS 204
+ *                                 deterministic signing (e.g. ACVP conformance
+ *                                 testing).
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a sig or \a sig_len pointer
  * @retval IMB_ERR_NULL_SRC invalid \a msg pointer
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
+ * @retval IMB_ERR_PQC_BUFFER_TOO_SMALL \a *sig_len on entry is smaller than
+ *         the variant's SIG_BYTES
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  *
  * @warning Per FIPS 204 Section 6, the internal Sign_internal interface is

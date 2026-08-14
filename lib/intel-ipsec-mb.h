@@ -357,7 +357,9 @@ typedef enum {
         IMB_ERR_PQC_ALG,    /**< Invalid PQC algorithm/parameter set selector */
         IMB_ERR_PQC_INIT,   /**< PQC context allocation or initialization failure */
         IMB_ERR_PQC_KEMOP,  /**< PQC key-encapsulation encap/decap operation failure */
-        IMB_ERR_MAX         /* don't move this one */
+        IMB_ERR_PQC_BUFFER_TOO_SMALL, /**< PQC output buffer too small for the operation
+                                           requested */
+        IMB_ERR_MAX                   /* don't move this one */
 } IMB_ERR;
 
 /**
@@ -1798,13 +1800,15 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @brief Sign a message. Requires a private key to have been bound to \a self via
  *        imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
  *
- * @param [in]  self     ML-DSA context with a bound private key
- * @param [out] sig      Signature buffer (variant SIG_BYTES)
- * @param [out] sig_len  Produced signature length in bytes
- * @param [in]  msg      Message buffer
- * @param [in]  msg_len  Message length in bytes
- * @param [in]  params   Optional signing parameters, or NULL for hedged
- *                       signing with no context string
+ * @param [in]      self     ML-DSA context with a bound private key
+ * @param [out]     sig      Signature buffer (variant SIG_BYTES)
+ * @param [in,out]  sig_len  On entry, the capacity of \a sig in bytes. On
+ *                           success, overwritten with the produced signature
+ *                           length in bytes (variant SIG_BYTES).
+ * @param [in]      msg      Message buffer
+ * @param [in]      msg_len  Message length in bytes
+ * @param [in]      params   Optional signing parameters, or NULL for hedged
+ *                           signing with no context string
  *
  * @return Operation status
  * @retval 0 success
@@ -1814,6 +1818,8 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  *         \a params->ctx pointer, or \a params->msg_is_mu is set but
  *         \a msg_len is not 64
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
+ * @retval IMB_ERR_PQC_BUFFER_TOO_SMALL \a *sig_len on entry is smaller than
+ *         the variant's SIG_BYTES
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  */
 IMB_DLL_EXPORT int

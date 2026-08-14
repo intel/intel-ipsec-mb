@@ -132,7 +132,7 @@ ml_dsa_check_internal_sign(IMB_ML_DSA *self, const IMB_ML_DSA_ALG alg, const siz
                            const size_t ctx_len, const void *rnd_ptr, const void *expected_sig,
                            const size_t expected_sig_len, const int expect_valid)
 {
-        size_t sig_len = 0;
+        size_t sig_len = sizeof(exp_sig);
         size_t mprime_len = 0;
         int rc;
 
@@ -241,6 +241,7 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
                 sign_params.rnd_32 = rnd_ptr;
+                sig_len = sizeof(buf_sig);
                 rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, v->msg, v->msgLen, &sign_params);
         }
         if (v->resultValid) {
@@ -272,7 +273,7 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 if (v->hasMu) {
                         IMB_ML_DSA_SIGN_PARAMS mu_params = { 0 };
                         IMB_ML_DSA_VERIFY_PARAMS mu_verify_params = { 0 };
-                        size_t mu_sig_len = 0;
+                        size_t mu_sig_len = sizeof(buf_sig);
 
                         if (v->muLen != ML_DSA_MU_BYTES) {
                                 printf("ML-DSA sigGen mu wrong length (%s tcId=%zu)\n",
@@ -361,6 +362,7 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
                 sign_params.rnd_32 = rnd_ptr;
+                sig_len = sizeof(buf_sig);
                 rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, v->msg, v->msgLen, &sign_params);
         }
 
@@ -394,7 +396,7 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 if (v->hasMu) {
                         IMB_ML_DSA_SIGN_PARAMS mu_params = { 0 };
                         IMB_ML_DSA_VERIFY_PARAMS mu_verify_params = { 0 };
-                        size_t mu_sig_len = 0;
+                        size_t mu_sig_len = sizeof(buf_sig);
 
                         if (v->muLen != ML_DSA_MU_BYTES) {
                                 printf("ML-DSA sigGen mu wrong length (%s tcId=%zu)\n",
@@ -597,7 +599,7 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         const size_t msg_len = sizeof(msg) - 1;
         const size_t ctx_len = sizeof(ctx);
         size_t pk_bytes, sk_bytes, sig_bytes;
-        size_t sig_len = 0, sig_len2 = 0;
+        size_t sig_len = sizeof(buf_sig), sig_len2 = sizeof(exp_sig);
         IMB_ML_DSA *self = NULL;
         int ret = 1;
 
@@ -662,8 +664,10 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
                 sign_params.ctx = NULL;
                 sign_params.ctx_len = 0;
                 sign_params.rnd_32 = zero_rnd;
+                sig_len = sizeof(buf_sig);
                 if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0)
                         goto exit;
+                sig_len2 = sizeof(exp_sig);
                 if (imb_ml_dsa_sign(self, exp_sig, &sig_len2, msg, msg_len, &sign_params) != 0)
                         goto exit;
         }

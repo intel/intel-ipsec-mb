@@ -3244,7 +3244,7 @@ self_test_ml_dsa(IMB_MGR *p_mgr, const struct self_test_ml_dsa_vector *v)
         uint8_t sig[IMB_ML_DSA_87_SIG_BYTES];
         uint8_t msg[256];
         const uint8_t zero_rnd[32] = { 0 };
-        size_t sig_len = 0;
+        size_t sig_len = sizeof(sig);
         int ret = 0;
 
         IMB_ASSERT(v->msg_len <= sizeof(msg));

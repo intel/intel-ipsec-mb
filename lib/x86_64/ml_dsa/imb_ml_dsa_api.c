@@ -178,6 +178,16 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
 #endif
+        /*
+         * *sig_len is [in,out]: on entry it must hold the caller's buffer
+         * capacity. This check runs unconditionally (regardless of
+         * SAFE_PARAM) since sign_ctx() below always writes exactly
+         * self->sig_len bytes into sig - an undersized caller-supplied
+         * capacity would otherwise result in an out-of-bounds write.
+         */
+        if (*sig_len < self->sig_len)
+                return IMB_ERR_PQC_BUFFER_TOO_SMALL;
+
         int rc;
 
         rc = self->sign_ctx(self, sig, sig_len, msg, msg_len, ctx, ctx_len, rnd_32, msg_is_mu);
@@ -208,6 +218,10 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const voi
         if (msg == NULL && msg_len != 0)
                 return IMB_ERR_NULL_SRC;
 #endif
+        /* See imb_ml_dsa_sign() above: unconditional buffer-capacity check. */
+        if (*sig_len < self->sig_len)
+                return IMB_ERR_PQC_BUFFER_TOO_SMALL;
+
         const int rc = self->sign_internal(self, sig, sig_len, msg, msg_len, rnd_32_or_null);
 
         return (rc != 0) ? IMB_ERR_PQC_SIGNOP : 0;
