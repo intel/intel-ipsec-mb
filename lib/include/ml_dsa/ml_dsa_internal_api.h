@@ -102,8 +102,10 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const voi
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_SRC invalid \a sig or \a msg pointer
  * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
- * @retval IMB_ERR_PQC_SIGNOP the signature is invalid, or verification
- *         could not be performed
+ * @retval IMB_ERR_PQC_VERIFY_FAILED the signature is cryptographically
+ *         invalid (or malformed)
+ * @retval IMB_ERR_PQC_SIGNOP verification could not be performed (an
+ *         operational failure unrelated to the signature's validity)
  *
  * @warning Per FIPS 204 Section 6, the internal Verify_internal interface is
  * exported ONLY to support ACVP/CAVP conformance testing and MUST NOT be

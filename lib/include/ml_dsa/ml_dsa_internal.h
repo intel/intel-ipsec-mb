@@ -105,13 +105,20 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_NTT_INVERSE_FN *poly_ntt_inverse;
         ML_DSA_POLY_NTT_MULT_FN *poly_ntt_mult;
 
-        /* Backend dispatch table. All ops return 0 on success, <0 on error. */
+        /* Backend dispatch table. All ops return 0 on success, <0 on error,
+         * except verify_ctx/verify_internal - see their comment below. */
         int (*keypair)(IMB_ML_DSA *self, void *pk, void *sk, const void *xi_32_or_null);
         int (*set_privkey)(IMB_ML_DSA *self, const void *sk);
         int (*set_pubkey)(IMB_ML_DSA *self, const void *pk);
         int (*sign_ctx)(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
                         size_t msg_len, const void *ctx, size_t ctx_len, const void *rnd_32_or_null,
                         int msg_is_mu);
+        /**
+         * Returns 0 if the signature is valid, -1 if it is cryptographically
+         * invalid (or malformed), or -2 on an operational failure (e.g. no
+         * key bound, allocation or hashing failure) unrelated to the
+         * signature's validity.
+         */
         int (*verify_ctx)(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *ctx,
                           size_t ctx_len, const void *sig, size_t sig_len, int msg_is_mu);
         /**
@@ -122,6 +129,7 @@ struct IMB_ML_DSA {
          */
         int (*sign_internal)(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
                              size_t msg_len, const void *rnd_32_or_null);
+        /** Return convention: see verify_ctx above. */
         int (*verify_internal)(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
                                size_t sig_len);
         int (*pubkey_validate)(IMB_ML_DSA *self, const void *pk);

@@ -1,5 +1,7 @@
 /*
  * Copyright 2024-2026 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright (c) 2026, Intel Corporation. Modified for tri-state verify
+ * return values (valid / cryptographically invalid / operational failure).
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -377,13 +379,15 @@ err:
  * @param mu_len: The length of the mu buffer
  * @param sig_enc: The encoded signature to be verified
  * @param sig_enc_len: the encoded csignature length
- * @returns 1 on success, 0 on error
+ * @returns 1 if the signature is valid, 0 if it is cryptographically invalid
+ *          (or malformed), or -1 on an operational failure (e.g. allocation
+ *          or hashing failure) unrelated to the signature's validity
  */
 static int
 ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint8_t *mu,
                        size_t mu_len, const uint8_t *sig_enc, size_t sig_enc_len)
 {
-        int ret = 0;
+        int ret = -1;
         uint8_t *alloc = NULL, *w1_encoded = NULL;
         void *alloc_freeptr = NULL;
         POLY *p, *c_ntt;
@@ -417,7 +421,7 @@ ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint
         w1_encoded_len = k * (gamma2 == ML_DSA_GAMMA2_Q_MINUS1_DIV88 ? 192 : 128);
         w1_encoded = OPENSSL_malloc(w1_encoded_len);
         if (w1_encoded == NULL)
-                return 0;
+                return -1;
 
         /* Allocate aligned POLY array */
         poly_count = 1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig;
@@ -440,9 +444,12 @@ ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint
         vector_init(&az_ntt, p, k);
         vector_init(&ct1_ntt, p + k, k);
 
-        if (!ossl_ml_dsa_sig_decode(&sig, sig_enc, sig_enc_len, pub->params) ||
-            !self->matrix_expand_A(md_ctx, pub->shake128_md, pub->rho, &a_ntt))
+        if (!ossl_ml_dsa_sig_decode(&sig, sig_enc, sig_enc_len, pub->params)) {
+                ret = 0; /* malformed signature encoding: cryptographically invalid */
                 goto err;
+        }
+        if (!self->matrix_expand_A(md_ctx, pub->shake128_md, pub->rho, &a_ntt))
+                goto err; /* operational failure: ret stays -1 */
 
         /* Compute verifiers challenge c_ntt = NTT(SampleInBall(c_tilde)) */
         if (!poly_sample_in_ball_ntt(self, c_ntt, c_tilde_sig, (int) c_tilde_len, md_ctx,
@@ -535,7 +542,10 @@ err:
 
 /**
  * See FIPS 203 Section 5.3 Algorithm 3 ML-DSA.Verify()
- * @returns 1 on success, or 0 on error.
+ * @returns 1 if the signature is valid, 0 if it is cryptographically invalid
+ *          (or malformed), or -1 on an operational failure (e.g. no public
+ *          key, allocation or hashing failure) unrelated to the signature's
+ *          validity
  */
 int
 ossl_ml_dsa_verify(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, int msg_is_mu, const uint8_t *msg,
@@ -546,10 +556,10 @@ ossl_ml_dsa_verify(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, int msg_is_mu,
         uint8_t mu[ML_DSA_MU_BYTES];
         const uint8_t *mu_ptr = mu;
         size_t mu_len = sizeof(mu);
-        int ret = 0;
+        int ret = -1;
 
         if (ossl_ml_dsa_key_get_pub(pub) == NULL)
-                return 0;
+                return -1;
 
         if (msg_is_mu) {
                 mu_ptr = msg;
@@ -557,7 +567,7 @@ ossl_ml_dsa_verify(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, int msg_is_mu,
         } else {
                 md_ctx = ossl_ml_dsa_mu_init(pub, encode, context, context_len);
                 if (md_ctx == NULL)
-                        return 0;
+                        return -1;
 
                 if (!ossl_ml_dsa_mu_update(md_ctx, msg, msg_len))
                         goto err;

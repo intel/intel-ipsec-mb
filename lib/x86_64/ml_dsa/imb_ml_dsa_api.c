@@ -259,7 +259,9 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
 #endif
         const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len, msg_is_mu);
 
-        return (rc != 0) ? IMB_ERR_PQC_SIGNOP : 0;
+        if (rc == 0)
+                return 0;
+        return (rc == -1) ? IMB_ERR_PQC_VERIFY_FAILED : IMB_ERR_PQC_SIGNOP;
 }
 
 IMB_DLL_EXPORT int
@@ -278,7 +280,9 @@ imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, co
 #endif
         const int rc = self->verify_internal(self, msg, msg_len, sig, sig_len);
 
-        return (rc != 0) ? IMB_ERR_PQC_SIGNOP : 0;
+        if (rc == 0)
+                return 0;
+        return (rc == -1) ? IMB_ERR_PQC_VERIFY_FAILED : IMB_ERR_PQC_SIGNOP;
 }
 
 /* ------------------------------------------------------------------------- */

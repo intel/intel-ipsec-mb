@@ -85,6 +85,7 @@ SET_ERRNO_TYPES \
         IMB_ERR_PQC_ALG, \
         IMB_ERR_PQC_INIT, \
         IMB_ERR_PQC_KEMOP, \
+        IMB_ERR_PQC_VERIFY_FAILED, \
         IMB_ERR_PQC_BUFFER_TOO_SMALL
 
 ;; Reset global imb_errno to 0

@@ -78,6 +78,7 @@ IMB_DLL_LOCAL const int imb_errno_types[] = { IMB_ERR_NULL_MBMGR,
                                               IMB_ERR_PQC_ALG,
                                               IMB_ERR_PQC_INIT,
                                               IMB_ERR_PQC_KEMOP,
+                                              IMB_ERR_PQC_VERIFY_FAILED,
                                               IMB_ERR_PQC_BUFFER_TOO_SMALL };
 
 int
@@ -215,7 +216,7 @@ imb_get_strerror(int errnum)
         case IMB_ERR_PQC_KEYOP:
                 return "PQC key generation or key parse failure";
         case IMB_ERR_PQC_SIGNOP:
-                return "PQC sign or verify operation failure";
+                return "PQC sign operation failure, or verify operation could not be performed";
         case IMB_ERR_PQC_NO_KEY:
                 return "PQC operation attempted with no key bound to the context";
         case IMB_ERR_PQC_ALG:
@@ -224,6 +225,8 @@ imb_get_strerror(int errnum)
                 return "PQC context allocation or initialization failure";
         case IMB_ERR_PQC_KEMOP:
                 return "PQC key-encapsulation encap/decap operation failure";
+        case IMB_ERR_PQC_VERIFY_FAILED:
+                return "PQC signature verification failed (invalid signature)";
         case IMB_ERR_PQC_BUFFER_TOO_SMALL:
                 return "PQC output buffer too small for the operation requested";
         default:

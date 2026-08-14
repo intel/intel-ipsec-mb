@@ -196,17 +196,19 @@ op_verify_ctx(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *ctx
               const void *sig, size_t sig_len, int msg_is_mu)
 {
         if (self->key == NULL || ossl_ml_dsa_key_get_pub(self->key) == NULL)
-                return -1;
+                return -2; /* operational failure: no (public) key bound */
 
         /* When msg_is_mu=1, ctx is already baked into mu - pass NULL/0. */
         const void *verify_ctx = msg_is_mu ? NULL : ctx;
         const size_t verify_ctx_len = msg_is_mu ? 0 : ctx_len;
 
-        if (!ossl_ml_dsa_verify(self, self->key, msg_is_mu, msg, msg_len, verify_ctx,
-                                verify_ctx_len, 1 /* encode */, sig, sig_len))
-                return -1;
+        const int rc = ossl_ml_dsa_verify(self, self->key, msg_is_mu, msg, msg_len, verify_ctx,
+                                          verify_ctx_len, 1 /* encode */, sig, sig_len);
 
-        return 0;
+        if (rc == 1)
+                return 0;           /* signature is valid */
+        return (rc == 0) ? -1 : -2; /* -1: cryptographically invalid signature,
+                                        -2: operational failure */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -247,14 +249,16 @@ op_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void
                    size_t sig_len)
 {
         if (self->key == NULL || ossl_ml_dsa_key_get_pub(self->key) == NULL)
-                return -1;
+                return -2; /* operational failure: no (public) key bound */
 
         /* No context string, no message encoding: encode = 0. */
-        if (!ossl_ml_dsa_verify(self, self->key, 0 /* msg_is_mu */, msg, msg_len, NULL, 0,
-                                0 /* encode */, sig, sig_len))
-                return -1;
+        const int rc = ossl_ml_dsa_verify(self, self->key, 0 /* msg_is_mu */, msg, msg_len, NULL, 0,
+                                          0 /* encode */, sig, sig_len);
 
-        return 0;
+        if (rc == 1)
+                return 0;           /* signature is valid */
+        return (rc == 0) ? -1 : -2; /* -1: cryptographically invalid signature,
+                                        -2: operational failure */
 }
 
 /* ------------------------------------------------------------------------- */

@@ -351,12 +351,16 @@ typedef enum {
         IMB_ERR_BURST_SUITE_ID,
         IMB_ERR_JOB_SGL_STATE,
         /* add new error types above this comment */
-        IMB_ERR_PQC_KEYOP,  /**< PQC key generation or key parse failure */
-        IMB_ERR_PQC_SIGNOP, /**< PQC sign or verify operation failure */
-        IMB_ERR_PQC_NO_KEY, /**< PQC operation attempted with no key bound to the context */
-        IMB_ERR_PQC_ALG,    /**< Invalid PQC algorithm/parameter set selector */
-        IMB_ERR_PQC_INIT,   /**< PQC context allocation or initialization failure */
-        IMB_ERR_PQC_KEMOP,  /**< PQC key-encapsulation encap/decap operation failure */
+        IMB_ERR_PQC_KEYOP,         /**< PQC key generation or key parse failure */
+        IMB_ERR_PQC_SIGNOP,        /**< PQC sign operation failure, or verify operation could not be
+                                        performed (as opposed to a cryptographically invalid signature -
+                                        see IMB_ERR_PQC_VERIFY_FAILED) */
+        IMB_ERR_PQC_NO_KEY,        /**< PQC operation attempted with no key bound to the context */
+        IMB_ERR_PQC_ALG,           /**< Invalid PQC algorithm/parameter set selector */
+        IMB_ERR_PQC_INIT,          /**< PQC context allocation or initialization failure */
+        IMB_ERR_PQC_KEMOP,         /**< PQC key-encapsulation encap/decap operation failure */
+        IMB_ERR_PQC_VERIFY_FAILED, /**< PQC signature verification determined the signature to
+                                        be cryptographically invalid */
         IMB_ERR_PQC_BUFFER_TOO_SMALL, /**< PQC output buffer too small for the operation
                                            requested */
         IMB_ERR_MAX                   /* don't move this one */
@@ -1846,8 +1850,10 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
  * @retval IMB_ERR_NULL_SRC invalid \a sig, \a msg, \a params->ctx pointer,
  *         or \a params->msg_is_mu is set but \a msg_len is not 64
  * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
- * @retval IMB_ERR_PQC_SIGNOP the signature is invalid, or verification
- *         could not be performed
+ * @retval IMB_ERR_PQC_VERIFY_FAILED the signature is cryptographically
+ *         invalid (or malformed)
+ * @retval IMB_ERR_PQC_SIGNOP verification could not be performed (an
+ *         operational failure unrelated to the signature's validity)
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
