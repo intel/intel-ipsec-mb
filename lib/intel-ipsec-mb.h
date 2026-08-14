@@ -1762,6 +1762,11 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * \a ctx and \a ctx_len are ignored when this flag is set.
          */
         int msg_is_mu;
+        /**
+         * Reserved for future use (e.g. HashML-DSA pre-hash support).
+         * Must be zero-initialized.
+         */
+        uint8_t reserved[8];
 } IMB_ML_DSA_SIGN_PARAMS;
 
 /**
@@ -1782,6 +1787,11 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
          * \a ctx and \a ctx_len are ignored when this flag is set.
          */
         int msg_is_mu;
+        /**
+         * Reserved for future use (e.g. HashML-DSA pre-hash support).
+         * Must be zero-initialized.
+         */
+        uint8_t reserved[8];
 } IMB_ML_DSA_VERIFY_PARAMS;
 
 /**
