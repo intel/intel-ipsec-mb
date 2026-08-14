@@ -188,9 +188,10 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
 /**
  * ------------------------------------------------------------------------
  * FIPS 204 internal interface (ML-DSA.Sign_internal / ML-DSA.Verify_internal):
- * no context string, no message encoding. Intended for callers that perform
- * their own external-interface encoding (e.g. a composite scheme), and for
- * ACVP/CAVP conformance testing of the internal interface.
+ * no context string, no message encoding. Exported ONLY to support ACVP/CAVP
+ * conformance testing of the internal interface - not declared in the public
+ * intel-ipsec-mb.h header, and MUST NOT be used by other applications (see
+ * lib/include/ml_dsa/ml_dsa_internal_api.h).
  * ------------------------------------------------------------------------
  */
 IMB_DLL_EXPORT int

@@ -19,14 +19,13 @@
  * not part of the installed, public intel-ipsec-mb.h header, so applications
  * linking against the library never see these prototypes.
  *
- * These functions are exported from the library for external linkage (so
- * that test/certification harnesses such as kat-app/acvp-app can link
- * against them by including this header directly from the source tree), but
- * they are intended only for CAVP/ACVP conformance testing and similar
- * internal validation - not for use by customer/application code. Note that
- * caller-supplied-randomness signing (via IMB_ML_DSA_SIGN_PARAMS::rnd_32)
- * remains part of the always-public API in intel-ipsec-mb.h and is declared
- * there instead.
+ * @important These functions are exported from the library for external
+ * linkage purely so that test/certification harnesses (kat-app, acvp-app)
+ * can link against them by including this header directly from the source
+ * tree. They exist ONLY to support ACVP/CAVP conformance testing of the
+ * FIPS 204 internal interface and MUST NOT be called by general application
+ * code, nor treated as part of the library's public API. Application
+ * code must use the public API declared in intel-ipsec-mb.h instead.
  */
 
 #ifndef IMB_ML_DSA_INTERNAL_API_H
@@ -43,9 +42,9 @@ extern "C" {
 
 /**
  * @brief Sign a message using the FIPS 204 internal interface (ML-DSA.Sign_internal).
- *        No context string, no message encoding. Intended for composite schemes that
- *        perform their own external-interface encoding, and for ACVP/CAVP
- *        conformance testing of the internal interface.
+ *        No context string, no message encoding. Exported solely for ACVP/CAVP
+ *        conformance testing of the internal interface - not intended for use
+ *        by other applications (see @warning below).
  *        Requires a private key to have been bound to \a self via
  *        imb_ml_dsa_keypair() or imb_ml_dsa_set_privkey().
  *
@@ -67,12 +66,12 @@ extern "C" {
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  *
- * @warning Per FIPS 204 Section 6, the internal Sign_internal interface
- * should not be made available to applications outside of CAVP/ACVP
- * conformance testing or composite-scheme use. This function is not
- * declared in the public intel-ipsec-mb.h header; it is only intended to be
- * used by internal test/certification applications that include this
- * header directly from the source tree.
+ * @warning Per FIPS 204 Section 6, the internal Sign_internal interface is
+ * exported ONLY to support ACVP/CAVP conformance testing and MUST NOT be
+ * used by other applications. This function is not declared in the public
+ * intel-ipsec-mb.h header; it is only intended to be used by internal
+ * test/certification applications that include this header directly from
+ * the source tree.
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
@@ -81,6 +80,9 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const voi
 /**
  * @brief Verify a signature over a message using the FIPS 204 internal interface
  *        (ML-DSA.Verify_internal). No context string, no message encoding.
+ *        Exported solely for ACVP/CAVP conformance testing of the internal
+ *        interface - not intended for use by other applications (see
+ *        @warning below).
  *        Requires a public key to have been bound to \a self via
  *        imb_ml_dsa_keypair(),
  *        imb_ml_dsa_set_privkey() (private keys carry the public component too) or
@@ -99,12 +101,12 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const voi
  * @retval IMB_ERR_PQC_SIGNOP the signature is invalid, or verification
  *         could not be performed
  *
- * @warning Per FIPS 204 Section 6, the internal Verify_internal interface
- * should not be made available to applications outside of CAVP/ACVP
- * conformance testing or composite-scheme use. This function is not
- * declared in the public intel-ipsec-mb.h header; it is only intended to be
- * used by internal test/certification applications that include this
- * header directly from the source tree.
+ * @warning Per FIPS 204 Section 6, the internal Verify_internal interface is
+ * exported ONLY to support ACVP/CAVP conformance testing and MUST NOT be
+ * used by other applications. This function is not declared in the public
+ * intel-ipsec-mb.h header; it is only intended to be used by internal
+ * test/certification applications that include this header directly from
+ * the source tree.
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
