@@ -682,11 +682,6 @@ init_mb_mgr_avx10_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->gmac192_finalize = imb_aes_gmac_finalize_192_vaes_avx512;
         state->gmac256_finalize = imb_aes_gmac_finalize_256_vaes_avx512;
 
-        state->aes_ecb_128_quic = aes_ecb_quic_enc_128_vaes_avx512;
-        state->aes_ecb_256_quic = aes_ecb_quic_enc_256_vaes_avx512;
-        state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx512;
-        state->chacha20_hp_quic = quic_hp_chacha20_avx512;
-
 #ifdef SMX_NI
         state->sm4_keyexp = sm4_set_key_ni_avx2;
 #endif
