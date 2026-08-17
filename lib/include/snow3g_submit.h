@@ -25,11 +25,4 @@ def_submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
         return job;
 }
 
-static inline IMB_JOB *
-def_flush_snow3g_uea2_job(IMB_MGR *state)
-{
-        (void) state;
-        return NULL;
-}
-
 #endif /* SNOW3G_SUBMIT_H */
