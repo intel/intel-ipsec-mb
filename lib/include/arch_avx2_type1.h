@@ -256,12 +256,6 @@ IMB_JOB *
 flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 
 IMB_JOB *
-submit_job_aes_cntr_avx(IMB_JOB *job);
-
-IMB_JOB *
-submit_job_chacha20_enc_dec_avx(IMB_JOB *job);
-
-IMB_JOB *
 submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
 
 IMB_JOB *
