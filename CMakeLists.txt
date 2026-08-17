@@ -46,10 +46,8 @@ project(
   LANGUAGES C ASM
   HOMEPAGE_URL https://github.com/intel/intel-ipsec-mb/)
 
-# add testing support
-include(CTest)
-
-# configure CTest/Valgrind memcheck for constant-time validation builds
+# Configure CTest/Valgrind memcheck. Must precede include(CTest), which bakes
+# MEMORYCHECK_* into the configuration as they stand at that point.
 if(CONSTANT_TIME_VALIDATION)
   find_program(VALGRIND_EXECUTABLE valgrind)
   if(VALGRIND_EXECUTABLE)
@@ -62,6 +60,9 @@ if(CONSTANT_TIME_VALIDATION)
       "'ctest -T memcheck' will not be available.")
   endif()
 endif()
+
+# add testing support
+include(CTest)
 
 # set binary output directory if specified
 imb_set_binary_dir()
