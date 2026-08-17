@@ -28,7 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %define GCM128_MODE 1
 %include "include/gcm_common_avx2_avx512.inc"
-%include "include/align_avx512.inc"
+%include "include/align_avx.inc"
 
 mksection .text
 default rel
