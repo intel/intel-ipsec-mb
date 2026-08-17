@@ -16,8 +16,6 @@
 void
 call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
 void
-call_sha224_ni_x2_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
-void
 call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 
 void
