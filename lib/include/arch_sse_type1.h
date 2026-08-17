@@ -206,21 +206,6 @@ shake256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t 
 
 /* moved from MB MGR */
 IMB_JOB *
-submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_aes128_enc_sse(MB_MGR_AES_OOO *state);
-
-IMB_JOB *
-submit_job_aes192_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_aes192_enc_sse(MB_MGR_AES_OOO *state);
-
-IMB_JOB *
-submit_job_aes256_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_aes256_enc_sse(MB_MGR_AES_OOO *state);
-
-IMB_JOB *
 submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state);

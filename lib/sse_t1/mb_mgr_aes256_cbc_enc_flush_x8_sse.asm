@@ -5,7 +5,7 @@
 ;;
 
 %define NUM_LANES 8
-%define AES_CBC_ENC_X4 aes_cbc_enc_256_x8_sse
+%define AES_CBC_ENC_X8 aes_cbc_enc_256_x8_sse
 %define FLUSH_JOB_AES_ENC flush_job_aes256_enc_x8_sse
 
-%include "include/mb_mgr_aes_cbc_enc_flush_sse.inc"
+%include "include/mb_mgr_aes_cbc_enc_flush_x8_sse.inc"

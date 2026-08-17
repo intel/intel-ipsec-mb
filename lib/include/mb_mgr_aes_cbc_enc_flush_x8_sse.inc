@@ -11,17 +11,10 @@
 
 %include "include/reg_sizes.inc"
 
-%ifndef NUM_LANES
-%define NUM_LANES 4
-%endif
+;; NUM_LANES, AES_CBC_ENC_X8 and FLUSH_JOB_AES_ENC must be set by the includer
 
-%ifndef AES_CBC_ENC_X4
-%define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
-%define FLUSH_JOB_AES_ENC flush_job_aes128_enc_sse
-%endif
-
-; void AES_CBC_ENC_X4(AES_ARGS *args, UINT64 len_in_bytes);
-extern AES_CBC_ENC_X4
+; void AES_CBC_ENC_X8(AES_ARGS *args, UINT64 len_in_bytes);
+extern AES_CBC_ENC_X8
 
 mksection .rodata
 default rel
@@ -32,28 +25,22 @@ len_masks:
         dq 0x00000000FFFF0000, 0x0000000000000000
         dq 0x0000FFFF00000000, 0x0000000000000000
         dq 0xFFFF000000000000, 0x0000000000000000
-%if NUM_LANES > 4
         dq 0x0000000000000000, 0x000000000000FFFF
         dq 0x0000000000000000, 0x00000000FFFF0000
         dq 0x0000000000000000, 0x0000FFFF00000000
         dq 0x0000000000000000, 0xFFFF000000000000
-%endif
 
-%if NUM_LANES > 4
 align 16
 dupw:
         dq 0x0100010001000100, 0x0100010001000100
-%endif
 
 one:    dq  1
 two:    dq  2
 three:  dq  3
-%if NUM_LANES > 4
 four:   dq  4
 five:   dq  5
 six:    dq  6
 seven:  dq  7
-%endif
 
 mksection .text
 
@@ -129,7 +116,6 @@ FLUSH_JOB_AES_ENC:
         cmovne  good_lane, [rel two]
         cmp     qword [state + _aes_job_in_lane + 3*8], 0
         cmovne  good_lane, [rel three]
-%if NUM_LANES > 4
         cmp     qword [state + _aes_job_in_lane + 4*8], 0
         cmovne  good_lane, [rel four]
         cmp     qword [state + _aes_job_in_lane + 5*8], 0
@@ -138,7 +124,6 @@ FLUSH_JOB_AES_ENC:
         cmovne  good_lane, [rel six]
         cmp     qword [state + _aes_job_in_lane + 7*8], 0
         cmovne  good_lane, [rel seven]
-%endif
 
         ; copy good_lane to empty lanes
         mov     tmp1, [state + _aes_args_in + good_lane*8]
@@ -168,17 +153,13 @@ APPEND(skip_,I):
         or      len2, len2
         jz      len_is_0
 
-%if NUM_LANES > 4
         pshufb  xmm1, [rel dupw]   ; duplicate words across all lanes
-%else
-        pshuflw xmm1, xmm1, 0
-%endif
         psubw   xmm0, xmm1
         movdqa  [state + _aes_lens], xmm0
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
-        call    AES_CBC_ENC_X4
+        call    AES_CBC_ENC_X8
         ; state and idx are intact
 
 align_label

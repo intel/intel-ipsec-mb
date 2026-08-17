@@ -11,17 +11,11 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/align_sse.inc"
-%ifndef NUM_LANES
-%define NUM_LANES 4
-%endif
 
-%ifndef AES_CBC_ENC_X4
-%define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
-%define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_sse
-%endif
+;; AES_CBC_ENC_X8 and SUBMIT_JOB_AES_ENC must be set by the includer
 
-; void AES_CBC_ENC_X4(AES_ARGS *args, UINT64 len_in_bytes);
-extern AES_CBC_ENC_X4
+; void AES_CBC_ENC_X8(AES_ARGS *args, UINT64 len_in_bytes);
+extern AES_CBC_ENC_X8
 
 %ifdef LINUX
 %define arg1    rdi
@@ -54,14 +48,12 @@ _gpr_save:      resq    8
 _rsp_save:      resq    1
 endstruc
 
-%if NUM_LANES > 4
 mksection .rodata
 default rel
 
 align 16
 dupw:
         dq 0x0100010001000100, 0x0100010001000100
-%endif
 
 mksection .text
 
@@ -124,17 +116,13 @@ SUBMIT_JOB_AES_ENC:
         cmp     len2, 0
         je      len_is_0
 
-%if NUM_LANES > 4
         pshufb  xmm1, [rel dupw]   ; duplicate words across all lanes
-%else
-        pshuflw xmm1, xmm1, 0
-%endif
         psubw   xmm0, xmm1
         movdqa  [state + _aes_lens], xmm0
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
-        call    AES_CBC_ENC_X4
+        call    AES_CBC_ENC_X8
         ; state and idx are intact
 
 align_label
