@@ -228,16 +228,6 @@ kasumi_f9_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
 IMB_DLL_LOCAL void
 kasumi_1_block_avx512(const uint16_t *key_sched, uint16_t *data);
 
-/* SHA3 multi-buffer (x4) block-absorb helpers (sha3_avx512.asm) */
-IMB_DLL_LOCAL void
-call_sha3_224_x4_absorb_avx512(SHA3_ARGS *args, const uint64_t num_blocks);
-IMB_DLL_LOCAL void
-call_sha3_256_x4_absorb_avx512(SHA3_ARGS *args, const uint64_t num_blocks);
-IMB_DLL_LOCAL void
-call_sha3_384_x4_absorb_avx512(SHA3_ARGS *args, const uint64_t num_blocks);
-IMB_DLL_LOCAL void
-call_sha3_512_x4_absorb_avx512(SHA3_ARGS *args, const uint64_t num_blocks);
-
 /* SHA3 multi-buffer submit/flush (sha3_mb_avx512.asm) */
 IMB_DLL_LOCAL IMB_JOB *
 submit_job_sha3_224_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
