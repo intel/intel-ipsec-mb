@@ -334,20 +334,6 @@ IMB_DLL_LOCAL IMB_JOB *
 aes_gcm_dec_var_iv_256_avx_gen4(IMB_MGR *state, IMB_JOB *job);
 
 IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_enc_var_iv_128_avx512(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_enc_var_iv_192_avx512(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_enc_var_iv_256_avx512(IMB_MGR *state, IMB_JOB *job);
-
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_dec_var_iv_128_avx512(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_dec_var_iv_192_avx512(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_dec_var_iv_256_avx512(IMB_MGR *state, IMB_JOB *job);
-
-IMB_DLL_LOCAL IMB_JOB *
 aes_gcm_enc_var_iv_128_vaes_avx512(IMB_MGR *state, IMB_JOB *job);
 IMB_DLL_LOCAL IMB_JOB *
 aes_gcm_enc_var_iv_192_vaes_avx512(IMB_MGR *state, IMB_JOB *job);
