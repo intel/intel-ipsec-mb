@@ -366,6 +366,7 @@ typedef enum {
                                            requested */
         IMB_ERR_PQC_PARAMS_SIZE,      /**< PQC optional-params struct's size field does not match
                                            the size expected by this build of the library */
+        IMB_ERR_PQC_CTX_LEN,          /**< PQC context string length out of range */
         IMB_ERR_MAX                   /* don't move this one */
 } IMB_ERR;
 
@@ -1659,6 +1660,9 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
 #define IMB_ML_DSA_87_PRIVKEY_BYTES 4896
 #define IMB_ML_DSA_87_SIG_BYTES     4627
 
+/* Maximum context string length in bytes. See FIPS 204 Section 5.2. */
+#define IMB_ML_DSA_MAX_CTX_BYTES 255
+
 /**
  * @brief Allocate and initialize an ML-DSA context for a given parameter set.
  *
@@ -1816,7 +1820,7 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * NULL together with ctx_len = 0 means no context string.
          */
         const void *ctx;
-        /** Context string length in bytes (0..255) */
+        /** Context string length in bytes (0..IMB_ML_DSA_MAX_CTX_BYTES) */
         size_t ctx_len;
         /**
          * Optional 32-byte randomizer.
@@ -1872,7 +1876,7 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
          * NULL together with ctx_len = 0 means no context string.
          */
         const void *ctx;
-        /** Context string length in bytes (0..255) */
+        /** Context string length in bytes (0..IMB_ML_DSA_MAX_CTX_BYTES) */
         size_t ctx_len;
         /**
          * If non-zero, \a msg is a pre-computed \mu value (exactly 64 bytes)
@@ -1922,6 +1926,8 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  *         the variant's SIG_BYTES
  * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_DSA_SIGN_PARAMS)
+ * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
+ *         IMB_ML_DSA_MAX_CTX_BYTES
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
  */
 IMB_DLL_EXPORT int
@@ -1952,6 +1958,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
  *         invalid (or malformed)
  * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_DSA_VERIFY_PARAMS)
+ * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
+ *         IMB_ML_DSA_MAX_CTX_BYTES
  * @retval IMB_ERR_PQC_SIGNOP verification could not be performed (an
  *         operational failure unrelated to the signature's validity)
  */

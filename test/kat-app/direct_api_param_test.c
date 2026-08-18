@@ -3041,6 +3041,20 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
                                      IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_sign (params size)"))
                         ret = 1;
         }
+
+        /* context string longer than the FIPS 204 maximum (rejected before
+         * params->ctx is dereferenced) */
+        if (ret == 0) {
+                IMB_ML_DSA_SIGN_PARAMS params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
+                params.ctx = ctx;
+                params.ctx_len = IMB_ML_DSA_MAX_CTX_BYTES + 1;
+                sig_len = sizeof(sig);
+                if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
+                                     IMB_ERR_PQC_CTX_LEN, "imb_ml_dsa_sign (ctx len)"))
+                        ret = 1;
+        }
 exit:
         imb_ml_dsa_free(self);
         imb_ml_dsa_free(self_no_key);
@@ -3116,6 +3130,20 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
                 if (ml_dsa_param_err(
                             imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
                             IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_verify (params size)"))
+                        ret = 1;
+        }
+
+        /* context string longer than the FIPS 204 maximum (rejected before
+         * params->ctx is dereferenced) */
+        if (ret == 0) {
+                IMB_ML_DSA_VERIFY_PARAMS params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
+                params.ctx = ctx;
+                params.ctx_len = IMB_ML_DSA_MAX_CTX_BYTES + 1;
+                if (ml_dsa_param_err(
+                            imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
+                            IMB_ERR_PQC_CTX_LEN, "imb_ml_dsa_verify (ctx len)"))
                         ret = 1;
         }
 exit:

@@ -195,6 +195,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
+        if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
+                return IMB_ERR_PQC_CTX_LEN;
 #endif
         /*
          * *sig_len is [in,out]: on entry it must hold the caller's buffer
@@ -281,6 +283,8 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
+        if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
+                return IMB_ERR_PQC_CTX_LEN;
 #endif
         const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len, msg_is_mu);
 
