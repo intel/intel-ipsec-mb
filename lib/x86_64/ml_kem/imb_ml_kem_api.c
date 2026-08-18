@@ -95,15 +95,23 @@ imb_ml_kem_free(IMB_ML_KEM *self)
 IMB_DLL_EXPORT int
 imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN_PARAMS *params)
 {
-        const void *seed_d_z = (params != NULL) ? params->seed_d_z : NULL;
+        const void *seed_d_z = NULL;
 
+        /*
+         * The params structure size check is unconditional (not SAFE_PARAM
+         * gated) and done before any field is read, so that fields of a
+         * mismatching structure are never accessed.
+         */
+        if (params != NULL) {
+                if (params->size != sizeof(*params))
+                        return IMB_ERR_PQC_PARAMS_SIZE;
+                seed_d_z = params->seed_d_z;
+        }
 #ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (ek == NULL || dk == NULL)
                 return IMB_ERR_NULL_KEY;
-        if (params != NULL && params->size != sizeof(*params))
-                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         const int rc = self->keypair(self, ek, dk, seed_d_z);
 
@@ -148,8 +156,18 @@ IMB_DLL_EXPORT int
 imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, void *shared_secret,
                  const IMB_ML_KEM_ENCAP_PARAMS *params)
 {
-        const void *m_32 = (params != NULL) ? params->m_32 : NULL;
+        const void *m_32 = NULL;
 
+        /*
+         * The params structure size check is unconditional (not SAFE_PARAM
+         * gated) and done before any field is read, so that fields of a
+         * mismatching structure are never accessed.
+         */
+        if (params != NULL) {
+                if (params->size != sizeof(*params))
+                        return IMB_ERR_PQC_PARAMS_SIZE;
+                m_32 = params->m_32;
+        }
 #ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
@@ -157,8 +175,6 @@ imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, void *shared_secret,
                 return IMB_ERR_NULL_DST;
         if (self->key == NULL)
                 return IMB_ERR_PQC_NO_KEY;
-        if (params != NULL && params->size != sizeof(*params))
-                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         const int rc = self->encap(self, ct, shared_secret, m_32);
 

@@ -103,15 +103,24 @@ imb_ml_dsa_free(IMB_ML_DSA *self)
 IMB_DLL_EXPORT int
 imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN_PARAMS *params)
 {
+        const void *xi_32 = NULL;
+
+        /*
+         * The params structure size check is unconditional (not SAFE_PARAM
+         * gated) and done before any field is read, so that fields of a
+         * mismatching structure are never accessed.
+         */
+        if (params != NULL) {
+                if (params->size != sizeof(*params))
+                        return IMB_ERR_PQC_PARAMS_SIZE;
+                xi_32 = params->xi_32;
+        }
 #ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (pk == NULL || sk == NULL)
                 return IMB_ERR_NULL_KEY;
-        if (params != NULL && params->size != sizeof(*params))
-                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
-        const void *xi_32 = (params != NULL) ? params->xi_32 : NULL;
         const int rc = self->keypair(self, pk, sk, xi_32);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
@@ -160,7 +169,14 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
         const void *rnd_32 = NULL;
         int msg_is_mu = 0;
 
+        /*
+         * The params structure size check is unconditional (not SAFE_PARAM
+         * gated) and done before any field is read, so that fields of a
+         * mismatching structure are never accessed.
+         */
         if (params != NULL) {
+                if (params->size != sizeof(*params))
+                        return IMB_ERR_PQC_PARAMS_SIZE;
                 ctx = params->ctx;
                 ctx_len = params->ctx_len;
                 rnd_32 = params->rnd_32;
@@ -179,8 +195,6 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (params != NULL && params->size != sizeof(*params))
-                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         /*
          * *sig_len is [in,out]: on entry it must hold the caller's buffer
@@ -242,7 +256,14 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
         size_t ctx_len = 0;
         int msg_is_mu = 0;
 
+        /*
+         * The params structure size check is unconditional (not SAFE_PARAM
+         * gated) and done before any field is read, so that fields of a
+         * mismatching structure are never accessed.
+         */
         if (params != NULL) {
+                if (params->size != sizeof(*params))
+                        return IMB_ERR_PQC_PARAMS_SIZE;
                 ctx = params->ctx;
                 ctx_len = params->ctx_len;
                 msg_is_mu = params->msg_is_mu;
@@ -260,8 +281,6 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (params != NULL && params->size != sizeof(*params))
-                return IMB_ERR_PQC_PARAMS_SIZE;
 #endif
         const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len, msg_is_mu);
 
