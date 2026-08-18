@@ -3044,7 +3044,7 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
                         sig_len = sizeof(sig);
                         if (ml_dsa_param_err(
                                     imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
-                                    IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_sign (params size)")) {
+                                    IMB_ERR_PQC_PARAMS, "imb_ml_dsa_sign (params size)")) {
                                 ret = 1;
                                 break;
                         }
@@ -3074,6 +3074,18 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
                 sig_len = sizeof(sig);
                 if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
                                      IMB_ERR_PQC_MSG_LEN, "imb_ml_dsa_sign (mu msg len)"))
+                        ret = 1;
+        }
+
+        /* a non-zero reserved field requests an unsupported option */
+        for (i = 0; ret == 0 && i < sizeof(((IMB_ML_DSA_SIGN_PARAMS *) NULL)->reserved); i++) {
+                IMB_ML_DSA_SIGN_PARAMS params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
+                params.reserved[i] = 1;
+                sig_len = sizeof(sig);
+                if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
+                                     IMB_ERR_PQC_PARAMS, "imb_ml_dsa_sign (params reserved)"))
                         ret = 1;
         }
 exit:
@@ -3152,7 +3164,7 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
                         params.size = bad_size[i];
                         if (ml_dsa_param_err(imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE,
                                                                &params),
-                                             IMB_ERR_PQC_PARAMS_SIZE,
+                                             IMB_ERR_PQC_PARAMS,
                                              "imb_ml_dsa_verify (params size)")) {
                                 ret = 1;
                                 break;
@@ -3183,6 +3195,18 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
                 if (ml_dsa_param_err(
                             imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
                             IMB_ERR_PQC_MSG_LEN, "imb_ml_dsa_verify (mu msg len)"))
+                        ret = 1;
+        }
+
+        /* a non-zero reserved field requests an unsupported option */
+        for (i = 0; ret == 0 && i < sizeof(((IMB_ML_DSA_VERIFY_PARAMS *) NULL)->reserved); i++) {
+                IMB_ML_DSA_VERIFY_PARAMS params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
+                params.reserved[i] = 1;
+                if (ml_dsa_param_err(
+                            imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
+                            IMB_ERR_PQC_PARAMS, "imb_ml_dsa_verify (params reserved)"))
                         ret = 1;
         }
 exit:
@@ -3489,7 +3513,7 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
                         IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
                         params.size = bad_size[i];
                         if (ml_kem_param_err(imb_ml_kem_encap(self, ct, ss, &params),
-                                             IMB_ERR_PQC_PARAMS_SIZE,
+                                             IMB_ERR_PQC_PARAMS,
                                              "imb_ml_kem_encap (params size)")) {
                                 ret = 1;
                                 break;

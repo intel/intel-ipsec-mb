@@ -2206,7 +2206,12 @@ ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
         }
 
         if (imb_ml_dsa_set_pubkey(handle, tc->pub_key) != 0) {
-                verify_rc = -1;
+                /*
+                 * A public key that cannot be decoded is a legitimately
+                 * failing sigVer vector rather than a module malfunction, so
+                 * it maps to the same disposition as an invalid signature.
+                 */
+                verify_rc = IMB_ERR_PQC_VERIFY_FAILED;
         } else if (tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL) {
                 IMB_ML_DSA_VERIFY_PARAMS params;
 
@@ -2227,12 +2232,24 @@ ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
                                                        tc->sig, (size_t) tc->sig_len);
         }
 
-        if (verify_rc == 0)
+        /*
+         * Only a verdict on the signature itself is a test disposition. Any
+         * other error means verification could not be performed at all (an
+         * operational failure), which must be reported as a module failure
+         * instead of being recorded as a successfully rejected vector.
+         */
+        if (verify_rc == 0) {
                 tc->ver_disposition = ACVP_TEST_DISPOSITION_PASS;
-        else
+                ret = ACVP_SUCCESS;
+        } else if (verify_rc == IMB_ERR_PQC_VERIFY_FAILED) {
                 tc->ver_disposition = ACVP_TEST_DISPOSITION_FAIL;
+                ret = ACVP_SUCCESS;
+        } else {
+                fprintf(stderr, "ML-DSA verification failed to run (error %d: %s)\n", verify_rc,
+                        imb_get_strerror(verify_rc));
+                ret = ACVP_CRYPTO_MODULE_FAIL;
+        }
 
-        ret = ACVP_SUCCESS;
         imb_ml_dsa_free(handle);
         return ret;
 }
