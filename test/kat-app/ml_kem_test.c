@@ -553,6 +553,271 @@ exit:
         return ret;
 }
 
+/*
+ * Malformed encapsulation/decapsulation key handling.
+ *
+ * Exercises the two structural checks that FIPS 203 requires an
+ * implementation to perform when importing a key, plus the layout invariant
+ * that ties dk to ek:
+ *
+ *   - Section 7.2 "modulus check": ek is ByteEncode_12(t) || rho, so every
+ *     12-bit coefficient must decode to a value below q = 3329. An encoding
+ *     holding an out-of-range coefficient must be rejected.
+ *   - Section 7.3 "hash check": dk carries H(ek) so that a decapsulation key
+ *     inconsistent with its embedded encapsulation key can be detected.
+ *   - dk is dk_PKE || ek || H(ek) || z, so the ek copy embedded in dk must be
+ *     byte-identical to the separately returned ek.
+ *
+ * Note that the trailing z (implicit-rejection secret) is deliberately not
+ * covered by any consistency check, so a dk with a modified z stays valid -
+ * that property is exercised in ml_kem_decap_negative() instead.
+ */
+static int
+ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
+{
+        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t pkhash_off, ek_off;
+        IMB_ML_KEM *self = NULL, *fresh = NULL;
+        const char *stage = "setup";
+        int ret = 1;
+
+        if (ml_kem_alg_sizes(alg, &ek_bytes, &dk_bytes, &ct_bytes) < 0)
+                return 1;
+
+        if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
+                return 1;
+
+        if (imb_ml_kem_keypair(self, buf_ek, buf_dk, NULL) != 0)
+                goto exit;
+
+        /* dk = dk_PKE || ek || H(ek) || z, with 32-byte H(ek) and z trailers */
+        pkhash_off = dk_bytes - 2 * ML_KEM_K_BYTES;
+        ek_off = pkhash_off - ek_bytes;
+
+        stage = "ek embedded in dk";
+        if (memcmp(&buf_dk[ek_off], buf_ek, ek_bytes) != 0)
+                goto exit;
+
+        /*
+         * Modulus check: force the first 12-bit coefficient of t to
+         * 0xfff = 4095, which is >= q, leaving every other byte untouched.
+         */
+        stage = "ek modulus check";
+        memcpy(exp_ek, buf_ek, ek_bytes);
+        exp_ek[0] = 0xff;
+        exp_ek[1] |= 0x0f;
+        if (imb_ml_kem_pubkey_validate(self, exp_ek) != IMB_ERR_PQC_KEYOP)
+                goto exit;
+        if (imb_ml_kem_new(mb_mgr, alg, &fresh) != 0)
+                goto exit;
+        if (imb_ml_kem_set_pubkey(fresh, exp_ek) != IMB_ERR_PQC_KEYOP)
+                goto exit;
+        imb_ml_kem_free(fresh);
+        fresh = NULL;
+
+        /*
+         * The same check applies to dk's own s vector, which occupies the
+         * start of dk_PKE. This path is distinct from the embedded ek below:
+         * it is reached while parsing the private half of the key.
+         */
+        stage = "dk s vector modulus check";
+        memcpy(exp_dk, buf_dk, dk_bytes);
+        exp_dk[0] = 0xff;
+        exp_dk[1] |= 0x0f;
+        if (imb_ml_kem_privkey_validate(self, exp_dk) != IMB_ERR_PQC_KEYOP)
+                goto exit;
+        if (imb_ml_kem_new(mb_mgr, alg, &fresh) != 0)
+                goto exit;
+        if (imb_ml_kem_set_privkey(fresh, exp_dk) != IMB_ERR_PQC_KEYOP)
+                goto exit;
+        imb_ml_kem_free(fresh);
+        fresh = NULL;
+
+        /* the same corruption inside dk's embedded ek must also be caught */
+        stage = "dk embedded ek modulus check";
+        memcpy(exp_dk, buf_dk, dk_bytes);
+        exp_dk[ek_off] = 0xff;
+        exp_dk[ek_off + 1] |= 0x0f;
+        if (imb_ml_kem_privkey_validate(self, exp_dk) != IMB_ERR_PQC_KEYOP)
+                goto exit;
+
+        /* hash check: flip a bit of H(ek) so dk no longer matches its ek */
+        stage = "dk hash check";
+        memcpy(exp_dk, buf_dk, dk_bytes);
+        exp_dk[pkhash_off] ^= 0x01;
+        if (imb_ml_kem_privkey_validate(self, exp_dk) != IMB_ERR_PQC_KEYOP)
+                goto exit;
+        if (imb_ml_kem_new(mb_mgr, alg, &fresh) != 0)
+                goto exit;
+        if (imb_ml_kem_set_privkey(fresh, exp_dk) != IMB_ERR_PQC_KEYOP)
+                goto exit;
+        imb_ml_kem_free(fresh);
+        fresh = NULL;
+
+        /* an untouched copy must still validate, proving the above rejections
+         * came from the injected corruption and not from the copy itself */
+        stage = "pristine key still valid";
+        memcpy(exp_dk, buf_dk, dk_bytes);
+        if (imb_ml_kem_pubkey_validate(self, buf_ek) != 0 ||
+            imb_ml_kem_privkey_validate(self, exp_dk) != 0)
+                goto exit;
+
+        ret = 0;
+exit:
+        if (ret != 0)
+                printf("ML-KEM malformed-key test failed (%s, stage: %s)\n", ml_kem_alg_name(alg),
+                       stage);
+        imb_ml_kem_free(fresh);
+        imb_ml_kem_free(self);
+        return ret;
+}
+
+/*
+ * Decapsulation behaviour for ciphertexts that are not the ones produced by
+ * encapsulation against the bound key.
+ *
+ * FIPS 203 Section 7.3 gives decapsulation an unusual contract that is easy
+ * to get wrong: a correctly sized but content-invalid ciphertext must NOT be
+ * reported as an error. Instead the Fujisaki-Okamoto "implicit rejection"
+ * path returns K_bar = J(z || c), a shared secret that is pseudorandom but
+ * fully determined by the key's z and the ciphertext. Only a length mismatch
+ * is a hard error.
+ *
+ * This checks the parts of that contract that a single tamper-and-compare
+ * cannot: that rejection is deterministic, that it is driven by z, that it
+ * applies to a ciphertext belonging to a different key, and that the length
+ * check covers under-, over- and zero-length inputs.
+ */
+static int
+ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
+{
+        uint8_t ss_good[ML_KEM_K_BYTES], ss_rej[ML_KEM_K_BYTES], ss_rej2[ML_KEM_K_BYTES];
+        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t tamper_off[3];
+        size_t i;
+        IMB_ML_KEM *self = NULL, *other = NULL;
+        const char *stage = "setup";
+        int ret = 1;
+
+        if (ml_kem_alg_sizes(alg, &ek_bytes, &dk_bytes, &ct_bytes) < 0)
+                return 1;
+
+        if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
+                return 1;
+        if (imb_ml_kem_keypair(self, buf_ek, buf_dk, NULL) != 0)
+                goto exit;
+        if (imb_ml_kem_encap(self, buf_ct, ss_good, NULL) != 0)
+                goto exit;
+
+        /* implicit rejection is deterministic and differs from the real secret */
+        stage = "implicit rejection determinism";
+        tamper_off[0] = 0;
+        tamper_off[1] = ct_bytes / 2;
+        tamper_off[2] = ct_bytes - 1;
+
+        for (i = 0; i < DIM(tamper_off); i++) {
+                const size_t off = tamper_off[i];
+
+                memcpy(exp_ct, buf_ct, ct_bytes);
+                exp_ct[off] ^= 0x01;
+
+                if (imb_ml_kem_decap(self, ss_rej, exp_ct, ct_bytes, NULL) != 0)
+                        goto exit;
+                if (memcmp(ss_rej, ss_good, ML_KEM_K_BYTES) == 0)
+                        goto exit;
+                /* repeating the same decap must reproduce the same secret */
+                if (imb_ml_kem_decap(self, ss_rej2, exp_ct, ct_bytes, NULL) != 0)
+                        goto exit;
+                if (memcmp(ss_rej, ss_rej2, ML_KEM_K_BYTES) != 0)
+                        goto exit;
+        }
+
+        /*
+         * The rejection secret is keyed by z: re-binding the same key with a
+         * modified z must keep valid ciphertexts working while changing the
+         * implicit-rejection output. z is the last 32 bytes of dk and is
+         * covered by no consistency check, so the modified key stays valid.
+         */
+        stage = "implicit rejection keyed by z";
+        memcpy(exp_ct, buf_ct, ct_bytes);
+        exp_ct[ct_bytes / 2] ^= 0x01;
+        if (imb_ml_kem_decap(self, ss_rej, exp_ct, ct_bytes, NULL) != 0)
+                goto exit;
+
+        memcpy(exp_dk, buf_dk, dk_bytes);
+        exp_dk[dk_bytes - 1] ^= 0xff;
+        if (imb_ml_kem_new(mb_mgr, alg, &other) != 0)
+                goto exit;
+        if (imb_ml_kem_set_privkey(other, exp_dk) != 0)
+                goto exit;
+        /* valid ciphertext still recovers the original shared secret */
+        if (imb_ml_kem_decap(other, ss_rej2, buf_ct, ct_bytes, NULL) != 0)
+                goto exit;
+        if (memcmp(ss_rej2, ss_good, ML_KEM_K_BYTES) != 0)
+                goto exit;
+        /* but the rejection secret for the tampered ciphertext has changed */
+        if (imb_ml_kem_decap(other, ss_rej2, exp_ct, ct_bytes, NULL) != 0)
+                goto exit;
+        if (memcmp(ss_rej2, ss_rej, ML_KEM_K_BYTES) == 0)
+                goto exit;
+        imb_ml_kem_free(other);
+        other = NULL;
+
+        /* a ciphertext for a different key is rejected implicitly, not by error */
+        stage = "cross-key decapsulation";
+        if (imb_ml_kem_new(mb_mgr, alg, &other) != 0)
+                goto exit;
+        if (imb_ml_kem_keypair(other, exp_ek, exp_dk, NULL) != 0)
+                goto exit;
+        if (imb_ml_kem_decap(other, ss_rej, buf_ct, ct_bytes, NULL) != 0)
+                goto exit;
+        if (memcmp(ss_rej, ss_good, ML_KEM_K_BYTES) == 0)
+                goto exit;
+
+        /* length mismatches are the only hard decapsulation errors */
+        stage = "ciphertext length check";
+        if (imb_ml_kem_decap(self, ss_rej, buf_ct, ct_bytes - 1, NULL) != IMB_ERR_PQC_KEMOP)
+                goto exit;
+        if (imb_ml_kem_decap(self, ss_rej, buf_ct, ct_bytes + 1, NULL) != IMB_ERR_PQC_KEMOP)
+                goto exit;
+        if (imb_ml_kem_decap(self, ss_rej, buf_ct, 0, NULL) != IMB_ERR_PQC_KEMOP)
+                goto exit;
+
+        /*
+         * A context holding only an encapsulation key can encapsulate but not
+         * decapsulate. Note the error is IMB_ERR_PQC_KEMOP rather than
+         * IMB_ERR_PQC_NO_KEY: NO_KEY is reserved for a context with no key
+         * bound at all (covered by the direct API parameter tests), whereas
+         * here a key is bound but lacks the private component, so the failure
+         * surfaces from the decapsulation itself.
+         */
+        stage = "encap-only context";
+        imb_ml_kem_free(other);
+        other = NULL;
+        if (imb_ml_kem_new(mb_mgr, alg, &other) != 0)
+                goto exit;
+        if (imb_ml_kem_set_pubkey(other, buf_ek) != 0)
+                goto exit;
+        if (imb_ml_kem_encap(other, exp_ct, ss_rej, NULL) != 0)
+                goto exit;
+        if (imb_ml_kem_decap(other, ss_rej2, buf_ct, ct_bytes, NULL) != IMB_ERR_PQC_KEMOP)
+                goto exit;
+        /* the ciphertext it produced does decapsulate under the private key */
+        if (imb_ml_kem_decap(self, ss_rej2, exp_ct, ct_bytes, NULL) != 0)
+                goto exit;
+        if (memcmp(ss_rej, ss_rej2, ML_KEM_K_BYTES) != 0)
+                goto exit;
+
+        ret = 0;
+exit:
+        if (ret != 0)
+                printf("ML-KEM decapsulation negative test failed (%s, stage: %s)\n",
+                       ml_kem_alg_name(alg), stage);
+        imb_ml_kem_free(other);
+        imb_ml_kem_free(self);
+        return ret;
+}
+
 int
 ml_kem_test(struct IMB_MGR *mb_mgr)
 {
@@ -579,6 +844,14 @@ ml_kem_test(struct IMB_MGR *mb_mgr)
                 if (ml_kem_run_semi_expanded_decaps_vectors(mb_mgr, &variants[i], ctx) < 0)
                         test_suite_update(ctx, 0, 1);
                 if (ml_kem_roundtrip(mb_mgr, variants[i].alg) != 0)
+                        test_suite_update(ctx, 0, 1);
+                else
+                        test_suite_update(ctx, 1, 0);
+                if (ml_kem_key_negative(mb_mgr, variants[i].alg) != 0)
+                        test_suite_update(ctx, 0, 1);
+                else
+                        test_suite_update(ctx, 1, 0);
+                if (ml_kem_decap_negative(mb_mgr, variants[i].alg) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
                         test_suite_update(ctx, 1, 0);

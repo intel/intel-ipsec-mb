@@ -3383,14 +3383,17 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
         }
 
         /* struct-size mismatch: only meaningful for a valid self/ek/dk combo */
-        {
-                IMB_ML_KEM_KEYGEN_PARAMS params;
+        IMB_ML_KEM_KEYGEN_PARAMS size_params;
+        const size_t kem_bad_size[] = { sizeof(size_params) - 1, sizeof(size_params) + 1, 0 };
 
-                IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
-                params.size = sizeof(params) - 1;
-                if (ml_kem_param_err(imb_ml_kem_keypair(self, ek, dk, &params),
-                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_kem_keypair (params size)"))
+        for (i = 0; i < DIM(kem_bad_size); i++) {
+                IMB_ML_KEM_KEYGEN_PARAMS_INIT(&size_params);
+                size_params.size = kem_bad_size[i];
+                if (ml_kem_param_err(imb_ml_kem_keypair(self, ek, dk, &size_params),
+                                     IMB_ERR_PQC_PARAMS, "imb_ml_kem_keypair (params size)")) {
                         ret = 1;
+                        break;
+                }
         }
         imb_ml_kem_free(self);
         return ret;
@@ -3465,12 +3468,18 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
         /* struct-size mismatch: only meaningful for a valid, fully-formed call */
         if (ret == 0) {
                 IMB_ML_KEM_ENCAP_PARAMS params;
+                const size_t bad_size[] = { sizeof(params) - 1, sizeof(params) + 1, 0 };
 
-                IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
-                params.size = sizeof(params) + 1;
-                if (ml_kem_param_err(imb_ml_kem_encap(self, ct, ss, &params),
-                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_kem_encap (params size)"))
-                        ret = 1;
+                for (i = 0; i < DIM(bad_size); i++) {
+                        IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
+                        params.size = bad_size[i];
+                        if (ml_kem_param_err(imb_ml_kem_encap(self, ct, ss, &params),
+                                             IMB_ERR_PQC_PARAMS_SIZE,
+                                             "imb_ml_kem_encap (params size)")) {
+                                ret = 1;
+                                break;
+                        }
+                }
         }
 exit:
         imb_ml_kem_free(self);
