@@ -104,7 +104,7 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN
          */
         if (params != NULL) {
                 if (params->size != sizeof(*params))
-                        return IMB_ERR_PQC_PARAMS_SIZE;
+                        return IMB_ERR_PQC_PARAMS;
                 seed_d_z = params->seed_d_z;
         }
 #ifdef SAFE_PARAM
@@ -165,7 +165,7 @@ imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, void *shared_secret,
          */
         if (params != NULL) {
                 if (params->size != sizeof(*params))
-                        return IMB_ERR_PQC_PARAMS_SIZE;
+                        return IMB_ERR_PQC_PARAMS;
                 m_32 = params->m_32;
         }
 #ifdef SAFE_PARAM

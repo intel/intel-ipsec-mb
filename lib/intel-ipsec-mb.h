@@ -364,8 +364,10 @@ typedef enum {
                                         be cryptographically invalid */
         IMB_ERR_PQC_BUFFER_TOO_SMALL, /**< PQC output buffer too small for the operation
                                            requested */
-        IMB_ERR_PQC_PARAMS_SIZE,      /**< PQC optional-params struct's size field does not match
-                                           the size expected by this build of the library */
+        IMB_ERR_PQC_PARAMS,           /**< PQC optional-params struct is not valid for this
+                                           build of the library: either its size field does not
+                                           match the expected size, or a reserved field is not
+                                           zero (i.e. it requests an unsupported option) */
         IMB_ERR_PQC_CTX_LEN,          /**< PQC context string length out of range */
         IMB_ERR_PQC_MSG_LEN,          /**< PQC message length invalid for the operation
                                            requested */
@@ -1697,9 +1699,10 @@ IMB_DLL_EXPORT void
 imb_ml_dsa_free(IMB_ML_DSA *self);
 
 /**
- * Optional parameters for imb_ml_dsa_keypair(). A NULL \a params pointer is
- * equivalent to a zero-initialized structure: fresh-random key generation -
- * the common-case default.
+ * Optional parameters for imb_ml_dsa_keypair(). A NULL \a params pointer
+ * selects the common-case default: fresh-random key generation. Note that
+ * passing a bare `= { 0 }` structure instead is not equivalent, as its
+ * \a size field would be rejected - see \a size below.
  *
  * Always initialize instances of this structure with
  * IMB_ML_DSA_KEYGEN_PARAMS_INIT() (or otherwise ensure \a size is set to
@@ -1756,7 +1759,7 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk or \a sk pointer
- * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_DSA_KEYGEN_PARAMS)
  * @retval IMB_ERR_PQC_KEYOP key generation operation failed
  */
@@ -1802,9 +1805,10 @@ IMB_DLL_EXPORT int
 imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk);
 
 /**
- * Optional parameters for imb_ml_dsa_sign(). A NULL \a params pointer is
- * equivalent to a zero-initialized structure: no context string, hedged
- * (fresh-random) signing - the common-case default.
+ * Optional parameters for imb_ml_dsa_sign(). A NULL \a params pointer selects
+ * the common-case default: no context string and hedged (fresh-random)
+ * signing. Note that passing a bare `= { 0 }` structure instead is not
+ * equivalent, as its \a size field would be rejected - see \a size below.
  *
  * Always initialize instances of this structure with
  * IMB_ML_DSA_SIGN_PARAMS_INIT() (or otherwise ensure \a size is set to
@@ -1847,6 +1851,10 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
         /**
          * Reserved for future use (e.g. HashML-DSA pre-hash support).
          * Must be zero-initialized - use IMB_ML_DSA_SIGN_PARAMS_INIT().
+         * Every byte is validated to be zero on each call, so that a newer
+         * caller requesting an option carved out of this field is rejected
+         * with IMB_ERR_PQC_PARAMS by a library that predates it, rather
+         * than silently ignoring the request.
          */
         uint8_t reserved[8];
 } IMB_ML_DSA_SIGN_PARAMS;
@@ -1860,8 +1868,10 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
 #define IMB_ML_DSA_SIGN_PARAMS_INIT(p) IMB_PQC_PARAMS_INIT(p)
 
 /**
- * Optional parameters for imb_ml_dsa_verify(). A NULL \a params pointer is
- * equivalent to a zero-initialized structure: no context string.
+ * Optional parameters for imb_ml_dsa_verify(). A NULL \a params pointer
+ * selects the common-case default: no context string. Note that passing a
+ * bare `= { 0 }` structure instead is not equivalent, as its \a size field
+ * would be rejected - see \a size below.
  *
  * Always initialize instances of this structure with
  * IMB_ML_DSA_VERIFY_PARAMS_INIT() (or otherwise ensure \a size is set to
@@ -1895,6 +1905,10 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
         /**
          * Reserved for future use (e.g. HashML-DSA pre-hash support).
          * Must be zero-initialized - use IMB_ML_DSA_VERIFY_PARAMS_INIT().
+         * Every byte is validated to be zero on each call, so that a newer
+         * caller requesting an option carved out of this field is rejected
+         * with IMB_ERR_PQC_PARAMS by a library that predates it, rather
+         * than silently ignoring the request.
          */
         uint8_t reserved[8];
 } IMB_ML_DSA_VERIFY_PARAMS;
@@ -1933,8 +1947,9 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
  * @retval IMB_ERR_PQC_BUFFER_TOO_SMALL \a *sig_len on entry is smaller than
  *         the variant's SIG_BYTES
- * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
- *         sizeof(IMB_ML_DSA_SIGN_PARAMS)
+ * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
+ *         sizeof(IMB_ML_DSA_SIGN_PARAMS), or \a params->reserved is not
+ *         all zero
  * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
  *         IMB_ML_DSA_MAX_CTX_BYTES
  * @retval IMB_ERR_PQC_SIGNOP signing operation failed
@@ -1966,8 +1981,9 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
  * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
  * @retval IMB_ERR_PQC_VERIFY_FAILED the signature is cryptographically
  *         invalid (or malformed)
- * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
- *         sizeof(IMB_ML_DSA_VERIFY_PARAMS)
+ * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
+ *         sizeof(IMB_ML_DSA_VERIFY_PARAMS), or \a params->reserved is not
+ *         all zero
  * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
  *         IMB_ML_DSA_MAX_CTX_BYTES
  * @retval IMB_ERR_PQC_SIGNOP verification could not be performed (an
@@ -2100,9 +2116,10 @@ IMB_DLL_EXPORT void
 imb_ml_kem_free(IMB_ML_KEM *self);
 
 /**
- * Optional parameters for imb_ml_kem_keypair(). A NULL \a params pointer is
- * equivalent to a zero-initialized structure: fresh-random key generation -
- * the common-case default.
+ * Optional parameters for imb_ml_kem_keypair(). A NULL \a params pointer
+ * selects the common-case default: fresh-random key generation. Note that
+ * passing a bare `= { 0 }` structure instead is not equivalent, as its
+ * \a size field would be rejected - see \a size below.
  *
  * Always initialize instances of this structure with
  * IMB_ML_KEM_KEYGEN_PARAMS_INIT() (or otherwise ensure \a size is set to
@@ -2161,7 +2178,7 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek or \a dk pointer
- * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_KEM_KEYGEN_PARAMS)
  * @retval IMB_ERR_PQC_KEYOP key generation operation failed
  */
@@ -2210,9 +2227,10 @@ IMB_DLL_EXPORT int
 imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek);
 
 /**
- * Optional parameters for imb_ml_kem_encap(). A NULL \a params pointer is
- * equivalent to a zero-initialized structure: fresh-random encapsulation -
- * the common-case default.
+ * Optional parameters for imb_ml_kem_encap(). A NULL \a params pointer
+ * selects the common-case default: fresh-random encapsulation. Note that
+ * passing a bare `= { 0 }` structure instead is not equivalent, as its
+ * \a size field would be rejected - see \a size below.
  *
  * Always initialize instances of this structure with
  * IMB_ML_KEM_ENCAP_PARAMS_INIT() (or otherwise ensure \a size is set to
@@ -2267,7 +2285,7 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a ct or \a shared_secret pointer
  * @retval IMB_ERR_PQC_NO_KEY no encapsulation key bound to \a self
- * @retval IMB_ERR_PQC_PARAMS_SIZE non-NULL \a params->size does not equal
+ * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_KEM_ENCAP_PARAMS)
  * @retval IMB_ERR_PQC_KEMOP encapsulation operation failed
  */

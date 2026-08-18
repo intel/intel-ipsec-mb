@@ -27,6 +27,34 @@
 #include "ml_dsa_internal_api.h"
 #include "mb_mgr.h"
 
+/**
+ * @brief Check whether a reserved parameter field holds a non-zero value.
+ *
+ * The reserved fields let future options be added without changing sizeof()
+ * of the parameter structure, so the \a size check alone cannot detect them.
+ *
+ * The field is copied out rather than cast in place because it is only
+ * 4-byte aligned within both parameter structures; the copy is folded into a
+ * single compare by the compiler.
+ *
+ * @param [in] rsvd      Reserved field
+ * @param [in] rsvd_size Size of the reserved field in bytes
+ *
+ * @return Zero if the field is all zero, non-zero otherwise
+ */
+static int
+ml_dsa_reserved_is_set(const void *rsvd, const size_t rsvd_size)
+{
+        uint64_t v;
+
+        IMB_ASSERT(rsvd_size == sizeof(v));
+        (void) rsvd_size;
+
+        memcpy(&v, rsvd, sizeof(v));
+
+        return v != 0;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Context lifecycle                                                         */
 /* ------------------------------------------------------------------------- */
@@ -112,7 +140,7 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
          */
         if (params != NULL) {
                 if (params->size != sizeof(*params))
-                        return IMB_ERR_PQC_PARAMS_SIZE;
+                        return IMB_ERR_PQC_PARAMS;
                 xi_32 = params->xi_32;
         }
 #ifdef SAFE_PARAM
@@ -170,13 +198,15 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
         int msg_is_mu = 0;
 
         /*
-         * The params structure size check is unconditional (not SAFE_PARAM
-         * gated) and done before any field is read, so that fields of a
-         * mismatching structure are never accessed.
+         * The params structure validity checks are unconditional (not
+         * SAFE_PARAM gated) and the size check is done before any other field
+         * is read, so that fields of a mismatching structure are never
+         * accessed.
          */
         if (params != NULL) {
-                if (params->size != sizeof(*params))
-                        return IMB_ERR_PQC_PARAMS_SIZE;
+                if (params->size != sizeof(*params) ||
+                    ml_dsa_reserved_is_set(params->reserved, sizeof(params->reserved)))
+                        return IMB_ERR_PQC_PARAMS;
                 ctx = params->ctx;
                 ctx_len = params->ctx_len;
                 rnd_32 = params->rnd_32;
@@ -259,13 +289,15 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
         int msg_is_mu = 0;
 
         /*
-         * The params structure size check is unconditional (not SAFE_PARAM
-         * gated) and done before any field is read, so that fields of a
-         * mismatching structure are never accessed.
+         * The params structure validity checks are unconditional (not
+         * SAFE_PARAM gated) and the size check is done before any other field
+         * is read, so that fields of a mismatching structure are never
+         * accessed.
          */
         if (params != NULL) {
-                if (params->size != sizeof(*params))
-                        return IMB_ERR_PQC_PARAMS_SIZE;
+                if (params->size != sizeof(*params) ||
+                    ml_dsa_reserved_is_set(params->reserved, sizeof(params->reserved)))
+                        return IMB_ERR_PQC_PARAMS;
                 ctx = params->ctx;
                 ctx_len = params->ctx_len;
                 msg_is_mu = params->msg_is_mu;
