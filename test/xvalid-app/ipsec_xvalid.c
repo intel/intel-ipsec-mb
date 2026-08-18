@@ -2343,7 +2343,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         const struct params_s *params, struct data *data, struct safe_check_ctx *p_safe_check,
         const unsigned imix, const unsigned num_jobs)
 {
-        struct job_ctx job_ctx_tab[MAX_NUM_JOBS];
+        struct job_ctx job_ctx_tab[MAX_NUM_JOBS] = { 0 };
         IMB_JOB job_tab[MAX_NUM_JOBS];
         unsigned i;
         int ret = -1;
