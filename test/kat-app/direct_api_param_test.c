@@ -2939,14 +2939,17 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
         }
 
         /* struct-size mismatch: only meaningful for a valid self/pk/sk combo */
-        {
-                IMB_ML_DSA_KEYGEN_PARAMS params;
+        IMB_ML_DSA_KEYGEN_PARAMS size_params;
+        const size_t dsa_bad_size[] = { sizeof(size_params) - 1, sizeof(size_params) + 1, 0 };
 
-                IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
-                params.size = sizeof(params) - 1;
-                if (ml_dsa_param_err(imb_ml_dsa_keypair(self, pk, sk, &params),
-                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_keypair (params size)"))
+        for (i = 0; i < DIM(dsa_bad_size); i++) {
+                IMB_ML_DSA_KEYGEN_PARAMS_INIT(&size_params);
+                size_params.size = dsa_bad_size[i];
+                if (ml_dsa_param_err(imb_ml_dsa_keypair(self, pk, sk, &size_params),
+                                     IMB_ERR_PQC_PARAMS, "imb_ml_dsa_keypair (params size)")) {
                         ret = 1;
+                        break;
+                }
         }
         imb_ml_dsa_free(self);
         return ret;
@@ -3033,13 +3036,19 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
         /* struct-size mismatch: only meaningful for a valid, fully-formed call */
         if (ret == 0) {
                 IMB_ML_DSA_SIGN_PARAMS params;
+                const size_t bad_size[] = { sizeof(params) - 1, sizeof(params) + 1, 0 };
 
-                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
-                params.size = sizeof(params) + 1;
-                sig_len = sizeof(sig);
-                if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
-                                     IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_sign (params size)"))
-                        ret = 1;
+                for (i = 0; i < DIM(bad_size); i++) {
+                        IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
+                        params.size = bad_size[i];
+                        sig_len = sizeof(sig);
+                        if (ml_dsa_param_err(
+                                    imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
+                                    IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_sign (params size)")) {
+                                ret = 1;
+                                break;
+                        }
+                }
         }
 
         /* context string longer than the FIPS 204 maximum (rejected before
@@ -3136,13 +3145,19 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
         /* struct-size mismatch: only meaningful for a valid, fully-formed call */
         if (ret == 0) {
                 IMB_ML_DSA_VERIFY_PARAMS params;
+                const size_t bad_size[] = { sizeof(params) - 1, sizeof(params) + 1, 0 };
 
-                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
-                params.size = 0;
-                if (ml_dsa_param_err(
-                            imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
-                            IMB_ERR_PQC_PARAMS_SIZE, "imb_ml_dsa_verify (params size)"))
-                        ret = 1;
+                for (i = 0; i < DIM(bad_size); i++) {
+                        IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
+                        params.size = bad_size[i];
+                        if (ml_dsa_param_err(imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE,
+                                                               &params),
+                                             IMB_ERR_PQC_PARAMS_SIZE,
+                                             "imb_ml_dsa_verify (params size)")) {
+                                ret = 1;
+                                break;
+                        }
+                }
         }
 
         /* context string longer than the FIPS 204 maximum (rejected before
