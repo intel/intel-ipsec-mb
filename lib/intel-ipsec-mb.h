@@ -367,6 +367,8 @@ typedef enum {
         IMB_ERR_PQC_PARAMS_SIZE,      /**< PQC optional-params struct's size field does not match
                                            the size expected by this build of the library */
         IMB_ERR_PQC_CTX_LEN,          /**< PQC context string length out of range */
+        IMB_ERR_PQC_MSG_LEN,          /**< PQC message length invalid for the operation
+                                           requested */
         IMB_ERR_MAX                   /* don't move this one */
 } IMB_ERR;
 
@@ -1663,6 +1665,10 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
 /* Maximum context string length in bytes. See FIPS 204 Section 5.2. */
 #define IMB_ML_DSA_MAX_CTX_BYTES 255
 
+/* Size in bytes of the pre-computed message representative \mu.
+ * See FIPS 204 Algorithms 7 & 8. */
+#define IMB_ML_DSA_MU_BYTES 64
+
 /**
  * @brief Allocate and initialize an ML-DSA context for a given parameter set.
  *
@@ -1832,7 +1838,8 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          */
         const void *rnd_32;
         /**
-         * If non-zero, \a msg is a pre-computed \mu value (exactly 64 bytes)
+         * If non-zero, \a msg is a pre-computed \mu value (exactly
+         * IMB_ML_DSA_MU_BYTES bytes)
          * and the SHAKE hashing step H(tr || M') is skipped entirely.
          * \a ctx and \a ctx_len are ignored when this flag is set.
          */
@@ -1879,7 +1886,8 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
         /** Context string length in bytes (0..IMB_ML_DSA_MAX_CTX_BYTES) */
         size_t ctx_len;
         /**
-         * If non-zero, \a msg is a pre-computed \mu value (exactly 64 bytes)
+         * If non-zero, \a msg is a pre-computed \mu value (exactly
+         * IMB_ML_DSA_MU_BYTES bytes)
          * and the SHAKE hashing step H(tr || M') is skipped entirely.
          * \a ctx and \a ctx_len are ignored when this flag is set.
          */
@@ -1918,9 +1926,10 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a sig or \a sig_len pointer
- * @retval IMB_ERR_NULL_SRC invalid \a msg pointer, invalid
- *         \a params->ctx pointer, or \a params->msg_is_mu is set but
- *         \a msg_len is not 64
+ * @retval IMB_ERR_NULL_SRC invalid \a msg pointer or invalid
+ *         \a params->ctx pointer
+ * @retval IMB_ERR_PQC_MSG_LEN \a params->msg_is_mu is set but \a msg_len is
+ *         not IMB_ML_DSA_MU_BYTES
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
  * @retval IMB_ERR_PQC_BUFFER_TOO_SMALL \a *sig_len on entry is smaller than
  *         the variant's SIG_BYTES
@@ -1951,8 +1960,9 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
  * @return Operation status
  * @retval 0 the signature is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
- * @retval IMB_ERR_NULL_SRC invalid \a sig, \a msg, \a params->ctx pointer,
- *         or \a params->msg_is_mu is set but \a msg_len is not 64
+ * @retval IMB_ERR_NULL_SRC invalid \a sig, \a msg or \a params->ctx pointer
+ * @retval IMB_ERR_PQC_MSG_LEN \a params->msg_is_mu is set but \a msg_len is
+ *         not IMB_ML_DSA_MU_BYTES
  * @retval IMB_ERR_PQC_NO_KEY no public key bound to \a self
  * @retval IMB_ERR_PQC_VERIFY_FAILED the signature is cryptographically
  *         invalid (or malformed)

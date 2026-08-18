@@ -191,8 +191,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
                 return IMB_ERR_PQC_NO_KEY;
         if (msg == NULL && msg_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (msg_is_mu && msg_len != 64)
-                return IMB_ERR_NULL_SRC;
+        if (msg_is_mu && msg_len != IMB_ML_DSA_MU_BYTES)
+                return IMB_ERR_PQC_MSG_LEN;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
@@ -279,8 +279,8 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
                 return IMB_ERR_PQC_NO_KEY;
         if (msg == NULL && msg_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (msg_is_mu && msg_len != 64)
-                return IMB_ERR_NULL_SRC;
+        if (msg_is_mu && msg_len != IMB_ML_DSA_MU_BYTES)
+                return IMB_ERR_PQC_MSG_LEN;
         if (!msg_is_mu && ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)

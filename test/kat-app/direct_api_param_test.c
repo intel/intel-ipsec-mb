@@ -3055,6 +3055,18 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
                                      IMB_ERR_PQC_CTX_LEN, "imb_ml_dsa_sign (ctx len)"))
                         ret = 1;
         }
+
+        /* msg_is_mu set but msg_len is not the mu size */
+        if (ret == 0) {
+                IMB_ML_DSA_SIGN_PARAMS params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
+                params.msg_is_mu = 1;
+                sig_len = sizeof(sig);
+                if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, BUFF_SIZE, &params),
+                                     IMB_ERR_PQC_MSG_LEN, "imb_ml_dsa_sign (mu msg len)"))
+                        ret = 1;
+        }
 exit:
         imb_ml_dsa_free(self);
         imb_ml_dsa_free(self_no_key);
@@ -3144,6 +3156,18 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
                 if (ml_dsa_param_err(
                             imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
                             IMB_ERR_PQC_CTX_LEN, "imb_ml_dsa_verify (ctx len)"))
+                        ret = 1;
+        }
+
+        /* msg_is_mu set but msg_len is not the mu size */
+        if (ret == 0) {
+                IMB_ML_DSA_VERIFY_PARAMS params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
+                params.msg_is_mu = 1;
+                if (ml_dsa_param_err(
+                            imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
+                            IMB_ERR_PQC_MSG_LEN, "imb_ml_dsa_verify (mu msg len)"))
                         ret = 1;
         }
 exit:

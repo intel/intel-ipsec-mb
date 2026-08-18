@@ -81,7 +81,8 @@ IMB_DLL_LOCAL const int imb_errno_types[] = { IMB_ERR_NULL_MBMGR,
                                               IMB_ERR_PQC_VERIFY_FAILED,
                                               IMB_ERR_PQC_BUFFER_TOO_SMALL,
                                               IMB_ERR_PQC_PARAMS_SIZE,
-                                              IMB_ERR_PQC_CTX_LEN };
+                                              IMB_ERR_PQC_CTX_LEN,
+                                              IMB_ERR_PQC_MSG_LEN };
 
 int
 imb_get_errno(IMB_MGR *mb_mgr)
@@ -235,6 +236,8 @@ imb_get_strerror(int errnum)
                 return "PQC optional-params struct size field mismatch";
         case IMB_ERR_PQC_CTX_LEN:
                 return "PQC context string length out of range";
+        case IMB_ERR_PQC_MSG_LEN:
+                return "PQC message length invalid for the operation requested";
         default:
                 return strerror(errnum);
         }

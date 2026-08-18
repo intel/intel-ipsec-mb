@@ -88,7 +88,8 @@ SET_ERRNO_TYPES \
         IMB_ERR_PQC_VERIFY_FAILED, \
         IMB_ERR_PQC_BUFFER_TOO_SMALL, \
         IMB_ERR_PQC_PARAMS_SIZE, \
-        IMB_ERR_PQC_CTX_LEN
+        IMB_ERR_PQC_CTX_LEN, \
+        IMB_ERR_PQC_MSG_LEN
 
 ;; Reset global imb_errno to 0
 %macro IMB_ERR_CHECK_RESET 0
