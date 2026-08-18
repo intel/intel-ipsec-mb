@@ -38,33 +38,14 @@
 struct hmac_alg_desc {
         IMB_HASH_ALG hash_alg;
         size_t digest_size;
-        /*
-         * Minimum number of submitted jobs before IMB_SUBMIT_JOB may legally
-         * return a completed job (e.g. 8 for HMAC-MD5, 2 for SHANI HMAC-SHA).
-         */
-        uint32_t min_jobs_for_early_completion;
-};
-
-struct hmac_auth_bufs {
-        uint8_t **auths;
-        uint32_t num_jobs;
-        size_t tag_size;
 };
 
 int
-hmac_auth_bufs_alloc(struct hmac_auth_bufs *b, const uint32_t num_jobs, const size_t tag_size);
-
-void
-hmac_auth_bufs_free(struct hmac_auth_bufs *b);
+hmac_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const size_t tag_size);
 
 int
-hmac_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-            const size_t tag_size);
-
-void
 hmac_job_fill(struct IMB_JOB *job, const struct mac_test *vec, const struct hmac_alg_desc *desc,
-              uint8_t *auth_buf, const size_t tag_size, const uint8_t *ipad_hash,
-              const uint8_t *opad_hash);
+              const size_t tag_size, const uint8_t *ipad_hash, const uint8_t *opad_hash);
 
 int
 hmac_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,

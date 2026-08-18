@@ -35,85 +35,42 @@
 #include "mac_test.h"
 #include "hmac_common.h"
 
-/* upper bound covering every HMAC digest size exercised by the KAT app */
-#define HMAC_MAX_DIGEST_SIZE IMB_SHA512_DIGEST_SIZE_IN_BYTES
+/* upper bound covering every HMAC block size exercised by the KAT app */
+#define HMAC_MAX_DIGEST_SIZE IMB_SHA3_MAX_BLOCK_SIZE
 
 int
-hmac_auth_bufs_alloc(struct hmac_auth_bufs *b, const uint32_t num_jobs, const size_t tag_size)
-{
-        uint32_t i;
-
-        memset(b, 0, sizeof(*b));
-        b->num_jobs = num_jobs;
-        b->tag_size = tag_size;
-
-        b->auths = malloc(num_jobs * sizeof(void *));
-        if (b->auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                return -1;
-        }
-        memset(b->auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = tag_size;
-
-                b->auths[i] = malloc(alloc_len);
-                if (b->auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        hmac_auth_bufs_free(b);
-                        return -1;
-                }
-                memset(b->auths[i], -1, alloc_len);
-        }
-
-        return 0;
-}
-
-void
-hmac_auth_bufs_free(struct hmac_auth_bufs *b)
-{
-        uint32_t i;
-
-        if (b->auths == NULL)
-                return;
-
-        for (i = 0; i < b->num_jobs; i++)
-                free(b->auths[i]);
-
-        free(b->auths);
-        b->auths = NULL;
-}
-
-int
-hmac_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-            const size_t tag_size)
+hmac_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const size_t tag_size)
 {
         if (job->status != IMB_STATUS_COMPLETED) {
                 printf("line:%d job error status:%d ", __LINE__, job->status);
                 return 0;
         }
 
-        if (memcmp(vec->tag, auth, tag_size)) {
+        if (memcmp(vec->tag, job->auth_tag_output, tag_size)) {
                 printf("hash mismatched\n");
-                hexdump(stderr, "Received", auth, tag_size);
+                hexdump(stderr, "Received", job->auth_tag_output, tag_size);
                 hexdump(stderr, "Expected", vec->tag, tag_size);
                 return 0;
         }
         return 1;
 }
 
-void
+int
 hmac_job_fill(struct IMB_JOB *job, const struct mac_test *vec, const struct hmac_alg_desc *desc,
-              uint8_t *auth_buf, const size_t tag_size, const uint8_t *ipad_hash,
-              const uint8_t *opad_hash)
+              const size_t tag_size, const uint8_t *ipad_hash, const uint8_t *opad_hash)
 {
+        job->auth_tag_output = malloc(tag_size);
+        if (job->auth_tag_output == NULL) {
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                return -1;
+        }
+
         job->enc_keys = NULL;
         job->dec_keys = NULL;
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
         job->dst = NULL;
         job->key_len_in_bytes = 0;
-        job->auth_tag_output = auth_buf;
         job->auth_tag_output_len_in_bytes = tag_size;
         job->iv = NULL;
         job->iv_len_in_bytes = 0;
@@ -127,22 +84,25 @@ hmac_job_fill(struct IMB_JOB *job, const struct mac_test *vec, const struct hmac
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = desc->hash_alg;
 
-        job->user_data = auth_buf;
+        return 0;
+}
+
+static void
+hmac_job_free_tag(struct IMB_JOB *job)
+{
+        free(job->auth_tag_output);
+        job->auth_tag_output = NULL;
 }
 
 int
 hmac_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
                        const size_t tag_size, const struct hmac_alg_desc *desc)
 {
-        struct hmac_auth_bufs bufs;
         struct IMB_JOB *job;
         uint32_t i, jobs_rx = 0;
         int ret = -1;
         DECLARE_ALIGNED(uint8_t ipad_hash[HMAC_MAX_DIGEST_SIZE], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[HMAC_MAX_DIGEST_SIZE], 16);
-
-        if (hmac_auth_bufs_alloc(&bufs, num_jobs, tag_size) < 0)
-                goto end;
 
         imb_hmac_ipad_opad(mb_mgr, desc->hash_alg, vec->key, vec->keySize / 8, ipad_hash,
                            opad_hash);
@@ -153,24 +113,27 @@ hmac_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const
 
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
-                hmac_job_fill(job, vec, desc, bufs.auths[i], tag_size, ipad_hash, opad_hash);
+                if (hmac_job_fill(job, vec, desc, tag_size, ipad_hash, opad_hash) < 0)
+                        goto end;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job) {
                         jobs_rx++;
-                        if (num_jobs < desc->min_jobs_for_early_completion) {
-                                printf("%d Unexpected return from submit_job\n", __LINE__);
+                        if (!hmac_job_ok(vec, job, tag_size)) {
+                                hmac_job_free_tag(job);
                                 goto end;
                         }
-                        if (!hmac_job_ok(vec, job, job->user_data, tag_size))
-                                goto end;
+                        hmac_job_free_tag(job);
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!hmac_job_ok(vec, job, job->user_data, tag_size))
+                if (!hmac_job_ok(vec, job, tag_size)) {
+                        hmac_job_free_tag(job);
                         goto end;
+                }
+                hmac_job_free_tag(job);
         }
 
         if (jobs_rx != num_jobs) {
@@ -181,10 +144,8 @@ hmac_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const
 
 end:
         /* empty the manager before next tests */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        hmac_auth_bufs_free(&bufs);
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                hmac_job_free_tag(job);
 
         return ret;
 }
@@ -193,15 +154,11 @@ int
 hmac_test_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
                 const size_t tag_size, const struct hmac_alg_desc *desc)
 {
-        struct hmac_auth_bufs bufs;
         struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
         uint32_t i, jobs_rx = 0, completed_jobs = 0;
         int ret = -1, err;
         DECLARE_ALIGNED(uint8_t ipad_hash[HMAC_MAX_DIGEST_SIZE], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[HMAC_MAX_DIGEST_SIZE], 16);
-
-        if (hmac_auth_bufs_alloc(&bufs, num_jobs, tag_size) < 0)
-                goto end;
 
         imb_hmac_ipad_opad(mb_mgr, desc->hash_alg, vec->key, vec->keySize / 8, ipad_hash,
                            opad_hash);
@@ -211,7 +168,8 @@ hmac_test_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32
 
         for (i = 0; i < num_jobs; i++) {
                 job = jobs[i];
-                hmac_job_fill(job, vec, desc, bufs.auths[i], tag_size, ipad_hash, opad_hash);
+                if (hmac_job_fill(job, vec, desc, tag_size, ipad_hash, opad_hash) < 0)
+                        goto end;
                 imb_set_session(mb_mgr, job);
         }
 
@@ -232,8 +190,11 @@ check_burst_jobs:
                         goto end;
                 }
 
-                if (!hmac_job_ok(vec, job, job->user_data, tag_size))
+                if (!hmac_job_ok(vec, job, tag_size)) {
+                        hmac_job_free_tag(job);
                         goto end;
+                }
+                hmac_job_free_tag(job);
                 jobs_rx++;
         }
 
@@ -248,7 +209,11 @@ check_burst_jobs:
         ret = 0;
 
 end:
-        hmac_auth_bufs_free(&bufs);
+        completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
+        for (i = 0; i < completed_jobs; i++)
+                hmac_job_free_tag(jobs[i]);
+        for (i = 0; i < num_jobs; i++)
+                hmac_job_free_tag(jobs[i]);
 
         return ret;
 }
@@ -257,21 +222,19 @@ int
 hmac_test_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
                      const size_t tag_size, const struct hmac_alg_desc *desc)
 {
-        struct hmac_auth_bufs bufs;
         struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE] = { 0 };
         uint32_t i, jobs_rx = 0, completed_jobs = 0;
         int ret = -1;
         DECLARE_ALIGNED(uint8_t ipad_hash[HMAC_MAX_DIGEST_SIZE], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[HMAC_MAX_DIGEST_SIZE], 16);
 
-        if (hmac_auth_bufs_alloc(&bufs, num_jobs, tag_size) < 0)
-                goto end;
-
         imb_hmac_ipad_opad(mb_mgr, desc->hash_alg, vec->key, vec->keySize / 8, ipad_hash,
                            opad_hash);
 
-        for (i = 0; i < num_jobs; i++)
-                hmac_job_fill(&jobs[i], vec, desc, bufs.auths[i], tag_size, ipad_hash, opad_hash);
+        for (i = 0; i < num_jobs; i++) {
+                if (hmac_job_fill(&jobs[i], vec, desc, tag_size, ipad_hash, opad_hash) < 0)
+                        goto end;
+        }
 
         completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, desc->hash_alg);
         if (completed_jobs != num_jobs) {
@@ -293,8 +256,11 @@ hmac_test_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const u
                         goto end;
                 }
 
-                if (!hmac_job_ok(vec, job, job->user_data, tag_size))
+                if (!hmac_job_ok(vec, job, tag_size)) {
+                        hmac_job_free_tag(job);
                         goto end;
+                }
+                hmac_job_free_tag(job);
                 jobs_rx++;
         }
 
@@ -305,7 +271,8 @@ hmac_test_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const u
         ret = 0;
 
 end:
-        hmac_auth_bufs_free(&bufs);
+        for (i = 0; i < num_jobs; i++)
+                hmac_job_free_tag(&jobs[i]);
 
         return ret;
 }

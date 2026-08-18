@@ -22,8 +22,7 @@ static struct mac_test *hmac_md5_vectors;
 
 /* HMAC-MD5 requires 8 submissions to get one back */
 static const struct hmac_alg_desc md5_desc = { .hash_alg = IMB_AUTH_MD5,
-                                               .digest_size = IMB_MD5_DIGEST_SIZE_IN_BYTES,
-                                               .min_jobs_for_early_completion = 8 };
+                                               .digest_size = IMB_MD5_DIGEST_SIZE_IN_BYTES };
 
 static void
 free_hmac_md5_vectors(struct test_json_alloc_ctx *ctx)
@@ -61,11 +60,14 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
 #endif
                         continue;
                 }
-                if (hmac_test_submit_flush(mb_mgr, v, num_jobs, v->tagSize / 8, &md5_desc)) {
-                        printf("error #%zu\n", v->tcId);
-                        test_suite_update(ts, 0, 1);
-                } else {
-                        test_suite_update(ts, 1, 0);
+                {
+                        if (hmac_test_submit_flush(mb_mgr, v, num_jobs, v->tagSize / 8,
+                                                   &md5_desc)) {
+                                printf("error #%zu\n", v->tcId);
+                                test_suite_update(ts, 0, 1);
+                        } else {
+                                test_suite_update(ts, 1, 0);
+                        }
                 }
         }
         if (!quiet_mode)
