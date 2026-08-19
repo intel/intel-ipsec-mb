@@ -13,7 +13,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
-#include "hmac_common.h"
+#include "kat_common_hash.h"
 #include "vector_utils.h"
 
 int
@@ -26,6 +26,32 @@ struct hmac_sha3_variant {
         size_t digest_size;
         const struct mac_test *vecs;
 };
+
+struct hmac_sha3_job_ctx {
+        IMB_HASH_ALG hash_alg;
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA3_MAX_BLOCK_SIZE], 16);
+};
+
+static int
+hmac_sha3_job_prepare(struct IMB_JOB *job, void *ctx)
+{
+        const struct hmac_sha3_job_ctx *hmac = ctx;
+
+        job->hash_alg = hmac->hash_alg;
+        job->u.HMAC._hashed_auth_key_xor_ipad = hmac->ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = hmac->opad_hash;
+        return 0;
+}
+
+static void
+hmac_sha3_job_ctx_init(struct IMB_MGR *mb_mgr, const struct hmac_sha3_variant *var,
+                       const struct mac_test *vec, struct hmac_sha3_job_ctx *ctx)
+{
+        ctx->hash_alg = var->alg;
+        imb_hmac_ipad_opad(mb_mgr, ctx->hash_alg, vec->key, vec->keySize / 8, ctx->ipad_hash,
+                           ctx->opad_hash);
+}
 
 static struct mac_test *hmac_sha3_224_vecs;
 static struct mac_test *hmac_sha3_256_vecs;
@@ -109,14 +135,17 @@ test_hmac_sha3_std_vectors(struct IMB_MGR *mb_mgr, const struct hmac_sha3_varian
                            const uint32_t num_jobs, struct test_suite_context *ts)
 {
         const struct mac_test *v = var->vecs;
-        const struct hmac_alg_desc desc = {
-                .hash_alg = var->alg,
-                .digest_size = var->digest_size,
+        struct hmac_sha3_job_ctx ctx;
+        const struct kat_hash_job_ops ops = {
+                .prepare = hmac_sha3_job_prepare,
+                .ctx = &ctx,
         };
 
         if (!quiet_mode)
                 printf("%s standard test vectors (N jobs = %u):\n", var->name, num_jobs);
         while (v->msg != NULL) {
+                hmac_sha3_job_ctx_init(mb_mgr, var, v, &ctx);
+
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("Test Case %zu keySize:%zu "
@@ -127,18 +156,16 @@ test_hmac_sha3_std_vectors(struct IMB_MGR *mb_mgr, const struct hmac_sha3_varian
 #endif
                 }
 
-                if (hmac_test_submit_flush(mb_mgr, v, num_jobs, v->tagSize / 8, &desc)) {
+                if (kat_hash_test_submit_flush(mb_mgr, v, num_jobs, &ops)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
-                } else {
+                } else
                         test_suite_update(ts, 1, 0);
-                }
-                if (hmac_test_burst(mb_mgr, v, num_jobs, v->tagSize / 8, &desc)) {
+                if (kat_hash_test_burst(mb_mgr, v, num_jobs, &ops)) {
                         printf("error #%zu - burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
-                } else {
+                } else
                         test_suite_update(ts, 1, 0);
-                }
                 v++;
         }
         if (!quiet_mode)

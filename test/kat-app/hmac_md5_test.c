@@ -13,16 +13,28 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
-#include "hmac_common.h"
+#include "kat_common_hash.h"
 
 int
 hmac_md5_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *hmac_md5_vectors;
 
-/* HMAC-MD5 requires 8 submissions to get one back */
-static const struct hmac_alg_desc md5_desc = { .hash_alg = IMB_AUTH_MD5,
-                                               .digest_size = IMB_MD5_DIGEST_SIZE_IN_BYTES };
+struct hmac_md5_job_ctx {
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_MD5_BLOCK_SIZE], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_MD5_BLOCK_SIZE], 16);
+};
+
+static int
+hmac_md5_job_prepare(struct IMB_JOB *job, void *ctx)
+{
+        const struct hmac_md5_job_ctx *hmac = ctx;
+
+        job->hash_alg = IMB_AUTH_MD5;
+        job->u.HMAC._hashed_auth_key_xor_ipad = hmac->ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = hmac->opad_hash;
+        return 0;
+}
 
 static void
 free_hmac_md5_vectors(struct test_json_alloc_ctx *ctx)
@@ -37,6 +49,11 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
 {
 
         const struct mac_test *v = hmac_md5_vectors;
+        struct hmac_md5_job_ctx ctx;
+        const struct kat_hash_job_ops ops = {
+                .prepare = hmac_md5_job_prepare,
+                .ctx = &ctx,
+        };
 
         if (!quiet_mode)
                 printf("HMAC-MD5 standard test vectors (N jobs = %u):\n", num_jobs);
@@ -60,15 +77,13 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
 #endif
                         continue;
                 }
-                {
-                        if (hmac_test_submit_flush(mb_mgr, v, num_jobs, v->tagSize / 8,
-                                                   &md5_desc)) {
-                                printf("error #%zu\n", v->tcId);
-                                test_suite_update(ts, 0, 1);
-                        } else {
-                                test_suite_update(ts, 1, 0);
-                        }
-                }
+                imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, v->key, v->keySize / 8, ctx.ipad_hash,
+                                   ctx.opad_hash);
+                if (kat_hash_test_submit_flush(mb_mgr, v, num_jobs, &ops)) {
+                        printf("error #%zu\n", v->tcId);
+                        test_suite_update(ts, 0, 1);
+                } else
+                        test_suite_update(ts, 1, 0);
         }
         if (!quiet_mode)
                 printf("\n");
