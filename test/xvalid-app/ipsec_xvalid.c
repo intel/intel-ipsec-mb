@@ -45,10 +45,7 @@
 /* number of bytes to increase buffer size when testing range of buffers */
 #define DEFAULT_JOB_SIZE_STEP 16
 
-#define MAX_GCM_AAD_SIZE 1024
-#define MAX_CCM_AAD_SIZE 46
-#define MAX_AAD_SIZE     1024
-#define NUM_TAG_SIZES    7
+/* MAX_AAD_SIZE, MAX_GCM_AAD_SIZE, MAX_CCM_AAD_SIZE and NUM_TAG_SIZES come from job_params.h */
 
 #define MAX_IV_SIZE 16
 
@@ -73,6 +70,18 @@ struct data {
         struct cipher_auth_keys enc_keys;
         struct cipher_auth_keys dec_keys;
         uint8_t tag_size;
+};
+
+/*
+ * IMB_MGR's and the architectures they have been initialized for.
+ * Encryption is done with one architecture and decryption with another one,
+ * so that results can be cross validated.
+ */
+struct test_mgr {
+        IMB_MGR *enc_mb_mgr;
+        IMB_ARCH enc_arch;
+        IMB_MGR *dec_mb_mgr;
+        IMB_ARCH dec_arch;
 };
 
 uint8_t custom_test = 0;
@@ -203,66 +212,6 @@ post_job(IMB_MGR *mgr, IMB_JOB *job, unsigned *num_processed_jobs, const struct 
         return 0;
 }
 
-static void
-set_job_ctx(struct job_ctx *ctx, const unsigned imix, const struct params_s *params,
-            uint8_t *in_digest, uint8_t *out_digest, uint8_t tag_size, uint8_t *test_buf,
-            uint8_t *src_dst_buf)
-{
-        ctx->in_digest = in_digest;
-        ctx->out_digest = out_digest;
-        ctx->tag_size_to_check = tag_size;
-        ctx->test_buf = test_buf;
-        ctx->src_dst_buf = src_dst_buf;
-
-        /* PON only fields, left at zero for all other algorithms */
-        ctx->pli = 0;
-        ctx->xgem_hdr = 0;
-
-        /* Prepare buffer sizes, job sizes are randomized in the IMIX mode */
-        if (imix)
-                ctx->buf_size = generate_imix_job_size(params, DEFAULT_JOB_SIZE_MAX);
-        else
-                ctx->buf_size = params->buf_size;
-
-        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                /* Buf size is XGEM payload, including CRC,
-                 * allocate space for XGEM header and padding */
-                ctx->pli = ctx->buf_size;
-                ctx->buf_size += 8;
-                if (ctx->buf_size < 16)
-                        ctx->buf_size = 16;
-                if (ctx->buf_size % 4)
-                        ctx->buf_size = (ctx->buf_size + 3) & 0xfffffffc;
-                /*
-                 * Only first 4 bytes are checked, corresponding to BIP
-                 */
-                ctx->tag_size_to_check = 4;
-        }
-
-        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
-                if (ctx->buf_size >=
-                    (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE + IMB_DOCSIS_CRC32_TAG_SIZE))
-                        ctx->tag_size_to_check = IMB_DOCSIS_CRC32_TAG_SIZE;
-                else
-                        ctx->tag_size_to_check = 0;
-        }
-
-        generate_random_buf(ctx->test_buf, ctx->buf_size);
-
-        /* For PON, construct the XGEM header, setting valid PLI */
-        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                /* create XGEM header template */
-                const uint16_t shifted_pli = (ctx->pli << 2) & 0xffff;
-                uint64_t *p_src = (uint64_t *) ctx->test_buf;
-
-                ctx->xgem_hdr = ((shifted_pli >> 8) & 0xff) | ((shifted_pli & 0xff) << 8);
-                p_src[0] = ctx->xgem_hdr;
-        }
-
-        /* Randomize memory for output digest */
-        generate_random_buf(ctx->out_digest, ctx->tag_size_to_check);
-}
-
 static int
 process_jobs(IMB_MGR *mb_mgr, IMB_JOB *job_tab, const unsigned num_jobs,
              const struct params_s *params, struct job_ctx *job_ctx_tab,
@@ -357,8 +306,7 @@ process_jobs(IMB_MGR *mb_mgr, IMB_JOB *job_tab, const unsigned num_jobs,
 }
 
 static void
-print_fail_context(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr,
-                   const IMB_ARCH dec_arch, const struct params_s *params, struct data *data,
+print_fail_context(const struct test_mgr *mgr, const struct params_s *params, struct data *data,
                    const unsigned imix, const unsigned num_jobs, const unsigned idx,
                    const struct job_ctx *job_ctx_tab)
 {
@@ -369,13 +317,13 @@ print_fail_context(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb
 
         printf("\nEncrypting ");
         features = 0;
-        (void) imb_get_features(enc_mb_mgr, &features);
-        print_tested_arch(features, enc_arch);
+        (void) imb_get_features(mgr->enc_mb_mgr, &features);
+        print_tested_arch(features, mgr->enc_arch);
 
         printf("Decrypting ");
         features = 0;
-        (void) imb_get_features(dec_mb_mgr, &features);
-        print_tested_arch(features, dec_arch);
+        (void) imb_get_features(mgr->dec_mb_mgr, &features);
+        print_tested_arch(features, mgr->dec_arch);
 
         /*
          * Print buffer size info if the failure was caused by an actual job,
@@ -405,14 +353,15 @@ print_fail_context(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb
  * @retval -1 encrypt/decrypt operation error (result mismatch, unsupported algorithm etc.)
  */
 static int
-do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const IMB_ARCH dec_arch,
-        const struct params_s *params, struct data *data, const unsigned imix,
-        const unsigned num_jobs)
+do_test(const struct test_mgr *mgr, const struct params_s *params, struct data *data,
+        const unsigned imix, const unsigned num_jobs)
 {
         struct job_ctx job_ctx_tab[MAX_NUM_JOBS] = { 0 };
         IMB_JOB job_tab[MAX_NUM_JOBS];
         unsigned i;
         int ret = -1;
+        IMB_MGR *const enc_mb_mgr = mgr->enc_mb_mgr;
+        IMB_MGR *const dec_mb_mgr = mgr->dec_mb_mgr;
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
 
@@ -426,9 +375,17 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         generate_random_buf(data->ciph_key, MAX_KEY_SIZE);
         generate_random_buf(data->auth_key, MAX_KEY_SIZE);
 
-        for (i = 0; i < num_jobs; i++)
-                set_job_ctx(&job_ctx_tab[i], imix, params, data->in_digest[i], data->out_digest[i],
-                            data->tag_size, data->test_buf[i], data->src_dst_buf[i]);
+        for (i = 0; i < num_jobs; i++) {
+                /* Job sizes are randomized per job in the IMIX mode */
+                const uint32_t buf_size =
+                        imix ? generate_imix_job_size(params, DEFAULT_JOB_SIZE_MAX)
+                             : params->buf_size;
+
+                if (set_job_ctx(&job_ctx_tab[i], params, buf_size, JOB_SIZE_TOP, data->in_digest[i],
+                                data->out_digest[i], data->tag_size, data->test_buf[i],
+                                data->src_dst_buf[i], generate_random_buf) < 0)
+                        goto exit;
+        }
 
         /* Expand/schedule keys */
         if (fill_keys(enc_mb_mgr, enc_keys, data->ciph_key, data->auth_key, params, NULL) < 0)
@@ -589,21 +546,17 @@ exit:
         clear_data(data);
 
         if (ret == -1)
-                print_fail_context(enc_mb_mgr, enc_arch, dec_mb_mgr, dec_arch, params, data, imix,
-                                   num_jobs, i, job_ctx_tab);
+                print_fail_context(mgr, params, data, imix, num_jobs, i, job_ctx_tab);
 
         return ret;
 }
 
 static void
-test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const IMB_ARCH dec_arch,
-            struct params_s *params, struct data *variant_data, const uint32_t buf_size)
+test_single(const struct test_mgr *mgr, const struct params_s *params, struct data *variant_data,
+            const uint32_t buf_size)
 {
-        unsigned int i;
-        unsigned int num_tag_sizes = 0;
         uint8_t tag_sizes[NUM_TAG_SIZES];
         const uint32_t min_aad_sz = 0;
-        uint32_t max_aad_sz, aad_sz;
 
         if (params->hash_alg >= IMB_AUTH_NUM) {
                 if (verbose) {
@@ -613,40 +566,23 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                 exit(EXIT_FAILURE);
         }
 
-        if (params->cipher_mode == IMB_CIPHER_GCM)
-                max_aad_sz = MAX_GCM_AAD_SIZE;
-        else if (params->cipher_mode == IMB_CIPHER_CCM)
-                max_aad_sz = MAX_CCM_AAD_SIZE;
-        else
-                max_aad_sz = 0;
+        const uint32_t max_aad_sz = get_max_aad_size(params);
+        const unsigned num_tag_sizes = get_tag_sizes(params, tag_sizes);
 
-        /* If tag size is defined by user, only test this size */
-        if (auth_tag_size != 0) {
-                tag_sizes[0] = auth_tag_size;
-                num_tag_sizes = 1;
-        } else {
-                /* If CCM, test all tag sizes supported (4,6,8,10,12,14,16) */
-                if (params->hash_alg == IMB_AUTH_AES_CCM) {
-                        for (i = 4; i <= 16; i += 2)
-                                tag_sizes[num_tag_sizes++] = i;
-                } else {
-                        tag_sizes[0] = auth_tag_len_bytes[params->hash_alg - 1];
-                        num_tag_sizes = 1;
-                }
-        }
-
-        for (i = 0; i < num_tag_sizes; i++) {
+        for (unsigned i = 0; i < num_tag_sizes; i++) {
                 variant_data->tag_size = tag_sizes[i];
 
-                for (aad_sz = min_aad_sz; aad_sz <= max_aad_sz; aad_sz++) {
-                        params->aad_size = aad_sz;
-                        params->buf_size = buf_size;
+                for (uint32_t aad_sz = min_aad_sz; aad_sz <= max_aad_sz; aad_sz++) {
+                        /* Parameters of this test case, params is left untouched */
+                        struct params_s job_params = *params;
 
-                        if (!is_valid_job_size(params, buf_size))
+                        job_params.aad_size = aad_sz;
+                        job_params.buf_size = buf_size;
+
+                        if (!is_valid_job_size(&job_params, buf_size))
                                 continue;
 
-                        if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params, variant_data, 0,
-                                    1) < 0)
+                        if (do_test(mgr, &job_params, variant_data, 0, 1) < 0)
                                 exit(EXIT_FAILURE);
                 }
         }
@@ -654,8 +590,8 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
 
 /* Runs test for each buffer size */
 static void
-process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr,
-                const IMB_ARCH dec_arch, struct params_s *params, struct data *variant_data)
+process_variant(const struct test_mgr *mgr, const struct params_s *params,
+                struct data *variant_data)
 {
 #ifdef PIN_BASED_CEC
         const uint32_t sizes = job_sizes[RANGE_MAX];
@@ -679,19 +615,20 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr,
                 const uint32_t buf_size = job_sizes[RANGE_MIN] + (sz * job_sizes[RANGE_STEP]);
 #endif
 
-                test_single(enc_mgr, enc_arch, dec_mgr, dec_arch, params, variant_data, buf_size);
+                test_single(mgr, params, variant_data, buf_size);
         }
 
         /* Perform IMIX tests */
         if (imix_enabled) {
-                unsigned int i, j;
+                /* IMIX tests are run with no AAD and with job sizes randomized per job */
+                struct params_s imix_params = *params;
 
-                params->aad_size = 0;
+                imix_params.aad_size = 0;
+                imix_params.buf_size = 0;
 
-                for (i = 2; i <= max_num_jobs; i++) {
-                        for (j = 0; j < IMIX_ITER; j++) {
-                                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
-                                            variant_data, 1, i) < 0) {
+                for (unsigned i = 2; i <= max_num_jobs; i++) {
+                        for (unsigned j = 0; j < IMIX_ITER; j++) {
+                                if (do_test(mgr, &imix_params, variant_data, 1, i) < 0) {
                                         printf("FAIL\n");
                                         exit(EXIT_FAILURE);
                                 }
@@ -802,11 +739,16 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
         printf("Decrypting ");
         print_tested_arch(features, dec_arch);
 
+        const struct test_mgr mgr = { .enc_mb_mgr = enc_mgr,
+                                      .enc_arch = enc_arch,
+                                      .dec_mb_mgr = dec_mgr,
+                                      .dec_arch = dec_arch };
+
         if (custom_test) {
                 params->key_size = custom_job_params.key_size;
                 params->cipher_mode = custom_job_params.cipher_mode;
                 params->hash_alg = custom_job_params.hash_alg;
-                process_variant(enc_mgr, enc_arch, dec_mgr, dec_arch, params, variant_data);
+                process_variant(&mgr, params, variant_data);
                 goto exit;
         }
 
@@ -839,8 +781,7 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
 
                         for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                                 params->key_size = key_sz;
-                                process_variant(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
-                                                variant_data);
+                                process_variant(&mgr, params, variant_data);
                         }
                 }
         }

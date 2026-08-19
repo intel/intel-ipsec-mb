@@ -106,6 +106,40 @@ fill_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph_ke
           const struct key_fill_pattern *pattern);
 
 /**
+ * @brief Fills in the context of a single job and prepares its message
+ *
+ * Sets up the buffer pointers, the message size and the tag size to be
+ * verified after the job has been completed. PON and DOCSIS message sizes
+ * and tag sizes are adjusted to the algorithm requirements, including
+ * the XGEM header for PON.
+ *
+ * The message is written by the \a fill_test_buf callback, which allows
+ * an application to use random data or a known byte pattern
+ * (see the safe check application).
+ * The digest buffer to verify against is filled with random data.
+ *
+ * @param [out] ctx           Pointer to the job context to fill in
+ * @param [in] params         Pointer to the test parameters
+ * @param [in] buf_size       Message size in bytes
+ * @param [in] max_buf_size   Size of \a test_buf and \a src_dst_buf in bytes
+ * @param [in] in_digest      Pointer to the digest buffer to be produced
+ * @param [in] out_digest     Pointer to the digest buffer to verify against
+ * @param [in] tag_size       Authentication tag size in bytes
+ * @param [in] test_buf       Pointer to the message buffer
+ * @param [in] src_dst_buf    Pointer to the source/destination buffer
+ * @param [in] fill_test_buf  Function filling \a test_buf with the message
+ *
+ * @return Operation status
+ * @retval 0 context filled in
+ * @retval -1 message size too big for the selected algorithm
+ */
+int
+set_job_ctx(struct job_ctx *ctx, const struct params_s *params, const uint32_t buf_size,
+            const uint32_t max_buf_size, uint8_t *in_digest, uint8_t *out_digest,
+            const uint8_t tag_size, uint8_t *test_buf, uint8_t *src_dst_buf,
+            void (*fill_test_buf)(uint8_t *buf, const uint32_t size));
+
+/**
  * @brief Fills in a job structure with the test parameters
  *
  * Sets up all job fields required by the selected cipher mode and
@@ -185,6 +219,37 @@ is_valid_job_size(const struct params_s *params, const uint32_t buf_size);
  */
 uint32_t
 generate_imix_job_size(const struct params_s *params, const uint32_t max_size);
+
+/**
+ * @brief Returns the maximum AAD size to be tested for the selected algorithms
+ *
+ * Only AES-GCM and AES-CCM take additional authenticated data,
+ * zero is returned for all the other algorithms.
+ *
+ * @param [in] params  Pointer to the test parameters
+ *
+ * @return Maximum AAD size in bytes
+ */
+uint32_t
+get_max_aad_size(const struct params_s *params);
+
+/**
+ * @brief Fills in the list of authentication tag sizes to be tested
+ *
+ * A single tag size is used by most of the algorithms. AES-CCM supports
+ * a range of tag sizes, so all of them get tested.
+ * If the tag size has been selected by the user then only that size
+ * is returned.
+ *
+ * @param [in] params      Pointer to the test parameters
+ * @param [out] tag_sizes  Array of NUM_TAG_SIZES entries to fill in
+ *
+ * @return Number of tag sizes filled in
+ *
+ * @see auth_tag_size
+ */
+unsigned
+get_tag_sizes(const struct params_s *params, uint8_t tag_sizes[NUM_TAG_SIZES]);
 
 /**
  * @brief Reads a numeric command line argument

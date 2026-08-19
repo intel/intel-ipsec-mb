@@ -15,6 +15,15 @@
 #define MAX_KEY_SIZE    IMB_SHA_512_BLOCK_SIZE
 #define MAX_DIGEST_SIZE IMB_SHA512_DIGEST_SIZE_IN_BYTES
 
+/* Maximum AAD size tested with AES-GCM */
+#define MAX_GCM_AAD_SIZE 1024
+/* Maximum AAD size tested with AES-CCM */
+#define MAX_CCM_AAD_SIZE 46
+/* Number of authentication tag sizes tested with AES-CCM (4,6,8,10,12,14,16) */
+#define NUM_TAG_SIZES 7
+/* Size of the AAD buffer, has to fit the largest AAD size tested */
+#define MAX_AAD_SIZE MAX_GCM_AAD_SIZE
+
 /**
  * @brief Test parameters describing a single algorithm and message size
  */

@@ -21,6 +21,7 @@
 #include "algo_maps.h"
 #include "job_utils.h"
 #include "misc.h"
+#include "utils.h"
 
 /* cipher and authentication IV sizes */
 uint32_t cipher_iv_size = 0;
@@ -449,6 +450,75 @@ fill_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph_ke
                 fprintf(stderr, "Unsupported cipher mode\n");
                 return -1;
         }
+
+        return 0;
+}
+
+/*
+ * Fills in the context of a single job and prepares its message buffer.
+ * The message itself is written by the fill_test_buf() callback, so that
+ * applications can choose between random data and a known pattern.
+ */
+int
+set_job_ctx(struct job_ctx *ctx, const struct params_s *params, const uint32_t buf_size,
+            const uint32_t max_buf_size, uint8_t *in_digest, uint8_t *out_digest,
+            const uint8_t tag_size, uint8_t *test_buf, uint8_t *src_dst_buf,
+            void (*fill_test_buf)(uint8_t *buf, const uint32_t size))
+{
+        ctx->in_digest = in_digest;
+        ctx->out_digest = out_digest;
+        ctx->tag_size_to_check = tag_size;
+        ctx->test_buf = test_buf;
+        ctx->src_dst_buf = src_dst_buf;
+        ctx->buf_size = buf_size;
+
+        /* PON only fields, left at zero for all other algorithms */
+        ctx->pli = 0;
+        ctx->xgem_hdr = 0;
+
+        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
+                /* Buf size is XGEM payload, including CRC,
+                 * allocate space for XGEM header and padding */
+                ctx->pli = (uint16_t) ctx->buf_size;
+                ctx->buf_size += 8;
+                if (ctx->buf_size < 16)
+                        ctx->buf_size = 16;
+                if (ctx->buf_size % 4)
+                        ctx->buf_size = (ctx->buf_size + 3) & 0xfffffffc;
+                if (ctx->buf_size > max_buf_size) {
+                        fprintf(stderr, "Invalid PON buffer size %u (max %u)\n", ctx->buf_size,
+                                max_buf_size);
+                        return -1;
+                }
+                /*
+                 * Only first 4 bytes are checked, corresponding to BIP
+                 */
+                ctx->tag_size_to_check = 4;
+        }
+
+        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
+                if (ctx->buf_size >=
+                    (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE + IMB_DOCSIS_CRC32_TAG_SIZE))
+                        ctx->tag_size_to_check = IMB_DOCSIS_CRC32_TAG_SIZE;
+                else
+                        ctx->tag_size_to_check = 0;
+        }
+
+        /* Fill in the message to be processed */
+        fill_test_buf(ctx->test_buf, ctx->buf_size);
+
+        /* For PON, construct the XGEM header, setting valid PLI */
+        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
+                /* create XGEM header template */
+                const uint16_t shifted_pli = (ctx->pli << 2) & 0xffff;
+                uint64_t *p_src = (uint64_t *) ctx->test_buf;
+
+                ctx->xgem_hdr = ((shifted_pli >> 8) & 0xff) | ((shifted_pli & 0xff) << 8);
+                p_src[0] = ctx->xgem_hdr;
+        }
+
+        /* Randomize memory for output digest */
+        generate_random_buf(ctx->out_digest, ctx->tag_size_to_check);
 
         return 0;
 }
@@ -896,6 +966,45 @@ generate_imix_job_size(const struct params_s *params, const uint32_t max_size)
                         random_num = 16;
 
         return random_num;
+}
+
+/* Returns the maximum AAD size to be tested for the selected algorithms */
+uint32_t
+get_max_aad_size(const struct params_s *params)
+{
+        if (params->cipher_mode == IMB_CIPHER_GCM)
+                return MAX_GCM_AAD_SIZE;
+
+        if (params->cipher_mode == IMB_CIPHER_CCM)
+                return MAX_CCM_AAD_SIZE;
+
+        return 0;
+}
+
+/*
+ * Fills in the list of authentication tag sizes to be tested
+ * and returns the number of sizes filled in.
+ */
+unsigned
+get_tag_sizes(const struct params_s *params, uint8_t tag_sizes[NUM_TAG_SIZES])
+{
+        unsigned num_tag_sizes = 0;
+
+        /* If tag size is defined by user, only test this size */
+        if (auth_tag_size != 0) {
+                tag_sizes[0] = auth_tag_size;
+                return 1;
+        }
+
+        /* If CCM, test all tag sizes supported (4,6,8,10,12,14,16) */
+        if (params->hash_alg == IMB_AUTH_AES_CCM) {
+                for (unsigned i = 4; i <= 16; i += 2)
+                        tag_sizes[num_tag_sizes++] = (uint8_t) i;
+        } else {
+                tag_sizes[num_tag_sizes++] = auth_tag_len_bytes[params->hash_alg - 1];
+        }
+
+        return num_tag_sizes;
 }
 
 int

@@ -23,32 +23,19 @@
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
-#ifndef LINUX
-#include <malloc.h> /* _aligned_malloc() and aligned_free() */
-#endif
-#include "misc.h"
-#include "utils.h"
-#ifdef PIN_BASED_CEC
-#include <pin_based_cec.h>
-#endif
-
-#ifdef _WIN32
-#include <intrin.h>
-#define strdup     _strdup
-#define BSWAP64    _byteswap_uint64
-#define __func__   __FUNCTION__
-#define strcasecmp _stricmp
-#else
-#include <x86intrin.h>
-#define BSWAP64 __builtin_bswap64
-#endif
-
 #include <intel-ipsec-mb.h>
 #include "include/mb_mgr.h"
-
 #include "algo_maps.h"
 #include "job_params.h"
 #include "job_utils.h"
+#include "misc.h"
+#include "utils.h"
+#ifdef _WIN32
+#include <malloc.h> /* _aligned_malloc() and aligned_free() */
+#endif
+#ifdef PIN_BASED_CEC
+#include <pin_based_cec.h>
+#endif
 
 /* maximum size of a test buffer */
 #define JOB_SIZE_TOP (16 * 1024)
@@ -59,10 +46,7 @@
 /* number of bytes to increase buffer size when testing range of buffers */
 #define DEFAULT_JOB_SIZE_STEP 16
 
-#define MAX_GCM_AAD_SIZE 1024
-#define MAX_CCM_AAD_SIZE 46
-#define MAX_AAD_SIZE     1024
-#define NUM_TAG_SIZES    7
+/* MAX_AAD_SIZE, MAX_GCM_AAD_SIZE, MAX_CCM_AAD_SIZE and NUM_TAG_SIZES come from job_params.h */
 
 #define MAX_IV_SIZE 16
 
@@ -109,6 +93,12 @@ struct data {
         uint8_t auth_key[MAX_KEY_SIZE];
         struct cipher_auth_keys keys;
         uint8_t tag_size;
+};
+
+/* IMB_MGR and the architecture it has been initialized for */
+struct test_mgr {
+        IMB_MGR *mb_mgr;
+        IMB_ARCH arch;
 };
 
 uint8_t custom_test = 0;
@@ -503,7 +493,7 @@ print_match_gp(const void *ptr, const size_t offset)
         const uint8_t *ptr8 = (const uint8_t *) ptr;
         const size_t len_to_print = 8;
         const size_t reg_idx = offset / 8;
-        const char *reg_name = (reg_idx < DIM(reg_str)) ? reg_str[reg_idx] : "<unknown>";
+        const char *reg_name = (reg_idx < IMB_DIM(reg_str)) ? reg_str[reg_idx] : "<unknown>";
 
         hexdump_ex(stderr, reg_name, &ptr8[offset & ~7], len_to_print, NULL);
 }
@@ -778,66 +768,11 @@ post_job(IMB_MGR *mgr, const IMB_JOB *job, unsigned *num_processed_jobs)
         return 0;
 }
 
-/* Sets up job context and fills the message buffer with the plain text pattern */
+/* Fills the message buffer with the plain text pattern to search for */
 static void
-set_job_ctx(struct job_ctx *ctx, const struct params_s *params, const uint32_t buf_size,
-            uint8_t *in_digest, uint8_t *out_digest, const uint8_t tag_size, uint8_t *test_buf,
-            uint8_t *src_dst_buf)
+fill_plain_text_pattern(uint8_t *buf, const uint32_t size)
 {
-        ctx->in_digest = in_digest;
-        ctx->out_digest = out_digest;
-        ctx->tag_size_to_check = tag_size;
-        ctx->test_buf = test_buf;
-        ctx->src_dst_buf = src_dst_buf;
-        ctx->buf_size = buf_size;
-
-        /* PON only fields, left at zero for all other algorithms */
-        ctx->pli = 0;
-        ctx->xgem_hdr = 0;
-
-        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                /* Buf size is XGEM payload, including CRC,
-                 * allocate space for XGEM header and padding */
-                ctx->pli = (uint16_t) ctx->buf_size;
-                ctx->buf_size += 8;
-                if (ctx->buf_size < 16)
-                        ctx->buf_size = 16;
-                if (ctx->buf_size % 4)
-                        ctx->buf_size = (ctx->buf_size + 3) & 0xfffffffc;
-                if (ctx->buf_size > JOB_SIZE_TOP) {
-                        fprintf(stderr, "Invalid PON buffer size %u (max %d)\n", ctx->buf_size,
-                                JOB_SIZE_TOP);
-                        exit(EXIT_FAILURE);
-                }
-                /*
-                 * Only first 4 bytes are checked, corresponding to BIP
-                 */
-                ctx->tag_size_to_check = 4;
-        }
-
-        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
-                if (ctx->buf_size >=
-                    (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE + IMB_DOCSIS_CRC32_TAG_SIZE))
-                        ctx->tag_size_to_check = IMB_DOCSIS_CRC32_TAG_SIZE;
-                else
-                        ctx->tag_size_to_check = 0;
-        }
-
-        /* Fill the message with the sensitive data pattern */
-        nosimd_memset(ctx->test_buf, pattern_plain_text, ctx->buf_size);
-
-        /* For PON, construct the XGEM header, setting valid PLI */
-        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                /* create XGEM header template */
-                const uint16_t shifted_pli = (ctx->pli << 2) & 0xffff;
-                uint64_t *p_src = (uint64_t *) ctx->test_buf;
-
-                ctx->xgem_hdr = ((shifted_pli >> 8) & 0xff) | ((shifted_pli & 0xff) << 8);
-                p_src[0] = ctx->xgem_hdr;
-        }
-
-        /* Randomize memory for output digest */
-        generate_random_buf(ctx->out_digest, ctx->tag_size_to_check);
+        nosimd_memset(buf, pattern_plain_text, size);
 }
 
 /*
@@ -932,7 +867,7 @@ process_jobs(IMB_MGR *mb_mgr, const IMB_JOB *job_tab, const unsigned num_jobs,
 }
 
 static void
-print_fail_context(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
+print_fail_context(const struct test_mgr *mgr, const struct params_s *params,
                    const struct data *data, const struct safe_check_ctx *safe_ctx)
 {
         uint64_t features = 0;
@@ -941,8 +876,8 @@ print_fail_context(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *
         print_algo_info(params);
 
         printf("\nTested ");
-        (void) imb_get_features(mb_mgr, &features);
-        print_tested_arch(features, arch);
+        (void) imb_get_features(mgr->mb_mgr, &features);
+        print_tested_arch(features, mgr->arch);
 
         printf("Cipher direction = %s\n",
                (safe_ctx != NULL && safe_ctx->cipher_dir == IMB_DIR_DECRYPT) ? "DECRYPT"
@@ -971,14 +906,15 @@ print_fail_context(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *
  * @retval -2 sensitive data found
  */
 static int
-do_test(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params, struct data *data,
+do_test(const struct test_mgr *mgr, const struct params_s *params, struct data *data,
         const IMB_CIPHER_DIRECTION cipher_dir, const unsigned imix, const unsigned num_jobs,
         struct safe_check_ctx *p_safe_check)
 {
-        struct job_ctx job_ctx_tab[MAX_NUM_JOBS];
+        struct job_ctx job_ctx_tab[MAX_NUM_JOBS] = { 0 };
         IMB_JOB job_tab[MAX_NUM_JOBS];
         unsigned i;
         int ret = -1;
+        IMB_MGR *const mb_mgr = mgr->mb_mgr;
         struct cipher_auth_keys *keys = &data->keys;
         const int is_enc = (cipher_dir == IMB_DIR_ENCRYPT);
         const char *dir_str = is_enc ? "encrypting" : "decrypting";
@@ -1002,9 +938,10 @@ do_test(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params, str
                         imix ? generate_imix_job_size(params, DEFAULT_JOB_SIZE_MAX)
                              : params->buf_size;
 
-                set_job_ctx(&job_ctx_tab[i], params, buf_size, data->in_digest[i],
-                            data->out_digest[i], data->tag_size, data->test_buf[i],
-                            data->src_dst_buf[i]);
+                if (set_job_ctx(&job_ctx_tab[i], params, buf_size, JOB_SIZE_TOP, data->in_digest[i],
+                                data->out_digest[i], data->tag_size, data->test_buf[i],
+                                data->src_dst_buf[i], fill_plain_text_pattern) < 0)
+                        goto exit;
         }
 
         p_safe_check->cipher_dir = cipher_dir;
@@ -1018,9 +955,10 @@ do_test(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params, str
         if (fill_keys(mb_mgr, keys, data->ciph_key, data->auth_key, params, NULL) < 0)
                 goto exit;
 
-        if (perform_safe_checks(mb_mgr, arch, p_safe_check,
+        if (perform_safe_checks(mb_mgr, mgr->arch, p_safe_check,
                                 is_enc ? "expanding encryption keys"
                                        : "expanding decryption keys") < 0) {
+                /* perform_safe_checks() resets the context, set the fields again */
                 p_safe_check->key_exp_phase = 1;
                 p_safe_check->cipher_dir = cipher_dir;
                 p_safe_check->num_jobs = num_jobs;
@@ -1104,7 +1042,8 @@ do_test(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params, str
          * Check that the registers, stack and MB_MGR do not contain any
          * sensitive information after the jobs are returned
          */
-        if (perform_safe_checks(mb_mgr, arch, p_safe_check, dir_str) < 0) {
+        if (perform_safe_checks(mb_mgr, mgr->arch, p_safe_check, dir_str) < 0) {
+                /* perform_safe_checks() resets the context, set the fields again */
                 p_safe_check->cipher_dir = cipher_dir;
                 p_safe_check->num_jobs = num_jobs;
                 p_safe_check->job_size = job_ctx_tab[0].buf_size;
@@ -1120,27 +1059,105 @@ exit:
         clear_data(data);
 
         if (ret == -1)
-                print_fail_context(mb_mgr, arch, params, data, NULL);
+                print_fail_context(mgr, params, data, NULL);
 
         return ret;
 }
 
 /*
- * Runs safe check for a single buffer size (or mixed job sizes when \a imix
- * is set), for all tag sizes, AAD sizes and cipher directions
+ * Runs safe check for one test case and,
+ * if a match is found, retries it with new patterns
+ * to eliminate false positives. Exits the application on a failure.
  */
 static void
-test_single(IMB_MGR *mb_mgr, const IMB_ARCH arch, struct params_s *params,
-            struct data *variant_data, const uint32_t buf_size, const unsigned imix)
+do_safe_check_test(const struct test_mgr *mgr, const struct params_s *params,
+                   struct data *variant_data, const IMB_CIPHER_DIRECTION dir, const unsigned imix,
+                   const unsigned num_jobs)
 {
-        unsigned int i;
-        unsigned int num_tag_sizes = 0;
-        uint8_t tag_sizes[NUM_TAG_SIZES];
-        const uint32_t min_aad_sz = 0;
-        uint32_t max_aad_sz, aad_sz;
-        static const IMB_CIPHER_DIRECTION dir_tab[] = { IMB_DIR_ENCRYPT, IMB_DIR_DECRYPT };
+        struct safe_check_ctx safe_ctx1 = { 0 };
+        const int result1 = do_test(mgr, params, variant_data, dir, imix, num_jobs, &safe_ctx1);
+
+        if (result1 == -1) {
+                printf("FAIL\n");
+                exit(EXIT_FAILURE);
+        }
+
+        if (result1 != -2)
+                return;
+
+        /*
+         * Potential match found.
+         * Change the patterns and retry to eliminate false positives.
+         */
+        for (uint32_t retry = 0; retry < safe_retries; retry++) {
+                struct safe_check_ctx safe_ctx2 = { 0 };
+
+                generate_patterns();
+
+                const int result2 =
+                        do_test(mgr, params, variant_data, dir, imix, num_jobs, &safe_ctx2);
+
+                if (result2 == -1) {
+                        printf("FAIL\n");
+                        exit(EXIT_FAILURE);
+                }
+
+                if (result2 != -2 || compare_match(&safe_ctx1, &safe_ctx2) != 0)
+                        return;
+
+                if (retry == (safe_retries - 1)) {
+                        printf("FAIL\n");
+                        print_patterns();
+                        print_fail_context(mgr, params, variant_data, &safe_ctx2);
+                        print_match(&safe_ctx2, safe_ctx2.dir_name);
+                        exit(EXIT_FAILURE);
+                }
+        }
+}
+
+/*
+ * Runs safe check for one cipher direction, for all job numbers selected
+ * by the user. In the IMIX mode each test case is repeated IMIX_ITER times,
+ * as the job sizes are randomized on every run.
+ */
+static void
+test_cipher_dir(const struct test_mgr *mgr, const struct params_s *params,
+                struct data *variant_data, const IMB_CIPHER_DIRECTION dir, const unsigned imix)
+{
         /* IMIX tests submit more than one job of a randomized size */
         const unsigned min_num_jobs = imix ? 2 : 1;
+        const unsigned num_iter = imix ? IMIX_ITER : 1;
+
+        /* Skip cipher direction not selected by the user */
+        if (cipher_dirs[dir] == 0)
+                return;
+
+        for (unsigned n = 0; n < IMB_DIM(num_jobs_tab); n++) {
+                const unsigned num_jobs = num_jobs_tab[n];
+
+                /* Skip job numbers not selected by the user */
+                if (max_num_jobs != 0 && num_jobs != max_num_jobs)
+                        continue;
+
+                if (num_jobs < min_num_jobs)
+                        continue;
+
+                for (unsigned it = 0; it < num_iter; it++)
+                        do_safe_check_test(mgr, params, variant_data, dir, imix, num_jobs);
+        }
+}
+
+/*
+ * Runs safe check for a single buffer size (or mixed job sizes when \a imix
+ * is set), for all tag sizes, AAD sizes, cipher directions and job numbers
+ */
+static void
+test_single(const struct test_mgr *mgr, const struct params_s *params, struct data *variant_data,
+            const uint32_t buf_size, const unsigned imix)
+{
+        static const IMB_CIPHER_DIRECTION dir_tab[] = { IMB_DIR_ENCRYPT, IMB_DIR_DECRYPT };
+        uint8_t tag_sizes[NUM_TAG_SIZES];
+        const uint32_t min_aad_sz = 0;
 
         if (params->hash_alg >= IMB_AUTH_NUM) {
                 fprintf(stderr, "Invalid hash alg\n");
@@ -1149,113 +1166,32 @@ test_single(IMB_MGR *mb_mgr, const IMB_ARCH arch, struct params_s *params,
         }
 
         /* IMIX tests focus on mixed job sizes and are run with no AAD */
-        if (imix)
-                max_aad_sz = 0;
-        else if (params->cipher_mode == IMB_CIPHER_GCM)
-                max_aad_sz = MAX_GCM_AAD_SIZE;
-        else if (params->cipher_mode == IMB_CIPHER_CCM)
-                max_aad_sz = MAX_CCM_AAD_SIZE;
-        else
-                max_aad_sz = 0;
+        const uint32_t max_aad_sz = imix ? 0 : get_max_aad_size(params);
+        const unsigned num_tag_sizes = get_tag_sizes(params, tag_sizes);
 
-        /* If tag size is defined by user, only test this size */
-        if (auth_tag_size != 0) {
-                tag_sizes[0] = auth_tag_size;
-                num_tag_sizes = 1;
-        } else {
-                /* If CCM, test all tag sizes supported (4,6,8,10,12,14,16) */
-                if (params->hash_alg == IMB_AUTH_AES_CCM) {
-                        for (i = 4; i <= 16; i += 2)
-                                tag_sizes[num_tag_sizes++] = (uint8_t) i;
-                } else {
-                        tag_sizes[0] = auth_tag_len_bytes[params->hash_alg - 1];
-                        num_tag_sizes = 1;
-                }
-        }
-
-        for (i = 0; i < num_tag_sizes; i++) {
+        for (unsigned i = 0; i < num_tag_sizes; i++) {
                 variant_data->tag_size = tag_sizes[i];
 
-                for (aad_sz = min_aad_sz; aad_sz <= max_aad_sz; aad_sz++) {
-                        params->aad_size = aad_sz;
-                        params->buf_size = buf_size;
+                for (uint32_t aad_sz = min_aad_sz; aad_sz <= max_aad_sz; aad_sz++) {
+                        /* Parameters of this test case, params is left untouched */
+                        struct params_s job_params = *params;
+
+                        job_params.aad_size = aad_sz;
+                        job_params.buf_size = buf_size;
 
                         /* Job sizes are randomized per job in the IMIX mode */
-                        if (!imix && !is_valid_job_size(params, buf_size))
+                        if (!imix && !is_valid_job_size(&job_params, buf_size))
                                 continue;
 
-                        for (unsigned d = 0; d < IMB_DIM(dir_tab); d++) {
-                                const IMB_CIPHER_DIRECTION dir = dir_tab[d];
-
-                                /* Skip cipher direction not selected by the user */
-                                if (cipher_dirs[dir] == 0)
-                                        continue;
-
-                                for (unsigned n = 0; n < DIM(num_jobs_tab); n++) {
-                                        const unsigned num_jobs = num_jobs_tab[n];
-                                        struct safe_check_ctx safe_ctx1 = { 0 };
-
-                                        /* Skip job numbers not selected by the user */
-                                        if (max_num_jobs != 0 && num_jobs != max_num_jobs)
-                                                continue;
-
-                                        if (num_jobs < min_num_jobs)
-                                                continue;
-
-                                        const int result1 =
-                                                do_test(mb_mgr, arch, params, variant_data, dir,
-                                                        imix, num_jobs, &safe_ctx1);
-
-                                        if (result1 == -1) {
-                                                printf("FAIL\n");
-                                                exit(EXIT_FAILURE);
-                                        }
-
-                                        if (result1 != -2)
-                                                continue;
-
-                                        /*
-                                         * Potential match found.
-                                         * Change the patterns and retry to
-                                         * eliminate false positives.
-                                         */
-                                        for (uint32_t retry = 0; retry < safe_retries; retry++) {
-                                                struct safe_check_ctx safe_ctx2 = { 0 };
-
-                                                generate_patterns();
-
-                                                const int result2 =
-                                                        do_test(mb_mgr, arch, params, variant_data,
-                                                                dir, imix, num_jobs, &safe_ctx2);
-
-                                                if (result2 == -1) {
-                                                        printf("FAIL\n");
-                                                        exit(EXIT_FAILURE);
-                                                }
-
-                                                if (result2 != -2 ||
-                                                    compare_match(&safe_ctx1, &safe_ctx2) != 0)
-                                                        break;
-
-                                                if (retry == (safe_retries - 1)) {
-                                                        printf("FAIL\n");
-                                                        print_patterns();
-                                                        print_fail_context(mb_mgr, arch, params,
-                                                                           variant_data,
-                                                                           &safe_ctx2);
-                                                        print_match(&safe_ctx2, safe_ctx2.dir_name);
-                                                        exit(EXIT_FAILURE);
-                                                }
-                                        }
-                                }
-                        }
+                        for (unsigned d = 0; d < IMB_DIM(dir_tab); d++)
+                                test_cipher_dir(mgr, &job_params, variant_data, dir_tab[d], imix);
                 }
         }
 }
 
 /* Runs safe check for each buffer size */
 static void
-process_variant(IMB_MGR *mb_mgr, const IMB_ARCH arch, struct params_s *params,
+process_variant(const struct test_mgr *mgr, const struct params_s *params,
                 struct data *variant_data)
 {
 #ifdef PIN_BASED_CEC
@@ -1281,16 +1217,12 @@ process_variant(IMB_MGR *mb_mgr, const IMB_ARCH arch, struct params_s *params,
                 const uint32_t buf_size = job_sizes[RANGE_MIN] + (sz * job_sizes[RANGE_STEP]);
 #endif
 
-                test_single(mb_mgr, arch, params, variant_data, buf_size, 0);
+                test_single(mgr, params, variant_data, buf_size, 0);
         }
 
-        /*
-         * Perform IMIX tests, where job sizes are randomized per job.
-         * Each iteration exercises a new set of job sizes.
-         */
+        /* Perform IMIX tests, where job sizes are randomized per job */
         if (imix_enabled)
-                for (uint32_t it = 0; it < IMIX_ITER; it++)
-                        test_single(mb_mgr, arch, params, variant_data, 0, 1);
+                test_single(mgr, params, variant_data, 0, 1);
 }
 
 /* Runs safe check for all algorithms and key sizes on a given architecture */
@@ -1345,11 +1277,13 @@ run_test(const IMB_ARCH arch, struct params_s *params, struct data *variant_data
         printf("Testing ");
         print_tested_arch(features, arch);
 
+        const struct test_mgr mgr = { .mb_mgr = mb_mgr, .arch = arch };
+
         if (custom_test) {
                 params->key_size = custom_job_params.key_size;
                 params->cipher_mode = custom_job_params.cipher_mode;
                 params->hash_alg = custom_job_params.hash_alg;
-                process_variant(mb_mgr, arch, params, variant_data);
+                process_variant(&mgr, params, variant_data);
                 goto exit;
         }
 
@@ -1382,7 +1316,7 @@ run_test(const IMB_ARCH arch, struct params_s *params, struct data *variant_data
 
                         for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                                 params->key_size = key_sz;
-                                process_variant(mb_mgr, arch, params, variant_data);
+                                process_variant(&mgr, params, variant_data);
                         }
                 }
         }
@@ -1481,7 +1415,7 @@ usage(const char *app_name)
                 "--num-jobs: number of jobs to submit in one go "
                 "(default: test 1, 3, 4, 5, 7, 8, 9, 15, 16 and 17 jobs; maximum = %d)\n"
                 "--imix: additionally scan jobs of mixed (randomized) sizes submitted in one go, "
-                "%d iterations per algorithm\n"
+                "%d iterations per job number\n"
                 "--safe-retries: number of retries with new patterns to confirm "
                 "a match (default %d, maximum %d)\n"
                 "--avx-sse: if XGETBV is available then check for potential "
@@ -1616,16 +1550,16 @@ main(int argc, char *argv[])
                         }
                         unsigned n;
 
-                        for (n = 0; n < DIM(num_jobs_tab); n++)
+                        for (n = 0; n < IMB_DIM(num_jobs_tab); n++)
                                 if (num_jobs_tab[n] == max_num_jobs)
                                         break;
 
-                        if (n >= DIM(num_jobs_tab)) {
+                        if (n >= IMB_DIM(num_jobs_tab)) {
                                 fprintf(stderr,
                                         "Number of jobs %u is not one of the "
                                         "supported values: ",
                                         max_num_jobs);
-                                for (n = 0; n < DIM(num_jobs_tab); n++)
+                                for (n = 0; n < IMB_DIM(num_jobs_tab); n++)
                                         fprintf(stderr, "%u ", num_jobs_tab[n]);
                                 fprintf(stderr, "\n");
                                 return EXIT_FAILURE;
