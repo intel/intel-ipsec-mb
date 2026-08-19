@@ -17,6 +17,11 @@ const struct str_value_mapping arch_str_map[] = {
         { .name = "AVX10", .values.arch_type = IMB_ARCH_AVX10 }
 };
 
+const struct str_value_mapping cipher_dir_str_map[] = {
+        { .name = "ENCRYPT", .values.cipher_dir = IMB_DIR_ENCRYPT },
+        { .name = "DECRYPT", .values.cipher_dir = IMB_DIR_DECRYPT }
+};
+
 const struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "AES-CBC-128",
           .values.job_params = { .cipher_mode = IMB_CIPHER_CBC, .key_size = IMB_KEY_128_BYTES } },
@@ -289,6 +294,7 @@ const uint8_t key_sizes[][3] = {
 };
 
 const size_t num_arch_str_map = DIM(arch_str_map);
+const size_t num_cipher_dir_str_map = DIM(cipher_dir_str_map);
 const size_t num_cipher_algo_str_map = DIM(cipher_algo_str_map);
 const size_t num_hash_algo_str_map = DIM(hash_algo_str_map);
 const size_t num_aead_algo_str_map = DIM(aead_algo_str_map);

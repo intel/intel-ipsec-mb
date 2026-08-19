@@ -24,6 +24,9 @@ add_subdirectory(zerolen-app)
 # build imb-oob application
 add_subdirectory(oob-app)
 
+# build imb-safe-check application
+add_subdirectory(safe-check-app)
+
 if(NOT WINDOWS)
   # build imb-acvp if libacvp available
   if(NOT ACVP_LOC)

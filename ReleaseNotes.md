@@ -47,6 +47,10 @@ Library
 - Removed QUIC API support.
 
 Test Applications
+- Added new `imb-safe-check` application scanning all algorithms, message sizes,
+  cipher directions and job numbers for sensitive data left in registers and memory.
+- Removed `--safe-check` and `--safe-retries` options from `imb-xvalid` application
+  (functionality moved to `imb-safe-check` application).
 - Added `--offset` parameter to `imb-xvalid` application.
 - Removed bit-length message/offset test coverage paths for wireless algorithms and switched applications to byte-only lengths.
 - Added AVX10 architecture support.

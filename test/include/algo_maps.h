@@ -23,6 +23,13 @@
 extern const struct str_value_mapping arch_str_map[];
 
 /**
+ * @brief Cipher direction name to IMB_CIPHER_DIRECTION value mapping
+ *
+ * @see num_cipher_dir_str_map
+ */
+extern const struct str_value_mapping cipher_dir_str_map[];
+
+/**
  * @brief Cipher algorithm name to cipher mode and key size mapping
  *
  * @see num_cipher_algo_str_map
@@ -47,6 +54,11 @@ extern const struct str_value_mapping aead_algo_str_map[];
  * @brief Number of entries in arch_str_map[]
  */
 extern const size_t num_arch_str_map;
+
+/**
+ * @brief Number of entries in cipher_dir_str_map[]
+ */
+extern const size_t num_cipher_dir_str_map;
 
 /**
  * @brief Number of entries in cipher_algo_str_map[]

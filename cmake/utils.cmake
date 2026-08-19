@@ -301,7 +301,7 @@ macro(imb_add_target_spellcheck)
       COMMAND
         bash -c "${CODESPELL} -d -L ${CS_IGNORE_WORDS} \
               -S '*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,imb-perf' \
-              -S 'imb-kat,imb-xvalid' \
+              -S 'imb-kat,imb-xvalid,imb-safe-check' \
               -S '*.pl' \
               ./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
               ReleaseNotes.md LICENSE ${CS_EXTRA_OPTS}"

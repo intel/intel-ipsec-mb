@@ -96,6 +96,7 @@ struct custom_job_params {
  */
 union params {
         IMB_ARCH arch_type;
+        IMB_CIPHER_DIRECTION cipher_dir;
         struct custom_job_params job_params;
 };
 
