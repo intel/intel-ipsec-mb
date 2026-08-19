@@ -92,7 +92,7 @@ endstruc
         mov     ecx, [rax + _auth_tag_output_len_in_bytes]
         mov     rdx, [rax + _auth_tag_output]
         mov     eax, -1
-        bzhi    eax, eax, ecx           ;; ecx bytes → ecx low bits set
+        bzhi    eax, eax, ecx           ;; ecx bytes -> ecx low bits set
         kmovw   k1, eax
         vmovdqu8 [rdx]{k1}, xmm0
 

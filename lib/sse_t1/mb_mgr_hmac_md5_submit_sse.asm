@@ -122,7 +122,7 @@ submit_job_hmac_md5_sse:
         shr     extra_blocks, 6
         mov     [lane_data + _extra_blocks], DWORD(extra_blocks)
 
-        ; zero length check — skip src load and copy for empty messages
+        ; zero length check - skip src load and copy for empty messages
         test    len, len
         jz      end_fast_copy
 

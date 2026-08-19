@@ -22,8 +22,8 @@ This directory contains utility scripts and tools to assist with development, fo
   (`<results-dir>/cov-report/report.html`) with a per-symbol breakdown.
 
   Configuration is YAML or JSON. Example configs shipped here:
-  - `example.yaml` / `.json` — project-neutral schema reference
-  - `imb-kat.yaml` / `.json` — imb-kat test case matrix
+  - `example.yaml` / `.json` - project-neutral schema reference
+  - `imb-kat.yaml` / `.json` - imb-kat test case matrix
 
 ## Usage
 

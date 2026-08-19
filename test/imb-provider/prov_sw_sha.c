@@ -31,7 +31,7 @@ sha_async_init(ALG_CTX *ctx)
 
         /* Reset hash output state for re-initialization.
          * Keep xof_buf allocated so the same CTX can be reused across
-         * repeated init→update→final calls (e.g. openssl speed). */
+         * repeated init->update->final calls (e.g. openssl speed). */
         if (ctx->xof_buf != NULL && ctx->md_size > 0)
                 OPENSSL_cleanse(ctx->xof_buf, ctx->md_size);
         else

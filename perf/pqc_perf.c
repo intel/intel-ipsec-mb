@@ -31,7 +31,7 @@
 #define WARMUP_SECONDS  0.5
 #define DEFAULT_SECONDS 10.0
 #define MSG_LEN         32
-#define MAX_OPS         8  /* max operations per algorithm (keygen/sign/verify/…) */
+#define MAX_OPS         8  /* max operations per algorithm (keygen/sign/verify/...) */
 #define MAX_RESULTS     64 /* max algorithms per run */
 
 /* ML-DSA ops[] indices */
@@ -95,7 +95,7 @@ now_sec(void)
 }
 
 /**
- * @brief Fast deterministic PRNG (splitmix64); not cryptographic — only used to
+ * @brief Fast deterministic PRNG (splitmix64); not cryptographic - only used to
  *        diversify benchmark inputs without OS randomness overhead.
  */
 static uint64_t
@@ -486,7 +486,7 @@ measure_ml_kem_1024(struct IMB_MGR *mgr, double seconds, struct pqc_result *res)
         return measure_ml_kem(mgr, &ml_kem_variants[2], seconds, res);
 }
 
-/* Algorithm registry — add new families here as they are implemented. */
+/* Algorithm registry - add new families here as they are implemented. */
 
 static const struct algo_entry known_algos[] = {
         { "ML-DSA-44", measure_ml_dsa_44 },   { "ML-DSA-65", measure_ml_dsa_65 },
@@ -758,7 +758,7 @@ main(int argc, char **argv)
         print_run_info(arch_name, selected_arch);
 
         if (num_selected == 0) {
-                /* No explicit selection — run all known algorithms. */
+                /* No explicit selection - run all known algorithms. */
                 for (i = 0; i < NUM_KNOWN_ALGOS && num_results < MAX_RESULTS; i++) {
                         if (known_algos[i].measure(mgr, seconds, &results[num_results]) != 0)
                                 failures++;

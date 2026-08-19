@@ -667,7 +667,7 @@ test_provider_fetch_all_hashes()
  * Test that SHAKE-128 and SHAKE-256 accept a caller-supplied XOFLEN.
  * Exercises the SETTABLE_CTX_PARAMS dispatch path and
  * prov_shake_set_ctx_params().  The provider's update/final path requires an
- * async job context, so we only verify fetch → init → set_params here.
+ * async job context, so we only verify fetch -> init -> set_params here.
  */
 void
 test_provider_shake_xoflen(const char *shake_name, size_t xoflen)

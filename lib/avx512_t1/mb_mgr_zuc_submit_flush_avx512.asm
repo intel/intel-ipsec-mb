@@ -309,7 +309,7 @@ align_label
 %%no_clone_in:
         ;; Build init_mask: init lanes + null lanes treated as init-mode by CIPHER_INIT
         ;; (LFSR uses init feedback, in/out pointers NOT advanced).
-        ;; Fast path: when tmp4 == 0, no init/null lanes — call faster ZUC_CIPHER.
+        ;; Fast path: when tmp4 == 0, no init/null lanes - call faster ZUC_CIPHER.
         mov             DWORD(tmp4), [state + _zuc_init_not_done]
         or              DWORD(tmp4), DWORD(null_jobs_mask)  ; ZF set iff both are zero
         jnz             %%call_cipher_init_sf

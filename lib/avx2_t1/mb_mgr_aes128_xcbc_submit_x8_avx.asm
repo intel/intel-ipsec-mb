@@ -108,7 +108,7 @@ SUBMIT_JOB_AES_XCBC:
         mov     tmp, [job + _k1_expanded]
         mov     [state + _aes_xcbc_args_keys + lane*8], tmp
 
-        ;; zero length check — set up final block without accessing src
+        ;; zero length check - set up final block without accessing src
         test    len, len
         jnz     .not_zero_len
 

@@ -273,8 +273,8 @@ align_loop
         dec             DWORD(TEMP_GP)
         jnz             %%_init_fsm_lfsr_loop
 
-;     if t==15 then R1 = R1 ⊕ (k_7,k_6,…,k_0 )
-;     if t==16 then R1 = R1 ⊕ (k_15,k_14,…,k_8 )
+;     if t==15 then R1 = R1 ⊕ (k_7,k_6,...,k_0 )
+;     if t==16 then R1 = R1 ⊕ (k_15,k_14,...,k_8 )
         mov             TEMP_GP, %%KEYS
         movdqu          TEMP_3, [TEMP_GP]
         pxor            FSM_R1, TEMP_3

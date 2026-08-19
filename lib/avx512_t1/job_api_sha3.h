@@ -58,7 +58,7 @@ submit_job_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
  * computed by imb_hmac_ipad_opad().
  *
  * We build the inner input (ipad_key || msg) on the stack and call sha3_*
- * twice — once for inner, once for outer. msg_len is bounded by the caller;
+ * twice - once for inner, once for outer. msg_len is bounded by the caller;
  * for safety very large messages should use a streaming path, but this
  * mirrors how all other single-buffer hash types work in this library.
  */
@@ -93,7 +93,7 @@ submit_job_hmac_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 break;
         }
 
-        /* Inner hash: SHA3(ipad || msg) — absorbed in two pieces, no malloc */
+        /* Inner hash: SHA3(ipad || msg) - absorbed in two pieces, no malloc */
         sha3_ctx_init(&ctx, block_size, 0x06);
         sha3_ctx_update(&ctx, ipad, block_size);
         if (msg_len > 0)
@@ -106,7 +106,7 @@ submit_job_hmac_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         sha3_ctx_update(&ctx, inner_digest, digest_size);
         sha3_ctx_final(&ctx, outer_digest, digest_size);
 
-        /* Copy only the requested tag length — may be truncated (4..digest_size) */
+        /* Copy only the requested tag length - may be truncated (4..digest_size) */
         memcpy(job->auth_tag_output, outer_digest, job->auth_tag_output_len_in_bytes);
 
 #ifdef SAFE_DATA
@@ -116,7 +116,7 @@ submit_job_hmac_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         clear_scratch_gps();
         clear_scratch_xmms_sse();
 #endif
-        (void) state; /* unused — single-buffer, no OOO manager */
+        (void) state; /* unused - single-buffer, no OOO manager */
         job->status |= IMB_STATUS_COMPLETED_AUTH;
         return job;
 }

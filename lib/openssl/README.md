@@ -1,7 +1,7 @@
 # lib/openssl/
 
 This tree holds vendored OpenSSL `.c` / `.pl` sources, mirroring the layout of
-the upstream OpenSSL `crypto/` directory. No headers live here — see
+the upstream OpenSSL `crypto/` directory. No headers live here - see
 `lib/include/openssl/` for the corresponding vendored and compatibility
 headers.
 

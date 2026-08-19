@@ -16,7 +16,7 @@ These carry the OpenSSL Project Authors copyright and are licensed under the
 Files were ported from OpenSSL at commit:
 626ff8fd9344eb46e50464960ce84dcbacf5a4dd
 
-## `compat/` — ipsec-mb compatibility shims
+## `compat/` - ipsec-mb compatibility shims
 
 `compat/` provides the OpenSSL-compatibility surface that the vendored ML-DSA
 and ML-KEM code uses. The vendored sources include `openssl_compat.h`
@@ -32,18 +32,18 @@ non-trivial types or constants used by the vendored code:
 logic, and therefore carries a dual Intel + OpenSSL copyright/license header.
 OpenSSL-derived pieces include:
 
-- `openssl_compat.h` — `CRYPTO_memcmp()`, `OPENSSL_memdup()`, and the
+- `openssl_compat.h` - `CRYPTO_memcmp()`, `OPENSSL_memdup()`, and the
   `OPENSSL_{store,load}_u{16,32,64}_le()` helpers are adapted from OpenSSL's
   `crypto/cpuid.c`, `crypto/o_str.c`, and `include/openssl/byteorder.h`.
-- `compat/internal/sha3.h` — the macros, `struct keccak_st` layout, and
+- `compat/internal/sha3.h` - the macros, `struct keccak_st` layout, and
   function declarations are copied near-verbatim from OpenSSL's
   `include/internal/sha3.h`.
-- `compat/internal/packet.h` — the `PACKET` struct and its
+- `compat/internal/packet.h` - the `PACKET` struct and its
   `packet_forward()` / `PACKET_remaining()` / `PACKET_buf_init()` functions
   are copied near-verbatim from OpenSSL's `include/internal/packet.h` (the
   `WPACKET` side is an original, reduced-scope reimplementation).
 
 When adding a new compat shim, check whether you are reusing OpenSSL logic
 (struct layouts, algorithms, non-trivial control flow) versus just
-reimplementing an API name against ipsec-mb primitives — the former requires
+reimplementing an API name against ipsec-mb primitives - the former requires
 the dual copyright header, the latter does not.

@@ -66,7 +66,7 @@ json_parser_test(struct IMB_MGR *mb_mgr)
                 printf("JSON Parser test:\n");
 
         /* ------------------------------------------------------------------ */
-        /* P1 – valid MAC single vector                                        */
+        /* P1 - valid MAC single vector                                        */
         /* ------------------------------------------------------------------ */
         snprintf(path, sizeof(path), "imb_json_test_1_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
@@ -87,25 +87,25 @@ json_parser_test(struct IMB_MGR *mb_mgr)
                                    "  ]\n"
                                    "}\n");
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P1 – could not write temp file\n");
+                fprintf(stderr, "FAIL: P1 - could not write temp file\n");
                 errors++;
                 goto p1_done;
         }
         ret = json_load_mac_test(path, &mac_v, &ctx);
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P1 – json_load_mac_test returned %d\n", ret);
+                fprintf(stderr, "FAIL: P1 - json_load_mac_test returned %d\n", ret);
                 errors++;
                 goto p1_cleanup;
         }
         if (mac_v[1].msg != NULL) {
-                fprintf(stderr, "FAIL: P1 – expected sentinel at index 1\n");
+                fprintf(stderr, "FAIL: P1 - expected sentinel at index 1\n");
                 errors++;
         } else if (mac_v[0].tcId != 1 || mac_v[0].keySize != 128 || mac_v[0].msgSize != 128 ||
                    mac_v[0].tagSize != 128 || mac_v[0].resultValid != 1 || mac_v[0].key == NULL ||
                    (unsigned char) mac_v[0].key[0] != 0x2b || mac_v[0].msg == NULL ||
                    (unsigned char) mac_v[0].msg[0] != 0x6b || mac_v[0].tag == NULL ||
                    (unsigned char) mac_v[0].tag[0] != 0x07) {
-                fprintf(stderr, "FAIL: P1 – unexpected field values\n");
+                fprintf(stderr, "FAIL: P1 - unexpected field values\n");
                 errors++;
         } else {
                 if (!quiet_mode) {
@@ -124,7 +124,7 @@ p1_done:
         remove_tmp_file(path);
 
         /* ------------------------------------------------------------------ */
-        /* P2 – valid MAC with "invalid" result                                */
+        /* P2 - valid MAC with "invalid" result                                */
         /* ------------------------------------------------------------------ */
         snprintf(path, sizeof(path), "imb_json_test_2_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
@@ -145,18 +145,18 @@ p1_done:
                                    "  ]\n"
                                    "}\n");
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P2 – could not write temp file\n");
+                fprintf(stderr, "FAIL: P2 - could not write temp file\n");
                 errors++;
                 goto p2_done;
         }
         ret = json_load_mac_test(path, &mac_v, &ctx);
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P2 – json_load_mac_test returned %d\n", ret);
+                fprintf(stderr, "FAIL: P2 - json_load_mac_test returned %d\n", ret);
                 errors++;
                 goto p2_cleanup;
         }
         if (mac_v[0].resultValid != 0) {
-                fprintf(stderr, "FAIL: P2 – expected resultValid == 0, got %d\n",
+                fprintf(stderr, "FAIL: P2 - expected resultValid == 0, got %d\n",
                         mac_v[0].resultValid);
                 errors++;
         } else {
@@ -176,7 +176,7 @@ p2_done:
         remove_tmp_file(path);
 
         /* ------------------------------------------------------------------ */
-        /* P3 – size fields at testGroup level (inherited)                    */
+        /* P3 - size fields at testGroup level (inherited)                    */
         /* ------------------------------------------------------------------ */
         snprintf(path, sizeof(path), "imb_json_test_3_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
@@ -197,22 +197,22 @@ p2_done:
                                    "  ]\n"
                                    "}\n");
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P3 – could not write temp file\n");
+                fprintf(stderr, "FAIL: P3 - could not write temp file\n");
                 errors++;
                 goto p3_done;
         }
         ret = json_load_mac_test(path, &mac_v, &ctx);
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P3 – json_load_mac_test returned %d\n", ret);
+                fprintf(stderr, "FAIL: P3 - json_load_mac_test returned %d\n", ret);
                 errors++;
                 goto p3_cleanup;
         }
         if (mac_v[1].msg != NULL) {
-                fprintf(stderr, "FAIL: P3 – expected sentinel at index 1\n");
+                fprintf(stderr, "FAIL: P3 - expected sentinel at index 1\n");
                 errors++;
         } else if (mac_v[0].keySize != 128 || mac_v[0].tagSize != 128 || mac_v[0].key == NULL ||
                    (unsigned char) mac_v[0].key[0] != 0x2b) {
-                fprintf(stderr, "FAIL: P3 – unexpected field values\n");
+                fprintf(stderr, "FAIL: P3 - unexpected field values\n");
                 errors++;
         } else {
                 if (!quiet_mode) {
@@ -231,7 +231,7 @@ p3_done:
         remove_tmp_file(path);
 
         /* ------------------------------------------------------------------ */
-        /* P4 – valid MAC multiple testGroups                                  */
+        /* P4 - valid MAC multiple testGroups                                  */
         /* ------------------------------------------------------------------ */
         snprintf(path, sizeof(path), "imb_json_test_4_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
@@ -265,21 +265,21 @@ p3_done:
                                    "  ]\n"
                                    "}\n");
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P4 – could not write temp file\n");
+                fprintf(stderr, "FAIL: P4 - could not write temp file\n");
                 errors++;
                 goto p4_done;
         }
         ret = json_load_mac_test(path, &mac_v, &ctx);
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P4 – json_load_mac_test returned %d\n", ret);
+                fprintf(stderr, "FAIL: P4 - json_load_mac_test returned %d\n", ret);
                 errors++;
                 goto p4_cleanup;
         }
         if (mac_v[2].msg != NULL) {
-                fprintf(stderr, "FAIL: P4 – expected sentinel at index 2\n");
+                fprintf(stderr, "FAIL: P4 - expected sentinel at index 2\n");
                 errors++;
         } else if (mac_v[0].msg == NULL || mac_v[1].msg == NULL) {
-                fprintf(stderr, "FAIL: P4 – expected 2 vectors\n");
+                fprintf(stderr, "FAIL: P4 - expected 2 vectors\n");
                 errors++;
         } else {
                 if (!quiet_mode) {
@@ -298,7 +298,7 @@ p4_done:
         remove_tmp_file(path);
 
         /* ------------------------------------------------------------------ */
-        /* P5 – valid cipher single vector                                     */
+        /* P5 - valid cipher single vector                                     */
         /* ------------------------------------------------------------------ */
         snprintf(path, sizeof(path), "imb_json_test_5_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
@@ -320,18 +320,18 @@ p4_done:
                                    "  ]\n"
                                    "}\n");
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P5 – could not write temp file\n");
+                fprintf(stderr, "FAIL: P5 - could not write temp file\n");
                 errors++;
                 goto p5_done;
         }
         ret = json_load_cipher_test(path, &cipher_v, &ctx);
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P5 – json_load_cipher_test returned %d\n", ret);
+                fprintf(stderr, "FAIL: P5 - json_load_cipher_test returned %d\n", ret);
                 errors++;
                 goto p5_cleanup;
         }
         if (cipher_v[1].msg != NULL) {
-                fprintf(stderr, "FAIL: P5 – expected sentinel at index 1\n");
+                fprintf(stderr, "FAIL: P5 - expected sentinel at index 1\n");
                 errors++;
         } else if (cipher_v[0].keySize != 128 || cipher_v[0].ivSize != 128 ||
                    cipher_v[0].msgSize != 128 || cipher_v[0].resultValid != 1 ||
@@ -339,7 +339,7 @@ p4_done:
                    cipher_v[0].iv == NULL || (unsigned char) cipher_v[0].iv[0] != 0x00 ||
                    cipher_v[0].msg == NULL || (unsigned char) cipher_v[0].msg[0] != 0x6b ||
                    cipher_v[0].ct == NULL || (unsigned char) cipher_v[0].ct[0] != 0x76) {
-                fprintf(stderr, "FAIL: P5 – unexpected field values\n");
+                fprintf(stderr, "FAIL: P5 - unexpected field values\n");
                 errors++;
         } else {
                 if (!quiet_mode) {
@@ -358,7 +358,7 @@ p5_done:
         remove_tmp_file(path);
 
         /* ------------------------------------------------------------------ */
-        /* P6 – sizes derived from hex when size fields absent                 */
+        /* P6 - sizes derived from hex when size fields absent                 */
         /* ------------------------------------------------------------------ */
         snprintf(path, sizeof(path), "imb_json_test_6_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
@@ -377,18 +377,18 @@ p5_done:
                                    "  ]\n"
                                    "}\n");
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P6 – could not write temp file\n");
+                fprintf(stderr, "FAIL: P6 - could not write temp file\n");
                 errors++;
                 goto p6_done;
         }
         ret = json_load_mac_test(path, &mac_v, &ctx);
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P6 – json_load_mac_test returned %d\n", ret);
+                fprintf(stderr, "FAIL: P6 - json_load_mac_test returned %d\n", ret);
                 errors++;
                 goto p6_cleanup;
         }
         if (mac_v[0].keySize != 128 || mac_v[0].msgSize != 128 || mac_v[0].tagSize != 128) {
-                fprintf(stderr, "FAIL: P6 – derived sizes wrong: key=%zu msg=%zu tag=%zu\n",
+                fprintf(stderr, "FAIL: P6 - derived sizes wrong: key=%zu msg=%zu tag=%zu\n",
                         mac_v[0].keySize, mac_v[0].msgSize, mac_v[0].tagSize);
                 errors++;
         } else {
@@ -408,7 +408,7 @@ p6_done:
         remove_tmp_file(path);
 
         /* ------------------------------------------------------------------ */
-        /* P7 – valid AEAD vectors, sentinel and empty msg/tag handling        */
+        /* P7 - valid AEAD vectors, sentinel and empty msg/tag handling        */
         /* ------------------------------------------------------------------ */
         snprintf(path, sizeof(path), "imb_json_test_7_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
@@ -449,18 +449,18 @@ p6_done:
                                    "  ]\n"
                                    "}\n");
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P7 – could not write temp file\n");
+                fprintf(stderr, "FAIL: P7 - could not write temp file\n");
                 errors++;
                 goto p7_done;
         }
         ret = json_load_aead_test(path, &aead_v, &ctx);
         if (ret != 0) {
-                fprintf(stderr, "FAIL: P7 – json_load_aead_test returned %d\n", ret);
+                fprintf(stderr, "FAIL: P7 - json_load_aead_test returned %d\n", ret);
                 errors++;
                 goto p7_cleanup;
         }
         if (aead_v[2].msg != NULL) {
-                fprintf(stderr, "FAIL: P7 – expected sentinel at index 2\n");
+                fprintf(stderr, "FAIL: P7 - expected sentinel at index 2\n");
                 errors++;
         } else if (aead_v[0].tcId != 1 || aead_v[0].msgSize != 0 || aead_v[0].tagSize != 0 ||
                    aead_v[0].resultValid != 1 || aead_v[0].msg == NULL || aead_v[0].ct == NULL ||
@@ -468,7 +468,7 @@ p6_done:
                    aead_v[1].tagSize != 32 || aead_v[1].resultValid != 0 || aead_v[1].msg == NULL ||
                    (unsigned char) aead_v[1].msg[0] != 0x00 || aead_v[1].tag == NULL ||
                    (unsigned char) aead_v[1].tag[0] != 0x44) {
-                fprintf(stderr, "FAIL: P7 – unexpected field values\n");
+                fprintf(stderr, "FAIL: P7 - unexpected field values\n");
                 errors++;
         } else {
                 if (!quiet_mode) {
@@ -487,10 +487,10 @@ p7_done:
         remove_tmp_file(path);
 
         /* ================================================================== */
-        /* Negative tests – parser must return -1                             */
+        /* Negative tests - parser must return -1                             */
         /* ================================================================== */
 
-        /* N1 – empty file */
+        /* N1 - empty file */
         snprintf(path, sizeof(path), "imb_json_test_n1_%d.json", pid);
         if (write_tmp_file(path, "") != 0) {
                 fprintf(stderr, "FAIL: N1 - could not create temp file\n");
@@ -500,7 +500,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N1 – expected -1 for empty file, got %d\n", ret);
+                        fprintf(stderr, "FAIL: N1 - expected -1 for empty file, got %d\n", ret);
                         errors++;
                         json_free_test_ctx(ctx);
                         ctx = NULL;
@@ -516,7 +516,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N2 – empty JSON object {} */
+        /* N2 - empty JSON object {} */
         snprintf(path, sizeof(path), "imb_json_test_n2_%d.json", pid);
         if (write_tmp_file(path, "{}") != 0) {
                 fprintf(stderr, "FAIL: N2 - could not create temp file\n");
@@ -526,7 +526,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N2 – expected -1 for empty object, got %d\n", ret);
+                        fprintf(stderr, "FAIL: N2 - expected -1 for empty object, got %d\n", ret);
                         errors++;
                         json_free_test_ctx(ctx);
                         ctx = NULL;
@@ -542,7 +542,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N3 – root is array [] */
+        /* N3 - root is array [] */
         snprintf(path, sizeof(path), "imb_json_test_n3_%d.json", pid);
         if (write_tmp_file(path, "[]") != 0) {
                 fprintf(stderr, "FAIL: N3 - could not create temp file\n");
@@ -552,7 +552,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N3 – expected -1 for root array, got %d\n", ret);
+                        fprintf(stderr, "FAIL: N3 - expected -1 for root array, got %d\n", ret);
                         errors++;
                         json_free_test_ctx(ctx);
                         ctx = NULL;
@@ -568,7 +568,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N4 – testGroups not array */
+        /* N4 - testGroups not array */
         snprintf(path, sizeof(path), "imb_json_test_n4_%d.json", pid);
         if (write_tmp_file(path, "{\"testGroups\": \"bad\"}") != 0) {
                 fprintf(stderr, "FAIL: N4 - could not create temp file\n");
@@ -578,7 +578,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N4 – expected -1 for testGroups not array, got %d\n",
+                        fprintf(stderr, "FAIL: N4 - expected -1 for testGroups not array, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -595,7 +595,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N5 – tests not array */
+        /* N5 - tests not array */
         snprintf(path, sizeof(path), "imb_json_test_n5_%d.json", pid);
         if (write_tmp_file(path, "{\"testGroups\": [{\"tests\": \"bad\"}]}") != 0) {
                 fprintf(stderr, "FAIL: N5 - could not create temp file\n");
@@ -605,7 +605,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N5 – expected -1 for tests not array, got %d\n",
+                        fprintf(stderr, "FAIL: N5 - expected -1 for tests not array, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -622,7 +622,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N6 – missing result field */
+        /* N6 - missing result field */
         snprintf(path, sizeof(path), "imb_json_test_n6_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -647,7 +647,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N6 – expected -1 for missing result field, got %d\n",
+                        fprintf(stderr, "FAIL: N6 - expected -1 for missing result field, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -664,7 +664,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N7 – invalid result value */
+        /* N7 - invalid result value */
         snprintf(path, sizeof(path), "imb_json_test_n7_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -690,7 +690,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N7 – expected -1 for invalid result value, got %d\n",
+                        fprintf(stderr, "FAIL: N7 - expected -1 for invalid result value, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -707,7 +707,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N8 – invalid hex chars */
+        /* N8 - invalid hex chars */
         snprintf(path, sizeof(path), "imb_json_test_n8_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -733,7 +733,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N8 – expected -1 for invalid hex chars, got %d\n",
+                        fprintf(stderr, "FAIL: N8 - expected -1 for invalid hex chars, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -750,7 +750,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N9 – truncated JSON */
+        /* N9 - truncated JSON */
         snprintf(path, sizeof(path), "imb_json_test_n9_%d.json", pid);
         if (write_tmp_file(path, "{\"testGroups\": [") != 0) {
                 fprintf(stderr, "FAIL: N9 - could not create temp file\n");
@@ -760,7 +760,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N9 – expected -1 for truncated JSON, got %d\n", ret);
+                        fprintf(stderr, "FAIL: N9 - expected -1 for truncated JSON, got %d\n", ret);
                         errors++;
                         json_free_test_ctx(ctx);
                         ctx = NULL;
@@ -776,7 +776,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N10 – negative keySize */
+        /* N10 - negative keySize */
         snprintf(path, sizeof(path), "imb_json_test_n10_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -802,7 +802,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N10 – expected -1 for negative keySize, got %d\n",
+                        fprintf(stderr, "FAIL: N10 - expected -1 for negative keySize, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -819,7 +819,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N11 – keySize overflow */
+        /* N11 - keySize overflow */
         snprintf(path, sizeof(path), "imb_json_test_n11_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -845,7 +845,7 @@ p7_done:
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
-                        fprintf(stderr, "FAIL: N11 – expected -1 for keySize overflow, got %d\n",
+                        fprintf(stderr, "FAIL: N11 - expected -1 for keySize overflow, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -862,7 +862,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N12 – AEAD missing aad field */
+        /* N12 - AEAD missing aad field */
         snprintf(path, sizeof(path), "imb_json_test_n12_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -892,7 +892,7 @@ p7_done:
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
                         fprintf(stderr,
-                                "FAIL: N12 – expected -1 for AEAD missing aad field, got %d\n",
+                                "FAIL: N12 - expected -1 for AEAD missing aad field, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -909,7 +909,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N13 – AEAD tagSize exceeds decoded tag length */
+        /* N13 - AEAD tagSize exceeds decoded tag length */
         snprintf(path, sizeof(path), "imb_json_test_n13_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -940,7 +940,7 @@ p7_done:
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
                         fprintf(stderr,
-                                "FAIL: N13 – expected -1 for AEAD tagSize validation, got %d\n",
+                                "FAIL: N13 - expected -1 for AEAD tagSize validation, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);
@@ -957,7 +957,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N14 – cipher ct length does not match msg length */
+        /* N14 - cipher ct length does not match msg length */
         snprintf(path, sizeof(path), "imb_json_test_n14_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -985,7 +985,7 @@ p7_done:
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
                         fprintf(stderr,
-                                "FAIL: N14 – expected -1 for cipher ct/msg length mismatch, got "
+                                "FAIL: N14 - expected -1 for cipher ct/msg length mismatch, got "
                                 "%d\n",
                                 ret);
                         errors++;
@@ -1003,7 +1003,7 @@ p7_done:
                 remove_tmp_file(path);
         }
 
-        /* N15 – AEAD ct length does not match msg length */
+        /* N15 - AEAD ct length does not match msg length */
         snprintf(path, sizeof(path), "imb_json_test_n15_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
@@ -1034,7 +1034,7 @@ p7_done:
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
                         fprintf(stderr,
-                                "FAIL: N15 – expected -1 for AEAD ct/msg length mismatch, got %d\n",
+                                "FAIL: N15 - expected -1 for AEAD ct/msg length mismatch, got %d\n",
                                 ret);
                         errors++;
                         json_free_test_ctx(ctx);

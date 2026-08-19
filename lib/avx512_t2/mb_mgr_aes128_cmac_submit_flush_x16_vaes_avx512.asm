@@ -495,7 +495,7 @@ align_label
 %%_lt_one_block:
         ;; Single partial block
 
-        ;; zero length — build m_last from padding and K2 only (no src access)
+        ;; zero length - build m_last from padding and K2 only (no src access)
         ;; (must test len before it gets clobbered by tmp alias below)
         test    len, len
         jnz     %%_lt_one_block_nonzero

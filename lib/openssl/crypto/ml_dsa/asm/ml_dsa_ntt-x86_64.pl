@@ -168,8 +168,8 @@ ___
 #   to [0, Q).
 #
 #   Still used in two places:
-#     1. intt_levels5to7 — 1/N normalization (8 calls after the last INTT butterfly level)
-#     2. poly_ntt_mult_avx2 — pointwise NTT-domain polynomial multiplication
+#     1. intt_levels5to7 - 1/N normalization (8 calls after the last INTT butterfly level)
+#     2. poly_ntt_mult_avx2 - pointwise NTT-domain polynomial multiplication
 #
 #   NOTE: The NTT/INTT butterfly operations use a separate inlined signed multiply
 #   (vpmuldq + QINV) rather than calling this subroutine, because the signed butterfly
@@ -183,7 +183,7 @@ ___
 #   tmp0-tmp2 - Temporary registers for intermediate values
 #   q_neg_inv - YMM containing -Q^{-1} mod 2^32 (= 4236238847) broadcast 64-bit
 #   q         - YMM containing modulus Q (broadcast 32-bit)
-#   bcast32   – if 1, `inB` is assumed to have each qword formed by
+#   bcast32   - if 1, `inB` is assumed to have each qword formed by
 #               repeating its low dword (DW|DW). Multiplication uses only
 #               the low dword, avoiding the need for `vmovshdup` when
 #               zetas are uniform across all lanes of `inA`.
@@ -265,7 +265,7 @@ ___
 #
 #     t = hi32(zeta × w_odd) − hi32(Q × lo32(zeta_qinv × w_odd))   ∈ (−Q, Q)
 #
-#   Outputs are NOT biased — they remain signed and can be negative:
+#   Outputs are NOT biased - they remain signed and can be negative:
 #
 #     n_even = w_even + t   ∈ (−2Q, 2Q)
 #     n_odd  = w_even − t   ∈ (−2Q, 2Q)
@@ -285,8 +285,8 @@ ___
 #   tmp0..tmp3 - Scratch YMM registers
 #   q          - YMM broadcast with modulus Q
 #   level      - current NTT level (controls bcast32 mode:
-#                  level < 7  → bcast32=1, all 8 lanes share one zeta (vpbroadcastd)
-#                  level >= 7 → bcast32=0, each lane has a distinct zeta (vmovdqu))
+#                  level < 7  -> bcast32=1, all 8 lanes share one zeta (vpbroadcastd)
+#                  level >= 7 -> bcast32=0, each lane has a distinct zeta (vmovdqu))
 #
 # Side effects:
 #   Clobbers tmp0, tmp1, tmp2, tmp3
@@ -854,8 +854,8 @@ ___
 #   n_odd      - Output YMM for updated odd coefficients
 #   q          - YMM broadcast with modulus Q
 #   level      - current INTT level (controls bcast32 mode:
-#                  level >= 1 → bcast32=1, shared zeta (vpbroadcastd)
-#                  level < 1  → bcast32=0, per-lane distinct zetas (vmovdqu))
+#                  level >= 1 -> bcast32=1, shared zeta (vpbroadcastd)
+#                  level < 1  -> bcast32=0, per-lane distinct zetas (vmovdqu))
 #
 # Side effects:
 #   Clobbers tmp0, tmp1, tmp2, tmp3
@@ -914,7 +914,7 @@ ___
 # intt_levels0to4
 #
 # Description:
-#   Executes the first five stages (levels 0–4) of the INTT
+#   Executes the first five stages (levels 0-4) of the INTT
 #   on a block of 64 coefficients (8 YMM registers).
 #
 #   This function hierarchically mixes and transforms groups of coefficients using
@@ -1709,7 +1709,7 @@ for (my $i = 63; $i >= 32; $i -= 2) {
 
 $code .= <<___;
 # zetas_inverse: 256-entry inverse NTT twiddle-factor table (FIPS 204, Algorithm 36).
-# Entry i = Q - @zetas_fwd[255-i] — the negated forward zeta in reversed traversal
+# Entry i = Q - @zetas_fwd[255-i] - the negated forward zeta in reversed traversal
 # order, so the INTT can apply forward-table entries in reverse without a
 # per-butterfly negation step.
 # Used by INTT levels 0, 3, 4, 5, 6, 7 via the same base pointer with byte offsets.
@@ -1757,12 +1757,12 @@ idx_odd:
 ml_dsa_q:
     .quad $ML_DSA_Q
 
-# -Q^{-1} mod 2^32 — unsigned Montgomery parameter for multiply_mod_Q
+# -Q^{-1} mod 2^32 - unsigned Montgomery parameter for multiply_mod_Q
 .align 8
 ml_dsa_q_neg_inv:
     .quad $ML_DSA_Q_NEG_INV
 
-# N^{-1} mod Q in Montgomery form — for INTT 1/N scaling (FIPS 204, Table 1: N = 256)
+# N^{-1} mod Q in Montgomery form - for INTT 1/N scaling (FIPS 204, Table 1: N = 256)
 .align 8
 ml_dsa_inverse_degree_montgomery:
     .quad $inverse_degree_montgomery

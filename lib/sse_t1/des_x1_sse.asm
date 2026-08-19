@@ -698,7 +698,7 @@ fRK:
         pand    xmm1, xmm2
         pcmpeqb xmm1, xmm2                     ; xmm1 = input bits 16-31
 
-        ;; Step 2: pshufb permutation — output bits 0-15
+        ;; Step 2: pshufb permutation - output bits 0-15
         movdqa  xmm2, xmm0
         pshufb  xmm2, [rel p_lo_from_lo]
         movdqa  xmm3, xmm1
@@ -706,7 +706,7 @@ fRK:
         por     xmm2, xmm3
         pmovmskb eax, xmm2                     ; eax = output bits 0-15
 
-        ;; Step 3: pshufb permutation — output bits 16-31
+        ;; Step 3: pshufb permutation - output bits 16-31
         pshufb  xmm0, [rel p_hi_from_lo]
         pshufb  xmm1, [rel p_hi_from_hi]
         por     xmm0, xmm1

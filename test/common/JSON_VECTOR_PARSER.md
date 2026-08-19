@@ -12,13 +12,13 @@ be shared across multiple test applications.
 | Term | Meaning |
 |---|---|
 | **KAT (Known-Answer Test)** | A test where fixed, pre-computed inputs and their expected outputs are compared against a live crypto implementation to verify correctness. |
-| **Test vector** | One set of KAT inputs and expected outputs (key, plaintext, ciphertext, tag, …). |
+| **Test vector** | One set of KAT inputs and expected outputs (key, plaintext, ciphertext, tag, ...). |
 | **Tokenisation** | The first stage of parsing: scanning the raw JSON text and recording the type and byte-range of each structural element (object, array, string, number) without copying any data. |
-| **Token** | A lightweight descriptor pointing into the raw JSON buffer. Tokens are never decoded or copied — they are just `(type, start, end)` tuples. |
+| **Token** | A lightweight descriptor pointing into the raw JSON buffer. Tokens are never decoded or copied - they are just `(type, start, end)` tuples. |
 | **Decoding** | The second stage of parsing: reading a token's byte range from the raw buffer and converting it into its final form (e.g. decoding a hex string into binary bytes). |
-| **Hex string** | A string where every two characters represent one byte in hexadecimal (e.g. `"2b7e"` → `0x2b 0x7e`). All binary fields in the JSON files use this encoding. |
+| **Hex string** | A string where every two characters represent one byte in hexadecimal (e.g. `"2b7e"` -> `0x2b 0x7e`). All binary fields in the JSON files use this encoding. |
 | **Sentinel-terminated array** | An array whose last element is a zero-initialised dummy entry that signals the end of the data. Callers loop until they hit it rather than needing a separate length variable. For `mac_test`, `cipher_test`, and `aead_test`, the sentinel is detected by `msg == NULL`. |
-| **Allocation context** | An opaque object (`struct test_json_alloc_ctx`) that tracks every heap allocation made during a parse. Passing it to `json_free_test_ctx()` releases all memory in one call — callers never need to free individual fields. |
+| **Allocation context** | An opaque object (`struct test_json_alloc_ctx`) that tracks every heap allocation made during a parse. Passing it to `json_free_test_ctx()` releases all memory in one call - callers never need to free individual fields. |
 | **Field inheritance** | Size fields (`keySize`, `ivSize`, `tagSize`) are defined at the `testGroups` level and apply to every test case in that group. The parser reads these fields exclusively from the group scope; test-case-level size fields are not supported. Binary payload fields (`key`, `iv`, `msg`, `ct`, `tag`, `aad`) are read exclusively from the test-case scope. |
 | **`result` field** | A mandatory string in every test case that is either `"valid"` (the operation should succeed and produce the expected output) or `"invalid"` (the operation is expected to fail or produce a different output). Maps to `resultValid = 1` or `0`. |
 
@@ -28,7 +28,7 @@ be shared across multiple test applications.
 
 The parser lives in `test/common/vector_utils.c` and is exposed through the
 header `test/include/vector_utils.h`. It has **no external library
-dependencies** — tokenisation and decoding are implemented from scratch using
+dependencies** - tokenisation and decoding are implemented from scratch using
 only the C standard library.
 
 Three high-level entry points are provided:
@@ -173,7 +173,7 @@ Fields belong to one of two scopes within the JSON:
 > `len(hex_string) * 4`. When the size field is present it must exactly match
 > the hex-string length for `keySize` and `ivSize` (a mismatch is a parse
 > error). For `tagSize` the declared value may be smaller than the hex-string
-> length — this covers truncated tags where the hex field carries the full
+> length - this covers truncated tags where the hex field carries the full
 > output but only the declared number of bits are significant.
 > For cipher and AEAD vectors, plaintext and AAD sizes
 > are always derived from the hex field length and are not present in the JSON.
@@ -225,7 +225,7 @@ typedef struct {
 } json_tok;
 ```
 
-The tokeniser never copies string data — every token is just a window into the
+The tokeniser never copies string data - every token is just a window into the
 original in-memory document. Strings are read directly from the raw buffer at
 decode time.
 
@@ -233,9 +233,9 @@ decode time.
 
 | Type | Description |
 |---|---|
-| `JSON_TOK_OBJECT` | `{…}` — children are alternating key/value tokens |
-| `JSON_TOK_ARRAY` | `[…]` — children are value tokens |
-| `JSON_TOK_STRING` | `"…"` — `start`/`end` exclude the surrounding quotes |
+| `JSON_TOK_OBJECT` | `{...}` - children are alternating key/value tokens |
+| `JSON_TOK_ARRAY` | `[...]` - children are value tokens |
+| `JSON_TOK_STRING` | `"..."` - `start`/`end` exclude the surrounding quotes |
 | `JSON_TOK_PRIMITIVE` | Numbers, `true`, `false`, `null` |
 
 Error codes returned by the tokeniser:
@@ -248,8 +248,8 @@ Error codes returned by the tokeniser:
 
 ### Allocation context
 
-All heap memory — the JSON text buffer, the token array, the decoded binary
-buffers, and the output vector array — is tracked by a single
+All heap memory - the JSON text buffer, the token array, the decoded binary
+buffers, and the output vector array - is tracked by a single
 `struct test_json_alloc_ctx`. The context holds a growable pointer table; on
 success it is returned to the caller and on failure `json_free_test_ctx()`
 releases everything in one call.
@@ -262,7 +262,7 @@ test_json_alloc_ctx
         ├── [2] vector array   (mac_test* / cipher_test*)
         ├── [3] key buffer     (unsigned char*)
         ├── [4] msg buffer
-        └── …
+        └── ...
 ```
 
 ---
@@ -278,9 +278,9 @@ json_load_mac_test() / json_load_cipher_test() / json_load_aead_test()
     │       ├─ fopen() + read entire file into heap buffer
     │       ├─ json_tokenize_document()
     │       │     ├─ json_parse_value_token()          ← dispatch on first char
-    │       │     │     ├─ json_parse_object_token()   ← '{' … '}'
-    │       │     │     ├─ json_parse_array_token()    ← '[' … ']'
-    │       │     │     ├─ json_parse_string_token()   ← '"' … '"'
+    │       │     │     ├─ json_parse_object_token()   ← '{' ... '}'
+    │       │     │     ├─ json_parse_array_token()    ← '[' ... ']'
+    │       │     │     ├─ json_parse_string_token()   ← '"' ... '"'
     │       │     │     └─ json_parse_primitive_token()← numbers / keywords
     │       │     └─ retry with 2× capacity on JSON_PARSE_NOMEM
     │       └─ register token array in alloc context
@@ -289,19 +289,19 @@ json_load_mac_test() / json_load_cipher_test() / json_load_aead_test()
     │       ├─ tokens[0].type == JSON_TOK_OBJECT
     │       └─ "testGroups" is a JSON_TOK_ARRAY
     │
-    ├─ 4. First pass — count tests
-    │       └─ iterate testGroups → sum tokens[tests_idx].size
+    ├─ 4. First pass - count tests
+    │       └─ iterate testGroups -> sum tokens[tests_idx].size
     │
     ├─ 5. Allocate output vector array (test_cnt + 1 elements; last is zero sentinel)
     │
-    └─ 6. Second pass — decode each test case
+    └─ 6. Second pass - decode each test case
             ├─ json_object_get(tg_pos)      ← size fields from group scope
             ├─ json_object_get(tc_pos)      ← payload/metadata from test scope
             ├─ json_parse_size_t()          ← numeric fields
             ├─ json_hex_token_len_bytes()   ← validate hex length
-            ├─ json_decode_hex_token()      ← hex → binary buffer in ctx
+            ├─ json_decode_hex_token()      ← hex -> binary buffer in ctx
             ├─ json_validate_declared_size()← declared bits fit in buffer
-            └─ json_result_to_valid()       ← "valid"→1, "invalid"→0
+            └─ json_result_to_valid()       ← "valid"->1, "invalid"->0
 ```
 
 ### Key helpers
@@ -333,7 +333,7 @@ if (json_load_mac_test("path/to/vectors.json", &vectors, &ctx) != 0) {
 
 /* Iterate until sentinel (msg == NULL for last + 1 entry) */
 for (size_t i = 0; vectors[i].msg != NULL; i++) {
-    /* use vectors[i].key, vectors[i].msg, vectors[i].tag, … */
+    /* use vectors[i].key, vectors[i].msg, vectors[i].tag, ... */
 }
 
 json_free_test_ctx(ctx);
@@ -353,7 +353,7 @@ if (json_load_cipher_test("path/to/vectors.json", &vectors, &ctx) != 0) {
 }
 
 for (size_t i = 0; vectors[i].msg != NULL; i++) {
-    /* use vectors[i].key, vectors[i].iv, vectors[i].msg, vectors[i].ct, … */
+    /* use vectors[i].key, vectors[i].iv, vectors[i].msg, vectors[i].ct, ... */
 }
 
 json_free_test_ctx(ctx);
@@ -374,7 +374,7 @@ if (json_load_aead_test("path/to/vectors.json", &vectors, &ctx) != 0) {
 
 for (size_t i = 0; vectors[i].msg != NULL; i++) {
     /* use vectors[i].key, vectors[i].iv, vectors[i].aad,
-     * vectors[i].msg, vectors[i].ct, vectors[i].tag, … */
+     * vectors[i].msg, vectors[i].ct, vectors[i].tag, ... */
 }
 
 json_free_test_ctx(ctx);
@@ -384,14 +384,14 @@ json_free_test_ctx(ctx);
 
 | Return | Meaning |
 |---|---|
-| `0` | Success — `*out_vectors` and `*out_ctx` are valid |
-| `-1` | Failure — `*out_vectors` and `*out_ctx` are `NULL`; error printed to `stderr` in `DEBUG` builds |
+| `0` | Success - `*out_vectors` and `*out_ctx` are valid |
+| `-1` | Failure - `*out_vectors` and `*out_ctx` are `NULL`; error printed to `stderr` in `DEBUG` builds |
 
 ### Sentinel detection
 
 The output array has one extra zero-initialised element appended. For MAC,
 cipher, and AEAD vectors the sentinel is detected by `msg == NULL`. Do **not**
-use `tcId` or size fields for sentinel detection — they are `0` in the
+use `tcId` or size fields for sentinel detection - they are `0` in the
 sentinel but could also be `0` in a real vector.
 
 ---
@@ -535,14 +535,14 @@ run_my_test(void)
 
 ### Supplying the vector path
 
-The parser itself has no concept of a "default" vector directory — that is the
+The parser itself has no concept of a "default" vector directory - that is the
 responsibility of the calling application. Common approaches used in this
 repository include:
 
-- **Compiled-in default** — the CMake build system defines a preprocessor
+- **Compiled-in default** - the CMake build system defines a preprocessor
   macro (e.g. `MY_APP_VECTOR_DIR`) pointing to the `vectors/` subdirectory
   at configure time, so the binary works out of the box.
-- **Runtime override** — a command-line option (e.g. `--vector-dir <DIR>`)
+- **Runtime override** - a command-line option (e.g. `--vector-dir <DIR>`)
   lets the caller replace the compiled-in path without rebuilding.
 
 Each application is free to combine, extend, or replace these mechanisms as
@@ -559,24 +559,24 @@ system beyond temporary files:
 | Test | What it checks |
 |---|---|
 | P1 | Single MAC vector, all fields present |
-| P2 | MAC vector with `"result": "invalid"` → `resultValid == 0` |
+| P2 | MAC vector with `"result": "invalid"` -> `resultValid == 0` |
 | P3 | Size fields (`keySize`, `tagSize`) at `testGroups` level inherited by test case |
 | P4 | Multiple `testGroups`, all vectors collected |
 | P5 | Single cipher vector with `iv` and `ct` fields |
-| P6 | Size fields absent — derived from hex length |
+| P6 | Size fields absent - derived from hex length |
 | P7 | Valid AEAD vectors including empty `msg` and empty `tag` |
-| N1 | Empty file → `-1` |
-| N2 | Empty JSON object `{}` → `-1` |
-| N3 | Root is array `[]` → `-1` |
-| N4 | `testGroups` is not an array → `-1` |
-| N5 | `tests` is not an array → `-1` |
-| N6 | Missing `result` field → `-1` |
-| N7 | Invalid `result` value (`"maybe"`) → `-1` |
-| N8 | Invalid hex characters in `key` → `-1` |
-| N9 | Truncated JSON document → `-1` |
-| N10 | Negative `keySize` → `-1` |
-| N11 | `keySize` integer overflow → `-1` |
-| N12 | AEAD vector missing required `aad` field → `-1` |
-| N13 | AEAD `tagSize` exceeds decoded `tag` length → `-1` |
-| N14 | Cipher `ct` length does not match `msg` length → `-1` |
-| N15 | AEAD `ct` length does not match `msg` length → `-1` |
+| N1 | Empty file -> `-1` |
+| N2 | Empty JSON object `{}` -> `-1` |
+| N3 | Root is array `[]` -> `-1` |
+| N4 | `testGroups` is not an array -> `-1` |
+| N5 | `tests` is not an array -> `-1` |
+| N6 | Missing `result` field -> `-1` |
+| N7 | Invalid `result` value (`"maybe"`) -> `-1` |
+| N8 | Invalid hex characters in `key` -> `-1` |
+| N9 | Truncated JSON document -> `-1` |
+| N10 | Negative `keySize` -> `-1` |
+| N11 | `keySize` integer overflow -> `-1` |
+| N12 | AEAD vector missing required `aad` field -> `-1` |
+| N13 | AEAD `tagSize` exceeds decoded `tag` length -> `-1` |
+| N14 | Cipher `ct` length does not match `msg` length -> `-1` |
+| N15 | AEAD `ct` length does not match `msg` length -> `-1` |

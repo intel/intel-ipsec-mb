@@ -87,7 +87,7 @@ ossl_sha3_final(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
 int
 ossl_sha3_squeeze(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
 
-/* Default (generic x86_64) implementations — called directly by the EVP shim */
+/* Default (generic x86_64) implementations - called directly by the EVP shim */
 size_t
 ossl_sha3_absorb_default(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len);
 int

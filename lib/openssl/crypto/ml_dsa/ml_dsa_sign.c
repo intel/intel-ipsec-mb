@@ -327,7 +327,7 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                  * proof, so they reveal nothing about the key.
                  *
                  * c_tilde = H(mu || w1) carries taint that propagated from the
-                 * secret rho_prime through y → w → w1.  It is the Fiat-Shamir
+                 * secret rho_prime through y -> w -> w1.  It is the Fiat-Shamir
                  * challenge commitment and is published as part of the signature.
                  * We defer its declassification to here (rather than immediately
                  * after the SHAKE call) so that Valgrind can check that

@@ -84,7 +84,7 @@ endstruc
         ;; Reload state pointer (r11 clobbered by nia_vclmul_avx512 call)
         mov     %%STATE, [rsp + _state_save_nia4]
 
-        ;; Copy tag to output — masked store for partial tag lengths
+        ;; Copy tag to output - masked store for partial tag lengths
         vmovdqu64 %%DIGEST, [rsp + _digest_nia4]
         mov       %%GP1, [%%STATE + _snow5g_job_in_lane + %%LANE*8]     ;; job pointer
         mov       DWORD(%%GP1), [%%GP1 + _auth_tag_output_len_in_bytes]

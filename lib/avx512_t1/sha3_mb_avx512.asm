@@ -6,7 +6,7 @@
 ; AVX-512 SHA3 multi-buffer (4-lane) submit / flush.
 
 ; ============================================================
-; Named register aliases – used throughout SHA3_OOO_SUBMIT_FLUSH_FN
+; Named register aliases - used throughout SHA3_OOO_SUBMIT_FLUSH_FN
 ; ============================================================
 %define state           rbx     ; MB_MGR_SHA3_OOO* (callee-saved)
 %define lane            r12     ; current / selected lane index (0-3)
@@ -85,10 +85,10 @@ extern keccak1600_block_64bit
 ; We save them in a small stack frame allocated in the prologue.
 ;
 ; After 6 pushes (48 bytes) plus the caller's return address (8 bytes)
-; the stack is offset 56 bytes from 16-byte alignment → rsp mod 16 = 8.
+; the stack is offset 56 bytes from 16-byte alignment -> rsp mod 16 = 8.
 ; Subtracting WIN_FRAME_SIZE = 232 (≡ 8 mod 16) restores 16-byte alignment.
 ;
-;   [rsp +   0 ..  159]  xmm6–xmm15  (10 × 16 bytes)
+;   [rsp +   0 ..  159]  xmm6-xmm15  (10 × 16 bytes)
 ;   [rsp + 160]          rdi
 ;   [rsp + 168]          job (rsi)
 ;   [rsp + 176]          rbx (state)
@@ -192,7 +192,7 @@ MKGLOBAL(%%FN,function,internal)
         jne     %%ret_null
 %else
         ;; --- FLUSH: find first occupied lane (unrolled, no branches) ---
-        ;; Scan high→low with cmovne so the lowest occupied lane index wins.
+        ;; Scan high->low with cmovne so the lowest occupied lane index wins.
         cmp     dword [state + _sha3_num_lanes_inuse], 0
         je      %%ret_null
         mov     lane, 3
@@ -514,11 +514,11 @@ SHA3_OOO_SUBMIT_FLUSH_FN flush_job_sha3_512_avx512,  SHA3_512_RATE, SHA3_512_DIG
 ; Windows x64 stack frame for SHAKE_OOO_SUBMIT_FLUSH_FN
 ;
 ; After 6 pushes (48 bytes) + return address (8 bytes) = 56 bytes offset
-; → rsp mod 16 = 8.  We need the combined sub to be ≡ 8 mod 16 to restore
+; -> rsp mod 16 = 8.  We need the combined sub to be ≡ 8 mod 16 to restore
 ; 16-byte alignment before any call.  256 (scratch) + 232 (saves) = 488 ≡ 8 mod 16. ✓
 ;
 ;   [rsp +   0 ..  255]  scratch buffer for squeeze partial block
-;   [rsp + 256 ..  415]  xmm6–xmm15  (10 × 16 bytes)
+;   [rsp + 256 ..  415]  xmm6-xmm15  (10 × 16 bytes)
 ;   [rsp + 416]          rdi
 ;   [rsp + 424]          JOB (rsi)
 ;   [rsp + 432]          STATE (rbx)
@@ -639,7 +639,7 @@ MKGLOBAL(%%FN,function,internal)
         jne     %%ret_null
 %else
         ;; --- FLUSH: find first occupied lane (unrolled, no branches) ---
-        ;; Scan high→low with cmovne so the lowest occupied lane index wins.
+        ;; Scan high->low with cmovne so the lowest occupied lane index wins.
         cmp     dword [STATE + _sha3_num_lanes_inuse], 0
         je      %%ret_null
         mov     LANE, 3
@@ -844,7 +844,7 @@ align_label
         ;; Squeeze phase: extract outlen bytes for completing lane MIN_IDX
         ;; ====================================================================
 
-        ;; Compute ldata offset once into LANE (r12 – callee-saved, survives
+        ;; Compute ldata offset once into LANE (r12 - callee-saved, survives
         ;; all keccak1600_block_64bit calls below; its original lane-index role
         ;; is no longer needed past this point).
         ;; DATA0 already holds MIN_IDX * _SHA3_LANE_DATA_size from the finalize

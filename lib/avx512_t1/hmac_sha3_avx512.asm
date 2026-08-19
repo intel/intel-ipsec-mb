@@ -158,7 +158,7 @@ hmac_sha3_ %+ %%SFX %+ _submit_avx512:
 
         call            keccak_1600_init_state
 
-        ;; Absorb ipad block — exactly %%RATE bytes into sponge
+        ;; Absorb ipad block - exactly %%RATE bytes into sponge
         mov             data_ptr, [job + _auth_key_xor_ipad]
         ABSORB_BYTES    data_ptr, 0, %%RATE
         call            keccak1600_block_64bit
@@ -177,7 +177,7 @@ hmac_sha3_ %+ %%SFX %+ _submit_avx512:
         div             rcx                     ;; rax = block count, rdx = remainder
         mov             msg_len, rdx            ;; msg_len = remaining bytes < %%RATE
 
-        ;; Absorb all full rate-sized blocks — 1 backward jump per block
+        ;; Absorb all full rate-sized blocks - 1 backward jump per block
         test            rax, rax
         jz              %%inner_loop_done
 align_loop
@@ -203,7 +203,7 @@ align_label
         ABSORB_BYTES    rax, 0, %%RATE
         call            keccak1600_block_64bit
 
-        ;; Squeeze inner digest once, directly into a fresh _PARTIAL —
+        ;; Squeeze inner digest once, directly into a fresh _PARTIAL -
         ;; pad in-place and absorb without a separate _DIGEST staging copy.
         ZERO_PARTIAL
 %assign %%I 0
@@ -223,7 +223,7 @@ align_label
 
         call            keccak_1600_init_state
 
-        ;; Absorb opad block — exactly %%RATE bytes
+        ;; Absorb opad block - exactly %%RATE bytes
         mov             data_ptr, [job + _auth_key_xor_opad]
         ABSORB_BYTES    data_ptr, 0, %%RATE
         call            keccak1600_block_64bit
