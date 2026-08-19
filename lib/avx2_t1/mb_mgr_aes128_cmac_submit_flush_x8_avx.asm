@@ -206,6 +206,14 @@ align_label
 
         memcpy_avx_16 m_last, tmp, r, tmp4, iv
 
+%ifdef SAFE_DATA
+        ;; memcpy above leaves fragments of the message in the scratch GP
+        ;; registers - clear them before any subsequent call spills them onto
+        ;; the stack
+        xor     tmp4, tmp4
+        xor     iv, iv
+%endif
+
         ;; src + n + r
         mov     tmp3, [job + _skey2]
         vmovdqa xmm1, [m_last]

@@ -361,6 +361,14 @@ align_label
 
         memcpy_avx_16 m_last, TMP_GP_1, r, TMP_GP_2, TMP_GP_3
 
+%ifdef SAFE_DATA
+        ;; memcpy above leaves fragments of the message in the scratch GP
+        ;; registers - clear them before any subsequent call spills them onto
+        ;; the stack
+        xor     TMP_GP_2, TMP_GP_2
+        xor     TMP_GP_3, TMP_GP_3
+%endif
+
         ;; src + n + r
         mov     TMP_GP_3, [job + _skey2]
         vmovdqa XMM_TMP_1, [m_last]
