@@ -34,6 +34,7 @@
 #define AVX2_NUM_SHA256_LANES 8
 #define AVX2_NUM_SHA512_LANES 4
 #define AVX2_NUM_MD5_LANES    16
+#define AVX2_NUM_SHA3_LANES   4
 
 #define AVX_NUM_SHA1_LANES   4
 #define AVX_NUM_SHA256_LANES 4
@@ -122,8 +123,10 @@ typedef struct {
 
 typedef struct {
         /* interleaved keccak state: state[word*4 + lane], 25 words × 4 lanes */
-        DECLARE_ALIGNED(uint64_t keccak_state[SHA3_STATE_WORDS * AVX512_NUM_SHA3_LANES], 32);
-        const uint8_t *data_ptr[AVX512_NUM_SHA3_LANES];
+        DECLARE_ALIGNED(uint64_t keccak_state[SHA3_STATE_WORDS * AVX2_NUM_SHA3_LANES], 32);
+        /* 32-byte aligned: the flush paths load/store the whole array with
+         * aligned YMM moves (vmovdqa/vmovdqa64) */
+        DECLARE_ALIGNED(const uint8_t *data_ptr[AVX2_NUM_SHA3_LANES], 32);
 } SHA3_ARGS;
 
 typedef struct {

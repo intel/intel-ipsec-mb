@@ -542,7 +542,9 @@ _snow3g_args_byte_length      equ _snow3g_args + __snow3g_arg_byte_length
 START_FIELDS    ; SHA3_ARGS
 ;;      name                    size                            align
 FIELD   _sha3_kstate,           25*MAX_SHA3_LANES*8,            32      ; 4-lane interleaved keccak state (25 x 4 qwords)
-FIELD   _sha3_data_ptr,         MAX_SHA3_LANES*8,               8       ; array of 4 pointers to input data
+FIELD   _sha3_data_ptr,         MAX_SHA3_LANES*8,               32      ; array of 4 pointers to input data
+                                                                        ; 32B aligned: flush paths access the
+                                                                        ; whole array with aligned YMM moves
 END_FIELDS
 %assign _SHA3_ARGS_size         _FIELD_OFFSET
 %assign _SHA3_ARGS_align        _STRUCT_ALIGN

@@ -20,6 +20,7 @@ Library
 - Removed ZUC-EEA3-256 and ZUC-EIA3-256 algorithms.
 - Added SHA3-224, SHA3-256, SHA3-384 and SHA3-512 base implementations.
 - Added SHAKE128 and SHAKE256 base implementations.
+- Added AVX2 Type 1 4-lane multi-buffer implementations of SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128 and SHAKE256.
 - Removed KASUMI bit-length support and corresponding API.
 - Removed non-byte-aligned message length/offset support from wireless job APIs and direct APIs (AES-CMAC, ZUC-EIA3, SNOW3G-UIA2/UEA2, KASUMI-UEA1).
 - Added support for zero-length messages in HMAC-SHA and HMAC-MD5 algorithms.

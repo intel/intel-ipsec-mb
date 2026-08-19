@@ -199,6 +199,32 @@ submit_job_sha512_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_sha512_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
 
+/* SHA3 / SHAKE multi-buffer OOO (AVX2) */
+IMB_JOB *
+submit_job_sha3_224_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha3_224_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+submit_job_sha3_256_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha3_256_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+submit_job_sha3_384_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha3_384_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+submit_job_sha3_512_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha3_512_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+submit_job_shake128_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_shake128_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+submit_job_shake256_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_shake256_avx2(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+
 void
 aes_cmac_256_subkey_gen_avx2(const void *key_exp, void *key1, void *key2);
 
