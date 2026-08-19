@@ -102,7 +102,7 @@ misc_cpuid(const unsigned leaf, const unsigned subleaf, struct misc_cpuid_regs *
  * @retval 0 XGETBV NOT available
  * @retval 1 XGETBV available
  */
-static int
+static inline int
 avx_sse_detectability(void)
 {
         struct misc_cpuid_regs r;
@@ -123,7 +123,7 @@ avx_sse_detectability(void)
 }
 
 /* decodes cipher mode to string */
-static const char *
+static inline const char *
 misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
 {
         static char cb[64];
@@ -182,7 +182,7 @@ misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
 }
 
 /* decodes hash algorithm to string */
-static const char *
+static inline const char *
 misc_hash_alg_to_str(const IMB_HASH_ALG mode)
 {
         static char cb[64];
