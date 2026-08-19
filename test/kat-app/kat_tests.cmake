@@ -72,3 +72,23 @@ foreach(TYPE ${TEST_TYPES})
     COMMAND ${TEST_APP} --test-type ${TYPE}
     WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
 endforeach()
+
+# additionally run the algorithms carrying the Wycheproof vectors with CPU
+# extensions disabled
+set(SHANI_OFF_TEST_TYPES HMAC_SHA1 HMAC_SHA256)
+
+foreach(TYPE ${SHANI_OFF_TEST_TYPES})
+  add_test(
+    NAME KAT::${TYPE}_SHANI_OFF
+    COMMAND ${TEST_APP} --test-type ${TYPE} --shani-off
+    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+endforeach()
+
+set(GFNI_OFF_TEST_TYPES GCM GMAC CCM CMAC CHACHA20_POLY1305)
+
+foreach(TYPE ${GFNI_OFF_TEST_TYPES})
+  add_test(
+    NAME KAT::${TYPE}_GFNI_OFF
+    COMMAND ${TEST_APP} --test-type ${TYPE} --gfni-off
+    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+endforeach()

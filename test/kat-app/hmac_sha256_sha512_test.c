@@ -14,6 +14,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
+#include "wycheproof_test.h"
 
 #define max_burst_jobs 32
 
@@ -740,5 +741,10 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         free_hmac_sha256_vectors(ctx256);
         free_hmac_sha384_vectors(ctx384);
         free_hmac_sha512_vectors(ctx512);
+        errors += wycheproof_hmac_sha224_test(mb_mgr);
+        errors += wycheproof_hmac_sha256_test(mb_mgr);
+        errors += wycheproof_hmac_sha384_test(mb_mgr);
+        errors += wycheproof_hmac_sha512_test(mb_mgr);
+
         return errors;
 }

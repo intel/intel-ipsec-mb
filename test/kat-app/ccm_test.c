@@ -13,6 +13,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "aead_test.h"
+#include "wycheproof_test.h"
 
 int
 ccm_test(struct IMB_MGR *mb_mgr);
@@ -614,5 +615,7 @@ ccm_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx);
 
         free_ccm_vectors(ctx_128, ctx_256);
+        errors += wycheproof_ccm_test(mb_mgr);
+
         return errors;
 }

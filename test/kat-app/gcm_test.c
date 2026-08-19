@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "aead_test.h"
+#include "wycheproof_test.h"
 
 /* 0 - no extra messages, 1 - additional messages */
 #define VERBOSE 0
@@ -1360,5 +1361,7 @@ gcm_test(IMB_MGR *p_mgr)
         errors += test_suite_end(&ts256);
 
         free_gcm_vectors(vector_ctx);
+        errors += wycheproof_gcm_test(p_mgr);
+
         return errors;
 }

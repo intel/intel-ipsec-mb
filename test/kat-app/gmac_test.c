@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
+#include "wycheproof_test.h"
 
 int
 gmac_test(struct IMB_MGR *mb_mgr);
@@ -225,5 +226,7 @@ gmac_test(IMB_MGR *mb_mgr)
         errors += test_suite_end(&ts256);
 
         free_gmac_vectors(jctx);
+        errors += wycheproof_gmac_test(mb_mgr);
+
         return errors;
 }

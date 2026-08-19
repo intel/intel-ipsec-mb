@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "aead_test.h"
+#include "wycheproof_test.h"
 
 #define AAD_SZ    24
 #define DIGEST_SZ 16
@@ -915,5 +916,7 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
         errors = test_suite_end(&ctx);
 
         free_chacha20_poly1305_vectors(jctx);
+        errors += wycheproof_chacha20_poly1305_test(mb_mgr);
+
         return errors;
 }

@@ -14,6 +14,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
+#include "wycheproof_test.h"
 
 int
 hmac_sha1_test(struct IMB_MGR *mb_mgr);
@@ -463,5 +464,7 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
         errors = test_suite_end(&ts);
 
         free_hmac_sha1_vectors(ctx);
+        errors += wycheproof_hmac_sha1_test(mb_mgr);
+
         return errors;
 }

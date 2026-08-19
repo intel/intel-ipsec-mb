@@ -13,6 +13,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
+#include "wycheproof_test.h"
 
 enum cmac_type {
         CMAC_128 = 0,
@@ -589,6 +590,8 @@ cmac_test(struct IMB_MGR *mb_mgr)
         free_cmac_vectors(ctx_128, ctx_256);
         cmac_128_vectors = NULL;
         cmac_256_vectors = NULL;
+
+        errors += wycheproof_cmac_test(mb_mgr);
 
         return errors;
 }
