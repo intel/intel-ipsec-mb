@@ -57,6 +57,12 @@ Test Applications
 - Added zero-length message HMAC-SHA and HMAC-MD5 test vectors.
 - Added ML-DSA (FIPS 204) support for ML-DSA-44, ML-DSA-65 and ML-DSA-87 to imb-kat and imb-acvp applications.
 - Added ML-KEM (FIPS 203) support for ML-KEM-512, ML-KEM-768 and ML-KEM-1024 to imb-kat and imb-acvp applications.
+- Removed `imb-wycheproof` application. Its Project Wycheproof test vectors were
+  converted to JSON and are now run by `imb-kat` as part of the AES-GCM, AES-CCM,
+  CHACHA20-POLY1305, AES-CMAC, AES-GMAC and HMAC-SHA test types, across all
+  supported architectures.
+- Updated the Project Wycheproof test vectors to the upstream v1 vector set,
+  adding 154 new test cases.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.

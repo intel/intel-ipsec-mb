@@ -64,6 +64,34 @@ field:
 | `ind_cpa_test_schema_v1.json` | `IndCpaTest` | AES-CBC/CTR/ECB/CFB, DES/3DES/DES-CFB/DES-DOCSIS, ChaCha20, KASUMI-UEA1, SNOW3G-UEA2, ZUC-EEA3-128, ZUC-NEA6, SM4-CBC/CTR/ECB, SNOW5G-NEA4, AES-NEA5 |
 | `aead_test_schema_v1.json` | `AeadTest` | AES-GCM, AES-CCM-128/256, ChaCha20-Poly1305, SM4-GCM, ZUC-NCA6, SNOW5G-NCA4, AES-NCA5 |
 
+### Negative test vectors
+
+Most vector files contain only `"result": "valid"` cases. The `wycheproof_*`
+files are the exception: they are imported from the
+[Project Wycheproof](https://github.com/google/wycheproof) suite and roughly
+half of their cases are marked `"result": "invalid"`. Those cases deliberately
+use malformed or weak parameters (unsupported key/IV/tag sizes, corrupted tags,
+etc.) and pass only when the library either rejects the operation or produces a
+result that differs from the recorded one. Test applications consuming these
+files must therefore honour `resultValid` rather than treating every mismatch as
+a failure. See `test/kat-app/wycheproof_test.c` for a reference implementation,
+which `imb-kat` runs as part of the test type of the algorithm each file belongs
+to.
+
+Because a rejected `*_INIT()` call leaves its context structure untouched,
+applications must check `imb_get_errno()` after init and skip the subsequent
+`*_UPDATE()` / `*_FINALIZE()` calls when it reports an error.
+
+Where a negative vector carries no expected tag, its group declares
+`"tagSize": 0`.
+
+The `wycheproof_*` files are copied from the upstream project's `testvectors_v1`
+directory, which already follows this schema. Each group records where it came
+from in its `source` field. A small number of groups are marked with an older
+`source` version because they cover parameter combinations that later upstream
+releases dropped; they are kept so that test coverage is not reduced when the
+vectors are refreshed.
+
 ---
 
 ## JSON File Format
