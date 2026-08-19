@@ -22,7 +22,7 @@ set(CMAKE_C_FLAGS
 -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
 -Wformat-security -Wunreachable-code -Wmissing-noreturn -Wsign-compare \
 -Wno-endif-labels -Wstrict-prototypes -Wmissing-prototypes \
--Wold-style-definition -fno-delete-null-pointer-checks -fwrapv -std=c99")
+-Wold-style-definition -fno-delete-null-pointer-checks -fwrapv -std=c11")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -DDEBUG -g")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 set(CMAKE_EXE_LINKER_FLAGS "-fPIE")

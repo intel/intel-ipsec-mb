@@ -5,6 +5,7 @@ Unreleased
 General
 - Removed support for legacy Makefile-based builds and legacy Windows `.mak` build scripts.
 - Updated CI workflows, project documentation, and RPM packaging instructions to use CMake-only build flows.
+- Updated GCC and Clang builds to use the C11 standard, aligning them with the MSVC builds.
 
 Library
 - Added AES-CFB AVX2 type 2 implementation.

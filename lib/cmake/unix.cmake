@@ -26,7 +26,7 @@ set(CMAKE_C_FLAGS
 -Wformat-security -Wunreachable-code -Wmissing-noreturn \
 -Wsign-compare -Wno-endif-labels -Wstrict-prototypes \
 -Wmissing-prototypes -Wold-style-definition \
--fno-delete-null-pointer-checks -fwrapv -std=c99")
+-fno-delete-null-pointer-checks -fwrapv -std=c11")
 set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG -O0")
 set(CMAKE_C_FLAGS_RELEASE "-fstack-protector -D_FORTIFY_SOURCE=2 -O3")
 set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -lc")
