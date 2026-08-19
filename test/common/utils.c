@@ -182,6 +182,8 @@ update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint
  * @brief fill table of supported architectures
  *
  * @param arch_support table of supported architectures
+ * @param flags        IMB_MGR flags, extensions disabled through them are
+ *                     not taken into account when detecting architectures
  *
  * @return  Operation status
  * @retval 0 architectures identified correctly
@@ -203,8 +205,14 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM], const uint64_t flags)
         for (IMB_ARCH arch_id = IMB_ARCH_SSE; arch_id < IMB_ARCH_NUM; arch_id++)
                 arch_support[arch_id] = 1;
 
-        (void) flags;
-        const uint64_t features = imb_get_cpu_features();
+        uint64_t features = imb_get_cpu_features();
+
+        /* extensions disabled through the flags are not available to the MB_MGR */
+        if (flags & IMB_FLAG_SHANI_OFF)
+                features &= ~IMB_FEATURE_SHANI;
+
+        if (flags & IMB_FLAG_GFNI_OFF)
+                features &= ~IMB_FEATURE_GFNI;
 
         if ((features & detect_avx10) != detect_avx10)
                 arch_support[IMB_ARCH_AVX10] = 0;
