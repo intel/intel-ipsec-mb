@@ -62,6 +62,14 @@ set(TEST_TYPES
     SM4_CTR
     SM4_GCM
     SHA3
+    HMAC_SHA3
+    SNOW5G_NEA4
+    AES_NIA5
+    AES_NEA5
+    AES_NCA5
+    ZUC_NCA6
+    SNOW5G_NIA4
+    SNOW5G_NCA4
     ML_DSA
     ML_KEM)
 
