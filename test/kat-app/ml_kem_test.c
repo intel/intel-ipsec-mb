@@ -108,12 +108,11 @@ ml_kem_ctx_for_alg(const IMB_ML_KEM_ALG alg, struct test_suite_context ctxs[3])
 /*
  * Combined keygen-from-seed + decap vector ("MLKEMTest" schema,
  * mlkem_*_test.json): drives ML-KEM.KeyGen(seed) -> compare ek,
- * then ML-KEM.Decaps(dk, c) -> compare K. Only "valid" entries follow this
- * uniform pipeline: "invalid" entries in this schema represent structurally
- * malformed inputs (e.g. truncated keys) that are not exercised here, since
- * the fields they populate do not always carry the same semantics as the
- * "valid" case (e.g. "seed" may hold a non-64-byte value standing in for a
- * different kind of malformed input entirely).
+ * then ML-KEM.Decaps(dk, c) -> compare K.
+ * "Invalid" entries carry either a wrong size seed or a wrong size
+ * ciphertext. The latter is exercised here and decapsulation is expected to
+ * reject it. The former cannot be exercised, as the key generation seed is
+ * passed to the library as a plain pointer without a length.
  */
 static int
 ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const struct kem_test *v)
@@ -124,14 +123,20 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
         int rc;
         int ret = 1;
 
-        if (!v->resultValid)
-                return 0;
-
         if (ml_kem_alg_sizes(alg, &ek_bytes, &dk_bytes, &ct_bytes) < 0)
                 return 1;
         (void) dk_bytes;
-        if (!v->hasSeed || v->seedLen != ML_KEM_SEED_BYTES || !v->hasC || v->cLen != ct_bytes ||
-            !v->hasK || v->KLen != ML_KEM_K_BYTES)
+        if (!v->hasSeed || !v->hasC)
+                return 1;
+
+        /*
+         * The key generation seed is passed to the library as a plain pointer,
+         * so a wrong seed length cannot be handed over to be rejected.
+         */
+        if (v->seedLen != ML_KEM_SEED_BYTES)
+                return v->resultValid ? 1 : 0;
+
+        if (v->resultValid && (v->cLen != ct_bytes || !v->hasK || v->KLen != ML_KEM_K_BYTES))
                 return 1;
 
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
@@ -148,9 +153,16 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
         }
 
         rc = imb_ml_kem_decap(self, buf_ss, v->c, v->cLen, NULL);
-        if (rc != 0 || memcmp(buf_ss, v->K, ML_KEM_K_BYTES) != 0) {
-                printf("ML-KEM decap KAT mismatch (%s tcId=%zu rc=%d)\n", ml_kem_alg_name(alg),
-                       v->tcId, rc);
+
+        if (v->resultValid) {
+                if (rc != 0 || memcmp(buf_ss, v->K, ML_KEM_K_BYTES) != 0) {
+                        printf("ML-KEM decap KAT mismatch (%s tcId=%zu rc=%d)\n",
+                               ml_kem_alg_name(alg), v->tcId, rc);
+                        goto exit;
+                }
+        } else if (rc == 0) {
+                printf("ML-KEM decap unexpectedly succeeded (%s tcId=%zu ct_len=%zu)\n",
+                       ml_kem_alg_name(alg), v->tcId, v->cLen);
                 goto exit;
         }
 
@@ -164,8 +176,8 @@ exit:
  * Encapsulation vector ("MLKEMEncapsTest" schema, mlkem_*_encaps_test.json):
  * drives set_pubkey(ek) + ML-KEM.Encaps(m) -> compare c/K.
  * "Invalid" entries mean ek fails the FIPS 203 Section 7.2 encapsulation-key
- * check (set_pubkey must fail); some "invalid" vectors may still carry a
- * (meaningless) c/K that is not checked.
+ * check, which is asserted through the key validation API; some "invalid"
+ * vectors may still carry a (meaningless) c/K that is not checked.
  */
 static int
 ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const struct kem_test *v)
@@ -203,13 +215,14 @@ ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const str
                         goto exit;
                 }
         } else {
-                /* An "invalid" ek is allowed to be rejected by set_pubkey; if it
-                 * happens to parse anyway (some invalid categories are only
-                 * detectable via the pairwise-consistency check, not decoding),
-                 * encap succeeding is not itself an error - just don't assert
-                 * byte-exact c/K in that case. */
-                if (set_rc == 0 && rc != 0) {
-                        printf("ML-KEM encaps unexpectedly failed post set_pubkey (%s tcId=%zu)\n",
+                /*
+                 * The key must fail the FIPS 203 Section 7.2 encapsulation key
+                 * check. Keys of a wrong size cannot be handed over to the
+                 * library, as the key setting API takes the size implicitly
+                 * from the algorithm.
+                 */
+                if (v->ekLen == ek_bytes && imb_ml_kem_pubkey_validate(self, v->ek) == 0) {
+                        printf("ML-KEM encaps key unexpectedly validated (%s tcId=%zu)\n",
                                ml_kem_alg_name(alg), v->tcId);
                         goto exit;
                 }

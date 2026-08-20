@@ -213,6 +213,10 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 return 1;
         if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
+        /*
+         * The key generation seed is passed to the library as a plain pointer,
+         * so a wrong seed length cannot be handed over to be rejected.
+         */
         if (v->privateSeedLen != ML_DSA_SEED_BYTES)
                 return v->resultValid ? 1 : 0;
         if (v->hasRnd) {
@@ -353,6 +357,10 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 return 1;
         if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
+        /*
+         * The private key is passed to the library as a plain pointer, so a
+         * wrong key length cannot be handed over to be rejected.
+         */
         if (v->privateKeyLen != sk_bytes)
                 return v->resultValid ? 1 : 0;
         if (v->hasRnd) {
@@ -444,6 +452,18 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                         }
                 }
         } else {
+                /*
+                 * The vector must be rejected either when the private key is
+                 * bound to the context or when the signature is produced.
+                 */
+                const int validate_rc = imb_ml_dsa_privkey_validate(self, v->privateKey);
+
+                if ((set_rc == 0) != (validate_rc == 0)) {
+                        printf("ML-DSA private key validation inconsistent with key set "
+                               "(%s tcId=%zu set_rc=%d validate_rc=%d)\n",
+                               ml_dsa_alg_name(alg), v->tcId, set_rc, validate_rc);
+                        goto exit;
+                }
                 if (v->msg != NULL && set_rc == 0 && rc == 0) {
                         printf("ML-DSA sigGen unexpectedly succeeded (%s tcId=%zu)\n",
                                ml_dsa_alg_name(alg), v->tcId);
