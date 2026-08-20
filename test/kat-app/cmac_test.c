@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "mac_test.h"
 #include "wycheproof_test.h"
+#include "kat_common_hash.h"
 
 enum cmac_type {
         CMAC_128 = 0,
@@ -25,6 +26,13 @@ cmac_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *cmac_128_vectors;
 static struct mac_test *cmac_256_vectors;
+
+struct cmac_job_ctx {
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        uint32_t skey1[4];
+        uint32_t skey2[4];
+        IMB_HASH_ALG hash_alg;
+};
 
 /**
  * @brief Load all CMAC vector sets used by the CMAC kat-app module.
@@ -161,206 +169,61 @@ cmac_subkey_test(const struct cmac_subkeys *skeys, const uint32_t *skey1, const 
 }
 
 static int
-cmac_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-            const uint8_t *padding, const size_t sizeof_padding)
+cmac_job_prepare(struct IMB_JOB *job, void *ctx)
 {
-        const size_t auth_len = job->auth_tag_output_len_in_bytes;
+        const struct cmac_job_ctx *cmac = ctx;
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d Error status:%d", __LINE__, job->status);
-                return 0;
+        job->hash_alg = cmac->hash_alg;
+        job->u.CMAC._key_expanded = cmac->expkey;
+        job->u.CMAC._skey1 = cmac->skey1;
+        job->u.CMAC._skey2 = cmac->skey2;
+        return 0;
+}
+
+static int
+cmac_job_ctx_init(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
+                  const struct cmac_subkeys *subKeys, const enum cmac_type type,
+                  struct cmac_job_ctx *ctx)
+{
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
+
+        if (type == CMAC_128) {
+                IMB_AES_KEYEXP_128(mb_mgr, vec->key, ctx->expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, ctx->expkey, ctx->skey1, ctx->skey2);
+                ctx->hash_alg = IMB_AUTH_AES_CMAC;
+        } else { /* AES-CMAC-256 */
+                IMB_AES_KEYEXP_256(mb_mgr, vec->key, ctx->expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, ctx->expkey, ctx->skey1, ctx->skey2);
+                ctx->hash_alg = IMB_AUTH_AES_CMAC_256;
         }
 
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + auth_len], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + auth_len], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(vec->tag, &auth[sizeof_padding], auth_len)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], auth_len);
-                hexdump(stderr, "Expected", vec->tag, auth_len);
-                return 0;
-        }
-        return 1;
+        return cmac_subkey_test(subKeys, ctx->skey1, ctx->skey2) ? 0 : -1;
 }
 
 static int
 test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_subkeys *subKeys,
           const int num_jobs, const enum cmac_type type)
 {
-        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
-        uint32_t skey1[4], skey2[4];
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        struct cmac_job_ctx ctx;
+        const struct kat_hash_job_ops ops = {
+                .prepare = cmac_job_prepare,
+                .ctx = &ctx,
+        };
+        int i;
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
+        if (cmac_job_ctx_init(mb_mgr, vec, subKeys, type, &ctx) < 0)
+                return -1;
 
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
+        if (kat_hash_test_submit_flush(mb_mgr, vec, num_jobs, &ops))
+                return -1;
 
+        /* Keep the per-job submit/flush coverage by running 1-job batches. */
         for (i = 0; i < num_jobs; i++) {
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
+                if (kat_hash_test_submit_flush(mb_mgr, vec, 1, &ops))
+                        return -1;
         }
 
-        if (type == CMAC_128) {
-                IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
-                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
-        } else { /* AES-CMAC-256 */
-                IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
-                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, expkey, skey1, skey2);
-        }
-
-        if (!cmac_subkey_test(subKeys, skey1, skey2))
-                goto end;
-
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        /**
-         * Submit all jobs then flush any outstanding jobs
-         */
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-
-                switch (type) {
-                case CMAC_128:
-                        job->hash_alg = IMB_AUTH_AES_CMAC;
-                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                case CMAC_256:
-                        job->hash_alg = IMB_AUTH_AES_CMAC_256;
-                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                default:
-                        printf("Invalid CMAC type specified\n");
-                        goto end;
-                }
-                job->u.CMAC._key_expanded = expkey;
-                job->u.CMAC._skey1 = skey1;
-                job->u.CMAC._skey2 = skey2;
-                job->src = (const void *) vec->msg;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (num_jobs < 4) {
-                                printf("%d Unexpected return from submit_job\n", __LINE__);
-                                goto end;
-                        }
-                        if (!cmac_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-
-                if (!cmac_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-
-        /**
-         * Submit each job and flush immediately
-         */
-        for (i = 0; i < num_jobs; i++) {
-                struct IMB_JOB *first_job = NULL;
-
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                first_job = job;
-
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-
-                switch (type) {
-                case CMAC_128:
-                        job->hash_alg = IMB_AUTH_AES_CMAC;
-                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                case CMAC_256:
-                        job->hash_alg = IMB_AUTH_AES_CMAC_256;
-                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                default:
-                        printf("Invalid CMAC type specified\n");
-                        goto end;
-                }
-                job->u.CMAC._key_expanded = expkey;
-                job->u.CMAC._skey1 = skey1;
-                job->u.CMAC._skey2 = skey2;
-                job->src = (const void *) vec->msg;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        printf("Received job, expected NULL\n");
-                        goto end;
-                }
-
-                while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                        if (job != first_job) {
-                                printf("Invalid return job received\n");
-                                goto end;
-                        }
-                        if (!cmac_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return 0;
 }
 
 static int
@@ -368,122 +231,16 @@ test_cmac_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                      const struct cmac_subkeys *subKeys, const uint32_t num_jobs,
                      const enum cmac_type type)
 {
-        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
-        uint32_t skey1[4], skey2[4];
-        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE] = { 0 };
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int ret = -1;
-        uint32_t jobs_rx = 0, i, completed_jobs = 0;
+        struct cmac_job_ctx ctx;
+        const struct kat_hash_job_ops ops = {
+                .prepare = cmac_job_prepare,
+                .ctx = &ctx,
+        };
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
+        if (cmac_job_ctx_init(mb_mgr, vec, subKeys, type, &ctx) < 0)
+                return -1;
 
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
-        }
-
-        if (type == CMAC_128) {
-                IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
-                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
-        } else { /* AES-CMAC-256 */
-                IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
-                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, expkey, skey1, skey2);
-        }
-
-        if (!cmac_subkey_test(subKeys, skey1, skey2))
-                goto end;
-
-        /**
-         * Submit all jobs
-         */
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-
-                switch (type) {
-                case CMAC_128:
-                        job->hash_alg = IMB_AUTH_AES_CMAC;
-                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                case CMAC_256:
-                        job->hash_alg = IMB_AUTH_AES_CMAC_256;
-                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                default:
-                        printf("Invalid CMAC type specified\n");
-                        goto end;
-                }
-                job->u.CMAC._key_expanded = expkey;
-                job->u.CMAC._skey1 = skey1;
-                job->u.CMAC._skey2 = skey2;
-                job->src = (const void *) vec->msg;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                job->user_data = auths[i];
-        }
-
-        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, jobs[0].hash_alg);
-        if (completed_jobs != num_jobs) {
-                int err = imb_get_errno(mb_mgr);
-
-                if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                        goto end;
-                } else {
-                        printf("submit_burst error: not enough "
-                               "jobs returned!\n");
-                        goto end;
-                }
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i + 1);
-                        goto end;
-                }
-
-                if (!cmac_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                goto end;
-        }
-
-        ret = 0;
-
-end:
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_hash_burst(mb_mgr, vec, num_jobs, ctx.hash_alg, &ops);
 }
 
 static void
@@ -508,16 +265,14 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, co
                 if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_128)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
-                } else {
+                } else
                         test_suite_update(ctx, 1, 0);
-                }
 
                 if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128)) {
                         printf("hash burst error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
-                } else {
+                } else
                         test_suite_update(ctx, 1, 0);
-                }
         }
         if (!quiet_mode)
                 printf("\n");
@@ -546,15 +301,13 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx
                 if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_256)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
-                } else {
+                } else
                         test_suite_update(ctx, 1, 0);
-                }
                 if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_256)) {
                         printf("hash burst error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
-                } else {
+                } else
                         test_suite_update(ctx, 1, 0);
-                }
         }
         if (!quiet_mode)
                 printf("\n");
