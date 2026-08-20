@@ -57,19 +57,39 @@ free_hmac_sha512_vectors(struct test_json_alloc_ctx *ctx)
 
 struct hmac_shax_job_ctx {
         IMB_HASH_ALG hash_alg;
-        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
-        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
 };
 
 static int
-hmac_shax_job_prepare(struct IMB_JOB *job, void *ctx)
+hmac_shax_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                      void *ctx)
 {
         const struct hmac_shax_job_ctx *hmac = ctx;
+        uint8_t *ipad = NULL, *opad = NULL;
 
+        ipad = test_aligned_alloc(16, IMB_SHA512_DIGEST_SIZE_IN_BYTES);
+        if (ipad == NULL)
+                return -1;
+        opad = test_aligned_alloc(16, IMB_SHA512_DIGEST_SIZE_IN_BYTES);
+        if (opad == NULL) {
+                test_aligned_free(ipad);
+                return -1;
+        }
+
+        imb_hmac_ipad_opad(mb_mgr, hmac->hash_alg, vec->key, vec->keySize / 8, ipad, opad);
         job->hash_alg = hmac->hash_alg;
-        job->u.HMAC._hashed_auth_key_xor_ipad = hmac->ipad_hash;
-        job->u.HMAC._hashed_auth_key_xor_opad = hmac->opad_hash;
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad;
         return 0;
+}
+
+static void
+hmac_shax_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        (void) ctx;
+        test_aligned_free((void *) (uintptr_t) job->u.HMAC._hashed_auth_key_xor_ipad);
+        test_aligned_free((void *) (uintptr_t) job->u.HMAC._hashed_auth_key_xor_opad);
+        job->u.HMAC._hashed_auth_key_xor_ipad = NULL;
+        job->u.HMAC._hashed_auth_key_xor_opad = NULL;
 }
 
 static int
@@ -97,32 +117,27 @@ hmac_shax_hash_alg(const int sha_type, IMB_HASH_ALG *hash_alg)
 }
 
 static int
-hmac_shax_job_ctx_init(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int sha_type,
-                       struct hmac_shax_job_ctx *ctx)
-{
-        if (hmac_shax_hash_alg(sha_type, &ctx->hash_alg) < 0)
-                return -1;
-
-        imb_hmac_ipad_opad(mb_mgr, ctx->hash_alg, vec->key, vec->keySize / 8, ctx->ipad_hash,
-                           ctx->opad_hash);
-        return 0;
-}
-
-static int
 test_hmac_shax(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
                const int sha_type, const size_t tag_size)
 {
         struct hmac_shax_job_ctx ctx;
-        const struct kat_hash_job_ops ops = {
-                .prepare = hmac_shax_job_prepare,
-                .tag_size = tag_size,
-                .ctx = &ctx,
-        };
+        /* Override the tag size on a local copy instead of the shared vector. */
+        struct mac_test tag_vec = *vec;
+        const struct mac_test *tag_vec_ptr = &tag_vec;
 
-        if (hmac_shax_job_ctx_init(mb_mgr, vec, sha_type, &ctx) < 0)
+        tag_vec.tagSize = tag_size * 8;
+
+        if (hmac_shax_hash_alg(sha_type, &ctx.hash_alg) < 0)
                 return -1;
 
-        return kat_hash_test_submit_flush(mb_mgr, vec, num_jobs, &ops);
+        const struct kat_hash_job_ops ops = {
+                .prepare = hmac_shax_job_prepare,
+                .cleanup = hmac_shax_job_cleanup,
+                .ctx = &ctx,
+                .hash_alg = ctx.hash_alg,
+        };
+
+        return kat_hash_test_submit_flush(mb_mgr, &tag_vec_ptr, 1, num_jobs, &ops);
 }
 
 static int
@@ -130,15 +145,18 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const u
                      const int sha_type)
 {
         struct hmac_shax_job_ctx ctx;
-        const struct kat_hash_job_ops ops = {
-                .prepare = hmac_shax_job_prepare,
-                .ctx = &ctx,
-        };
 
-        if (hmac_shax_job_ctx_init(mb_mgr, vec, sha_type, &ctx) < 0)
+        if (hmac_shax_hash_alg(sha_type, &ctx.hash_alg) < 0)
                 return -1;
 
-        return kat_hash_test_burst(mb_mgr, vec, num_jobs, &ops);
+        const struct kat_hash_job_ops ops = {
+                .prepare = hmac_shax_job_prepare,
+                .cleanup = hmac_shax_job_cleanup,
+                .ctx = &ctx,
+                .hash_alg = ctx.hash_alg,
+        };
+
+        return kat_hash_test_burst(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static int
@@ -146,18 +164,18 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                           const uint32_t num_jobs, const int sha_type)
 {
         struct hmac_shax_job_ctx ctx;
+
+        if (hmac_shax_hash_alg(sha_type, &ctx.hash_alg) < 0)
+                return -1;
+
         const struct kat_hash_job_ops ops = {
                 .prepare = hmac_shax_job_prepare,
+                .cleanup = hmac_shax_job_cleanup,
                 .ctx = &ctx,
+                .hash_alg = ctx.hash_alg,
         };
-        IMB_HASH_ALG hash_alg;
 
-        if (hmac_shax_job_ctx_init(mb_mgr, vec, sha_type, &ctx) < 0)
-                return -1;
-        if (hmac_shax_hash_alg(sha_type, &hash_alg) < 0)
-                return -1;
-
-        return kat_hash_test_hash_burst(mb_mgr, vec, num_jobs, hash_alg, &ops);
+        return kat_hash_test_hash_burst(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static void

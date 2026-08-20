@@ -21,29 +21,38 @@ int
 hmac_sha1_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *hmac_sha1_vectors;
-
-struct hmac_sha1_job_ctx {
-        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA1_BLOCK_SIZE], 16);
-        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA1_BLOCK_SIZE], 16);
-};
+static int hmac_sha1_unused_ctx;
 
 static int
-hmac_sha1_job_prepare(struct IMB_JOB *job, void *ctx)
+hmac_sha1_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                      void *ctx)
 {
-        const struct hmac_sha1_job_ctx *hmac = ctx;
+        uint8_t *ipad = NULL, *opad = NULL;
 
-        job->hash_alg = IMB_AUTH_HMAC_SHA_1;
-        job->u.HMAC._hashed_auth_key_xor_ipad = hmac->ipad_hash;
-        job->u.HMAC._hashed_auth_key_xor_opad = hmac->opad_hash;
+        (void) ctx;
+        ipad = test_aligned_alloc(16, IMB_SHA1_BLOCK_SIZE);
+        if (ipad == NULL)
+                return -1;
+        opad = test_aligned_alloc(16, IMB_SHA1_BLOCK_SIZE);
+        if (opad == NULL) {
+                test_aligned_free(ipad);
+                return -1;
+        }
+
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1, vec->key, vec->keySize / 8, ipad, opad);
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad;
         return 0;
 }
 
 static void
-hmac_sha1_job_ctx_init(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
-                       struct hmac_sha1_job_ctx *ctx)
+hmac_sha1_job_cleanup(struct IMB_JOB *job, void *ctx)
 {
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1, vec->key, vec->keySize / 8, ctx->ipad_hash,
-                           ctx->opad_hash);
+        (void) ctx;
+        test_aligned_free((void *) (uintptr_t) job->u.HMAC._hashed_auth_key_xor_ipad);
+        test_aligned_free((void *) (uintptr_t) job->u.HMAC._hashed_auth_key_xor_opad);
+        job->u.HMAC._hashed_auth_key_xor_ipad = NULL;
+        job->u.HMAC._hashed_auth_key_xor_opad = NULL;
 }
 
 static void
@@ -58,10 +67,11 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
                            struct test_suite_context *ts)
 {
         const struct mac_test *v = hmac_sha1_vectors;
-        struct hmac_sha1_job_ctx ctx;
         const struct kat_hash_job_ops ops = {
                 .prepare = hmac_sha1_job_prepare,
-                .ctx = &ctx,
+                .cleanup = hmac_sha1_job_cleanup,
+                .ctx = &hmac_sha1_unused_ctx,
+                .hash_alg = IMB_AUTH_HMAC_SHA_1,
         };
 
         if (!quiet_mode)
@@ -77,18 +87,17 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
 #endif
                 }
 
-                hmac_sha1_job_ctx_init(mb_mgr, v, &ctx);
-                if (kat_hash_test_submit_flush(mb_mgr, v, num_jobs, &ops)) {
+                if (kat_hash_test_submit_flush(mb_mgr, &v, 1, num_jobs, &ops)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else
                         test_suite_update(ts, 1, 0);
-                if (kat_hash_test_burst(mb_mgr, v, num_jobs, &ops)) {
+                if (kat_hash_test_burst(mb_mgr, &v, 1, num_jobs, &ops)) {
                         printf("error #%zu - burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else
                         test_suite_update(ts, 1, 0);
-                if (kat_hash_test_hash_burst(mb_mgr, v, num_jobs, IMB_AUTH_HMAC_SHA_1, &ops)) {
+                if (kat_hash_test_hash_burst(mb_mgr, &v, 1, num_jobs, &ops)) {
                         printf("error #%zu - hash-only burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else
@@ -109,10 +118,13 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
         uint32_t num_jobs;
         uint32_t tag_size;
         const struct mac_test *v;
-        struct hmac_sha1_job_ctx tag_ctx;
-        struct kat_hash_job_ops tag_ops = {
+        struct mac_test tag_vec;
+        const struct mac_test *tag_vec_ptr = &tag_vec;
+        const struct kat_hash_job_ops tag_ops = {
                 .prepare = hmac_sha1_job_prepare,
-                .ctx = &tag_ctx,
+                .cleanup = hmac_sha1_job_cleanup,
+                .ctx = &hmac_sha1_unused_ctx,
+                .hash_alg = IMB_AUTH_HMAC_SHA_1,
         };
 
         if (load_mac_vectors(kat_vector_dir, "hmac_sha1_test.json", &hmac_sha1_vectors, &ctx) < 0)
@@ -127,10 +139,11 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
         test_hmac_sha1_std_vectors(mb_mgr, IMB_MAX_BURST_SIZE, &ts);
 
         assert(v->tagSize / 8 == 20);
+        tag_vec = *v;
         for (tag_size = 4; tag_size <= 20; tag_size++) {
-                tag_ops.tag_size = tag_size;
-                hmac_sha1_job_ctx_init(mb_mgr, v, &tag_ctx);
-                if (kat_hash_test_submit_flush(mb_mgr, v, TEST_MAX_NUM_JOBS, &tag_ops)) {
+                tag_vec.tagSize = tag_size * 8;
+                if (kat_hash_test_submit_flush(mb_mgr, &tag_vec_ptr, 1, TEST_MAX_NUM_JOBS,
+                                               &tag_ops)) {
                         printf("error tag size: %u\n", tag_size);
                         test_suite_update(&ts, 0, 1);
                 } else
@@ -138,9 +151,8 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
         }
 
         /* exercise max-burst path at max tag size */
-        tag_ops.tag_size = 20;
-        hmac_sha1_job_ctx_init(mb_mgr, v, &tag_ctx);
-        if (kat_hash_test_submit_flush(mb_mgr, v, IMB_MAX_BURST_SIZE, &tag_ops)) {
+        tag_vec.tagSize = 20 * 8;
+        if (kat_hash_test_submit_flush(mb_mgr, &tag_vec_ptr, 1, IMB_MAX_BURST_SIZE, &tag_ops)) {
                 printf("error tag size: %u (max burst)\n", 20);
                 test_suite_update(&ts, 0, 1);
         } else

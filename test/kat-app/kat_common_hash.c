@@ -14,7 +14,32 @@
 
 #define KAT_MAX_BURST_SIZE IMB_MAX_BURST_SIZE
 
-void
+static int
+kat_hash_validate_vec_tab(const struct mac_test *const *vec_tab, const uint32_t vec_tab_num)
+{
+        if (vec_tab == NULL || vec_tab_num != 1 || vec_tab[0] == NULL) {
+                printf("Invalid vec table configuration: vec_tab_num must be 1\n");
+                return -1;
+        }
+
+        return 0;
+}
+
+static const struct mac_test *
+kat_hash_get_vec(const struct mac_test *const *vec_tab, const uint32_t vec_tab_num,
+                 const uint32_t vec_idx)
+{
+        if (vec_tab_num == 1)
+                return vec_tab[0];
+
+        return vec_tab[vec_idx % vec_tab_num];
+}
+
+/*
+ * Initialize fields common to hash-only KAT jobs.
+ * Algorithm-specific fields are caller-owned.
+ */
+static void
 kat_hash_job_init(struct IMB_JOB *job, const void *src, const size_t msg_len, const size_t tag_len)
 {
         job->enc_keys = NULL;
@@ -32,34 +57,14 @@ kat_hash_job_init(struct IMB_JOB *job, const void *src, const size_t msg_len, co
         job->hash_start_src_offset_in_bytes = 0;
         job->msg_len_to_hash_in_bytes = msg_len;
         job->cipher_mode = IMB_CIPHER_NULL;
+        job->user_data = NULL;
+        job->user_data2 = NULL;
 }
 
 static int
-kat_job_prepare_hash(struct IMB_JOB *job, const void *vector, const struct kat_hash_job_ops *ops)
+kat_hash_job_check(const struct IMB_JOB *job, const struct mac_test *vec)
 {
-        const struct mac_test *vec = vector;
-        const size_t tag_size = (ops->tag_size != 0) ? ops->tag_size : vec->tagSize / 8;
-
-        /* Common ownership: this helper allocates the tag buffer and always frees it. */
-        job->auth_tag_output = malloc(tag_size);
-        if (job->auth_tag_output == NULL)
-                return -1;
-
-        kat_hash_job_init(job, (const void *) vec->msg, vec->msgSize / 8, tag_size);
-        if (ops->prepare(job, ops->ctx) < 0) {
-                kat_hash_job_cleanup(job, ops->ctx);
-                return -1;
-        }
-
-        return 0;
-}
-
-int
-kat_hash_job_check(const struct IMB_JOB *job, const void *vector, const void *ctx)
-{
-        const struct mac_test *vec = vector;
-        const struct kat_hash_job_ops *ops = ctx;
-        const size_t tag_size = (ops->tag_size != 0) ? ops->tag_size : vec->tagSize / 8;
+        const size_t tag_size = vec->tagSize / 8;
 
         if (job->status != IMB_STATUS_COMPLETED)
                 return -1;
@@ -73,51 +78,89 @@ kat_hash_job_check(const struct IMB_JOB *job, const void *vector, const void *ct
         return 0;
 }
 
-void
-kat_hash_job_cleanup(struct IMB_JOB *job, void *ctx)
+static void
+kat_hash_job_cleanup(struct IMB_JOB *job, const struct kat_hash_job_ops *ops)
 {
-        (void) ctx;
+        if (ops->cleanup != NULL)
+                ops->cleanup(job, ops->ctx);
         free(job->auth_tag_output);
         job->auth_tag_output = NULL;
 }
 
 static int
-kat_job_process_hash(struct IMB_JOB *job, const void *vec, const struct kat_hash_job_ops *ops)
+kat_job_prepare_hash(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                     const struct kat_hash_job_ops *ops)
 {
-        const int ret = kat_hash_job_check(job, vec, ops);
+        const size_t tag_size = vec->tagSize / 8;
+
+        /* Common ownership: this helper allocates the tag buffer and always frees it. */
+        job->auth_tag_output = malloc(tag_size);
+        if (job->auth_tag_output == NULL)
+                return -1;
+
+        kat_hash_job_init(job, (const void *) vec->msg, vec->msgSize / 8, tag_size);
+
+        if (ops->prepare(mb_mgr, job, vec, ops->ctx) < 0) {
+                kat_hash_job_cleanup(job, ops);
+                return -1;
+        }
+        job->hash_alg = ops->hash_alg;
+
+        return 0;
+}
+
+static int
+kat_job_process_hash(struct IMB_JOB *job, const struct mac_test *const *vec_tab,
+                     const uint32_t vec_tab_num, const struct kat_hash_job_ops *ops)
+{
+        const uint32_t vec_idx = (uint32_t) (uintptr_t) job->user_data2;
+        const struct mac_test *vec = kat_hash_get_vec(vec_tab, vec_tab_num, vec_idx);
+        const int ret = kat_hash_job_check(job, vec);
 
         /* Returned jobs are consumed here regardless of pass/fail status. */
-        kat_hash_job_cleanup(job, ops->ctx);
+        kat_hash_job_cleanup(job, ops);
         return ret;
 }
 
 int
-kat_hash_test_submit_flush(struct IMB_MGR *mb_mgr, const void *vec, const uint32_t num_jobs,
+kat_hash_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *const *vec_tab,
+                           const uint32_t vec_tab_num, const uint32_t num_jobs,
                            const struct kat_hash_job_ops *ops)
 {
         struct IMB_JOB *job;
         uint32_t jobs_rx = 0;
         int ret = -1;
 
+        if (ops == NULL || ops->prepare == NULL) {
+                printf("Invalid hash job operations\n");
+                return -1;
+        }
+
+        if (kat_hash_validate_vec_tab(vec_tab, vec_tab_num) < 0)
+                return -1;
+
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (uint32_t i = 0; i < num_jobs; i++) {
+                const struct mac_test *vec = kat_hash_get_vec(vec_tab, vec_tab_num, i);
+
                 job = IMB_GET_NEXT_JOB(mb_mgr);
-                if (kat_job_prepare_hash(job, vec, ops) < 0)
+                if (kat_job_prepare_hash(mb_mgr, job, vec, ops) < 0)
                         goto end;
+                job->user_data2 = (void *) (uintptr_t) i;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
-                        if (kat_job_process_hash(job, vec, ops) < 0)
+                        if (kat_job_process_hash(job, vec_tab, vec_tab_num, ops) < 0)
                                 goto end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (kat_job_process_hash(job, vec, ops) < 0)
+                if (kat_job_process_hash(job, vec_tab, vec_tab_num, ops) < 0)
                         goto end;
         }
 
@@ -128,27 +171,45 @@ kat_hash_test_submit_flush(struct IMB_MGR *mb_mgr, const void *vec, const uint32
         ret = 0;
 
 end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                kat_hash_job_cleanup(job, ops->ctx);
-        }
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                kat_hash_job_cleanup(job, ops);
         return ret;
 }
 
 int
-kat_hash_test_burst(struct IMB_MGR *mb_mgr, const void *vec, const uint32_t num_jobs,
+kat_hash_test_burst(struct IMB_MGR *mb_mgr, const struct mac_test *const *vec_tab,
+                    const uint32_t vec_tab_num, const uint32_t num_jobs,
                     const struct kat_hash_job_ops *ops)
 {
         struct IMB_JOB *job, *jobs[KAT_MAX_BURST_SIZE] = { NULL };
+        struct IMB_JOB *prepared[KAT_MAX_BURST_SIZE] = { NULL };
         uint32_t jobs_rx = 0, completed_jobs = 0, prepared_jobs = 0;
         int ret = -1;
+
+        if (ops == NULL || ops->prepare == NULL) {
+                printf("Invalid hash job operations\n");
+                return -1;
+        }
+
+        if (num_jobs == 0 || num_jobs > KAT_MAX_BURST_SIZE) {
+                printf("Invalid number of burst jobs: %u\n", num_jobs);
+                return -1;
+        }
+
+        if (kat_hash_validate_vec_tab(vec_tab, vec_tab_num) < 0)
+                return -1;
 
         while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
                 IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
 
         for (uint32_t i = 0; i < num_jobs; i++) {
-                if (kat_job_prepare_hash(jobs[i], vec, ops) < 0)
+                const struct mac_test *vec = kat_hash_get_vec(vec_tab, vec_tab_num, i);
+
+                if (kat_job_prepare_hash(mb_mgr, jobs[i], vec, ops) < 0)
                         goto end;
-                prepared_jobs++;
+                jobs[i]->user_data2 = (void *) (uintptr_t) i;
+                /* jobs[] gets overwritten by later flush calls; keep our own record. */
+                prepared[prepared_jobs++] = jobs[i];
                 imb_set_session(mb_mgr, jobs[i]);
         }
 
@@ -159,66 +220,86 @@ kat_hash_test_burst(struct IMB_MGR *mb_mgr, const void *vec, const uint32_t num_
                 goto end;
         }
 
-check_jobs:
-        for (uint32_t i = 0; i < completed_jobs; i++) {
-                job = jobs[i];
-                if (job->status != IMB_STATUS_COMPLETED || kat_job_process_hash(job, vec, ops) < 0)
-                        goto end;
-                jobs_rx++;
-        }
+        while (jobs_rx < num_jobs) {
+                for (uint32_t i = 0; i < completed_jobs; i++) {
+                        job = jobs[i];
+                        if (kat_job_process_hash(job, vec_tab, vec_tab_num, ops) < 0)
+                                goto end;
+                        jobs_rx++;
+                }
 
-        if (jobs_rx != num_jobs) {
+                if (jobs_rx == num_jobs)
+                        break;
+
                 completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - jobs_rx, jobs);
                 if (completed_jobs == 0) {
                         printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                         goto end;
                 }
-                goto check_jobs;
         }
-        ret = 0;
+        /* Every prepared job was already cleaned up above via kat_job_process_hash(). */
+        return 0;
 
 end:
-        completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
-        for (uint32_t i = 0; i < completed_jobs; i++) {
-                kat_hash_job_cleanup(jobs[i], ops->ctx);
-        }
-        /* Only jobs prepared successfully own an auth_tag_output allocation. */
+        /* Force outstanding jobs to completion before releasing their buffers. */
+        while (IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs) != 0)
+                ;
         for (uint32_t i = 0; i < prepared_jobs; i++) {
-                kat_hash_job_cleanup(jobs[i], ops->ctx);
+                if (prepared[i]->auth_tag_output != NULL)
+                        kat_hash_job_cleanup(prepared[i], ops);
         }
         return ret;
 }
 
 int
-kat_hash_test_hash_burst(struct IMB_MGR *mb_mgr, const void *vec, const uint32_t num_jobs,
-                         const IMB_HASH_ALG hash_alg, const struct kat_hash_job_ops *ops)
+kat_hash_test_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *const *vec_tab,
+                         const uint32_t vec_tab_num, const uint32_t num_jobs,
+                         const struct kat_hash_job_ops *ops)
 {
         struct IMB_JOB jobs[KAT_MAX_BURST_SIZE] = { 0 };
         uint32_t completed_jobs = 0, prepared_jobs = 0;
         int ret = -1;
 
+        if (ops == NULL || ops->prepare == NULL) {
+                printf("Invalid hash job operations\n");
+                return -1;
+        }
+
+        if (num_jobs == 0 || num_jobs > KAT_MAX_BURST_SIZE) {
+                printf("Invalid number of burst jobs: %u\n", num_jobs);
+                return -1;
+        }
+
+        if (kat_hash_validate_vec_tab(vec_tab, vec_tab_num) < 0)
+                return -1;
+
         for (uint32_t i = 0; i < num_jobs; i++) {
-                if (kat_job_prepare_hash(&jobs[i], vec, ops) < 0)
+                const struct mac_test *vec = kat_hash_get_vec(vec_tab, vec_tab_num, i);
+
+                if (kat_job_prepare_hash(mb_mgr, &jobs[i], vec, ops) < 0)
                         goto end;
+                jobs[i].user_data2 = (void *) (uintptr_t) i;
                 prepared_jobs++;
         }
 
-        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, hash_alg);
+        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, ops->hash_alg);
         if (completed_jobs != num_jobs) {
-                printf("submit_burst error: not enough jobs returned!\n");
+                const int err = imb_get_errno(mb_mgr);
+
+                printf("submit_hash_burst returned %u/%u jobs, error %d : '%s'\n", completed_jobs,
+                       num_jobs, err, imb_get_strerror(err));
                 goto end;
         }
 
-        for (uint32_t i = 0; i < num_jobs; i++) {
-                if (jobs[i].status != IMB_STATUS_COMPLETED ||
-                    kat_job_process_hash(&jobs[i], vec, ops) < 0)
+        for (uint32_t i = 0; i < num_jobs; i++)
+                if (kat_job_process_hash(&jobs[i], vec_tab, vec_tab_num, ops) < 0)
                         goto end;
-        }
         ret = 0;
 
 end:
         for (uint32_t i = 0; i < prepared_jobs; i++) {
-                kat_hash_job_cleanup(&jobs[i], ops->ctx);
+                if (jobs[i].auth_tag_output != NULL)
+                        kat_hash_job_cleanup(&jobs[i], ops);
         }
         return ret;
 }

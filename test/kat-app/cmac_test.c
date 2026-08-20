@@ -28,11 +28,21 @@ static struct mac_test *cmac_128_vectors;
 static struct mac_test *cmac_256_vectors;
 
 struct cmac_job_ctx {
-        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
-        uint32_t skey1[4];
-        uint32_t skey2[4];
-        IMB_HASH_ALG hash_alg;
+        uint32_t *expkey;
+        uint32_t *skey1;
+        uint32_t *skey2;
 };
+
+struct cmac_job_prepare_ctx {
+        const struct cmac_subkeys *subKeys;
+        enum cmac_type type;
+};
+
+static size_t
+cmac_expkey_size(const enum cmac_type type)
+{
+        return (type == CMAC_128) ? 11 * IMB_AES_BLOCK_SIZE : 15 * IMB_AES_BLOCK_SIZE;
+}
 
 /**
  * @brief Load all CMAC vector sets used by the CMAC kat-app module.
@@ -169,57 +179,92 @@ cmac_subkey_test(const struct cmac_subkeys *skeys, const uint32_t *skey1, const 
 }
 
 static int
-cmac_job_prepare(struct IMB_JOB *job, void *ctx)
+cmac_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec, void *ctx)
 {
-        const struct cmac_job_ctx *cmac = ctx;
+        const struct cmac_job_prepare_ctx *prepare_ctx = ctx;
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
+        struct cmac_job_ctx *cmac = calloc(1, sizeof(*cmac));
 
-        job->hash_alg = cmac->hash_alg;
+        if (cmac == NULL)
+                return -1;
+
+        cmac->expkey = test_aligned_alloc(16, cmac_expkey_size(prepare_ctx->type));
+        if (cmac->expkey == NULL) {
+                free(cmac);
+                return -1;
+        }
+
+        cmac->skey1 = test_aligned_alloc(16, IMB_AES_BLOCK_SIZE);
+        if (cmac->skey1 == NULL) {
+                test_aligned_free(cmac->expkey);
+                free(cmac);
+                return -1;
+        }
+        cmac->skey2 = test_aligned_alloc(16, IMB_AES_BLOCK_SIZE);
+        if (cmac->skey2 == NULL) {
+                test_aligned_free(cmac->expkey);
+                test_aligned_free(cmac->skey1);
+                free(cmac);
+                return -1;
+        }
+
+        if (prepare_ctx->type == CMAC_128) {
+                IMB_AES_KEYEXP_128(mb_mgr, vec->key, cmac->expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, cmac->expkey, cmac->skey1, cmac->skey2);
+        } else { /* AES-CMAC-256 */
+                IMB_AES_KEYEXP_256(mb_mgr, vec->key, cmac->expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, cmac->expkey, cmac->skey1, cmac->skey2);
+        }
+
+        if (!cmac_subkey_test(prepare_ctx->subKeys, cmac->skey1, cmac->skey2)) {
+                test_aligned_free(cmac->expkey);
+                test_aligned_free(cmac->skey1);
+                test_aligned_free(cmac->skey2);
+                free(cmac);
+                return -1;
+        }
+
+        job->user_data = cmac;
         job->u.CMAC._key_expanded = cmac->expkey;
         job->u.CMAC._skey1 = cmac->skey1;
         job->u.CMAC._skey2 = cmac->skey2;
         return 0;
 }
 
-static int
-cmac_job_ctx_init(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
-                  const struct cmac_subkeys *subKeys, const enum cmac_type type,
-                  struct cmac_job_ctx *ctx)
+static void
+cmac_job_cleanup(struct IMB_JOB *job, void *ctx)
 {
-        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
+        struct cmac_job_ctx *cmac = job->user_data;
 
-        if (type == CMAC_128) {
-                IMB_AES_KEYEXP_128(mb_mgr, vec->key, ctx->expkey, dust);
-                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, ctx->expkey, ctx->skey1, ctx->skey2);
-                ctx->hash_alg = IMB_AUTH_AES_CMAC;
-        } else { /* AES-CMAC-256 */
-                IMB_AES_KEYEXP_256(mb_mgr, vec->key, ctx->expkey, dust);
-                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, ctx->expkey, ctx->skey1, ctx->skey2);
-                ctx->hash_alg = IMB_AUTH_AES_CMAC_256;
+        (void) ctx;
+        if (cmac != NULL) {
+                test_aligned_free(cmac->expkey);
+                test_aligned_free(cmac->skey1);
+                test_aligned_free(cmac->skey2);
+                free(cmac);
         }
-
-        return cmac_subkey_test(subKeys, ctx->skey1, ctx->skey2) ? 0 : -1;
+        job->user_data = NULL;
 }
 
 static int
 test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_subkeys *subKeys,
           const int num_jobs, const enum cmac_type type)
 {
-        struct cmac_job_ctx ctx;
+        struct cmac_job_prepare_ctx prepare_ctx = { subKeys, type };
         const struct kat_hash_job_ops ops = {
                 .prepare = cmac_job_prepare,
-                .ctx = &ctx,
+                .cleanup = cmac_job_cleanup,
+                .ctx = &prepare_ctx,
+                .hash_alg = type == CMAC_128 ? IMB_AUTH_AES_CMAC : IMB_AUTH_AES_CMAC_256,
         };
         int i;
 
-        if (cmac_job_ctx_init(mb_mgr, vec, subKeys, type, &ctx) < 0)
-                return -1;
-
-        if (kat_hash_test_submit_flush(mb_mgr, vec, num_jobs, &ops))
+        if (kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops))
                 return -1;
 
         /* Keep the per-job submit/flush coverage by running 1-job batches. */
         for (i = 0; i < num_jobs; i++) {
-                if (kat_hash_test_submit_flush(mb_mgr, vec, 1, &ops))
+                if (kat_hash_test_submit_flush(mb_mgr, &vec, 1, 1, &ops))
                         return -1;
         }
 
@@ -231,16 +276,16 @@ test_cmac_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                      const struct cmac_subkeys *subKeys, const uint32_t num_jobs,
                      const enum cmac_type type)
 {
-        struct cmac_job_ctx ctx;
+        struct cmac_job_prepare_ctx prepare_ctx = { subKeys, type };
+
         const struct kat_hash_job_ops ops = {
                 .prepare = cmac_job_prepare,
-                .ctx = &ctx,
+                .cleanup = cmac_job_cleanup,
+                .ctx = &prepare_ctx,
+                .hash_alg = type == CMAC_128 ? IMB_AUTH_AES_CMAC : IMB_AUTH_AES_CMAC_256,
         };
 
-        if (cmac_job_ctx_init(mb_mgr, vec, subKeys, type, &ctx) < 0)
-                return -1;
-
-        return kat_hash_test_hash_burst(mb_mgr, vec, num_jobs, ctx.hash_alg, &ops);
+        return kat_hash_test_hash_burst(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static void

@@ -56,6 +56,30 @@ memory_set(void *dst, const int val, size_t length)
                 *d++ = val;
 }
 
+void *
+test_aligned_alloc(const size_t alignment, const size_t size)
+{
+#ifdef _WIN32
+        return _aligned_malloc(size, alignment);
+#else
+        void *ptr = NULL;
+
+        if (posix_memalign(&ptr, alignment, size) != 0)
+                return NULL;
+        return ptr;
+#endif
+}
+
+void
+test_aligned_free(void *ptr)
+{
+#ifdef _WIN32
+        _aligned_free(ptr);
+#else
+        free(ptr);
+#endif
+}
+
 /**
  * @brief Dumps fragment of memory in hex and ASCII into `fp`
  *

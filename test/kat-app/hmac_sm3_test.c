@@ -19,6 +19,7 @@ int
 hmac_sm3_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *hmac_sm3_vectors;
+static int hmac_sm3_unused_ctx;
 
 static void
 free_hmac_sm3_vectors(struct test_json_alloc_ctx *ctx)
@@ -27,54 +28,62 @@ free_hmac_sm3_vectors(struct test_json_alloc_ctx *ctx)
         hmac_sm3_vectors = NULL;
 }
 
-struct hmac_sm3_job_ctx {
-        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SM3_DIGEST_SIZE], 16);
-        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SM3_DIGEST_SIZE], 16);
-};
-
 static int
-hmac_sm3_job_prepare(struct IMB_JOB *job, void *ctx)
+hmac_sm3_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                     void *ctx)
 {
-        const struct hmac_sm3_job_ctx *hmac = ctx;
+        uint8_t *ipad = NULL, *opad = NULL;
 
-        job->hash_alg = IMB_AUTH_HMAC_SM3;
-        job->u.HMAC._hashed_auth_key_xor_ipad = hmac->ipad_hash;
-        job->u.HMAC._hashed_auth_key_xor_opad = hmac->opad_hash;
+        (void) ctx;
+        ipad = test_aligned_alloc(16, IMB_SM3_DIGEST_SIZE);
+        if (ipad == NULL)
+                return -1;
+        opad = test_aligned_alloc(16, IMB_SM3_DIGEST_SIZE);
+        if (opad == NULL) {
+                test_aligned_free(ipad);
+                return -1;
+        }
+
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SM3, vec->key, vec->keySize / 8, ipad, opad);
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad;
         return 0;
 }
 
 static void
-hmac_sm3_job_ctx_init(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
-                      struct hmac_sm3_job_ctx *ctx)
+hmac_sm3_job_cleanup(struct IMB_JOB *job, void *ctx)
 {
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SM3, vec->key, vec->keySize / 8, ctx->ipad_hash,
-                           ctx->opad_hash);
+        (void) ctx;
+        test_aligned_free((void *) (uintptr_t) job->u.HMAC._hashed_auth_key_xor_ipad);
+        test_aligned_free((void *) (uintptr_t) job->u.HMAC._hashed_auth_key_xor_opad);
+        job->u.HMAC._hashed_auth_key_xor_ipad = NULL;
+        job->u.HMAC._hashed_auth_key_xor_opad = NULL;
 }
 
 static int
 test_hmac_sm3(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs)
 {
-        struct hmac_sm3_job_ctx ctx;
         const struct kat_hash_job_ops ops = {
                 .prepare = hmac_sm3_job_prepare,
-                .ctx = &ctx,
+                .cleanup = hmac_sm3_job_cleanup,
+                .ctx = &hmac_sm3_unused_ctx,
+                .hash_alg = IMB_AUTH_HMAC_SM3,
         };
 
-        hmac_sm3_job_ctx_init(mb_mgr, vec, &ctx);
-        return kat_hash_test_submit_flush(mb_mgr, vec, num_jobs, &ops);
+        return kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static int
 test_hmac_sm3_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs)
 {
-        struct hmac_sm3_job_ctx ctx;
         const struct kat_hash_job_ops ops = {
                 .prepare = hmac_sm3_job_prepare,
-                .ctx = &ctx,
+                .cleanup = hmac_sm3_job_cleanup,
+                .ctx = &hmac_sm3_unused_ctx,
+                .hash_alg = IMB_AUTH_HMAC_SM3,
         };
 
-        hmac_sm3_job_ctx_init(mb_mgr, vec, &ctx);
-        return kat_hash_test_burst(mb_mgr, vec, num_jobs, &ops);
+        return kat_hash_test_burst(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static void

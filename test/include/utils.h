@@ -9,6 +9,9 @@
 
 #include <stdio.h>
 #include <fcntl.h>
+#ifdef _WIN32
+#include <malloc.h>
+#endif
 #include <intel-ipsec-mb.h>
 
 #ifdef _WIN32
@@ -86,6 +89,13 @@ void
 memory_copy(void *dst, const void *src, size_t length);
 void
 memory_set(void *dst, const int val, size_t length);
+
+void *
+test_aligned_alloc(const size_t alignment, const size_t size);
+
+void
+test_aligned_free(void *ptr);
+
 /* Directory containing JSON vector files (set by --vector-dir; default: "<app>/vectors") */
 extern const char *kat_vector_dir;
 
