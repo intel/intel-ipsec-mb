@@ -210,6 +210,7 @@ macro(imb_add_target_style_checks)
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang-format.cmake")
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-format.cmake")
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/asm-format.cmake")
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/special-chars.cmake")
 endmacro()
 
 # add TAGS target
