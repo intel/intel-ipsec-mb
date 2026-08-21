@@ -226,19 +226,17 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        {
-                IMB_ML_DSA_KEYGEN_PARAMS keygen_params;
+        IMB_ML_DSA_KEYGEN_PARAMS keygen_params;
 
-                IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
-                /*
-                 * A NULL seed asks the library for a random one, so a vector
-                 * carrying an empty seed is handed over as a non-NULL buffer.
-                 */
-                keygen_params.xi_32 = (v->privateSeed != NULL) ? (const void *) v->privateSeed
-                                                               : (const void *) zero_rnd;
-                keygen_params.xi_len = v->privateSeedLen;
-                rc = imb_ml_dsa_keypair(self, buf_pk, buf_sk, &keygen_params);
-        }
+        IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
+        /*
+         * A NULL seed asks the library for a random one, so a vector
+         * carrying an empty seed is handed over as a non-NULL buffer.
+         */
+        keygen_params.xi_32 =
+                (v->privateSeed != NULL) ? (const void *) v->privateSeed : (const void *) zero_rnd;
+        keygen_params.xi_len = v->privateSeedLen;
+        rc = imb_ml_dsa_keypair(self, buf_pk, buf_sk, &keygen_params);
         if (!v->resultValid && rc != 0) {
                 /* the key generation seed was rejected, as expected */
                 ret = 0;
@@ -671,56 +669,45 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
          * set_pubkey() call.
          */
 
+        IMB_ML_DSA_SIGN_PARAMS sign_params;
+        IMB_ML_DSA_VERIFY_PARAMS verify_params;
+
         /* hedged sign with context, then verify */
-        {
-                IMB_ML_DSA_SIGN_PARAMS sign_params;
+        IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
+        sign_params.ctx = ctx;
+        sign_params.ctx_len = ctx_len;
+        sign_params.rnd_32 = NULL;
+        if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0 ||
+            sig_len != sig_bytes)
+                goto exit;
 
-                IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
+        IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
+        verify_params.ctx = ctx;
+        verify_params.ctx_len = ctx_len;
+        if (imb_ml_dsa_verify(self, msg, msg_len, buf_sig, sig_len, &verify_params) != 0)
+                goto exit;
 
-                sign_params.ctx = ctx;
-                sign_params.ctx_len = ctx_len;
-                sign_params.rnd_32 = NULL;
-                if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0 ||
-                    sig_len != sig_bytes)
-                        goto exit;
-        }
-        {
-                IMB_ML_DSA_VERIFY_PARAMS verify_params;
-
-                IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
-
-                verify_params.ctx = ctx;
-                verify_params.ctx_len = ctx_len;
-                if (imb_ml_dsa_verify(self, msg, msg_len, buf_sig, sig_len, &verify_params) != 0)
-                        goto exit;
-
-                /* tampered signature must be rejected */
-                buf_sig[sig_bytes / 2] ^= 0x55;
-                if (imb_ml_dsa_verify(self, msg, msg_len, buf_sig, sig_len, &verify_params) == 0)
-                        goto exit;
-                buf_sig[sig_bytes / 2] ^= 0x55;
-        }
+        /* tampered signature must be rejected */
+        buf_sig[sig_bytes / 2] ^= 0x55;
+        if (imb_ml_dsa_verify(self, msg, msg_len, buf_sig, sig_len, &verify_params) == 0)
+                goto exit;
+        buf_sig[sig_bytes / 2] ^= 0x55;
 
         /* wrong context must be rejected */
         if (imb_ml_dsa_verify(self, msg, msg_len, buf_sig, sig_len, NULL) == 0)
                 goto exit;
 
         /* deterministic signing is reproducible (explicit all-zero rnd_32) */
-        {
-                IMB_ML_DSA_SIGN_PARAMS sign_params;
-
-                IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
-
-                sign_params.ctx = NULL;
-                sign_params.ctx_len = 0;
-                sign_params.rnd_32 = zero_rnd;
-                sig_len = sizeof(buf_sig);
-                if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0)
-                        goto exit;
-                sig_len2 = sizeof(exp_sig);
-                if (imb_ml_dsa_sign(self, exp_sig, &sig_len2, msg, msg_len, &sign_params) != 0)
-                        goto exit;
-        }
+        IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
+        sign_params.ctx = NULL;
+        sign_params.ctx_len = 0;
+        sign_params.rnd_32 = zero_rnd;
+        sig_len = sizeof(buf_sig);
+        if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0)
+                goto exit;
+        sig_len2 = sizeof(exp_sig);
+        if (imb_ml_dsa_sign(self, exp_sig, &sig_len2, msg, msg_len, &sign_params) != 0)
+                goto exit;
         if (sig_len != sig_len2 || memcmp(buf_sig, exp_sig, sig_len) != 0)
                 goto exit;
         if (imb_ml_dsa_verify(self, msg, msg_len, buf_sig, sig_len, NULL) != 0)

@@ -529,36 +529,32 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
                 goto exit;
 
         /* deterministic key generation is reproducible (explicit seed) */
-        {
-                IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
-                static const uint8_t zero_seed[ML_KEM_SEED_BYTES] = { 0 };
+        static const uint8_t zero_seed[ML_KEM_SEED_BYTES] = { 0 };
+        IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
 
-                IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
-                keygen_params.seed_d_z = zero_seed;
-                if (imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params) != 0)
-                        goto exit;
-                if (imb_ml_kem_keypair(self, exp_ek, exp_dk, &keygen_params) != 0)
-                        goto exit;
-        }
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
+        keygen_params.seed_d_z = zero_seed;
+        keygen_params.seed_d_z_len = sizeof(zero_seed);
+        if (imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params) != 0)
+                goto exit;
+        if (imb_ml_kem_keypair(self, exp_ek, exp_dk, &keygen_params) != 0)
+                goto exit;
         if (memcmp(buf_ek, exp_ek, ek_bytes) != 0 || memcmp(buf_dk, exp_dk, dk_bytes) != 0)
                 goto exit;
 
         /* deterministic encapsulation is reproducible (explicit m_32) */
-        {
-                IMB_ML_KEM_ENCAP_PARAMS encap_params;
-                static const uint8_t zero_m[ML_KEM_M_BYTES] = { 0 };
-                uint8_t ss2[ML_KEM_K_BYTES];
+        static const uint8_t zero_m[ML_KEM_M_BYTES] = { 0 };
+        IMB_ML_KEM_ENCAP_PARAMS encap_params;
+        uint8_t ss2[ML_KEM_K_BYTES];
 
-                IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
-                encap_params.m_32 = zero_m;
-                if (imb_ml_kem_encap(self, buf_ct, buf_ss, &encap_params) != 0)
-                        goto exit;
-                if (imb_ml_kem_encap(self, exp_ct, ss2, &encap_params) != 0)
-                        goto exit;
-                if (memcmp(buf_ct, exp_ct, ct_bytes) != 0 ||
-                    memcmp(buf_ss, ss2, ML_KEM_K_BYTES) != 0)
-                        goto exit;
-        }
+        IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
+        encap_params.m_32 = zero_m;
+        if (imb_ml_kem_encap(self, buf_ct, buf_ss, &encap_params) != 0)
+                goto exit;
+        if (imb_ml_kem_encap(self, exp_ct, ss2, &encap_params) != 0)
+                goto exit;
+        if (memcmp(buf_ct, exp_ct, ct_bytes) != 0 || memcmp(buf_ss, ss2, ML_KEM_K_BYTES) != 0)
+                goto exit;
 
         ret = 0;
 exit:
