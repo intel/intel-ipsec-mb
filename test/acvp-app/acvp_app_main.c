@@ -2054,6 +2054,7 @@ ml_dsa_keygen_handler(ACVP_TEST_CASE *test_case)
 
         IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.xi_32 = tc->seed;
+        keygen_params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
         if (imb_ml_dsa_keypair(handle, tc->pub_key, tc->secret_key, &keygen_params) != 0) {
                 fprintf(stderr, "ML-DSA key generation failed\n");
                 goto exit;
@@ -2121,7 +2122,7 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        if (imb_ml_dsa_set_privkey(handle, tc->secret_key) != 0) {
+        if (imb_ml_dsa_set_privkey(handle, tc->secret_key, (size_t) tc->secret_key_len) != 0) {
                 fprintf(stderr, "ML-DSA private key binding failed\n");
                 goto exit;
         }
@@ -2205,7 +2206,7 @@ ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        if (imb_ml_dsa_set_pubkey(handle, tc->pub_key) != 0) {
+        if (imb_ml_dsa_set_pubkey(handle, tc->pub_key, (size_t) tc->pub_key_len) != 0) {
                 /*
                  * A public key that cannot be decoded is a legitimately
                  * failing sigVer vector rather than a module malfunction, so
@@ -2326,6 +2327,7 @@ ml_kem_keygen_handler(ACVP_TEST_CASE *test_case)
         memcpy(seed_d_z + ML_KEM_SEED_BYTES, tc->z, ML_KEM_SEED_BYTES);
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
         params.seed_d_z = seed_d_z;
+        params.seed_d_z_len = sizeof(seed_d_z);
 
         if (imb_ml_kem_keypair(handle, tc->ek, tc->dk, &params) != 0) {
                 fprintf(stderr, "ML-KEM key generation failed\n");
@@ -2375,7 +2377,7 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         fprintf(stderr, "Invalid ML-KEM encapsulation inputs\n");
                         goto exit;
                 }
-                if (imb_ml_kem_set_pubkey(handle, tc->ek) != 0) {
+                if (imb_ml_kem_set_pubkey(handle, tc->ek, (size_t) tc->ek_len) != 0) {
                         fprintf(stderr, "ML-KEM encapsulation key binding failed\n");
                         goto exit;
                 }
@@ -2395,7 +2397,7 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         goto exit;
                 }
                 if (tc->dk != NULL && tc->dk_len == (int) v.dk_len) {
-                        if (imb_ml_kem_set_privkey(handle, tc->dk) != 0) {
+                        if (imb_ml_kem_set_privkey(handle, tc->dk, (size_t) tc->dk_len) != 0) {
                                 fprintf(stderr, "ML-KEM decapsulation key binding failed\n");
                                 goto exit;
                         }
@@ -2405,6 +2407,7 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         memcpy(seed_d_z + ML_KEM_SEED_BYTES, tc->z, ML_KEM_SEED_BYTES);
                         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
                         keygen_params.seed_d_z = seed_d_z;
+                        keygen_params.seed_d_z_len = sizeof(seed_d_z);
                         if (imb_ml_kem_keypair(handle, tmp_ek, tmp_dk, &keygen_params) != 0) {
                                 fprintf(stderr, "ML-KEM key generation from seeds failed\n");
                                 goto exit;
@@ -2426,7 +2429,7 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         ret = ACVP_SUCCESS;
                         break;
                 }
-                imb_rc = imb_ml_kem_pubkey_validate(handle, tc->ek);
+                imb_rc = imb_ml_kem_pubkey_validate(handle, tc->ek, (size_t) tc->ek_len);
                 tc->keycheck_disposition =
                         (imb_rc == 0) ? ACVP_TEST_DISPOSITION_PASS : ACVP_TEST_DISPOSITION_FAIL;
                 ret = ACVP_SUCCESS;
@@ -2437,7 +2440,7 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         ret = ACVP_SUCCESS;
                         break;
                 }
-                imb_rc = imb_ml_kem_privkey_validate(handle, tc->dk);
+                imb_rc = imb_ml_kem_privkey_validate(handle, tc->dk, (size_t) tc->dk_len);
                 tc->keycheck_disposition =
                         (imb_rc == 0) ? ACVP_TEST_DISPOSITION_PASS : ACVP_TEST_DISPOSITION_FAIL;
                 ret = ACVP_SUCCESS;

@@ -109,15 +109,13 @@ ml_kem_ctx_for_alg(const IMB_ML_KEM_ALG alg, struct test_suite_context ctxs[3])
  * Combined keygen-from-seed + decap vector ("MLKEMTest" schema,
  * mlkem_*_test.json): drives ML-KEM.KeyGen(seed) -> compare ek,
  * then ML-KEM.Decaps(dk, c) -> compare K.
- * "Invalid" entries carry either a wrong size seed or a wrong size
- * ciphertext. The latter is exercised here and decapsulation is expected to
- * reject it. The former cannot be exercised, as the key generation seed is
- * passed to the library as a plain pointer without a length.
+ * "Invalid" entries carry either a wrong size seed, rejected by key
+ * generation, or a wrong size ciphertext, rejected by decapsulation.
  */
 static int
 ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const struct kem_test *v)
 {
-        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t ek_bytes = 0, dk_bytes = 0, ct_bytes = 0;
         IMB_ML_KEM *self = NULL;
         IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
         int rc;
@@ -129,22 +127,28 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
         if (!v->hasSeed || !v->hasC)
                 return 1;
 
-        /*
-         * The key generation seed is passed to the library as a plain pointer,
-         * so a wrong seed length cannot be handed over to be rejected.
-         */
-        if (v->seedLen != ML_KEM_SEED_BYTES)
-                return v->resultValid ? 1 : 0;
-
-        if (v->resultValid && (v->cLen != ct_bytes || !v->hasK || v->KLen != ML_KEM_K_BYTES))
+        if (v->resultValid && (v->seedLen != ML_KEM_SEED_BYTES || v->cLen != ct_bytes || !v->hasK ||
+                               v->KLen != ML_KEM_K_BYTES))
                 return 1;
 
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
-        keygen_params.seed_d_z = v->seed;
+        /*
+         * A NULL seed asks the library for a random one, so a vector carrying
+         * an empty seed is handed over as a non-NULL buffer.
+         */
+        keygen_params.seed_d_z = (v->seed != NULL) ? (const void *) v->seed : (const void *) exp_ek;
+        keygen_params.seed_d_z_len = v->seedLen;
         rc = imb_ml_kem_keypair(self, exp_ek, exp_dk, &keygen_params);
+
+        if (!v->resultValid && rc != 0) {
+                /* the key generation seed was rejected, as expected */
+                ret = 0;
+                goto exit;
+        }
+
         if (rc != 0 ||
             (v->hasEk && (v->ekLen != ek_bytes || memcmp(exp_ek, v->ek, ek_bytes) != 0))) {
                 printf("ML-KEM keyGen KAT mismatch (%s tcId=%zu rc=%d)\n", ml_kem_alg_name(alg),
@@ -182,7 +186,7 @@ exit:
 static int
 ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const struct kem_test *v)
 {
-        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t ek_bytes = 0, dk_bytes = 0, ct_bytes = 0;
         IMB_ML_KEM *self = NULL;
         IMB_ML_KEM_ENCAP_PARAMS encap_params;
         int set_rc;
@@ -198,7 +202,7 @@ ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const str
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        set_rc = (v->ekLen == ek_bytes) ? imb_ml_kem_set_pubkey(self, v->ek) : -1;
+        set_rc = imb_ml_kem_set_pubkey(self, v->ek, v->ekLen);
         if (set_rc == 0) {
                 IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
                 encap_params.m_32 = v->m;
@@ -216,12 +220,10 @@ ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const str
                 }
         } else {
                 /*
-                 * The key must fail the FIPS 203 Section 7.2 encapsulation key
-                 * check. Keys of a wrong size cannot be handed over to the
-                 * library, as the key setting API takes the size implicitly
-                 * from the algorithm.
+                 * The key must be rejected, either for its size or by the
+                 * FIPS 203 Section 7.2 encapsulation key check.
                  */
-                if (v->ekLen == ek_bytes && imb_ml_kem_pubkey_validate(self, v->ek) == 0) {
+                if (imb_ml_kem_pubkey_validate(self, v->ek, v->ekLen) == 0) {
                         printf("ML-KEM encaps key unexpectedly validated (%s tcId=%zu)\n",
                                ml_kem_alg_name(alg), v->tcId);
                         goto exit;
@@ -243,7 +245,7 @@ static int
 ml_kem_keygen_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg,
                           const struct kem_test *v)
 {
-        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t ek_bytes = 0, dk_bytes = 0, ct_bytes = 0;
         IMB_ML_KEM *self = NULL;
         IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
         int rc;
@@ -252,7 +254,7 @@ ml_kem_keygen_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg,
         if (ml_kem_alg_sizes(alg, &ek_bytes, &dk_bytes, &ct_bytes) < 0)
                 return 1;
         (void) ct_bytes;
-        if (!v->hasSeed || v->seedLen != ML_KEM_SEED_BYTES)
+        if (!v->hasSeed || (v->resultValid && v->seedLen != ML_KEM_SEED_BYTES))
                 return 1;
 
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
@@ -260,6 +262,7 @@ ml_kem_keygen_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg,
 
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.seed_d_z = v->seed;
+        keygen_params.seed_d_z_len = v->seedLen;
         rc = imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params);
 
         if (v->resultValid) {
@@ -297,7 +300,7 @@ static int
 ml_kem_semi_expanded_decaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg,
                                    const struct kem_test *v)
 {
-        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t ek_bytes = 0, dk_bytes = 0, ct_bytes = 0;
         IMB_ML_KEM *self = NULL;
         int set_rc = -1;
         int rc = -1;
@@ -312,11 +315,9 @@ ml_kem_semi_expanded_decaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG 
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        if (v->dkLen == dk_bytes) {
-                set_rc = imb_ml_kem_set_privkey(self, v->dk);
-                if (set_rc == 0)
-                        rc = imb_ml_kem_decap(self, buf_ss, v->c, v->cLen, NULL);
-        }
+        set_rc = imb_ml_kem_set_privkey(self, v->dk, v->dkLen);
+        if (set_rc == 0)
+                rc = imb_ml_kem_decap(self, buf_ss, v->c, v->cLen, NULL);
 
         if (v->resultValid) {
                 if (set_rc != 0 || rc != 0 || v->cLen != ct_bytes ||
@@ -328,10 +329,11 @@ ml_kem_semi_expanded_decaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG 
                         goto exit;
                 }
         } else {
-                /* An invalid dk-length or ciphertext-length case is caught by
-                 * the harness above/within decap()'s unconditional length
-                 * check; an invalid dk hash is caught by set_privkey(). */
-                if (v->dkLen == dk_bytes && v->cLen == ct_bytes && set_rc == 0 && rc == 0) {
+                /*
+                 * An invalid key size or hash is caught by set_privkey(), an
+                 * invalid ciphertext size by decap()'s unconditional check.
+                 */
+                if (set_rc == 0 && rc == 0) {
                         printf("ML-KEM semi-expanded decap unexpectedly succeeded (%s tcId=%zu)\n",
                                ml_kem_alg_name(alg), v->tcId);
                         goto exit;
@@ -479,7 +481,7 @@ exit:
 static int
 ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
 {
-        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t ek_bytes = 0, dk_bytes = 0, ct_bytes = 0;
         IMB_ML_KEM *self = NULL;
         int ret = 1;
 
@@ -492,9 +494,9 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         /* random key pair and its validation */
         if (imb_ml_kem_keypair(self, buf_ek, buf_dk, NULL) != 0)
                 goto exit;
-        if (imb_ml_kem_pubkey_validate(self, buf_ek) != 0)
+        if (imb_ml_kem_pubkey_validate(self, buf_ek, ek_bytes) != 0)
                 goto exit;
-        if (imb_ml_kem_privkey_validate(self, buf_dk) != 0)
+        if (imb_ml_kem_privkey_validate(self, buf_dk, dk_bytes) != 0)
                 goto exit;
 
         /*
@@ -588,7 +590,7 @@ exit:
 static int
 ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
 {
-        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t ek_bytes = 0, dk_bytes = 0, ct_bytes = 0;
         size_t pkhash_off, ek_off;
         IMB_ML_KEM *self = NULL, *fresh = NULL;
         const char *stage = "setup";
@@ -619,11 +621,11 @@ ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         memcpy(exp_ek, buf_ek, ek_bytes);
         exp_ek[0] = 0xff;
         exp_ek[1] |= 0x0f;
-        if (imb_ml_kem_pubkey_validate(self, exp_ek) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_kem_pubkey_validate(self, exp_ek, ek_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         if (imb_ml_kem_new(mb_mgr, alg, &fresh) != 0)
                 goto exit;
-        if (imb_ml_kem_set_pubkey(fresh, exp_ek) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_kem_set_pubkey(fresh, exp_ek, ek_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         imb_ml_kem_free(fresh);
         fresh = NULL;
@@ -637,11 +639,11 @@ ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         memcpy(exp_dk, buf_dk, dk_bytes);
         exp_dk[0] = 0xff;
         exp_dk[1] |= 0x0f;
-        if (imb_ml_kem_privkey_validate(self, exp_dk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_kem_privkey_validate(self, exp_dk, dk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         if (imb_ml_kem_new(mb_mgr, alg, &fresh) != 0)
                 goto exit;
-        if (imb_ml_kem_set_privkey(fresh, exp_dk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_kem_set_privkey(fresh, exp_dk, dk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         imb_ml_kem_free(fresh);
         fresh = NULL;
@@ -651,18 +653,18 @@ ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         memcpy(exp_dk, buf_dk, dk_bytes);
         exp_dk[ek_off] = 0xff;
         exp_dk[ek_off + 1] |= 0x0f;
-        if (imb_ml_kem_privkey_validate(self, exp_dk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_kem_privkey_validate(self, exp_dk, dk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
 
         /* hash check: flip a bit of H(ek) so dk no longer matches its ek */
         stage = "dk hash check";
         memcpy(exp_dk, buf_dk, dk_bytes);
         exp_dk[pkhash_off] ^= 0x01;
-        if (imb_ml_kem_privkey_validate(self, exp_dk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_kem_privkey_validate(self, exp_dk, dk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         if (imb_ml_kem_new(mb_mgr, alg, &fresh) != 0)
                 goto exit;
-        if (imb_ml_kem_set_privkey(fresh, exp_dk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_kem_set_privkey(fresh, exp_dk, dk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         imb_ml_kem_free(fresh);
         fresh = NULL;
@@ -671,8 +673,8 @@ ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
          * came from the injected corruption and not from the copy itself */
         stage = "pristine key still valid";
         memcpy(exp_dk, buf_dk, dk_bytes);
-        if (imb_ml_kem_pubkey_validate(self, buf_ek) != 0 ||
-            imb_ml_kem_privkey_validate(self, exp_dk) != 0)
+        if (imb_ml_kem_pubkey_validate(self, buf_ek, ek_bytes) != 0 ||
+            imb_ml_kem_privkey_validate(self, exp_dk, dk_bytes) != 0)
                 goto exit;
 
         ret = 0;
@@ -705,7 +707,7 @@ static int
 ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
 {
         uint8_t ss_good[ML_KEM_K_BYTES], ss_rej[ML_KEM_K_BYTES], ss_rej2[ML_KEM_K_BYTES];
-        size_t ek_bytes, dk_bytes, ct_bytes;
+        size_t ek_bytes = 0, dk_bytes = 0, ct_bytes = 0;
         size_t tamper_off[3];
         size_t i;
         IMB_ML_KEM *self = NULL, *other = NULL;
@@ -761,7 +763,7 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         exp_dk[dk_bytes - 1] ^= 0xff;
         if (imb_ml_kem_new(mb_mgr, alg, &other) != 0)
                 goto exit;
-        if (imb_ml_kem_set_privkey(other, exp_dk) != 0)
+        if (imb_ml_kem_set_privkey(other, exp_dk, dk_bytes) != 0)
                 goto exit;
         /* valid ciphertext still recovers the original shared secret */
         if (imb_ml_kem_decap(other, ss_rej2, buf_ct, ct_bytes, NULL) != 0)
@@ -809,7 +811,7 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         other = NULL;
         if (imb_ml_kem_new(mb_mgr, alg, &other) != 0)
                 goto exit;
-        if (imb_ml_kem_set_pubkey(other, buf_ek) != 0)
+        if (imb_ml_kem_set_pubkey(other, buf_ek, ek_bytes) != 0)
                 goto exit;
         if (imb_ml_kem_encap(other, exp_ct, ss_rej, NULL) != 0)
                 goto exit;

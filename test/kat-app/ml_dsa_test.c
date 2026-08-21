@@ -196,7 +196,7 @@ static int
 ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                         const struct sig_sign_test *v)
 {
-        size_t pk_bytes, sk_bytes, sig_bytes;
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
         const void *ctx_ptr = NULL;
         /*
          * A vector without an explicit "rnd" field is a deterministic test
@@ -213,12 +213,8 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 return 1;
         if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
-        /*
-         * The key generation seed is passed to the library as a plain pointer,
-         * so a wrong seed length cannot be handed over to be rejected.
-         */
-        if (v->privateSeedLen != ML_DSA_SEED_BYTES)
-                return v->resultValid ? 1 : 0;
+        if (v->resultValid && v->privateSeedLen != ML_DSA_SEED_BYTES)
+                return 1;
         if (v->hasRnd) {
                 if (v->rndLen != ML_DSA_RND_BYTES)
                         return 1;
@@ -234,8 +230,19 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 IMB_ML_DSA_KEYGEN_PARAMS keygen_params;
 
                 IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
-                keygen_params.xi_32 = v->privateSeed;
+                /*
+                 * A NULL seed asks the library for a random one, so a vector
+                 * carrying an empty seed is handed over as a non-NULL buffer.
+                 */
+                keygen_params.xi_32 = (v->privateSeed != NULL) ? (const void *) v->privateSeed
+                                                               : (const void *) zero_rnd;
+                keygen_params.xi_len = v->privateSeedLen;
                 rc = imb_ml_dsa_keypair(self, buf_pk, buf_sk, &keygen_params);
+        }
+        if (!v->resultValid && rc != 0) {
+                /* the key generation seed was rejected, as expected */
+                ret = 0;
+                goto exit;
         }
         if (rc != 0 || (v->publicKey != NULL && memcmp(buf_pk, v->publicKey, pk_bytes) != 0)) {
                 printf("ML-DSA keyGen KAT mismatch (%s tcId=%zu rc=%d)\n", ml_dsa_alg_name(alg),
@@ -339,7 +346,7 @@ static int
 ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                           const struct sig_sign_test *v)
 {
-        size_t pk_bytes, sk_bytes, sig_bytes;
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
         const void *ctx_ptr = NULL;
         /*
          * A vector without an explicit "rnd" field is a deterministic test
@@ -357,12 +364,8 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 return 1;
         if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
-        /*
-         * The private key is passed to the library as a plain pointer, so a
-         * wrong key length cannot be handed over to be rejected.
-         */
-        if (v->privateKeyLen != sk_bytes)
-                return v->resultValid ? 1 : 0;
+        if (v->resultValid && v->privateKeyLen != sk_bytes)
+                return 1;
         if (v->hasRnd) {
                 if (v->rndLen != ML_DSA_RND_BYTES)
                         return 1;
@@ -374,7 +377,7 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        set_rc = imb_ml_dsa_set_privkey(self, v->privateKey);
+        set_rc = imb_ml_dsa_set_privkey(self, v->privateKey, v->privateKeyLen);
         if (set_rc == 0 && v->msg != NULL) {
                 IMB_ML_DSA_SIGN_PARAMS sign_params;
 
@@ -456,7 +459,8 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                  * The vector must be rejected either when the private key is
                  * bound to the context or when the signature is produced.
                  */
-                const int validate_rc = imb_ml_dsa_privkey_validate(self, v->privateKey);
+                const int validate_rc =
+                        imb_ml_dsa_privkey_validate(self, v->privateKey, v->privateKeyLen);
 
                 if ((set_rc == 0) != (validate_rc == 0)) {
                         printf("ML-DSA private key validation inconsistent with key set "
@@ -485,7 +489,7 @@ static int
 ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                      const struct sig_verify_test *v)
 {
-        size_t pk_bytes, sk_bytes, sig_bytes;
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
         const void *ctx_ptr = NULL;
         IMB_ML_DSA *self = NULL;
         int set_rc;
@@ -496,15 +500,15 @@ ml_dsa_verify_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 return 1;
         if (v->msgLen > ML_DSA_MAX_MSG || v->ctxLen > ML_DSA_MAX_CTX)
                 return 1;
-        if (v->publicKeyLen != pk_bytes)
-                return v->resultValid ? 1 : 0;
+        if (v->resultValid && v->publicKeyLen != pk_bytes)
+                return 1;
         if (v->hasCtx)
                 ctx_ptr = v->ctx;
 
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        set_rc = imb_ml_dsa_set_pubkey(self, v->publicKey);
+        set_rc = imb_ml_dsa_set_pubkey(self, v->publicKey, v->publicKeyLen);
         if (set_rc == 0) {
                 IMB_ML_DSA_VERIFY_PARAMS verify_params;
 
@@ -638,7 +642,7 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         static const uint8_t ctx[] = { 0x10, 0x20, 0x30, 0x40, 0x50 };
         const size_t msg_len = sizeof(msg) - 1;
         const size_t ctx_len = sizeof(ctx);
-        size_t pk_bytes, sk_bytes, sig_bytes;
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
         size_t sig_len = sizeof(buf_sig), sig_len2 = sizeof(exp_sig);
         IMB_ML_DSA *self = NULL;
         int ret = 1;
@@ -652,11 +656,11 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         /* random key pair and its validation / public-key derivation */
         if (imb_ml_dsa_keypair(self, buf_pk, buf_sk, NULL) != 0)
                 goto exit;
-        if (imb_ml_dsa_pubkey_validate(self, buf_pk) != 0)
+        if (imb_ml_dsa_pubkey_validate(self, buf_pk, pk_bytes) != 0)
                 goto exit;
-        if (imb_ml_dsa_privkey_validate(self, buf_sk) != 0)
+        if (imb_ml_dsa_privkey_validate(self, buf_sk, sk_bytes) != 0)
                 goto exit;
-        if (imb_ml_dsa_pubkey_from_privkey(self, buf_sk, exp_pk) != 0 ||
+        if (imb_ml_dsa_pubkey_from_privkey(self, buf_sk, sk_bytes, exp_pk) != 0 ||
             memcmp(exp_pk, buf_pk, pk_bytes) != 0)
                 goto exit;
 
@@ -759,7 +763,7 @@ ml_dsa_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 {
         const size_t tr_off = 64;  /* rho(32) || K(32) || tr(64) || ... */
         const size_t s1_off = 128; /* first coefficient byte of s1 */
-        size_t pk_bytes, sk_bytes, sig_bytes;
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
         size_t sig_len = sizeof(buf_sig);
         IMB_ML_DSA *self = NULL, *fresh = NULL;
         const char *stage = "setup";
@@ -778,27 +782,27 @@ ml_dsa_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         stage = "s1 coefficient range check";
         memcpy(alt_sk, buf_sk, sk_bytes);
         memset(&alt_sk[s1_off], 0xff, 8);
-        if (imb_ml_dsa_privkey_validate(self, alt_sk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_dsa_privkey_validate(self, alt_sk, sk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         if (imb_ml_dsa_new(mb_mgr, alg, &fresh) != 0)
                 goto exit;
-        if (imb_ml_dsa_set_privkey(fresh, alt_sk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_dsa_set_privkey(fresh, alt_sk, sk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         imb_ml_dsa_free(fresh);
         fresh = NULL;
         /* the same undecodable key cannot yield a public key either */
-        if (imb_ml_dsa_pubkey_from_privkey(self, alt_sk, alt_pk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_dsa_pubkey_from_privkey(self, alt_sk, sk_bytes, alt_pk) != IMB_ERR_PQC_KEYOP)
                 goto exit;
 
         /* tr no longer matching H(pk) must be detected */
         stage = "tr consistency check";
         memcpy(alt_sk, buf_sk, sk_bytes);
         alt_sk[tr_off] ^= 0x01;
-        if (imb_ml_dsa_privkey_validate(self, alt_sk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_dsa_privkey_validate(self, alt_sk, sk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         if (imb_ml_dsa_new(mb_mgr, alg, &fresh) != 0)
                 goto exit;
-        if (imb_ml_dsa_set_privkey(fresh, alt_sk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_dsa_set_privkey(fresh, alt_sk, sk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
         imb_ml_dsa_free(fresh);
         fresh = NULL;
@@ -807,13 +811,13 @@ ml_dsa_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         stage = "rho consistency check";
         memcpy(alt_sk, buf_sk, sk_bytes);
         alt_sk[0] ^= 0x01;
-        if (imb_ml_dsa_privkey_validate(self, alt_sk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_dsa_privkey_validate(self, alt_sk, sk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
 
         /* an untouched copy must still validate */
         stage = "pristine key still valid";
         memcpy(alt_sk, buf_sk, sk_bytes);
-        if (imb_ml_dsa_privkey_validate(self, alt_sk) != 0)
+        if (imb_ml_dsa_privkey_validate(self, alt_sk, sk_bytes) != 0)
                 goto exit;
 
         /*
@@ -827,11 +831,11 @@ ml_dsa_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
         memcpy(alt_pk, buf_pk, pk_bytes);
         alt_pk[pk_bytes - 1] ^= 0x01;
-        if (imb_ml_dsa_pubkey_validate(self, alt_pk) != 0)
+        if (imb_ml_dsa_pubkey_validate(self, alt_pk, pk_bytes) != 0)
                 goto exit;
         if (imb_ml_dsa_new(mb_mgr, alg, &fresh) != 0)
                 goto exit;
-        if (imb_ml_dsa_set_pubkey(fresh, alt_pk) != 0)
+        if (imb_ml_dsa_set_pubkey(fresh, alt_pk, pk_bytes) != 0)
                 goto exit;
 
         stage = "corrupted public key rejects signature";
@@ -864,7 +868,7 @@ ml_dsa_sig_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         static const uint8_t msg[] = "intel-ipsec-mb ML-DSA negative test message";
         const size_t msg_len = sizeof(msg) - 1;
         size_t tamper_off[3];
-        size_t pk_bytes, sk_bytes, sig_bytes;
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
         size_t sig_len = sizeof(buf_sig), i;
         IMB_ML_DSA *self = NULL, *other = NULL;
         const char *stage = "setup";
@@ -973,7 +977,7 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         const size_t msg_len = sizeof(msg) - 1;
         IMB_ML_DSA_SIGN_PARAMS sign_params;
         IMB_ML_DSA_VERIFY_PARAMS verify_params;
-        size_t pk_bytes, sk_bytes, sig_bytes;
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
         size_t sig_len = sizeof(buf_sig), sig_len2 = sizeof(alt_sig), i;
         IMB_ML_DSA *self = NULL, *pub_only = NULL;
         const char *stage = "setup";
@@ -1088,7 +1092,7 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         stage = "verify-only context";
         if (imb_ml_dsa_new(mb_mgr, alg, &pub_only) != 0)
                 goto exit;
-        if (imb_ml_dsa_set_pubkey(pub_only, buf_pk) != 0)
+        if (imb_ml_dsa_set_pubkey(pub_only, buf_pk, pk_bytes) != 0)
                 goto exit;
         if (imb_ml_dsa_verify(pub_only, msg, msg_len, alt_sig, sig_len2, NULL) != 0)
                 goto exit;
@@ -1106,7 +1110,7 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         if (imb_ml_dsa_verify(self, msg, msg_len, alt_sig, sig_len2, NULL) !=
             IMB_ERR_PQC_VERIFY_FAILED)
                 goto exit;
-        if (imb_ml_dsa_set_pubkey(pub_only, alt_pk) != 0)
+        if (imb_ml_dsa_set_pubkey(pub_only, alt_pk, pk_bytes) != 0)
                 goto exit;
         if (imb_ml_dsa_verify(pub_only, msg, msg_len, alt_sig, sig_len2, NULL) !=
             IMB_ERR_PQC_VERIFY_FAILED)

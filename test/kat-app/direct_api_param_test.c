@@ -2868,14 +2868,14 @@ test_imb_ml_dsa_set_key(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        if (ml_dsa_param_err(imb_ml_dsa_set_privkey(NULL, sk), IMB_ERR_NULL_CTX,
-                             "imb_ml_dsa_set_privkey") ||
-            ml_dsa_param_err(imb_ml_dsa_set_privkey(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_dsa_set_privkey") ||
-            ml_dsa_param_err(imb_ml_dsa_set_pubkey(NULL, pk), IMB_ERR_NULL_CTX,
-                             "imb_ml_dsa_set_pubkey") ||
-            ml_dsa_param_err(imb_ml_dsa_set_pubkey(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_dsa_set_pubkey"))
+        if (ml_dsa_param_err(imb_ml_dsa_set_privkey(NULL, sk, IMB_ML_DSA_44_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_dsa_set_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_set_privkey(self, NULL, IMB_ML_DSA_44_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_dsa_set_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_set_pubkey(NULL, pk, IMB_ML_DSA_44_PUBKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_dsa_set_pubkey") ||
+            ml_dsa_param_err(imb_ml_dsa_set_pubkey(self, NULL, IMB_ML_DSA_44_PUBKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_dsa_set_pubkey"))
                 ret = 1;
 
         imb_ml_dsa_free(self);
@@ -2923,6 +2923,7 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
 
                 /* fresh-random path: xi_32 == NULL */
                 params.xi_32 = NULL;
+                params.xi_len = 0;
                 r = imb_ml_dsa_keypair(ap->self, ap->pk, ap->sk, &params);
                 if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_keypair (random)")) {
                         ret = 1;
@@ -2931,6 +2932,7 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
 
                 /* seeded (deterministic) path: xi_32 != NULL */
                 params.xi_32 = seed;
+                params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
                 r = imb_ml_dsa_keypair(ap->self, ap->pk, ap->sk, &params);
                 if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_keypair (xi_32)")) {
                         ret = 1;
@@ -3237,20 +3239,23 @@ test_imb_ml_dsa_key_validate(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        if (ml_dsa_param_err(imb_ml_dsa_pubkey_validate(NULL, pk), IMB_ERR_NULL_CTX,
-                             "imb_ml_dsa_pubkey_validate") ||
-            ml_dsa_param_err(imb_ml_dsa_pubkey_validate(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_dsa_pubkey_validate") ||
-            ml_dsa_param_err(imb_ml_dsa_privkey_validate(NULL, sk), IMB_ERR_NULL_CTX,
-                             "imb_ml_dsa_privkey_validate") ||
-            ml_dsa_param_err(imb_ml_dsa_privkey_validate(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_dsa_privkey_validate") ||
-            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(NULL, sk, pk), IMB_ERR_NULL_CTX,
-                             "imb_ml_dsa_pubkey_from_privkey") ||
-            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(self, NULL, pk), IMB_ERR_NULL_KEY,
-                             "imb_ml_dsa_pubkey_from_privkey") ||
-            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(self, sk, NULL), IMB_ERR_NULL_DST,
-                             "imb_ml_dsa_pubkey_from_privkey"))
+        if (ml_dsa_param_err(imb_ml_dsa_pubkey_validate(NULL, pk, IMB_ML_DSA_44_PUBKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_dsa_pubkey_validate") ||
+            ml_dsa_param_err(imb_ml_dsa_pubkey_validate(self, NULL, IMB_ML_DSA_44_PUBKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_dsa_pubkey_validate") ||
+            ml_dsa_param_err(imb_ml_dsa_privkey_validate(NULL, sk, IMB_ML_DSA_44_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_dsa_privkey_validate") ||
+            ml_dsa_param_err(imb_ml_dsa_privkey_validate(self, NULL, IMB_ML_DSA_44_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_dsa_privkey_validate") ||
+            ml_dsa_param_err(
+                    imb_ml_dsa_pubkey_from_privkey(NULL, sk, IMB_ML_DSA_44_PRIVKEY_BYTES, pk),
+                    IMB_ERR_NULL_CTX, "imb_ml_dsa_pubkey_from_privkey") ||
+            ml_dsa_param_err(
+                    imb_ml_dsa_pubkey_from_privkey(self, NULL, IMB_ML_DSA_44_PRIVKEY_BYTES, pk),
+                    IMB_ERR_NULL_KEY, "imb_ml_dsa_pubkey_from_privkey") ||
+            ml_dsa_param_err(
+                    imb_ml_dsa_pubkey_from_privkey(self, sk, IMB_ML_DSA_44_PRIVKEY_BYTES, NULL),
+                    IMB_ERR_NULL_DST, "imb_ml_dsa_pubkey_from_privkey"))
                 ret = 1;
 
         imb_ml_dsa_free(self);
@@ -3349,14 +3354,14 @@ test_imb_ml_kem_set_key(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        if (ml_kem_param_err(imb_ml_kem_set_privkey(NULL, dk), IMB_ERR_NULL_CTX,
-                             "imb_ml_kem_set_privkey") ||
-            ml_kem_param_err(imb_ml_kem_set_privkey(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_kem_set_privkey") ||
-            ml_kem_param_err(imb_ml_kem_set_pubkey(NULL, ek), IMB_ERR_NULL_CTX,
-                             "imb_ml_kem_set_pubkey") ||
-            ml_kem_param_err(imb_ml_kem_set_pubkey(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_kem_set_pubkey"))
+        if (ml_kem_param_err(imb_ml_kem_set_privkey(NULL, dk, IMB_ML_KEM_512_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_kem_set_privkey") ||
+            ml_kem_param_err(imb_ml_kem_set_privkey(self, NULL, IMB_ML_KEM_512_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_kem_set_privkey") ||
+            ml_kem_param_err(imb_ml_kem_set_pubkey(NULL, ek, IMB_ML_KEM_512_PUBKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_kem_set_pubkey") ||
+            ml_kem_param_err(imb_ml_kem_set_pubkey(self, NULL, IMB_ML_KEM_512_PUBKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_kem_set_pubkey"))
                 ret = 1;
 
         imb_ml_kem_free(self);
@@ -3406,6 +3411,7 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
 
                 /* fresh-random path: seed_d_z == NULL */
                 params.seed_d_z = NULL;
+                params.seed_d_z_len = 0;
                 r = imb_ml_kem_keypair(ap->self, ap->ek, ap->dk, &params);
                 if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_keypair (random)")) {
                         ret = 1;
@@ -3414,6 +3420,7 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
 
                 /* seeded (deterministic) path: seed_d_z != NULL */
                 params.seed_d_z = seed;
+                params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
                 r = imb_ml_kem_keypair(ap->self, ap->ek, ap->dk, &params);
                 if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_keypair (seed_d_z)")) {
                         ret = 1;
@@ -3602,14 +3609,14 @@ test_imb_ml_kem_key_validate(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        if (ml_kem_param_err(imb_ml_kem_pubkey_validate(NULL, ek), IMB_ERR_NULL_CTX,
-                             "imb_ml_kem_pubkey_validate") ||
-            ml_kem_param_err(imb_ml_kem_pubkey_validate(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_kem_pubkey_validate") ||
-            ml_kem_param_err(imb_ml_kem_privkey_validate(NULL, dk), IMB_ERR_NULL_CTX,
-                             "imb_ml_kem_privkey_validate") ||
-            ml_kem_param_err(imb_ml_kem_privkey_validate(self, NULL), IMB_ERR_NULL_KEY,
-                             "imb_ml_kem_privkey_validate"))
+        if (ml_kem_param_err(imb_ml_kem_pubkey_validate(NULL, ek, IMB_ML_KEM_512_PUBKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_kem_pubkey_validate") ||
+            ml_kem_param_err(imb_ml_kem_pubkey_validate(self, NULL, IMB_ML_KEM_512_PUBKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_kem_pubkey_validate") ||
+            ml_kem_param_err(imb_ml_kem_privkey_validate(NULL, dk, IMB_ML_KEM_512_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_CTX, "imb_ml_kem_privkey_validate") ||
+            ml_kem_param_err(imb_ml_kem_privkey_validate(self, NULL, IMB_ML_KEM_512_PRIVKEY_BYTES),
+                             IMB_ERR_NULL_KEY, "imb_ml_kem_privkey_validate"))
                 ret = 1;
 
         imb_ml_kem_free(self);

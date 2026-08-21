@@ -207,6 +207,7 @@ ml_dsa_op_keygen(void *arg)
         IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
         fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
         params.xi_32 = c->seed_buf;
+        params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
         /* Also binds the freshly generated key to c->handle. */
         return imb_ml_dsa_keypair(c->handle, c->pk, c->sk, &params);
 }
@@ -377,6 +378,7 @@ ml_kem_op_keygen(void *arg)
         fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
         params.seed_d_z = c->seed_buf;
+        params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
         /* Also binds the freshly generated key to c->handle. */
         return imb_ml_kem_keypair(c->handle, c->ek, c->dk, &params);
 }
