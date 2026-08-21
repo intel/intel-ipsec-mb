@@ -95,12 +95,6 @@ vector_progress(const size_t tc_id)
 #endif
 }
 
-#define SKIP_VECTOR(_note)                                                                         \
-        {                                                                                          \
-                skip_note_add(_note);                                                              \
-                continue;                                                                          \
-        }
-
 static int
 process_job(IMB_MGR *p_mgr)
 {
@@ -262,8 +256,10 @@ test_cmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_cont
                         continue;
                 }
 
-                if ((v->keySize / 8) == IMB_KEY_192_BYTES)
-                        SKIP_VECTOR("AES-CMAC-192 not supported");
+                if ((v->keySize / 8) == IMB_KEY_192_BYTES) {
+                        skip_note_add("AES-CMAC-192 not supported");
+                        continue;
+                }
 
                 if ((v->keySize / 8) != IMB_KEY_128_BYTES &&
                     (v->keySize / 8) != IMB_KEY_256_BYTES) {
@@ -272,7 +268,8 @@ test_cmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_cont
                                 test_suite_update(ts, 1, 0);
                                 continue;
                         }
-                        SKIP_VECTOR("AES-CMAC key size not supported");
+                        skip_note_add("AES-CMAC key size not supported");
+                        continue;
                 }
 
                 /* test JOB API */
@@ -338,7 +335,8 @@ test_gmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_cont
                                 test_suite_update(ts, 1, 0);
                                 continue;
                         }
-                        SKIP_VECTOR("AES-GMAC key size not supported");
+                        skip_note_add("AES-GMAC key size not supported");
+                        continue;
                 }
 
                 /* test JOB API */
@@ -480,8 +478,10 @@ test_hmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_cont
                         continue;
                 }
 
-                if (v->msgSize == 0)
-                        SKIP_VECTOR(zero_msg_note);
+                if (v->msgSize == 0) {
+                        skip_note_add(zero_msg_note);
+                        continue;
+                }
 
                 /* test JOB API */
                 IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
@@ -905,8 +905,10 @@ test_aead_chacha20_poly1305(IMB_MGR *p_mgr, const struct aead_test *vectors,
                  * IV length argument, so it cannot detect and reject vectors
                  * carrying a different nonce size.
                  */
-                if (v->ivSize != (IMB_CHACHA20_POLY1305_IV_SIZE * 8))
-                        SKIP_VECTOR("API requires 12 byte nonce (no nonce length argument)");
+                if (v->ivSize != (IMB_CHACHA20_POLY1305_IV_SIZE * 8)) {
+                        skip_note_add("API requires 12 byte nonce (no nonce length argument)");
+                        continue;
+                }
 
                 /* test direct API - encrypt */
                 memset(text, 0, sizeof(text));
@@ -974,8 +976,10 @@ test_aead_ccm(IMB_MGR *p_mgr, const struct aead_test *vectors, struct test_suite
                         continue;
                 }
 
-                if ((v->aadSize / 8) > CCM_MAX_AAD_SIZE)
-                        SKIP_VECTOR("AES-CCM AAD > 46 bytes not supported");
+                if ((v->aadSize / 8) > CCM_MAX_AAD_SIZE) {
+                        skip_note_add("AES-CCM AAD > 46 bytes not supported");
+                        continue;
+                }
 
                 switch (v->keySize / 8) {
                 case IMB_KEY_128_BYTES:
@@ -985,7 +989,8 @@ test_aead_ccm(IMB_MGR *p_mgr, const struct aead_test *vectors, struct test_suite
                         IMB_AES_KEYEXP_256(p_mgr, v->key, expkey, dust);
                         break;
                 case IMB_KEY_192_BYTES:
-                        SKIP_VECTOR("AES-CCM-192 not supported");
+                        skip_note_add("AES-CCM-192 not supported");
+                        continue;
                 default:
                         printf("Invalid key size: %u bytes!\n", (unsigned) v->keySize / 8);
                         print_aead_test(v);
