@@ -106,6 +106,15 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN
                 if (params->size != sizeof(*params))
                         return IMB_ERR_PQC_PARAMS;
                 seed_d_z = params->seed_d_z;
+
+                /*
+                 * A NULL seed asks for a random one and takes no length,
+                 * otherwise the size is fixed by FIPS 203.
+                 */
+                const size_t exp_seed_len = (seed_d_z != NULL) ? IMB_ML_KEM_KEYGEN_SEED_BYTES : 0;
+
+                if (params->seed_d_z_len != exp_seed_len)
+                        return IMB_ERR_PQC_KEYOP;
         }
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -122,7 +131,7 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN
 /* Key binding                                                               */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk)
+imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk, size_t dk_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -130,13 +139,17 @@ imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk)
         if (dk == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (dk_len != self->dk_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->set_privkey(self, dk);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
 }
 
 IMB_DLL_EXPORT int
-imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek)
+imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek, size_t ek_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -144,6 +157,10 @@ imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek)
         if (ek == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (ek_len != self->ek_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->set_pubkey(self, ek);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
@@ -214,7 +231,7 @@ imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t c
 /* Key validation                                                            */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek)
+imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek, size_t ek_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -222,13 +239,17 @@ imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek)
         if (ek == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (ek_len != self->ek_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->pubkey_validate(self, ek);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
 }
 
 IMB_DLL_EXPORT int
-imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk)
+imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk, size_t dk_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -236,6 +257,10 @@ imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk)
         if (dk == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (dk_len != self->dk_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->privkey_validate(self, dk);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;

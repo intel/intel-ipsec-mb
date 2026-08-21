@@ -142,6 +142,15 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
                 if (params->size != sizeof(*params))
                         return IMB_ERR_PQC_PARAMS;
                 xi_32 = params->xi_32;
+
+                /*
+                 * A NULL seed asks for a random one and takes no length,
+                 * otherwise the size is fixed by FIPS 204.
+                 */
+                const size_t exp_seed_len = (xi_32 != NULL) ? IMB_ML_DSA_KEYGEN_SEED_BYTES : 0;
+
+                if (params->xi_len != exp_seed_len)
+                        return IMB_ERR_PQC_KEYOP;
         }
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -158,7 +167,7 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
 /* Key binding                                                               */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk)
+imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -166,13 +175,17 @@ imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk)
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (sk_len != self->sk_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->set_privkey(self, sk);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk)
+imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk, size_t pk_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -180,6 +193,10 @@ imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk)
         if (pk == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (pk_len != self->pk_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->set_pubkey(self, pk);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
@@ -350,7 +367,7 @@ imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, co
 /* Key validation and derivation                                             */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk)
+imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk, size_t pk_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -358,13 +375,17 @@ imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk)
         if (pk == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (pk_len != self->pk_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->pubkey_validate(self, pk);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk)
+imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -372,13 +393,17 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk)
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (sk_len != self->sk_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->privkey_validate(self, sk);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, void *pk)
+imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len, void *pk)
 {
 #ifdef SAFE_PARAM
         if (self == NULL)
@@ -388,6 +413,10 @@ imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, void *pk)
         if (pk == NULL)
                 return IMB_ERR_NULL_DST;
 #endif
+        /* the encoded key size is fixed by the parameter set, reject anything else */
+        if (sk_len != self->sk_len)
+                return IMB_ERR_PQC_KEYOP;
+
         const int rc = self->pubkey_from_privkey(self, sk, pk);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;

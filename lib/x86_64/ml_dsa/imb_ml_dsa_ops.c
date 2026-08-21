@@ -19,6 +19,9 @@
  * redundant matrix-expand-and-NTT work that a decode-per-call design would
  * otherwise repeat on every sign/verify. All sensitive locals are wiped on
  * every return path.
+ *
+ * The decoders below use self->pk_len / self->sk_len as the caller's buffer
+ * length; imb_ml_dsa_api.c rejects a mismatched size before dispatching here.
  */
 
 #include <string.h>

@@ -107,6 +107,10 @@ struct IMB_ML_KEM {
          * Backend dispatch table (0 on success, <0 on error).
          * keypair()/encap() accept optional randomness (NULL = internal RNG).
          * decap() takes no randomness input.
+         *
+         * Key/seed args carry no length: the public wrappers reject a
+         * mismatched size first, so these ops read exactly self->ek_len /
+         * self->dk_len bytes. decap() is the exception, explained below.
          */
         int (*keypair)(IMB_ML_KEM *self, void *ek, void *dk, const void *seed_64_or_null);
         int (*set_privkey)(IMB_ML_KEM *self, const void *dk);

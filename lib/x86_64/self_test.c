@@ -3260,10 +3260,10 @@ self_test_ml_dsa(IMB_MGR *p_mgr, const struct self_test_ml_dsa_vector *v)
                 return 0;
 
         /* Standalone key-derivation self-check (does not bind a key). */
-        if (imb_ml_dsa_pubkey_from_privkey(handle, v->sk, pk) != 0)
+        if (imb_ml_dsa_pubkey_from_privkey(handle, v->sk, v->sk_len, pk) != 0)
                 goto end;
 
-        if (imb_ml_dsa_set_privkey(handle, v->sk) != 0)
+        if (imb_ml_dsa_set_privkey(handle, v->sk, v->sk_len) != 0)
                 goto end;
 
         IMB_ML_DSA_SIGN_PARAMS sign_params;
@@ -3653,6 +3653,7 @@ self_test_ml_kem(IMB_MGR *p_mgr, const struct self_test_ml_kem_vector *v)
 
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.seed_d_z = v->seed;
+        keygen_params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
 
         if (imb_ml_kem_keypair(handle, ek, dk, &keygen_params) != 0)
                 goto end;

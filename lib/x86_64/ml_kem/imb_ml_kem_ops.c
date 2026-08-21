@@ -23,6 +23,9 @@
  * OPENSSL_cleanse()/CONSTTIME_* calls (already covering every other
  * intermediate value per exception 1, the retained KeyGen seed) are left
  * untouched.
+ *
+ * The decoders below use self->ek_len / self->dk_len as the caller's buffer
+ * length; imb_ml_kem_api.c rejects a mismatched size before dispatching here.
  */
 
 #include <string.h>

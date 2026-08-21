@@ -105,8 +105,14 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_NTT_INVERSE_FN *poly_ntt_inverse;
         ML_DSA_POLY_NTT_MULT_FN *poly_ntt_mult;
 
-        /* Backend dispatch table. All ops return 0 on success, <0 on error,
-         * except verify_ctx/verify_internal - see their comment below. */
+        /**
+         * Backend dispatch table. All ops return 0 on success, <0 on error,
+         * except verify_ctx/verify_internal - see their comment below.
+         *
+         * Key/seed args carry no length: the public wrappers reject a
+         * mismatched size first, so these ops read exactly self->pk_len /
+         * self->sk_len bytes.
+         */
         int (*keypair)(IMB_ML_DSA *self, void *pk, void *sk, const void *xi_32_or_null);
         int (*set_privkey)(IMB_ML_DSA *self, const void *sk);
         int (*set_pubkey)(IMB_ML_DSA *self, const void *pk);

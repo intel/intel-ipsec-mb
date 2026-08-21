@@ -1671,6 +1671,9 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
  * See FIPS 204 Algorithms 7 & 8. */
 #define IMB_ML_DSA_MU_BYTES 64
 
+/* Key generation seed (FIPS 204 xi) size in bytes. */
+#define IMB_ML_DSA_KEYGEN_SEED_BYTES 32
+
 /**
  * @brief Allocate and initialize an ML-DSA context for a given parameter set.
  *
@@ -1720,13 +1723,19 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
          */
         size_t size;
         /**
-         * Optional 32-byte key generation seed (FIPS 204 xi).
+         * Optional key generation seed (FIPS 204 xi).
          * NULL requests fresh-random key generation: the library generates
          * a fresh random seed internally for each call.
-         * Non-NULL uses the supplied 32 bytes verbatim, producing a
+         * Non-NULL uses the supplied seed verbatim, producing a
          * deterministic key pair.
          */
         const void *xi_32;
+        /**
+         * Size of the seed pointed to by \a xi_32 in bytes.
+         * Must be IMB_ML_DSA_KEYGEN_SEED_BYTES when \a xi_32 is not NULL,
+         * otherwise must be 0.
+         */
+        size_t xi_len;
 } IMB_ML_DSA_KEYGEN_PARAMS;
 
 /**
@@ -1775,16 +1784,18 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
  *        private and public components, so it may also be used with the verify
  *        functions.
  *
- * @param [in] self  ML-DSA context
- * @param [in] sk    Encoded private key (variant PRIVKEY_BYTES)
+ * @param [in] self    ML-DSA context
+ * @param [in] sk      Encoded private key (variant PRIVKEY_BYTES)
+ * @param [in] sk_len  Size of \a sk in bytes, must match the variant
+ *                     PRIVKEY_BYTES
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
- * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
+ * @retval IMB_ERR_PQC_KEYOP invalid \a sk_len or key decode/validation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk);
+imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len);
 
 /**
  * @brief Bind an encoded ML-DSA public key to the context, replacing any
@@ -1793,16 +1804,18 @@ imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk);
  *        repeating that work. The bound key only carries the public component and
  *        so may only be used with the verify functions.
  *
- * @param [in] self  ML-DSA context
- * @param [in] pk    Encoded public key (variant PUBKEY_BYTES)
+ * @param [in] self    ML-DSA context
+ * @param [in] pk      Encoded public key (variant PUBKEY_BYTES)
+ * @param [in] pk_len  Size of \a pk in bytes, must match the variant
+ *                     PUBKEY_BYTES
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
- * @retval IMB_ERR_PQC_KEYOP key decode failed
+ * @retval IMB_ERR_PQC_KEYOP invalid \a pk_len or key decode failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk);
+imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk, size_t pk_len);
 
 /**
  * Optional parameters for imb_ml_dsa_sign(). A NULL \a params pointer selects
@@ -1996,46 +2009,52 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
 /**
  * @brief Validate an encoded ML-DSA public key.
  *
- * @param [in] self  ML-DSA context
- * @param [in] pk    Encoded public key (variant PUBKEY_BYTES)
+ * @param [in] self    ML-DSA context
+ * @param [in] pk      Encoded public key (variant PUBKEY_BYTES)
+ * @param [in] pk_len  Size of \a pk in bytes, must match the variant
+ *                     PUBKEY_BYTES
  * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
- * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ * @retval IMB_ERR_PQC_KEYOP invalid \a pk_len or the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk);
+imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk, size_t pk_len);
 
 /**
  * @brief Validate an encoded ML-DSA private key (decodes and checks consistency).
  *
- * @param [in] self  ML-DSA context
- * @param [in] sk    Encoded private key (variant PRIVKEY_BYTES)
+ * @param [in] self    ML-DSA context
+ * @param [in] sk      Encoded private key (variant PRIVKEY_BYTES)
+ * @param [in] sk_len  Size of \a sk in bytes, must match the variant
+ *                     PRIVKEY_BYTES
  * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
- * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ * @retval IMB_ERR_PQC_KEYOP invalid \a sk_len or the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk);
+imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len);
 
 /**
  * @brief Derive an encoded public key from an encoded private key.
  *
- * @param [in]  self  ML-DSA context
- * @param [in]  sk    Encoded private key (variant PRIVKEY_BYTES)
- * @param [out] pk    Encoded public key buffer (variant PUBKEY_BYTES)
+ * @param [in]  self    ML-DSA context
+ * @param [in]  sk      Encoded private key (variant PRIVKEY_BYTES)
+ * @param [in]  sk_len  Size of \a sk in bytes, must match the variant
+ *                      PRIVKEY_BYTES
+ * @param [out] pk      Encoded public key buffer (variant PUBKEY_BYTES)
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
  * @retval IMB_ERR_NULL_DST invalid \a pk pointer
- * @retval IMB_ERR_PQC_KEYOP derivation failed
+ * @retval IMB_ERR_PQC_KEYOP invalid \a sk_len or derivation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, void *pk);
+imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len, void *pk);
 
 /*
  * =========================================================
@@ -2088,6 +2107,9 @@ typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB
 /* Shared secret size in bytes: fixed across all ML-KEM parameter sets */
 #define IMB_ML_KEM_SHARED_SECRET_BYTES 32
 
+/* Key generation seed (FIPS 203 "d" || "z") size in bytes. */
+#define IMB_ML_KEM_KEYGEN_SEED_BYTES 64
+
 /**
  * @brief Allocate and initialize an ML-KEM context for a parameter set.
  *
@@ -2137,14 +2159,20 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
          */
         size_t size;
         /**
-         * Optional 64-byte key generation seed: the FIPS 203 "d" (first 32
+         * Optional key generation seed: the FIPS 203 "d" (first 32
          * bytes) concatenated with "z" (last 32 bytes).
          * NULL requests fresh-random key generation: the library generates
          * a fresh random seed internally for each call.
-         * Non-NULL uses the supplied 64 bytes verbatim, producing a
+         * Non-NULL uses the supplied seed verbatim, producing a
          * deterministic key pair.
          */
         const void *seed_d_z;
+        /**
+         * Size of the seed pointed to by \a seed_d_z in bytes.
+         * Must be IMB_ML_KEM_KEYGEN_SEED_BYTES when \a seed_d_z is not NULL,
+         * otherwise must be 0.
+         */
+        size_t seed_d_z_len;
 } IMB_ML_KEM_KEYGEN_PARAMS;
 
 /**
@@ -2195,16 +2223,18 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN
  *        both private and public components, so it may also be used with the
  *        encapsulate functions.
  *
- * @param [in] self  ML-KEM context
- * @param [in] dk    Encoded decapsulation key (variant PRIVKEY_BYTES)
+ * @param [in] self    ML-KEM context
+ * @param [in] dk      Encoded decapsulation key (variant PRIVKEY_BYTES)
+ * @param [in] dk_len  Size of \a dk in bytes, must match the variant
+ *                     PRIVKEY_BYTES
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a dk pointer
- * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
+ * @retval IMB_ERR_PQC_KEYOP invalid \a dk_len or key decode/validation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk);
+imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk, size_t dk_len);
 
 /**
  * @brief Bind an encoded ML-KEM encapsulation (public) key to the context,
@@ -2215,16 +2245,18 @@ imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk);
  *        key only carries the public component and so may only be used with the
  *        encapsulate functions.
  *
- * @param [in] self  ML-KEM context
- * @param [in] ek    Encoded encapsulation key (variant PUBKEY_BYTES)
+ * @param [in] self    ML-KEM context
+ * @param [in] ek      Encoded encapsulation key (variant PUBKEY_BYTES)
+ * @param [in] ek_len  Size of \a ek in bytes, must match the variant
+ *                     PUBKEY_BYTES
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
- * @retval IMB_ERR_PQC_KEYOP key decode failed
+ * @retval IMB_ERR_PQC_KEYOP invalid \a ek_len or key decode failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek);
+imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek, size_t ek_len);
 
 /**
  * Optional parameters for imb_ml_kem_encap(). A NULL \a params pointer
@@ -2336,31 +2368,35 @@ imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t c
 /**
  * @brief Validate an encoded ML-KEM encapsulation (public) key.
  *
- * @param [in] self  ML-KEM context
- * @param [in] ek    Encoded encapsulation key (variant PUBKEY_BYTES)
+ * @param [in] self    ML-KEM context
+ * @param [in] ek      Encoded encapsulation key (variant PUBKEY_BYTES)
+ * @param [in] ek_len  Size of \a ek in bytes, must match the variant
+ *                     PUBKEY_BYTES
  * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
- * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ * @retval IMB_ERR_PQC_KEYOP invalid \a ek_len or the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek);
+imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek, size_t ek_len);
 
 /**
  * @brief Validate an encoded ML-KEM decapsulation (private) key (decodes and
  *        checks consistency).
  *
- * @param [in] self  ML-KEM context
- * @param [in] dk    Encoded decapsulation key (variant PRIVKEY_BYTES)
+ * @param [in] self    ML-KEM context
+ * @param [in] dk      Encoded decapsulation key (variant PRIVKEY_BYTES)
+ * @param [in] dk_len  Size of \a dk in bytes, must match the variant
+ *                     PRIVKEY_BYTES
  * @return Operation status
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a dk pointer
- * @retval IMB_ERR_PQC_KEYOP the key is invalid
+ * @retval IMB_ERR_PQC_KEYOP invalid \a dk_len or the key is invalid
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk);
+imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk, size_t dk_len);
 
 /*
  * =========================================================
