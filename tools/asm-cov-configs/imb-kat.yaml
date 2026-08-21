@@ -14,7 +14,7 @@ commands:
   matrix_axes:
     arch: ["icx", "snr", "glm", "clx"]
     kat_arch: ["--no-avx2 --no-avx512", "--no-sse --no-avx512", "--no-sse --no-avx2"]
-    test_type: ["KAT", "DO_TEST", "CBC", "CFB_ONE", "CFB", "CTR", "PON", "XCBC", "GCM", "GMAC", "GHASH", "CUSTOMOP", "DES", "CCM", "CMAC", "ZUC_EEA3_NEA6", "ZUC_EIA3_NIA6", "KASUMI", "SNOW3G", "HMAC_SHA1", "HMAC_SHA256", "HMAC_MD5", "AES", "ECB", "SHA", "CHAINED", "HEC", "CHACHA", "POLY1305", "API", "DIRECT_API", "CLEAR_MEM", "CRC", "CHACHA20_POLY1305", "NULL", "DIRECT_API_PARAM", "QUIC-ECB", "QUIC_CHACHA20", "SM4_ECB", "SM4_CBC", "SM3", "HMAC_SM3", "SM4_CTR", "SM4_GCM", "SHA3", "SNOW5G_NEA4", "AES_NIA5", "AES_NEA5", "AES_NCA5", "ZUC_NCA6", "SNOW5G_NIA4", "SNOW5G_NCA4"]
+    test_type: ["KAT", "DO_TEST", "CBC", "CFB_ONE", "CFB", "CTR", "PON", "XCBC", "GCM", "GMAC", "GHASH", "CUSTOMOP", "DES", "CCM", "CMAC", "ZUC_EEA3_NEA6", "ZUC_EIA3_NIA6", "KASUMI", "SNOW3G", "HMAC_SHA1", "HMAC_SHA256", "HMAC_MD5", "AES", "ECB", "SHA", "CHAINED", "HEC", "CHACHA", "POLY1305", "API", "DIRECT_API", "CLEAR_MEM", "CRC", "CHACHA20_POLY1305", "NULL", "DIRECT_API_PARAM", "SM4_ECB", "SM4_CBC", "SM3", "HMAC_SM3", "SM4_CTR", "SM4_GCM", "SHA3", "HMAC_SHA3", "SNOW5G_NEA4", "AES_NIA5", "AES_NEA5", "AES_NCA5", "ZUC_NCA6", "SNOW5G_NIA4", "SNOW5G_NCA4", "ML_DSA", "ML_KEM"]
   result_subdir_template: "imb-kat_{arch}_{kat_arch_mapped}-{test_type}"
   value_maps:
     kat_arch:

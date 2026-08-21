@@ -68,8 +68,6 @@
         "CHACHA20_POLY1305",
         "NULL",
         "DIRECT_API_PARAM",
-        "QUIC-ECB",
-        "QUIC_CHACHA20",
         "SM4_ECB",
         "SM4_CBC",
         "SM3",
@@ -77,13 +75,16 @@
         "SM4_CTR",
         "SM4_GCM",
         "SHA3",
+        "HMAC_SHA3",
         "SNOW5G_NEA4",
         "AES_NIA5",
         "AES_NEA5",
         "AES_NCA5",
         "ZUC_NCA6",
         "SNOW5G_NIA4",
-        "SNOW5G_NCA4"
+        "SNOW5G_NCA4",
+        "ML_DSA",
+        "ML_KEM"
       ]
     },
     "result_subdir_template": "imb-kat_{arch}_{kat_arch_mapped}-{test_type}",
