@@ -900,6 +900,14 @@ test_aead_chacha20_poly1305(IMB_MGR *p_mgr, const struct aead_test *vectors,
                 else
                         test_suite_update(ts, 1, 0);
 
+                /*
+                 * The direct API takes a fixed size 12 byte nonce and offers no
+                 * IV length argument, so it cannot detect and reject vectors
+                 * carrying a different nonce size.
+                 */
+                if (v->ivSize != (IMB_CHACHA20_POLY1305_IV_SIZE * 8))
+                        SKIP_VECTOR("API requires 12 byte nonce (no nonce length argument)");
+
                 /* test direct API - encrypt */
                 memset(text, 0, sizeof(text));
                 memset(tag, 0, sizeof(tag));
