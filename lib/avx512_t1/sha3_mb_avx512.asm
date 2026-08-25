@@ -48,21 +48,38 @@ default rel
 ; ============================================================
 ; Inline state load / save  (ymm0-ymm24 <-> memory)
 ; %1 = base register pointing at keccak_state[0]
+; %2 = optional lane mask (k-register); when given, only the
+;      selected lanes are loaded (others zeroed) / stored.
+;      Lanes left out of the mask keep their in-memory value.
 ; ============================================================
-%macro X4_LOAD_STATE 1
+%macro X4_LOAD_STATE 1-2
 %assign %%I 0
+%if %0 == 2
+%rep 25
+        vmovdqu64  APPEND(ymm,%%I){%2}{z}, [%1 + %%I*32]
+%assign %%I (%%I+1)
+%endrep
+%else
 %rep 25
         vmovdqu64  APPEND(ymm,%%I), [%1 + %%I*32]
 %assign %%I (%%I+1)
 %endrep
+%endif
 %endmacro
 
-%macro X4_SAVE_STATE 1
+%macro X4_SAVE_STATE 1-2
 %assign %%I 0
+%if %0 == 2
+%rep 25
+        vmovdqu64  [%1 + %%I*32]{%2}, APPEND(ymm,%%I)
+%assign %%I (%%I+1)
+%endrep
+%else
 %rep 25
         vmovdqu64  [%1 + %%I*32], APPEND(ymm,%%I)
 %assign %%I (%%I+1)
 %endrep
+%endif
 %endmacro
 
 ; ============================================================
@@ -164,23 +181,10 @@ MKGLOBAL(%%FN,function,internal)
         add     rax, [job + _hash_start_src_offset_in_bytes]
         mov     [state + _sha3_args_data_ptr + min_idx*8], rax
 
-        ;; zero state words for this lane
-        ;; Use vpbroadcastq to write all 4 lane slots at once, then
-        ;; overwrite with a masked store so only lane min_idx is zeroed.
-        ;; This avoids store-to-load forwarding stalls that arise when
-        ;; a scalar qword store is immediately followed by a wide YMM load
-        ;; to the same cache line (different granularity -> forwarding fail).
-        vpxorq  ymm31, ymm31, ymm31
-        mov     eax, 1
-        shlx    eax, eax, r13d          ; eax = 1 << lane
-        kmovd   k1, eax                 ; k1  = write-mask: only lane min_idx
-%assign %%W 0
-%rep 25
-        vmovdqu64  ymm30, [state + _sha3_args_kstate + %%W*32]
-        vmovdqu64  ymm30 {k1}, ymm31    ; zero only the selected lane slot
-        vmovdqu64  [state + _sha3_args_kstate + %%W*32], ymm30
-%assign %%W (%%W+1)
-%endrep
+        ;; No need to zero this lane's slice of the interleaved kstate:
+        ;; the manager is reset to all-zero on allocation, the flush path
+        ;; only stores back to occupied lanes, and each lane is re-zeroed
+        ;; when its job completes (see lane release below).
         imul    rax, min_idx, _SHA3_LANE_DATA_size
         mov     [state + _sha3_ldata + rax + _sha3_job_in_lane], job
         mov     dword [state + _sha3_ldata + rax + _sha3_finalized], 0
@@ -246,6 +250,7 @@ align_loop
         vinserti32x4 ymm27, ymm27, xmm28, 1        ; ymm27 = job_in_lane[0..3]
         vpxorq     ymm28, ymm28, ymm28
         vpcmpeqq   k2, ymm27, ymm28                ; k2 = null-lane mask
+        knotb      k3, k2                          ; k3 = live-lane mask
 
         vpbroadcastq ymm29, [state + _sha3_args_data_ptr + lane*8]
         vmovdqa64   ymm28, [state + _sha3_args_data_ptr]
@@ -294,7 +299,13 @@ align_loop
         jz      %%no_absorb
 
         lea     rax, [state + _sha3_args_kstate]
+%if %%SUB
         X4_LOAD_STATE rax
+%else
+        ;; Flush: restrict the state load/store to occupied lanes so that
+        ;; the permutation never writes back over a free lane's zeroed slice.
+        X4_LOAD_STATE rax, k3
+%endif
 
         mov     r8,  [state + _sha3_args_data_ptr + 0*8]
         mov     r9,  [state + _sha3_args_data_ptr + 1*8]
@@ -316,7 +327,11 @@ align_loop
         jnz     %%absorb_loop
 
         lea     rax, [state + _sha3_args_kstate]
+%if %%SUB
         X4_SAVE_STATE rax
+%else
+        X4_SAVE_STATE rax, k3
+%endif
         mov     [state + _sha3_args_data_ptr + 0*8], r8
         mov     [state + _sha3_args_data_ptr + 1*8], r9
         mov     [state + _sha3_args_data_ptr + 2*8], r10
@@ -420,9 +435,23 @@ align_label
         imul    arg4, min_idx, _SHA3_LANE_DATA_size
         mov     qword [state + _sha3_ldata + arg4 + _sha3_job_in_lane], 0
 
+        ;; Zero completed lane's slice of the interleaved kstate.
+        ;; k1 selects the lane's qword in each 4-lane word, so a single
+        ;; masked store per word clears it without a read-modify-write.
+        ;; Done on release rather than on submit, so that a free lane is
+        ;; always left with a zeroed state ready for the next job.
+        vpxorq  ymm31, ymm31, ymm31
+        mov     r11d, 1
+        shlx    r11d, r11d, r13d        ; r13d = min_idx (lane)
+        kmovd   k1, r11d
+%assign %%W 0
+%rep 25
+        vmovdqu64  [state + _sha3_args_kstate + %%W*32]{k1}, ymm31
+%assign %%W (%%W+1)
+%endrep
+
 %ifdef SAFE_DATA
         ;; zero extra_block of completed lane (clear sensitive message data)
-        vpxorq  ymm31, ymm31, ymm31
         lea     arg1, [state + _sha3_ldata + arg4]
 %assign %%OFF 0
 %assign %%REM %%RATE
@@ -615,18 +644,10 @@ MKGLOBAL(%%FN,function,internal)
         add     rax, [JOB + _hash_start_src_offset_in_bytes]
         mov     [STATE + _sha3_args_data_ptr + MIN_IDX*8], rax
 
-        ;; Zero this lane's slice of the interleaved kstate
-        vpxorq  ymm31, ymm31, ymm31
-        mov     eax, 1
-        shlx    eax, eax, MIN_IDX32       ; eax = 1 << lane
-        kmovd   k1, eax
-%assign %%W 0
-%rep 25
-        vmovdqu64  ymm30, [STATE + _sha3_args_kstate + %%W*32]
-        vmovdqu64  ymm30 {k1}, ymm31
-        vmovdqu64  [STATE + _sha3_args_kstate + %%W*32], ymm30
-%assign %%W (%%W+1)
-%endrep
+        ;; No need to zero this lane's slice of the interleaved kstate:
+        ;; the manager is reset to all-zero on allocation, the flush path
+        ;; only stores back to occupied lanes, and each lane is re-zeroed
+        ;; when its job completes (see lane release below).
         imul    rax, MIN_IDX, _SHA3_LANE_DATA_size
         mov     [STATE + _sha3_ldata + rax + _sha3_job_in_lane], JOB
         mov     dword [STATE + _sha3_ldata + rax + _sha3_finalized], 0
@@ -691,6 +712,7 @@ align_loop
         vinserti32x4 ymm27, ymm27, xmm28, 1        ; ymm27 = job_in_lane[0..3]
         vpxorq     ymm28, ymm28, ymm28
         vpcmpeqq   k2, ymm27, ymm28                ; k2 = null-lane mask
+        knotb      k3, k2                          ; k3 = live-lane mask
 
         vpbroadcastq ymm29, [STATE + _sha3_args_data_ptr + LANE*8]
         vmovdqa64   ymm28, [STATE + _sha3_args_data_ptr]
@@ -743,7 +765,13 @@ align_loop
         jz      %%no_absorb
 
         lea     rax, [STATE + _sha3_args_kstate]
+%if %%SUB
         X4_LOAD_STATE rax
+%else
+        ;; Flush: restrict the state load/store to occupied lanes so that
+        ;; the permutation never writes back over a free lane's zeroed slice.
+        X4_LOAD_STATE rax, k3
+%endif
 
         mov     DATA0, [STATE + _sha3_args_data_ptr + 0*8]
         mov     DATA1, [STATE + _sha3_args_data_ptr + 1*8]
@@ -765,7 +793,11 @@ align_loop
         jnz     %%absorb_loop
 
         lea     rax, [STATE + _sha3_args_kstate]
+%if %%SUB
         X4_SAVE_STATE rax
+%else
+        X4_SAVE_STATE rax, k3
+%endif
         mov     [STATE + _sha3_args_data_ptr + 0*8], DATA0
         mov     [STATE + _sha3_args_data_ptr + 1*8], DATA1
         mov     [STATE + _sha3_args_data_ptr + 2*8], DATA2
@@ -933,6 +965,21 @@ align_label
         or      dword [rax + _status], IMB_STATUS_COMPLETED_AUTH
 
         mov     qword [STATE + _sha3_ldata + LANE + _sha3_job_in_lane], 0
+
+        ;; Zero completed lane's slice of the interleaved kstate.
+        ;; k1 selects the lane's qword in each 4-lane word, so a single
+        ;; masked store per word clears it without a read-modify-write.
+        ;; Done on release rather than on submit, so that a free lane is
+        ;; always left with a zeroed state ready for the next job.
+        vpxorq  ymm31, ymm31, ymm31
+        mov     r11d, 1
+        shlx    r11d, r11d, r15d        ; r15d = LANE_SAVED (lane)
+        kmovd   k1, r11d
+%assign %%W 0
+%rep 25
+        vmovdqu64  [STATE + _sha3_args_kstate + %%W*32]{k1}, ymm31
+%assign %%W (%%W+1)
+%endrep
 
 %ifdef SAFE_DATA
         ;; Zero extra_block of completed lane (clear sensitive message data)
