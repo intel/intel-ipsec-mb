@@ -464,6 +464,11 @@ align_label
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
 
+%ifdef SAFE_DATA
+        ;; Clear keccak state registers (xmm0-xmm24)
+        call    keccak_1600_init_state
+%endif ; SAFE_DATA
+
         add     rsp, 8*32
         pop     r15
         pop     r14
@@ -519,6 +524,11 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+
+%ifdef SAFE_DATA
+        ;; Clear keccak state registers (xmm0-xmm24)
+        call    keccak_1600_init_state
+%endif ; SAFE_DATA
 
         add     rsp, 8*32
         pop     r15
@@ -576,6 +586,11 @@ align_label
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
 
+%ifdef SAFE_DATA
+        ;; Clear keccak state registers (xmm0-xmm24)
+        call    keccak_1600_init_state
+%endif ; SAFE_DATA
+
         add     rsp, 8*32
         pop     r15
         pop     r14
@@ -631,6 +646,11 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+
+%ifdef SAFE_DATA
+        ;; Clear keccak state registers (xmm0-xmm24)
+        call    keccak_1600_init_state
+%endif ; SAFE_DATA
 
         add     rsp, 8*32
         pop     r15
@@ -708,6 +728,11 @@ align_label
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
 
+%ifdef SAFE_DATA
+        ;; Clear keccak state registers (xmm0-xmm24)
+        call    keccak_1600_init_state
+%endif ; SAFE_DATA
+
         add     rsp, 8*32
         pop     r15
         pop     r14
@@ -783,6 +808,11 @@ align_label
         vmovdqu64       [rsp + 32*5], ymm0
         vmovdqu64       [rsp + 32*6], ymm0
         vmovdqu64       [rsp + 32*7], ymm0
+
+%ifdef SAFE_DATA
+        ;; Clear keccak state registers (xmm0-xmm24)
+        call    keccak_1600_init_state
+%endif ; SAFE_DATA
 
         add     rsp, 32 * 8
         pop     r15
