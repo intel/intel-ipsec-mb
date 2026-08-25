@@ -513,6 +513,8 @@ align_label
         ;; Clear keccak state registers (xmm0-xmm24) and the
         ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ; SAFE_DATA
 
         RESTORE_WIN_XMMS
@@ -577,6 +579,8 @@ align_label
         ;; Clear keccak state registers (xmm0-xmm24) and the
         ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ; SAFE_DATA
 
         RESTORE_WIN_XMMS
@@ -641,6 +645,8 @@ align_label
         ;; Clear keccak state registers (xmm0-xmm24) and the
         ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ; SAFE_DATA
 
         RESTORE_WIN_XMMS
@@ -705,6 +711,8 @@ align_label
         ;; Clear keccak state registers (xmm0-xmm24) and the
         ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ; SAFE_DATA
 
         RESTORE_WIN_XMMS
@@ -789,6 +797,8 @@ align_label
         ;; Clear keccak state registers (xmm0-xmm24) and the
         ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ; SAFE_DATA
 
         RESTORE_WIN_XMMS
@@ -873,6 +883,8 @@ align_label
         ;; Clear keccak state registers (xmm0-xmm24) and the
         ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ; SAFE_DATA
 
         RESTORE_WIN_XMMS
