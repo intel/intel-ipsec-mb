@@ -110,6 +110,7 @@ submit_job_hmac_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #ifdef SAFE_DATA
         imb_clear_mem(&ctx, sizeof(ctx));
         imb_clear_mem(inner_digest, sizeof(inner_digest));
+        imb_clear_mem(outer_digest, sizeof(outer_digest));
 #endif
         (void) state; /* unused - single-buffer, no OOO manager */
         job->status |= IMB_STATUS_COMPLETED_AUTH;
