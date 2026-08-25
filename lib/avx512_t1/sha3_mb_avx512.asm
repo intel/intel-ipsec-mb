@@ -30,6 +30,7 @@ default rel
 %include "include/imb_job.inc"
 %include "include/align_avx512.inc"
 %include "include/mb_mgr_datastruct.inc"
+%include "include/clear_regs.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -463,6 +464,14 @@ align_label
 %endif ; SAFE_DATA
 
 %%return:
+%ifdef SAFE_DATA
+        ;; Clear the interleaved keccak state left in ymm0-ymm24, which
+        ;; still holds data belonging to the jobs in the other lanes.
+        ;; Done before the Windows non-volatile XMM registers are restored.
+        clear_all_zmms_asm
+%else
+        vzeroupper
+%endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqa xmm6,  [rsp + WIN_XMM_OFF +  0*16]
         vmovdqa xmm7,  [rsp + WIN_XMM_OFF +  1*16]
@@ -490,7 +499,6 @@ align_label
         pop     min_idx
         pop     num_blocks
         pop     remaining
-        vzeroupper
         ret
 
 %%ret_null:
@@ -1001,6 +1009,14 @@ align_label
 %endif ; SAFE_DATA
 
 %%return:
+%ifdef SAFE_DATA
+        ;; Clear the interleaved keccak state left in ymm0-ymm24, which
+        ;; still holds data belonging to the jobs in the other lanes.
+        ;; Done before the Windows non-volatile XMM registers are restored.
+        clear_all_zmms_asm
+%else
+        vzeroupper
+%endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqa xmm6,  [rsp + SHAKE_WIN_XMM_OFF +  0*16]
         vmovdqa xmm7,  [rsp + SHAKE_WIN_XMM_OFF +  1*16]
@@ -1030,7 +1046,6 @@ align_label
         pop     MIN_IDX
         pop     NUM_BLOCKS
         pop     REMAINING
-        vzeroupper
         ret
 %%ret_null:
         xor     eax, eax
