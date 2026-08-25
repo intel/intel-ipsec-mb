@@ -48,25 +48,21 @@ default rel
 ; ============================================================
 ; Inline state load / save  (ymm0-ymm24 <-> memory)
 ; %1 = base register pointing at keccak_state[0]
-; %2 = optional lane mask (k-register); when given, only the
-;      selected lanes are loaded (others zeroed) / stored.
-;      Lanes left out of the mask keep their in-memory value.
+;
+; The load is always unmasked: free lanes hold a zeroed state slice
+; in memory, so they are read back as zero anyway.
 ; ============================================================
-%macro X4_LOAD_STATE 1-2
+%macro X4_LOAD_STATE 1
 %assign %%I 0
-%if %0 == 2
-%rep 25
-        vmovdqu64  APPEND(ymm,%%I){%2}{z}, [%1 + %%I*32]
-%assign %%I (%%I+1)
-%endrep
-%else
 %rep 25
         vmovdqu64  APPEND(ymm,%%I), [%1 + %%I*32]
 %assign %%I (%%I+1)
 %endrep
-%endif
 %endmacro
 
+; %2 = optional lane mask (k-register); when given, only the selected
+;      lanes are stored. Lanes left out keep their in-memory value.
+; ============================================================
 %macro X4_SAVE_STATE 1-2
 %assign %%I 0
 %if %0 == 2
@@ -299,13 +295,7 @@ align_loop
         jz      %%no_absorb
 
         lea     rax, [state + _sha3_args_kstate]
-%if %%SUB
         X4_LOAD_STATE rax
-%else
-        ;; Flush: restrict the state load/store to occupied lanes so that
-        ;; the permutation never writes back over a free lane's zeroed slice.
-        X4_LOAD_STATE rax, k3
-%endif
 
         mov     r8,  [state + _sha3_args_data_ptr + 0*8]
         mov     r9,  [state + _sha3_args_data_ptr + 1*8]
@@ -330,6 +320,8 @@ align_loop
 %if %%SUB
         X4_SAVE_STATE rax
 %else
+        ;; Flush: restrict the store to occupied lanes, so that the
+        ;; permutation never writes back over a free lane's zeroed slice.
         X4_SAVE_STATE rax, k3
 %endif
         mov     [state + _sha3_args_data_ptr + 0*8], r8
@@ -765,13 +757,7 @@ align_loop
         jz      %%no_absorb
 
         lea     rax, [STATE + _sha3_args_kstate]
-%if %%SUB
         X4_LOAD_STATE rax
-%else
-        ;; Flush: restrict the state load/store to occupied lanes so that
-        ;; the permutation never writes back over a free lane's zeroed slice.
-        X4_LOAD_STATE rax, k3
-%endif
 
         mov     DATA0, [STATE + _sha3_args_data_ptr + 0*8]
         mov     DATA1, [STATE + _sha3_args_data_ptr + 1*8]
@@ -796,6 +782,8 @@ align_loop
 %if %%SUB
         X4_SAVE_STATE rax
 %else
+        ;; Flush: restrict the store to occupied lanes, so that the
+        ;; permutation never writes back over a free lane's zeroed slice.
         X4_SAVE_STATE rax, k3
 %endif
         mov     [STATE + _sha3_args_data_ptr + 0*8], DATA0
