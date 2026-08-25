@@ -2924,7 +2924,7 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
                 /* fresh-random path: xi_32 == NULL */
                 params.xi_32 = NULL;
                 params.xi_len = 0;
-                r = imb_ml_dsa_keypair(ap->self, ap->pk, ap->sk, &params);
+                r = imb_ml_dsa_keypair(ap->self, ap->pk, sizeof(pk), ap->sk, sizeof(sk), &params);
                 if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_keypair (random)")) {
                         ret = 1;
                         break;
@@ -2933,7 +2933,7 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
                 /* seeded (deterministic) path: xi_32 != NULL */
                 params.xi_32 = seed;
                 params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
-                r = imb_ml_dsa_keypair(ap->self, ap->pk, ap->sk, &params);
+                r = imb_ml_dsa_keypair(ap->self, ap->pk, sizeof(pk), ap->sk, sizeof(sk), &params);
                 if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_keypair (xi_32)")) {
                         ret = 1;
                         break;
@@ -2947,8 +2947,9 @@ test_imb_ml_dsa_keypair(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(dsa_bad_size); i++) {
                 IMB_ML_DSA_KEYGEN_PARAMS_INIT(&size_params);
                 size_params.size = dsa_bad_size[i];
-                if (ml_dsa_param_err(imb_ml_dsa_keypair(self, pk, sk, &size_params),
-                                     IMB_ERR_PQC_PARAMS, "imb_ml_dsa_keypair (params size)")) {
+                if (ml_dsa_param_err(
+                            imb_ml_dsa_keypair(self, pk, sizeof(pk), sk, sizeof(sk), &size_params),
+                            IMB_ERR_PQC_PARAMS, "imb_ml_dsa_keypair (params size)")) {
                         ret = 1;
                         break;
                 }
@@ -2965,7 +2966,7 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
 {
         IMB_ML_DSA *self = NULL, *self_no_key = NULL;
         uint8_t sig[BUFF_SIZE], msg[BUFF_SIZE], ctx[BUFF_SIZE], pk[IMB_ML_DSA_44_PUBKEY_BYTES],
-                sk[IMB_ML_DSA_44_PRIVKEY_BYTES], rnd[BUFF_SIZE];
+                sk[IMB_ML_DSA_44_PRIVKEY_BYTES], rnd[IMB_ML_DSA_SIGN_RND_BYTES];
         size_t sig_len = 0;
         int seg_err; /* segfault flag */
         unsigned i;
@@ -2985,7 +2986,7 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
         /* A key must be bound before sign() can be exercised for the other
          * invalid-param cases; self_no_key intentionally has none bound, to
          * exercise the IMB_ERR_PQC_NO_KEY path. */
-        if (imb_ml_dsa_keypair(self, pk, sk, NULL) != 0) {
+        if (imb_ml_dsa_keypair(self, pk, sizeof(pk), sk, sizeof(sk), NULL) != 0) {
                 printf("%s: imb_ml_dsa_keypair failed\n", __func__);
                 ret = 1;
                 goto exit;
@@ -3020,6 +3021,7 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
 
                 /* hedged (auto-random) path: rnd_32 == NULL */
                 params.rnd_32 = NULL;
+                params.rnd_len = 0;
                 r = imb_ml_dsa_sign(ap->self, ap->sig, ap->sig_len, ap->msg, ap->msg_len, &params);
                 if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_sign (hedged)")) {
                         ret = 1;
@@ -3028,6 +3030,7 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
 
                 /* caller-supplied randomness path: rnd_32 != NULL */
                 params.rnd_32 = rnd;
+                params.rnd_len = sizeof(rnd);
                 r = imb_ml_dsa_sign(ap->self, ap->sig, ap->sig_len, ap->msg, ap->msg_len, &params);
                 if (ml_dsa_param_err(r, ap->exp_err, "imb_ml_dsa_sign (rnd_32)")) {
                         ret = 1;
@@ -3120,7 +3123,7 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
                 printf("%s: imb_ml_dsa_new failed\n", __func__);
                 goto exit;
         }
-        if (imb_ml_dsa_keypair(self, pk, sk, NULL) != 0) {
+        if (imb_ml_dsa_keypair(self, pk, sizeof(pk), sk, sizeof(sk), NULL) != 0) {
                 printf("%s: imb_ml_dsa_keypair failed\n", __func__);
                 ret = 1;
                 goto exit;
@@ -3247,15 +3250,15 @@ test_imb_ml_dsa_key_validate(struct IMB_MGR *mgr)
                              IMB_ERR_NULL_CTX, "imb_ml_dsa_privkey_validate") ||
             ml_dsa_param_err(imb_ml_dsa_privkey_validate(self, NULL, IMB_ML_DSA_44_PRIVKEY_BYTES),
                              IMB_ERR_NULL_KEY, "imb_ml_dsa_privkey_validate") ||
-            ml_dsa_param_err(
-                    imb_ml_dsa_pubkey_from_privkey(NULL, sk, IMB_ML_DSA_44_PRIVKEY_BYTES, pk),
-                    IMB_ERR_NULL_CTX, "imb_ml_dsa_pubkey_from_privkey") ||
-            ml_dsa_param_err(
-                    imb_ml_dsa_pubkey_from_privkey(self, NULL, IMB_ML_DSA_44_PRIVKEY_BYTES, pk),
-                    IMB_ERR_NULL_KEY, "imb_ml_dsa_pubkey_from_privkey") ||
-            ml_dsa_param_err(
-                    imb_ml_dsa_pubkey_from_privkey(self, sk, IMB_ML_DSA_44_PRIVKEY_BYTES, NULL),
-                    IMB_ERR_NULL_DST, "imb_ml_dsa_pubkey_from_privkey"))
+            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(NULL, sk, IMB_ML_DSA_44_PRIVKEY_BYTES,
+                                                            pk, sizeof(pk)),
+                             IMB_ERR_NULL_CTX, "imb_ml_dsa_pubkey_from_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(self, NULL, IMB_ML_DSA_44_PRIVKEY_BYTES,
+                                                            pk, sizeof(pk)),
+                             IMB_ERR_NULL_KEY, "imb_ml_dsa_pubkey_from_privkey") ||
+            ml_dsa_param_err(imb_ml_dsa_pubkey_from_privkey(self, sk, IMB_ML_DSA_44_PRIVKEY_BYTES,
+                                                            NULL, sizeof(pk)),
+                             IMB_ERR_NULL_DST, "imb_ml_dsa_pubkey_from_privkey"))
                 ret = 1;
 
         imb_ml_dsa_free(self);
@@ -3412,7 +3415,7 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
                 /* fresh-random path: seed_d_z == NULL */
                 params.seed_d_z = NULL;
                 params.seed_d_z_len = 0;
-                r = imb_ml_kem_keypair(ap->self, ap->ek, ap->dk, &params);
+                r = imb_ml_kem_keypair(ap->self, ap->ek, sizeof(ek), ap->dk, sizeof(dk), &params);
                 if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_keypair (random)")) {
                         ret = 1;
                         break;
@@ -3421,7 +3424,7 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
                 /* seeded (deterministic) path: seed_d_z != NULL */
                 params.seed_d_z = seed;
                 params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
-                r = imb_ml_kem_keypair(ap->self, ap->ek, ap->dk, &params);
+                r = imb_ml_kem_keypair(ap->self, ap->ek, sizeof(ek), ap->dk, sizeof(dk), &params);
                 if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_keypair (seed_d_z)")) {
                         ret = 1;
                         break;
@@ -3435,8 +3438,9 @@ test_imb_ml_kem_keypair(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(kem_bad_size); i++) {
                 IMB_ML_KEM_KEYGEN_PARAMS_INIT(&size_params);
                 size_params.size = kem_bad_size[i];
-                if (ml_kem_param_err(imb_ml_kem_keypair(self, ek, dk, &size_params),
-                                     IMB_ERR_PQC_PARAMS, "imb_ml_kem_keypair (params size)")) {
+                if (ml_kem_param_err(
+                            imb_ml_kem_keypair(self, ek, sizeof(ek), dk, sizeof(dk), &size_params),
+                            IMB_ERR_PQC_PARAMS, "imb_ml_kem_keypair (params size)")) {
                         ret = 1;
                         break;
                 }
@@ -3471,7 +3475,7 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
                 printf("%s: imb_ml_kem_new failed\n", __func__);
                 goto exit;
         }
-        if (imb_ml_kem_keypair(self, ek, dk, NULL) != 0) {
+        if (imb_ml_kem_keypair(self, ek, sizeof(ek), dk, sizeof(dk), NULL) != 0) {
                 printf("%s: imb_ml_kem_keypair failed\n", __func__);
                 ret = 1;
                 goto exit;
@@ -3496,7 +3500,8 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
 
                 /* random path: m_32 == NULL */
                 params.m_32 = NULL;
-                r = imb_ml_kem_encap(ap->self, ap->ct, ap->ss, &params);
+                params.m_len = 0;
+                r = imb_ml_kem_encap(ap->self, ap->ct, sizeof(ct), ap->ss, sizeof(ss), &params);
                 if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_encap (random)")) {
                         ret = 1;
                         break;
@@ -3504,7 +3509,8 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
 
                 /* deterministic path: m_32 != NULL */
                 params.m_32 = m;
-                r = imb_ml_kem_encap(ap->self, ap->ct, ap->ss, &params);
+                params.m_len = sizeof(m);
+                r = imb_ml_kem_encap(ap->self, ap->ct, sizeof(ct), ap->ss, sizeof(ss), &params);
                 if (ml_kem_param_err(r, ap->exp_err, "imb_ml_kem_encap (m_32)")) {
                         ret = 1;
                         break;
@@ -3519,9 +3525,9 @@ test_imb_ml_kem_encap(struct IMB_MGR *mgr)
                 for (i = 0; i < DIM(bad_size); i++) {
                         IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
                         params.size = bad_size[i];
-                        if (ml_kem_param_err(imb_ml_kem_encap(self, ct, ss, &params),
-                                             IMB_ERR_PQC_PARAMS,
-                                             "imb_ml_kem_encap (params size)")) {
+                        if (ml_kem_param_err(
+                                    imb_ml_kem_encap(self, ct, sizeof(ct), ss, sizeof(ss), &params),
+                                    IMB_ERR_PQC_PARAMS, "imb_ml_kem_encap (params size)")) {
                                 ret = 1;
                                 break;
                         }
@@ -3557,28 +3563,28 @@ test_imb_ml_kem_decap(struct IMB_MGR *mgr)
                 printf("%s: imb_ml_kem_new failed\n", __func__);
                 goto exit;
         }
-        if (imb_ml_kem_keypair(self, ek, dk, NULL) != 0) {
+        if (imb_ml_kem_keypair(self, ek, sizeof(ek), dk, sizeof(dk), NULL) != 0) {
                 printf("%s: imb_ml_kem_keypair failed\n", __func__);
                 ret = 1;
                 goto exit;
         }
 
-        if (ml_kem_param_err(imb_ml_kem_decap(NULL, ss, ct, sizeof(ct), NULL), IMB_ERR_NULL_CTX,
-                             "imb_ml_kem_decap") ||
-            ml_kem_param_err(imb_ml_kem_decap(self, NULL, ct, sizeof(ct), NULL), IMB_ERR_NULL_DST,
-                             "imb_ml_kem_decap") ||
-            ml_kem_param_err(imb_ml_kem_decap(self_no_key, ss, ct, sizeof(ct), NULL),
+        if (ml_kem_param_err(imb_ml_kem_decap(NULL, ss, sizeof(ss), ct, sizeof(ct), NULL),
+                             IMB_ERR_NULL_CTX, "imb_ml_kem_decap") ||
+            ml_kem_param_err(imb_ml_kem_decap(self, NULL, sizeof(ss), ct, sizeof(ct), NULL),
+                             IMB_ERR_NULL_DST, "imb_ml_kem_decap") ||
+            ml_kem_param_err(imb_ml_kem_decap(self_no_key, ss, sizeof(ss), ct, sizeof(ct), NULL),
                              IMB_ERR_PQC_NO_KEY, "imb_ml_kem_decap") ||
-            ml_kem_param_err(imb_ml_kem_decap(self, ss, NULL, sizeof(ct), NULL), IMB_ERR_NULL_SRC,
-                             "imb_ml_kem_decap") ||
-            ml_kem_param_err(imb_ml_kem_decap(NULL, ss, ct, sizeof(ct), params), IMB_ERR_NULL_CTX,
-                             "imb_ml_kem_decap (params)") ||
-            ml_kem_param_err(imb_ml_kem_decap(self, NULL, ct, sizeof(ct), params), IMB_ERR_NULL_DST,
-                             "imb_ml_kem_decap (params)") ||
-            ml_kem_param_err(imb_ml_kem_decap(self_no_key, ss, ct, sizeof(ct), params),
+            ml_kem_param_err(imb_ml_kem_decap(self, ss, sizeof(ss), NULL, sizeof(ct), NULL),
+                             IMB_ERR_NULL_SRC, "imb_ml_kem_decap") ||
+            ml_kem_param_err(imb_ml_kem_decap(NULL, ss, sizeof(ss), ct, sizeof(ct), params),
+                             IMB_ERR_NULL_CTX, "imb_ml_kem_decap (params)") ||
+            ml_kem_param_err(imb_ml_kem_decap(self, NULL, sizeof(ss), ct, sizeof(ct), params),
+                             IMB_ERR_NULL_DST, "imb_ml_kem_decap (params)") ||
+            ml_kem_param_err(imb_ml_kem_decap(self_no_key, ss, sizeof(ss), ct, sizeof(ct), params),
                              IMB_ERR_PQC_NO_KEY, "imb_ml_kem_decap (params)") ||
-            ml_kem_param_err(imb_ml_kem_decap(self, ss, NULL, sizeof(ct), params), IMB_ERR_NULL_SRC,
-                             "imb_ml_kem_decap (params)"))
+            ml_kem_param_err(imb_ml_kem_decap(self, ss, sizeof(ss), NULL, sizeof(ct), params),
+                             IMB_ERR_NULL_SRC, "imb_ml_kem_decap (params)"))
                 ret = 1;
 
 exit:
@@ -3623,6 +3629,200 @@ test_imb_ml_kem_key_validate(struct IMB_MGR *mgr)
         return ret;
 }
 
+/*
+ * @brief Performs direct API invalid length tests for the ML-DSA API: the
+ *        parameter-struct length fields and the output buffer capacities
+ */
+static int
+test_imb_ml_dsa_lengths(struct IMB_MGR *mgr)
+{
+        IMB_ML_DSA *self = NULL;
+        uint8_t pk[IMB_ML_DSA_44_PUBKEY_BYTES], sk[IMB_ML_DSA_44_PRIVKEY_BYTES];
+        uint8_t sig[IMB_ML_DSA_44_SIG_BYTES];
+        const uint8_t seed[IMB_ML_DSA_KEYGEN_SEED_BYTES] = { 0 };
+        const uint8_t rnd[IMB_ML_DSA_SIGN_RND_BYTES] = { 0 };
+        const uint8_t msg[BUFF_SIZE] = { 0 };
+        IMB_ML_DSA_KEYGEN_PARAMS keygen_params;
+        IMB_ML_DSA_SIGN_PARAMS sign_params;
+        size_t sig_len;
+        int seg_err; /* segfault flag */
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_dsa_new(mgr, IMB_ML_DSA_44, &self) != 0) {
+                printf("%s: imb_ml_dsa_new failed\n", __func__);
+                return 1;
+        }
+
+        /* the keygen seed length must match exactly and pair with the pointer */
+        IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
+        keygen_params.xi_32 = seed;
+        keygen_params.xi_len = sizeof(seed) - 1;
+        if (ml_dsa_param_err(
+                    imb_ml_dsa_keypair(self, pk, sizeof(pk), sk, sizeof(sk), &keygen_params),
+                    IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_keypair (short xi_len)"))
+                ret = 1;
+
+        IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
+        keygen_params.xi_32 = NULL;
+        keygen_params.xi_len = sizeof(seed);
+        if (ml_dsa_param_err(
+                    imb_ml_dsa_keypair(self, pk, sizeof(pk), sk, sizeof(sk), &keygen_params),
+                    IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_keypair (xi_len without xi_32)"))
+                ret = 1;
+
+        /* the key output buffers must be large enough for the parameter set */
+        if (ml_dsa_param_err(imb_ml_dsa_keypair(self, pk, sizeof(pk) - 1, sk, sizeof(sk), NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_keypair (short pk_len)"))
+                ret = 1;
+        if (ml_dsa_param_err(imb_ml_dsa_keypair(self, pk, sizeof(pk), sk, sizeof(sk) - 1, NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_keypair (short sk_len)"))
+                ret = 1;
+
+        /* a bound key is required by the signing and derivation cases below */
+        if (imb_ml_dsa_keypair(self, pk, sizeof(pk), sk, sizeof(sk), NULL) != 0) {
+                printf("%s: imb_ml_dsa_keypair failed\n", __func__);
+                ret = 1;
+                goto exit;
+        }
+
+        /* the signing randomizer length must match exactly and pair with the pointer */
+        IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
+        sign_params.rnd_32 = rnd;
+        sign_params.rnd_len = sizeof(rnd) - 1;
+        sig_len = sizeof(sig);
+        if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, sizeof(msg), &sign_params),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_sign (short rnd_len)"))
+                ret = 1;
+
+        IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
+        sign_params.rnd_32 = NULL;
+        sign_params.rnd_len = sizeof(rnd);
+        sig_len = sizeof(sig);
+        if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, sizeof(msg), &sign_params),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_sign (rnd_len without rnd_32)"))
+                ret = 1;
+
+        /* the signature buffer must be large enough for the parameter set */
+        sig_len = sizeof(sig) - 1;
+        if (ml_dsa_param_err(imb_ml_dsa_sign(self, sig, &sig_len, msg, sizeof(msg), NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_sign (short sig_len)"))
+                ret = 1;
+
+        /* the derived public key buffer must be large enough */
+        if (ml_dsa_param_err(
+                    imb_ml_dsa_pubkey_from_privkey(self, sk, sizeof(sk), pk, sizeof(pk) - 1),
+                    IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_dsa_pubkey_from_privkey (short pk_len)"))
+                ret = 1;
+exit:
+        imb_ml_dsa_free(self);
+        return ret;
+}
+
+/*
+ * @brief Performs direct API invalid length tests for the ML-KEM API: the
+ *        parameter-struct length fields and the output buffer capacities
+ */
+static int
+test_imb_ml_kem_lengths(struct IMB_MGR *mgr)
+{
+        IMB_ML_KEM *self = NULL;
+        uint8_t ek[IMB_ML_KEM_512_PUBKEY_BYTES], dk[IMB_ML_KEM_512_PRIVKEY_BYTES];
+        uint8_t ct[IMB_ML_KEM_512_CIPHERTEXT_BYTES], ss[IMB_ML_KEM_SHARED_SECRET_BYTES];
+        const uint8_t seed[IMB_ML_KEM_KEYGEN_SEED_BYTES] = { 0 };
+        const uint8_t m[IMB_ML_KEM_ENCAP_SEED_BYTES] = { 0 };
+        IMB_ML_KEM_KEYGEN_PARAMS keygen_params;
+        IMB_ML_KEM_ENCAP_PARAMS encap_params;
+        int seg_err; /* segfault flag */
+        volatile int ret = 0;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        if (imb_ml_kem_new(mgr, IMB_ML_KEM_512, &self) != 0) {
+                printf("%s: imb_ml_kem_new failed\n", __func__);
+                return 1;
+        }
+
+        /* the keygen seed length must match exactly and pair with the pointer */
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
+        keygen_params.seed_d_z = seed;
+        keygen_params.seed_d_z_len = sizeof(seed) - 1;
+        if (ml_kem_param_err(
+                    imb_ml_kem_keypair(self, ek, sizeof(ek), dk, sizeof(dk), &keygen_params),
+                    IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_keypair (short seed_d_z_len)"))
+                ret = 1;
+
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
+        keygen_params.seed_d_z = NULL;
+        keygen_params.seed_d_z_len = sizeof(seed);
+        if (ml_kem_param_err(
+                    imb_ml_kem_keypair(self, ek, sizeof(ek), dk, sizeof(dk), &keygen_params),
+                    IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_keypair (seed_d_z_len without seed_d_z)"))
+                ret = 1;
+
+        /* the key output buffers must be large enough for the parameter set */
+        if (ml_kem_param_err(imb_ml_kem_keypair(self, ek, sizeof(ek) - 1, dk, sizeof(dk), NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_keypair (short ek_len)"))
+                ret = 1;
+        if (ml_kem_param_err(imb_ml_kem_keypair(self, ek, sizeof(ek), dk, sizeof(dk) - 1, NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_keypair (short dk_len)"))
+                ret = 1;
+
+        /* a bound key is required by the encap and decap cases below */
+        if (imb_ml_kem_keypair(self, ek, sizeof(ek), dk, sizeof(dk), NULL) != 0) {
+                printf("%s: imb_ml_kem_keypair failed\n", __func__);
+                ret = 1;
+                goto exit;
+        }
+
+        /* the encap randomness length must match exactly and pair with the pointer */
+        IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
+        encap_params.m_32 = m;
+        encap_params.m_len = sizeof(m) - 1;
+        if (ml_kem_param_err(imb_ml_kem_encap(self, ct, sizeof(ct), ss, sizeof(ss), &encap_params),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_encap (short m_len)"))
+                ret = 1;
+
+        IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
+        encap_params.m_32 = NULL;
+        encap_params.m_len = sizeof(m);
+        if (ml_kem_param_err(imb_ml_kem_encap(self, ct, sizeof(ct), ss, sizeof(ss), &encap_params),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_encap (m_len without m_32)"))
+                ret = 1;
+
+        /* the encap output buffers must be large enough for the parameter set */
+        if (ml_kem_param_err(imb_ml_kem_encap(self, ct, sizeof(ct) - 1, ss, sizeof(ss), NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_encap (short ct_len)"))
+                ret = 1;
+        if (ml_kem_param_err(imb_ml_kem_encap(self, ct, sizeof(ct), ss, sizeof(ss) - 1, NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_encap (short ss_len)"))
+                ret = 1;
+
+        /* a valid ciphertext is required by the decap case below */
+        if (imb_ml_kem_encap(self, ct, sizeof(ct), ss, sizeof(ss), NULL) != 0) {
+                printf("%s: imb_ml_kem_encap failed\n", __func__);
+                ret = 1;
+                goto exit;
+        }
+
+        /* the decap shared secret buffer must be large enough */
+        if (ml_kem_param_err(imb_ml_kem_decap(self, ss, sizeof(ss) - 1, ct, sizeof(ct), NULL),
+                             IMB_ERR_PQC_BUFFER_SIZE, "imb_ml_kem_decap (short ss_len)"))
+                ret = 1;
+exit:
+        imb_ml_kem_free(self);
+        return ret;
+}
+
 int
 direct_api_param_test(struct IMB_MGR *mb_mgr)
 {
@@ -3642,12 +3842,24 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         handler = signal(SIGSEGV, seg_handler);
 
 #endif
+        /*
+         * PQC length and capacity validation is not SAFE_PARAM gated, so
+         * these tests run before the feature check below to keep covering
+         * builds with SAFE_PARAM disabled.
+         */
+        errors += test_imb_ml_dsa_lengths(mb_mgr);
+        run++;
+
+        errors += test_imb_ml_kem_lengths(mb_mgr);
+        run++;
+
         uint64_t features = 0;
 
         if (imb_get_features(mb_mgr, &features) != 0 ||
             ((features & IMB_FEATURE_SAFE_PARAM) == 0)) {
                 printf("SAFE_PARAM feature disabled, "
                        "skipping remaining tests\n");
+                test_suite_update(&ts, run - errors, errors);
                 goto dir_api_exit;
         }
         errors += test_IMB_AES_KEYEXP_128(mb_mgr);

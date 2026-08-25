@@ -141,7 +141,8 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
          */
         keygen_params.seed_d_z = (v->seed != NULL) ? (const void *) v->seed : (const void *) exp_ek;
         keygen_params.seed_d_z_len = v->seedLen;
-        rc = imb_ml_kem_keypair(self, exp_ek, exp_dk, &keygen_params);
+        rc = imb_ml_kem_keypair(self, exp_ek, sizeof(exp_ek), exp_dk, sizeof(exp_dk),
+                                &keygen_params);
 
         if (!v->resultValid && rc != 0) {
                 /* the key generation seed was rejected, as expected */
@@ -156,7 +157,7 @@ ml_kem_combined_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const s
                 goto exit;
         }
 
-        rc = imb_ml_kem_decap(self, buf_ss, v->c, v->cLen, NULL);
+        rc = imb_ml_kem_decap(self, buf_ss, sizeof(buf_ss), v->c, v->cLen, NULL);
 
         if (v->resultValid) {
                 if (rc != 0 || memcmp(buf_ss, v->K, ML_KEM_K_BYTES) != 0) {
@@ -206,7 +207,9 @@ ml_kem_encaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg, const str
         if (set_rc == 0) {
                 IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
                 encap_params.m_32 = v->m;
-                rc = imb_ml_kem_encap(self, buf_ct, buf_ss, &encap_params);
+                encap_params.m_len = v->mLen;
+                rc = imb_ml_kem_encap(self, buf_ct, sizeof(buf_ct), buf_ss, sizeof(buf_ss),
+                                      &encap_params);
         }
 
         if (v->resultValid) {
@@ -263,7 +266,8 @@ ml_kem_keygen_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg,
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.seed_d_z = v->seed;
         keygen_params.seed_d_z_len = v->seedLen;
-        rc = imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params);
+        rc = imb_ml_kem_keypair(self, buf_ek, sizeof(buf_ek), buf_dk, sizeof(buf_dk),
+                                &keygen_params);
 
         if (v->resultValid) {
                 if (rc != 0 || v->ekLen != ek_bytes || v->dkLen != dk_bytes ||
@@ -317,7 +321,7 @@ ml_kem_semi_expanded_decaps_vector(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG 
 
         set_rc = imb_ml_kem_set_privkey(self, v->dk, v->dkLen);
         if (set_rc == 0)
-                rc = imb_ml_kem_decap(self, buf_ss, v->c, v->cLen, NULL);
+                rc = imb_ml_kem_decap(self, buf_ss, sizeof(buf_ss), v->c, v->cLen, NULL);
 
         if (v->resultValid) {
                 if (set_rc != 0 || rc != 0 || v->cLen != ct_bytes ||
@@ -492,7 +496,7 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
                 return 1;
 
         /* random key pair and its validation */
-        if (imb_ml_kem_keypair(self, buf_ek, buf_dk, NULL) != 0)
+        if (imb_ml_kem_keypair(self, buf_ek, sizeof(buf_ek), buf_dk, sizeof(buf_dk), NULL) != 0)
                 goto exit;
         if (imb_ml_kem_pubkey_validate(self, buf_ek, ek_bytes) != 0)
                 goto exit;
@@ -507,10 +511,10 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
          */
 
         /* random encapsulation, then decapsulation recovers the same secret */
-        if (imb_ml_kem_encap(self, buf_ct, buf_ss, NULL) != 0)
+        if (imb_ml_kem_encap(self, buf_ct, sizeof(buf_ct), buf_ss, sizeof(buf_ss), NULL) != 0)
                 goto exit;
-        if (imb_ml_kem_decap(self, exp_ct /* reuse as scratch shared-secret-sized buf */, buf_ct,
-                             ct_bytes, NULL) != 0)
+        if (imb_ml_kem_decap(self, exp_ct /* reuse as scratch shared-secret-sized buf */,
+                             sizeof(exp_ct), buf_ct, ct_bytes, NULL) != 0)
                 goto exit;
         if (memcmp(buf_ss, exp_ct, ML_KEM_K_BYTES) != 0)
                 goto exit;
@@ -518,14 +522,14 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         /* tampered (but correctly sized) ciphertext must still succeed via
          * implicit rejection, yielding a different shared secret */
         buf_ct[ct_bytes / 2] ^= 0x55;
-        if (imb_ml_kem_decap(self, exp_ct, buf_ct, ct_bytes, NULL) != 0)
+        if (imb_ml_kem_decap(self, exp_ct, sizeof(exp_ct), buf_ct, ct_bytes, NULL) != 0)
                 goto exit;
         if (memcmp(buf_ss, exp_ct, ML_KEM_K_BYTES) == 0)
                 goto exit;
         buf_ct[ct_bytes / 2] ^= 0x55;
 
         /* wrong-length ciphertext must be rejected */
-        if (imb_ml_kem_decap(self, exp_ct, buf_ct, ct_bytes - 1, NULL) == 0)
+        if (imb_ml_kem_decap(self, exp_ct, sizeof(exp_ct), buf_ct, ct_bytes - 1, NULL) == 0)
                 goto exit;
 
         /* deterministic key generation is reproducible (explicit seed) */
@@ -535,9 +539,11 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.seed_d_z = zero_seed;
         keygen_params.seed_d_z_len = sizeof(zero_seed);
-        if (imb_ml_kem_keypair(self, buf_ek, buf_dk, &keygen_params) != 0)
+        if (imb_ml_kem_keypair(self, buf_ek, sizeof(buf_ek), buf_dk, sizeof(buf_dk),
+                               &keygen_params) != 0)
                 goto exit;
-        if (imb_ml_kem_keypair(self, exp_ek, exp_dk, &keygen_params) != 0)
+        if (imb_ml_kem_keypair(self, exp_ek, sizeof(exp_ek), exp_dk, sizeof(exp_dk),
+                               &keygen_params) != 0)
                 goto exit;
         if (memcmp(buf_ek, exp_ek, ek_bytes) != 0 || memcmp(buf_dk, exp_dk, dk_bytes) != 0)
                 goto exit;
@@ -549,9 +555,11 @@ ml_kem_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
 
         IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
         encap_params.m_32 = zero_m;
-        if (imb_ml_kem_encap(self, buf_ct, buf_ss, &encap_params) != 0)
+        encap_params.m_len = sizeof(zero_m);
+        if (imb_ml_kem_encap(self, buf_ct, sizeof(buf_ct), buf_ss, sizeof(buf_ss), &encap_params) !=
+            0)
                 goto exit;
-        if (imb_ml_kem_encap(self, exp_ct, ss2, &encap_params) != 0)
+        if (imb_ml_kem_encap(self, exp_ct, sizeof(exp_ct), ss2, sizeof(ss2), &encap_params) != 0)
                 goto exit;
         if (memcmp(buf_ct, exp_ct, ct_bytes) != 0 || memcmp(buf_ss, ss2, ML_KEM_K_BYTES) != 0)
                 goto exit;
@@ -598,7 +606,7 @@ ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        if (imb_ml_kem_keypair(self, buf_ek, buf_dk, NULL) != 0)
+        if (imb_ml_kem_keypair(self, buf_ek, sizeof(buf_ek), buf_dk, sizeof(buf_dk), NULL) != 0)
                 goto exit;
 
         /* dk = dk_PKE || ek || H(ek) || z, with 32-byte H(ek) and z trailers */
@@ -715,9 +723,9 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
 
         if (imb_ml_kem_new(mb_mgr, alg, &self) != 0)
                 return 1;
-        if (imb_ml_kem_keypair(self, buf_ek, buf_dk, NULL) != 0)
+        if (imb_ml_kem_keypair(self, buf_ek, sizeof(buf_ek), buf_dk, sizeof(buf_dk), NULL) != 0)
                 goto exit;
-        if (imb_ml_kem_encap(self, buf_ct, ss_good, NULL) != 0)
+        if (imb_ml_kem_encap(self, buf_ct, sizeof(buf_ct), ss_good, sizeof(ss_good), NULL) != 0)
                 goto exit;
 
         /* implicit rejection is deterministic and differs from the real secret */
@@ -732,12 +740,12 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
                 memcpy(exp_ct, buf_ct, ct_bytes);
                 exp_ct[off] ^= 0x01;
 
-                if (imb_ml_kem_decap(self, ss_rej, exp_ct, ct_bytes, NULL) != 0)
+                if (imb_ml_kem_decap(self, ss_rej, sizeof(ss_rej), exp_ct, ct_bytes, NULL) != 0)
                         goto exit;
                 if (memcmp(ss_rej, ss_good, ML_KEM_K_BYTES) == 0)
                         goto exit;
                 /* repeating the same decap must reproduce the same secret */
-                if (imb_ml_kem_decap(self, ss_rej2, exp_ct, ct_bytes, NULL) != 0)
+                if (imb_ml_kem_decap(self, ss_rej2, sizeof(ss_rej2), exp_ct, ct_bytes, NULL) != 0)
                         goto exit;
                 if (memcmp(ss_rej, ss_rej2, ML_KEM_K_BYTES) != 0)
                         goto exit;
@@ -752,7 +760,7 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         stage = "implicit rejection keyed by z";
         memcpy(exp_ct, buf_ct, ct_bytes);
         exp_ct[ct_bytes / 2] ^= 0x01;
-        if (imb_ml_kem_decap(self, ss_rej, exp_ct, ct_bytes, NULL) != 0)
+        if (imb_ml_kem_decap(self, ss_rej, sizeof(ss_rej), exp_ct, ct_bytes, NULL) != 0)
                 goto exit;
 
         memcpy(exp_dk, buf_dk, dk_bytes);
@@ -762,12 +770,12 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         if (imb_ml_kem_set_privkey(other, exp_dk, dk_bytes) != 0)
                 goto exit;
         /* valid ciphertext still recovers the original shared secret */
-        if (imb_ml_kem_decap(other, ss_rej2, buf_ct, ct_bytes, NULL) != 0)
+        if (imb_ml_kem_decap(other, ss_rej2, sizeof(ss_rej2), buf_ct, ct_bytes, NULL) != 0)
                 goto exit;
         if (memcmp(ss_rej2, ss_good, ML_KEM_K_BYTES) != 0)
                 goto exit;
         /* but the rejection secret for the tampered ciphertext has changed */
-        if (imb_ml_kem_decap(other, ss_rej2, exp_ct, ct_bytes, NULL) != 0)
+        if (imb_ml_kem_decap(other, ss_rej2, sizeof(ss_rej2), exp_ct, ct_bytes, NULL) != 0)
                 goto exit;
         if (memcmp(ss_rej2, ss_rej, ML_KEM_K_BYTES) == 0)
                 goto exit;
@@ -778,20 +786,22 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         stage = "cross-key decapsulation";
         if (imb_ml_kem_new(mb_mgr, alg, &other) != 0)
                 goto exit;
-        if (imb_ml_kem_keypair(other, exp_ek, exp_dk, NULL) != 0)
+        if (imb_ml_kem_keypair(other, exp_ek, sizeof(exp_ek), exp_dk, sizeof(exp_dk), NULL) != 0)
                 goto exit;
-        if (imb_ml_kem_decap(other, ss_rej, buf_ct, ct_bytes, NULL) != 0)
+        if (imb_ml_kem_decap(other, ss_rej, sizeof(ss_rej), buf_ct, ct_bytes, NULL) != 0)
                 goto exit;
         if (memcmp(ss_rej, ss_good, ML_KEM_K_BYTES) == 0)
                 goto exit;
 
         /* length mismatches are the only hard decapsulation errors */
         stage = "ciphertext length check";
-        if (imb_ml_kem_decap(self, ss_rej, buf_ct, ct_bytes - 1, NULL) != IMB_ERR_PQC_KEMOP)
+        if (imb_ml_kem_decap(self, ss_rej, sizeof(ss_rej), buf_ct, ct_bytes - 1, NULL) !=
+            IMB_ERR_PQC_KEMOP)
                 goto exit;
-        if (imb_ml_kem_decap(self, ss_rej, buf_ct, ct_bytes + 1, NULL) != IMB_ERR_PQC_KEMOP)
+        if (imb_ml_kem_decap(self, ss_rej, sizeof(ss_rej), buf_ct, ct_bytes + 1, NULL) !=
+            IMB_ERR_PQC_KEMOP)
                 goto exit;
-        if (imb_ml_kem_decap(self, ss_rej, buf_ct, 0, NULL) != IMB_ERR_PQC_KEMOP)
+        if (imb_ml_kem_decap(self, ss_rej, sizeof(ss_rej), buf_ct, 0, NULL) != IMB_ERR_PQC_KEMOP)
                 goto exit;
 
         /*
@@ -809,12 +819,13 @@ ml_kem_decap_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
                 goto exit;
         if (imb_ml_kem_set_pubkey(other, buf_ek, ek_bytes) != 0)
                 goto exit;
-        if (imb_ml_kem_encap(other, exp_ct, ss_rej, NULL) != 0)
+        if (imb_ml_kem_encap(other, exp_ct, sizeof(exp_ct), ss_rej, sizeof(ss_rej), NULL) != 0)
                 goto exit;
-        if (imb_ml_kem_decap(other, ss_rej2, buf_ct, ct_bytes, NULL) != IMB_ERR_PQC_KEMOP)
+        if (imb_ml_kem_decap(other, ss_rej2, sizeof(ss_rej2), buf_ct, ct_bytes, NULL) !=
+            IMB_ERR_PQC_KEMOP)
                 goto exit;
         /* the ciphertext it produced does decapsulate under the private key */
-        if (imb_ml_kem_decap(self, ss_rej2, exp_ct, ct_bytes, NULL) != 0)
+        if (imb_ml_kem_decap(self, ss_rej2, sizeof(ss_rej2), exp_ct, ct_bytes, NULL) != 0)
                 goto exit;
         if (memcmp(ss_rej, ss_rej2, ML_KEM_K_BYTES) != 0)
                 goto exit;

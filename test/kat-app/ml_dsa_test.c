@@ -147,7 +147,8 @@ ml_dsa_check_internal_sign(IMB_ML_DSA *self, const IMB_ML_DSA_ALG alg, const siz
                 return 1;
         }
 
-        rc = imb_ml_dsa_sign_internal(self, exp_sig, &sig_len, buf_mprime, mprime_len, rnd_ptr);
+        rc = imb_ml_dsa_sign_internal(self, exp_sig, &sig_len, buf_mprime, mprime_len, rnd_ptr,
+                                      ML_DSA_RND_BYTES);
         if (expect_valid) {
                 if (rc == 0 && sig_len == expected_sig_len &&
                     memcmp(exp_sig, expected_sig, sig_len) == 0)
@@ -236,7 +237,8 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
         keygen_params.xi_32 =
                 (v->privateSeed != NULL) ? (const void *) v->privateSeed : (const void *) zero_rnd;
         keygen_params.xi_len = v->privateSeedLen;
-        rc = imb_ml_dsa_keypair(self, buf_pk, buf_sk, &keygen_params);
+        rc = imb_ml_dsa_keypair(self, buf_pk, sizeof(buf_pk), buf_sk, sizeof(buf_sk),
+                                &keygen_params);
         if (!v->resultValid && rc != 0) {
                 /* the key generation seed was rejected, as expected */
                 ret = 0;
@@ -256,6 +258,7 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
                 sign_params.rnd_32 = rnd_ptr;
+                sign_params.rnd_len = ML_DSA_RND_BYTES;
                 sig_len = sizeof(buf_sig);
                 rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, v->msg, v->msgLen, &sign_params);
         }
@@ -301,6 +304,7 @@ ml_dsa_sign_seed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                                 goto exit;
                         }
                         mu_params.rnd_32 = rnd_ptr;
+                        mu_params.rnd_len = ML_DSA_RND_BYTES;
                         mu_params.msg_is_mu = 1;
                         if (v->sigLen != sig_bytes) {
                                 printf("ML-DSA sigGen mu sig wrong length (%s tcId=%zu)\n",
@@ -384,6 +388,7 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                 sign_params.ctx = ctx_ptr;
                 sign_params.ctx_len = v->ctxLen;
                 sign_params.rnd_32 = rnd_ptr;
+                sign_params.rnd_len = ML_DSA_RND_BYTES;
                 sig_len = sizeof(buf_sig);
                 rc = imb_ml_dsa_sign(self, buf_sig, &sig_len, v->msg, v->msgLen, &sign_params);
         }
@@ -431,6 +436,7 @@ ml_dsa_sign_noseed_vector(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg,
                                 goto exit;
                         }
                         mu_params.rnd_32 = rnd_ptr;
+                        mu_params.rnd_len = ML_DSA_RND_BYTES;
                         mu_params.msg_is_mu = 1;
                         if (v->sigLen != sig_bytes) {
                                 printf("ML-DSA sigGen mu sig wrong length (%s tcId=%zu)\n",
@@ -652,13 +658,13 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
                 return 1;
 
         /* random key pair and its validation / public-key derivation */
-        if (imb_ml_dsa_keypair(self, buf_pk, buf_sk, NULL) != 0)
+        if (imb_ml_dsa_keypair(self, buf_pk, sizeof(buf_pk), buf_sk, sizeof(buf_sk), NULL) != 0)
                 goto exit;
         if (imb_ml_dsa_pubkey_validate(self, buf_pk, pk_bytes) != 0)
                 goto exit;
         if (imb_ml_dsa_privkey_validate(self, buf_sk, sk_bytes) != 0)
                 goto exit;
-        if (imb_ml_dsa_pubkey_from_privkey(self, buf_sk, sk_bytes, exp_pk) != 0 ||
+        if (imb_ml_dsa_pubkey_from_privkey(self, buf_sk, sk_bytes, exp_pk, sizeof(exp_pk)) != 0 ||
             memcmp(exp_pk, buf_pk, pk_bytes) != 0)
                 goto exit;
 
@@ -677,6 +683,7 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         sign_params.ctx = ctx;
         sign_params.ctx_len = ctx_len;
         sign_params.rnd_32 = NULL;
+        sign_params.rnd_len = 0;
         if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0 ||
             sig_len != sig_bytes)
                 goto exit;
@@ -702,6 +709,7 @@ ml_dsa_roundtrip(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         sign_params.ctx = NULL;
         sign_params.ctx_len = 0;
         sign_params.rnd_32 = zero_rnd;
+        sign_params.rnd_len = sizeof(zero_rnd);
         sig_len = sizeof(buf_sig);
         if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0)
                 goto exit;
@@ -762,7 +770,7 @@ ml_dsa_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
 
-        if (imb_ml_dsa_keypair(self, buf_pk, buf_sk, NULL) != 0)
+        if (imb_ml_dsa_keypair(self, buf_pk, sizeof(buf_pk), buf_sk, sizeof(buf_sk), NULL) != 0)
                 goto exit;
 
         /* out-of-range s1 coefficients must not decode */
@@ -778,7 +786,8 @@ ml_dsa_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         imb_ml_dsa_free(fresh);
         fresh = NULL;
         /* the same undecodable key cannot yield a public key either */
-        if (imb_ml_dsa_pubkey_from_privkey(self, alt_sk, sk_bytes, alt_pk) != IMB_ERR_PQC_KEYOP)
+        if (imb_ml_dsa_pubkey_from_privkey(self, alt_sk, sk_bytes, alt_pk, sizeof(alt_pk)) !=
+            IMB_ERR_PQC_KEYOP)
                 goto exit;
 
         /* tr no longer matching H(pk) must be detected */
@@ -866,7 +875,7 @@ ml_dsa_sig_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
-        if (imb_ml_dsa_keypair(self, buf_pk, buf_sk, NULL) != 0)
+        if (imb_ml_dsa_keypair(self, buf_pk, sizeof(buf_pk), buf_sk, sizeof(buf_sk), NULL) != 0)
                 goto exit;
         if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, NULL) != 0 ||
             sig_len != sig_bytes)
@@ -922,7 +931,7 @@ ml_dsa_sig_negative(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         stage = "cross-key verification";
         if (imb_ml_dsa_new(mb_mgr, alg, &other) != 0)
                 goto exit;
-        if (imb_ml_dsa_keypair(other, alt_pk, alt_sk, NULL) != 0)
+        if (imb_ml_dsa_keypair(other, alt_pk, sizeof(alt_pk), alt_sk, sizeof(alt_sk), NULL) != 0)
                 goto exit;
         if (imb_ml_dsa_verify(other, msg, msg_len, buf_sig, sig_len, NULL) !=
             IMB_ERR_PQC_VERIFY_FAILED)
@@ -978,7 +987,7 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
         if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
                 return 1;
-        if (imb_ml_dsa_keypair(self, buf_pk, buf_sk, NULL) != 0)
+        if (imb_ml_dsa_keypair(self, buf_pk, sizeof(buf_pk), buf_sk, sizeof(buf_sk), NULL) != 0)
                 goto exit;
 
         /* a 255-byte context is the largest the encoding can represent */
@@ -1003,11 +1012,11 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
         sign_params.ctx_len = 0;
         sig_len2 = sig_bytes - 1;
         if (imb_ml_dsa_sign(self, alt_sig, &sig_len2, msg, msg_len, &sign_params) !=
-            IMB_ERR_PQC_BUFFER_TOO_SMALL)
+            IMB_ERR_PQC_BUFFER_SIZE)
                 goto exit;
         sig_len2 = 0;
         if (imb_ml_dsa_sign(self, alt_sig, &sig_len2, msg, msg_len, NULL) !=
-            IMB_ERR_PQC_BUFFER_TOO_SMALL)
+            IMB_ERR_PQC_BUFFER_SIZE)
                 goto exit;
 
         /* a shorter context must not verify a signature made with the long one */
@@ -1037,6 +1046,7 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
          */
         stage = "hedged signing varies";
         sign_params.rnd_32 = NULL;
+        sign_params.rnd_len = 0;
         sig_len = sizeof(buf_sig);
         if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0)
                 goto exit;
@@ -1057,10 +1067,12 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
 
                 memset(rnd, 0xa5, sizeof(rnd));
                 sign_params.rnd_32 = zero_rnd;
+                sign_params.rnd_len = sizeof(zero_rnd);
                 sig_len = sizeof(buf_sig);
                 if (imb_ml_dsa_sign(self, buf_sig, &sig_len, msg, msg_len, &sign_params) != 0)
                         goto exit;
                 sign_params.rnd_32 = rnd;
+                sign_params.rnd_len = sizeof(rnd);
                 sig_len2 = sizeof(alt_sig);
                 if (imb_ml_dsa_sign(self, alt_sig, &sig_len2, msg, msg_len, &sign_params) != 0)
                         goto exit;
@@ -1092,7 +1104,7 @@ ml_dsa_ctx_and_hedging(struct IMB_MGR *mb_mgr, const IMB_ML_DSA_ALG alg)
          * unrelated key, the earlier signature must stop verifying.
          */
         stage = "key rebinding";
-        if (imb_ml_dsa_keypair(self, alt_pk, alt_sk, NULL) != 0)
+        if (imb_ml_dsa_keypair(self, alt_pk, sizeof(alt_pk), alt_sk, sizeof(alt_sk), NULL) != 0)
                 goto exit;
         if (imb_ml_dsa_verify(self, msg, msg_len, alt_sig, sig_len2, NULL) !=
             IMB_ERR_PQC_VERIFY_FAILED)

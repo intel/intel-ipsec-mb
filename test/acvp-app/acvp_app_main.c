@@ -2055,7 +2055,8 @@ ml_dsa_keygen_handler(ACVP_TEST_CASE *test_case)
         IMB_ML_DSA_KEYGEN_PARAMS_INIT(&keygen_params);
         keygen_params.xi_32 = tc->seed;
         keygen_params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
-        if (imb_ml_dsa_keypair(handle, tc->pub_key, tc->secret_key, &keygen_params) != 0) {
+        if (imb_ml_dsa_keypair(handle, tc->pub_key, v.pk_len, tc->secret_key, v.sk_len,
+                               &keygen_params) != 0) {
                 fprintf(stderr, "ML-DSA key generation failed\n");
                 goto exit;
         }
@@ -2134,6 +2135,7 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
                 params.ctx = tc->context;
                 params.ctx_len = (size_t) tc->context_len;
                 params.rnd_32 = rnd;
+                params.rnd_len = sizeof(rnd);
                 sig_len = v.sig_len;
                 sign_rc = imb_ml_dsa_sign(handle, tc->sig, &sig_len, tc->msg, (size_t) tc->msg_len,
                                           &params);
@@ -2142,6 +2144,7 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
 
                 IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
                 params.rnd_32 = rnd;
+                params.rnd_len = sizeof(rnd);
                 params.msg_is_mu = 1;
                 sig_len = v.sig_len;
                 sign_rc = imb_ml_dsa_sign(handle, tc->sig, &sig_len, tc->mu, (size_t) tc->mu_len,
@@ -2149,7 +2152,7 @@ ml_dsa_siggen_handler(ACVP_TEST_CASE *test_case)
         } else {
                 sig_len = v.sig_len;
                 sign_rc = imb_ml_dsa_sign_internal(handle, tc->sig, &sig_len, tc->msg,
-                                                   (size_t) tc->msg_len, rnd);
+                                                   (size_t) tc->msg_len, rnd, sizeof(rnd));
         }
 
         if (sign_rc != 0) {
@@ -2189,8 +2192,8 @@ ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
                 fprintf(stderr, "Unsupported ML-DSA parameter set\n");
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
-        if (tc->pub_key == NULL || (size_t) tc->pub_key_len != v.pk_len) {
-                fprintf(stderr, "Invalid ML-DSA public key\n");
+        if (tc->pub_key == NULL) {
+                fprintf(stderr, "Missing ML-DSA public key\n");
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
         if (tc->msg == NULL || tc->sig == NULL) {
@@ -2208,9 +2211,11 @@ ml_dsa_sigver_handler(ACVP_TEST_CASE *test_case)
 
         if (imb_ml_dsa_set_pubkey(handle, tc->pub_key, (size_t) tc->pub_key_len) != 0) {
                 /*
-                 * A public key that cannot be decoded is a legitimately
-                 * failing sigVer vector rather than a module malfunction, so
-                 * it maps to the same disposition as an invalid signature.
+                 * A public key of the wrong length, or one that cannot be
+                 * decoded, is a legitimately failing sigVer vector rather
+                 * than a module malfunction, so it maps to the same
+                 * disposition as an invalid signature. Both cases are left
+                 * for the library to detect.
                  */
                 verify_rc = IMB_ERR_PQC_VERIFY_FAILED;
         } else if (tc->sig_interface == ACVP_SIG_INTERFACE_EXTERNAL) {
@@ -2329,7 +2334,7 @@ ml_kem_keygen_handler(ACVP_TEST_CASE *test_case)
         params.seed_d_z = seed_d_z;
         params.seed_d_z_len = sizeof(seed_d_z);
 
-        if (imb_ml_kem_keypair(handle, tc->ek, tc->dk, &params) != 0) {
+        if (imb_ml_kem_keypair(handle, tc->ek, v.ek_len, tc->dk, v.dk_len, &params) != 0) {
                 fprintf(stderr, "ML-KEM key generation failed\n");
                 goto exit;
         }
@@ -2383,7 +2388,9 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                 }
                 IMB_ML_KEM_ENCAP_PARAMS_INIT(&encap_params);
                 encap_params.m_32 = tc->m;
-                if (imb_ml_kem_encap(handle, tc->c, tc->k, &encap_params) != 0) {
+                encap_params.m_len = (size_t) tc->m_len;
+                if (imb_ml_kem_encap(handle, tc->c, v.ct_len, tc->k, IMB_ML_KEM_SHARED_SECRET_BYTES,
+                                     &encap_params) != 0) {
                         fprintf(stderr, "ML-KEM encapsulation failed\n");
                         goto exit;
                 }
@@ -2408,7 +2415,8 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&keygen_params);
                         keygen_params.seed_d_z = seed_d_z;
                         keygen_params.seed_d_z_len = sizeof(seed_d_z);
-                        if (imb_ml_kem_keypair(handle, tmp_ek, tmp_dk, &keygen_params) != 0) {
+                        if (imb_ml_kem_keypair(handle, tmp_ek, sizeof(tmp_ek), tmp_dk,
+                                               sizeof(tmp_dk), &keygen_params) != 0) {
                                 fprintf(stderr, "ML-KEM key generation from seeds failed\n");
                                 goto exit;
                         }
@@ -2416,7 +2424,8 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                         fprintf(stderr, "Missing ML-KEM decapsulation key material\n");
                         goto exit;
                 }
-                if (imb_ml_kem_decap(handle, tc->k, tc->c, (size_t) tc->c_len, NULL) != 0) {
+                if (imb_ml_kem_decap(handle, tc->k, IMB_ML_KEM_SHARED_SECRET_BYTES, tc->c,
+                                     (size_t) tc->c_len, NULL) != 0) {
                         fprintf(stderr, "ML-KEM decapsulation failed\n");
                         goto exit;
                 }
@@ -2424,22 +2433,30 @@ ml_kem_xcap_handler(ACVP_TEST_CASE *test_case)
                 ret = ACVP_SUCCESS;
                 break;
         case ACVP_ML_KEM_FUNCTION_ENC_KEYCHECK:
-                if (tc->ek == NULL || tc->ek_len != (int) v.ek_len) {
-                        tc->keycheck_disposition = ACVP_TEST_DISPOSITION_FAIL;
-                        ret = ACVP_SUCCESS;
-                        break;
+                if (tc->ek == NULL) {
+                        fprintf(stderr, "Missing ML-KEM key for keyCheck\n");
+                        goto exit;
                 }
+                /*
+                 * A key of the wrong length is a legitimately failing
+                 * keyCheck vector, so the length is left for the library to
+                 * reject rather than being pre-screened here.
+                 */
                 imb_rc = imb_ml_kem_pubkey_validate(handle, tc->ek, (size_t) tc->ek_len);
                 tc->keycheck_disposition =
                         (imb_rc == 0) ? ACVP_TEST_DISPOSITION_PASS : ACVP_TEST_DISPOSITION_FAIL;
                 ret = ACVP_SUCCESS;
                 break;
         case ACVP_ML_KEM_FUNCTION_DEC_KEYCHECK:
-                if (tc->dk == NULL || tc->dk_len != (int) v.dk_len) {
-                        tc->keycheck_disposition = ACVP_TEST_DISPOSITION_FAIL;
-                        ret = ACVP_SUCCESS;
-                        break;
+                if (tc->dk == NULL) {
+                        fprintf(stderr, "Missing ML-KEM key for keyCheck\n");
+                        goto exit;
                 }
+                /*
+                 * A key of the wrong length is a legitimately failing
+                 * keyCheck vector, so the length is left for the library to
+                 * reject rather than being pre-screened here.
+                 */
                 imb_rc = imb_ml_kem_privkey_validate(handle, tc->dk, (size_t) tc->dk_len);
                 tc->keycheck_disposition =
                         (imb_rc == 0) ? ACVP_TEST_DISPOSITION_PASS : ACVP_TEST_DISPOSITION_FAIL;

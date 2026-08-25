@@ -189,7 +189,9 @@ static const struct ml_dsa_variant ml_dsa_variants[] = {
 struct ml_dsa_ctx {
         IMB_ML_DSA *handle;   /**< opaque library handle holding the active key pair */
         uint8_t *pk;          /**< public key buffer */
+        size_t pk_cap;        /**< capacity of the pk buffer in bytes */
         uint8_t *sk;          /**< private key buffer */
+        size_t sk_cap;        /**< capacity of the sk buffer in bytes */
         uint8_t *sig;         /**< signature output buffer */
         size_t sig_cap;       /**< capacity of the sig buffer in bytes */
         size_t sig_len;       /**< length of last produced signature in bytes */
@@ -209,7 +211,7 @@ ml_dsa_op_keygen(void *arg)
         params.xi_32 = c->seed_buf;
         params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
         /* Also binds the freshly generated key to c->handle. */
-        return imb_ml_dsa_keypair(c->handle, c->pk, c->sk, &params);
+        return imb_ml_dsa_keypair(c->handle, c->pk, c->pk_cap, c->sk, c->sk_cap, &params);
 }
 
 static int
@@ -225,6 +227,7 @@ ml_dsa_op_sign(void *arg)
         params.ctx = NULL;
         params.ctx_len = 0;
         params.rnd_32 = c->rnd;
+        params.rnd_len = sizeof(c->rnd);
         /* Signs against the key bound to c->handle by ml_dsa_op_keygen(). */
         ret = imb_ml_dsa_sign(c->handle, c->sig, &sig_len, test_msg, MSG_LEN, &params);
         c->sig_len = sig_len;
@@ -266,7 +269,9 @@ measure_ml_dsa(struct IMB_MGR *mgr, const struct ml_dsa_variant *v, const double
         }
 
         ctx.pk = malloc(v->pubkey_bytes);
+        ctx.pk_cap = v->pubkey_bytes;
         ctx.sk = malloc(v->privkey_bytes);
+        ctx.sk_cap = v->privkey_bytes;
         ctx.sig = malloc(v->sig_bytes);
         ctx.sig_cap = v->sig_bytes;
         ctx.prng = prng_init;
@@ -359,7 +364,9 @@ static const struct ml_kem_variant ml_kem_variants[] = {
 struct ml_kem_ctx {
         IMB_ML_KEM *handle; /**< opaque library handle holding the active key pair */
         uint8_t *ek;        /**< encapsulation key buffer */
+        size_t ek_cap;      /**< capacity of the ek buffer in bytes */
         uint8_t *dk;        /**< decapsulation key buffer */
+        size_t dk_cap;      /**< capacity of the dk buffer in bytes */
         uint8_t *ct;        /**< ciphertext buffer */
         size_t ct_len;      /**< ciphertext length in bytes */
         uint8_t ss_encap[IMB_ML_KEM_SHARED_SECRET_BYTES]; /**< shared secret produced by encaps */
@@ -380,7 +387,7 @@ ml_kem_op_keygen(void *arg)
         params.seed_d_z = c->seed_buf;
         params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
         /* Also binds the freshly generated key to c->handle. */
-        return imb_ml_kem_keypair(c->handle, c->ek, c->dk, &params);
+        return imb_ml_kem_keypair(c->handle, c->ek, c->ek_cap, c->dk, c->dk_cap, &params);
 }
 
 static int
@@ -392,8 +399,10 @@ ml_kem_op_encap(void *arg)
         fill_random_buf(&c->prng, c->m_buf, sizeof(c->m_buf));
         IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
         params.m_32 = c->m_buf;
+        params.m_len = sizeof(c->m_buf);
         /* Encapsulates against the key bound to c->handle by ml_kem_op_keygen(). */
-        return imb_ml_kem_encap(c->handle, c->ct, c->ss_encap, &params);
+        return imb_ml_kem_encap(c->handle, c->ct, c->ct_len, c->ss_encap, sizeof(c->ss_encap),
+                                &params);
 }
 
 static int
@@ -402,7 +411,8 @@ ml_kem_op_decap(void *arg)
         struct ml_kem_ctx *c = (struct ml_kem_ctx *) arg;
 
         /* Decapsulates against the key bound to c->handle by ml_kem_op_keygen(). */
-        return imb_ml_kem_decap(c->handle, c->ss_decap, c->ct, c->ct_len, NULL);
+        return imb_ml_kem_decap(c->handle, c->ss_decap, sizeof(c->ss_decap), c->ct, c->ct_len,
+                                NULL);
 }
 
 static int
@@ -427,7 +437,9 @@ measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double
         }
 
         ctx.ek = malloc(v->pubkey_bytes);
+        ctx.ek_cap = v->pubkey_bytes;
         ctx.dk = malloc(v->privkey_bytes);
+        ctx.dk_cap = v->privkey_bytes;
         ctx.ct = malloc(v->ct_bytes);
         ctx.ct_len = v->ct_bytes;
         ctx.prng = prng_init;

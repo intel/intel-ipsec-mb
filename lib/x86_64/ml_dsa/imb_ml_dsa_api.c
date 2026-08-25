@@ -6,13 +6,14 @@
 
 /**
  * Public IMB ML-DSA (FIPS 204) API: context lifecycle plus the exported
- * one-line wrappers. Each wrapper performs optional SAFE_PARAM validation
- * then forwards to the backend dispatch table installed at imb_ml_dsa_new()
- * time. imb_ml_dsa_new() reads mgr->used_arch to install the ISA specific
- * primitives matching the dispatch level the caller selected via
- * init_mb_mgr_*(). The selection is per context and read-only afterwards,
- * so contexts created from different managers, on different threads, run
- * independently.
+ * one-line wrappers. Each wrapper validates all of its arguments, so that
+ * no build of the library can be made to write past a caller supplied
+ * buffer, then forwards to the backend dispatch table installed at
+ * imb_ml_dsa_new() time. imb_ml_dsa_new() reads mgr->used_arch to install the
+ * ISA specific primitives matching the dispatch level the caller selected
+ * via init_mb_mgr_*(). The selection is per context and read-only
+ * afterwards, so contexts created from different managers, on different
+ * threads, run independently.
  */
 
 #include <stdlib.h>
@@ -63,15 +64,11 @@ imb_ml_dsa_new(IMB_MGR *mgr, IMB_ML_DSA_ALG alg, IMB_ML_DSA **new_self)
 {
         IMB_ML_DSA *self;
 
-#ifdef SAFE_PARAM
         if (new_self == NULL)
                 return IMB_ERR_NULL_CTX;
-#endif
         *new_self = NULL;
-#ifdef SAFE_PARAM
         if (mgr == NULL)
                 return IMB_ERR_NULL_MBMGR;
-#endif
         if (alg != IMB_ML_DSA_44 && alg != IMB_ML_DSA_65 && alg != IMB_ML_DSA_87)
                 return IMB_ERR_PQC_ALG;
 
@@ -129,14 +126,17 @@ imb_ml_dsa_free(IMB_ML_DSA *self)
 /* Key generation                                                            */
 /* ------------------------------------------------------------------------- */
 IMB_DLL_EXPORT int
-imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN_PARAMS *params)
+imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, size_t pk_len, void *sk, size_t sk_len,
+                   const IMB_ML_DSA_KEYGEN_PARAMS *params)
 {
         const void *xi_32 = NULL;
 
+        if (self == NULL)
+                return IMB_ERR_NULL_CTX;
+
         /*
-         * The params structure size check is unconditional (not SAFE_PARAM
-         * gated) and done before any field is read, so that fields of a
-         * mismatching structure are never accessed.
+         * The params structure size check is done before any other field is
+         * read, so that fields of a mismatching structure are never accessed.
          */
         if (params != NULL) {
                 if (params->size != sizeof(*params))
@@ -150,14 +150,20 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
                 const size_t exp_seed_len = (xi_32 != NULL) ? IMB_ML_DSA_KEYGEN_SEED_BYTES : 0;
 
                 if (params->xi_len != exp_seed_len)
-                        return IMB_ERR_PQC_KEYOP;
+                        return IMB_ERR_PQC_BUFFER_SIZE;
         }
-#ifdef SAFE_PARAM
-        if (self == NULL)
-                return IMB_ERR_NULL_CTX;
+
         if (pk == NULL || sk == NULL)
                 return IMB_ERR_NULL_KEY;
-#endif
+
+        /*
+         * keypair() below always writes exactly self->pk_len / self->sk_len
+         * bytes - an undersized caller-supplied capacity would otherwise
+         * result in an out-of-bounds write.
+         */
+        if (pk_len < self->pk_len || sk_len < self->sk_len)
+                return IMB_ERR_PQC_BUFFER_SIZE;
+
         const int rc = self->keypair(self, pk, sk, xi_32);
 
         return (rc != 0) ? IMB_ERR_PQC_KEYOP : 0;
@@ -169,15 +175,13 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
 IMB_DLL_EXPORT int
 imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 {
-#ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
-#endif
         /* the encoded key size is fixed by the parameter set, reject anything else */
         if (sk_len != self->sk_len)
-                return IMB_ERR_PQC_KEYOP;
+                return IMB_ERR_PQC_BUFFER_SIZE;
 
         const int rc = self->set_privkey(self, sk);
 
@@ -187,15 +191,13 @@ imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 IMB_DLL_EXPORT int
 imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk, size_t pk_len)
 {
-#ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (pk == NULL)
                 return IMB_ERR_NULL_KEY;
-#endif
         /* the encoded key size is fixed by the parameter set, reject anything else */
         if (pk_len != self->pk_len)
-                return IMB_ERR_PQC_KEYOP;
+                return IMB_ERR_PQC_BUFFER_SIZE;
 
         const int rc = self->set_pubkey(self, pk);
 
@@ -214,11 +216,12 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
         const void *rnd_32 = NULL;
         int msg_is_mu = 0;
 
+        if (self == NULL)
+                return IMB_ERR_NULL_CTX;
+
         /*
-         * The params structure validity checks are unconditional (not
-         * SAFE_PARAM gated) and the size check is done before any other field
-         * is read, so that fields of a mismatching structure are never
-         * accessed.
+         * The params structure size check is done before any other field is
+         * read, so that fields of a mismatching structure are never accessed.
          */
         if (params != NULL) {
                 if (params->size != sizeof(*params) ||
@@ -228,10 +231,16 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
                 ctx_len = params->ctx_len;
                 rnd_32 = params->rnd_32;
                 msg_is_mu = params->msg_is_mu;
+
+                /*
+                 * A NULL randomizer asks for a hedged (auto-random) signature
+                 * and takes no length, otherwise the size is fixed by FIPS 204.
+                 */
+                const size_t exp_rnd_len = (rnd_32 != NULL) ? IMB_ML_DSA_SIGN_RND_BYTES : 0;
+
+                if (params->rnd_len != exp_rnd_len)
+                        return IMB_ERR_PQC_BUFFER_SIZE;
         }
-#ifdef SAFE_PARAM
-        if (self == NULL)
-                return IMB_ERR_NULL_CTX;
         if (sig == NULL || sig_len == NULL)
                 return IMB_ERR_NULL_DST;
         if (self->key == NULL)
@@ -244,16 +253,14 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
                 return IMB_ERR_PQC_CTX_LEN;
-#endif
         /*
          * *sig_len is [in,out]: on entry it must hold the caller's buffer
-         * capacity. This check runs unconditionally (regardless of
-         * SAFE_PARAM) since sign_ctx() below always writes exactly
-         * self->sig_len bytes into sig - an undersized caller-supplied
-         * capacity would otherwise result in an out-of-bounds write.
+         * capacity. sign_ctx() below always writes exactly self->sig_len
+         * bytes into sig - an undersized caller-supplied capacity would
+         * otherwise result in an out-of-bounds write.
          */
         if (*sig_len < self->sig_len)
-                return IMB_ERR_PQC_BUFFER_TOO_SMALL;
+                return IMB_ERR_PQC_BUFFER_SIZE;
 
         int rc;
 
@@ -273,9 +280,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
-                         size_t msg_len, const void *rnd_32_or_null)
+                         size_t msg_len, const void *rnd_32_or_null, size_t rnd_len)
 {
-#ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (sig == NULL || sig_len == NULL)
@@ -284,10 +290,13 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const voi
                 return IMB_ERR_PQC_NO_KEY;
         if (msg == NULL && msg_len != 0)
                 return IMB_ERR_NULL_SRC;
-#endif
-        /* See imb_ml_dsa_sign() above: unconditional buffer-capacity check. */
+        /* See imb_ml_dsa_sign() above: randomizer-length check. */
+        if (rnd_len != ((rnd_32_or_null != NULL) ? IMB_ML_DSA_SIGN_RND_BYTES : 0))
+                return IMB_ERR_PQC_BUFFER_SIZE;
+
+        /* See imb_ml_dsa_sign() above: output buffer-capacity check. */
         if (*sig_len < self->sig_len)
-                return IMB_ERR_PQC_BUFFER_TOO_SMALL;
+                return IMB_ERR_PQC_BUFFER_SIZE;
 
         const int rc = self->sign_internal(self, sig, sig_len, msg, msg_len, rnd_32_or_null);
 
@@ -305,11 +314,12 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
         size_t ctx_len = 0;
         int msg_is_mu = 0;
 
+        if (self == NULL)
+                return IMB_ERR_NULL_CTX;
+
         /*
-         * The params structure validity checks are unconditional (not
-         * SAFE_PARAM gated) and the size check is done before any other field
-         * is read, so that fields of a mismatching structure are never
-         * accessed.
+         * The params structure size check is done before any other field is
+         * read, so that fields of a mismatching structure are never accessed.
          */
         if (params != NULL) {
                 if (params->size != sizeof(*params) ||
@@ -319,9 +329,6 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
                 ctx_len = params->ctx_len;
                 msg_is_mu = params->msg_is_mu;
         }
-#ifdef SAFE_PARAM
-        if (self == NULL)
-                return IMB_ERR_NULL_CTX;
         if (sig == NULL)
                 return IMB_ERR_NULL_SRC;
         if (self->key == NULL)
@@ -334,7 +341,6 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
                 return IMB_ERR_NULL_SRC;
         if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
                 return IMB_ERR_PQC_CTX_LEN;
-#endif
         const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len, msg_is_mu);
 
         if (rc == 0)
@@ -346,7 +352,6 @@ IMB_DLL_EXPORT int
 imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *sig,
                            size_t sig_len)
 {
-#ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (sig == NULL)
@@ -355,7 +360,6 @@ imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, co
                 return IMB_ERR_PQC_NO_KEY;
         if (msg == NULL && msg_len != 0)
                 return IMB_ERR_NULL_SRC;
-#endif
         const int rc = self->verify_internal(self, msg, msg_len, sig, sig_len);
 
         if (rc == 0)
@@ -369,15 +373,13 @@ imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, co
 IMB_DLL_EXPORT int
 imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk, size_t pk_len)
 {
-#ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (pk == NULL)
                 return IMB_ERR_NULL_KEY;
-#endif
         /* the encoded key size is fixed by the parameter set, reject anything else */
         if (pk_len != self->pk_len)
-                return IMB_ERR_PQC_KEYOP;
+                return IMB_ERR_PQC_BUFFER_SIZE;
 
         const int rc = self->pubkey_validate(self, pk);
 
@@ -387,15 +389,13 @@ imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk, size_t pk_len)
 IMB_DLL_EXPORT int
 imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 {
-#ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
-#endif
         /* the encoded key size is fixed by the parameter set, reject anything else */
         if (sk_len != self->sk_len)
-                return IMB_ERR_PQC_KEYOP;
+                return IMB_ERR_PQC_BUFFER_SIZE;
 
         const int rc = self->privkey_validate(self, sk);
 
@@ -403,19 +403,25 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 }
 
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len, void *pk)
+imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len, void *pk,
+                               size_t pk_len)
 {
-#ifdef SAFE_PARAM
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
         if (pk == NULL)
                 return IMB_ERR_NULL_DST;
-#endif
         /* the encoded key size is fixed by the parameter set, reject anything else */
         if (sk_len != self->sk_len)
-                return IMB_ERR_PQC_KEYOP;
+                return IMB_ERR_PQC_BUFFER_SIZE;
+
+        /*
+         * pubkey_from_privkey() below always writes exactly self->pk_len
+         * bytes into pk.
+         */
+        if (pk_len < self->pk_len)
+                return IMB_ERR_PQC_BUFFER_SIZE;
 
         const int rc = self->pubkey_from_privkey(self, sk, pk);
 

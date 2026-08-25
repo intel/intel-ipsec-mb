@@ -362,16 +362,18 @@ typedef enum {
         IMB_ERR_PQC_KEMOP,         /**< PQC key-encapsulation encap/decap operation failure */
         IMB_ERR_PQC_VERIFY_FAILED, /**< PQC signature verification determined the signature to
                                         be cryptographically invalid */
-        IMB_ERR_PQC_BUFFER_TOO_SMALL, /**< PQC output buffer too small for the operation
-                                           requested */
-        IMB_ERR_PQC_PARAMS,           /**< PQC optional-params struct is not valid for this
-                                           build of the library: either its size field does not
-                                           match the expected size, or a reserved field is not
-                                           zero (i.e. it requests an unsupported option) */
-        IMB_ERR_PQC_CTX_LEN,          /**< PQC context string length out of range */
-        IMB_ERR_PQC_MSG_LEN,          /**< PQC message length invalid for the operation
-                                           requested */
-        IMB_ERR_MAX                   /* don't move this one */
+        IMB_ERR_PQC_BUFFER_SIZE,   /**< PQC buffer length is not valid for the operation
+                                        requested: an output buffer is too small, or an input
+                                        buffer length does not match the size fixed by the
+                                        algorithm */
+        IMB_ERR_PQC_PARAMS,        /**< PQC optional-params struct is not valid for this
+                                        build of the library: either its size field does not
+                                        match the expected size, or a reserved field is not
+                                        zero (i.e. it requests an unsupported option) */
+        IMB_ERR_PQC_CTX_LEN,       /**< PQC context string length out of range */
+        IMB_ERR_PQC_MSG_LEN,       /**< PQC message length invalid for the operation
+                                        requested */
+        IMB_ERR_MAX                /* don't move this one */
 } IMB_ERR;
 
 /**
@@ -1674,6 +1676,9 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
 /* Key generation seed (FIPS 204 xi) size in bytes. */
 #define IMB_ML_DSA_KEYGEN_SEED_BYTES 32
 
+/* Signing randomizer (FIPS 204 rnd) size in bytes. */
+#define IMB_ML_DSA_SIGN_RND_BYTES 32
+
 /**
  * @brief Allocate and initialize an ML-DSA context for a given parameter set.
  *
@@ -1757,10 +1762,14 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
  *                      PUBKEY_BYTES, e.g. IMB_ML_DSA_65_PUBKEY_BYTES for
  *                      IMB_ML_DSA_65 - see the IMB_ML_DSA_*_PUBKEY_BYTES
  *                      macros above)
+ * @param [in]  pk_len  Capacity of \a pk in bytes, must be at least the
+ *                      variant PUBKEY_BYTES
  * @param [out] sk      Encoded private key buffer (fixed size: variant
  *                      PRIVKEY_BYTES, e.g. IMB_ML_DSA_65_PRIVKEY_BYTES for
  *                      IMB_ML_DSA_65 - see the IMB_ML_DSA_*_PRIVKEY_BYTES
  *                      macros above)
+ * @param [in]  sk_len  Capacity of \a sk in bytes, must be at least the
+ *                      variant PRIVKEY_BYTES
  * @param [in]  params  Optional key generation parameters, or NULL for
  *                      fresh-random key generation
  *
@@ -1768,12 +1777,17 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk or \a sk pointer
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a pk_len or \a sk_len is smaller than
+ *         the variant's PUBKEY_BYTES / PRIVKEY_BYTES
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_DSA_KEYGEN_PARAMS)
- * @retval IMB_ERR_PQC_KEYOP key generation operation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->xi_len does not match the seed
+ *         size fixed by FIPS 204 (or is not zero for a NULL \a params->xi_32)
+ * @retval IMB_ERR_PQC_KEYOP the key generation operation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN_PARAMS *params);
+imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, size_t pk_len, void *sk, size_t sk_len,
+                   const IMB_ML_DSA_KEYGEN_PARAMS *params);
 
 /**
  * @brief Bind an encoded ML-DSA private key to the context, replacing any
@@ -1792,7 +1806,9 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, void *sk, const IMB_ML_DSA_KEYGEN
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a sk_len or key decode/validation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a sk_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len);
@@ -1812,7 +1828,9 @@ imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len);
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a pk_len or key decode failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a pk_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP key decode failed
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk, size_t pk_len);
@@ -1854,6 +1872,12 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * caller-controlled entropy.
          */
         const void *rnd_32;
+        /**
+         * Size of the randomizer pointed to by \a rnd_32 in bytes.
+         * Must be IMB_ML_DSA_SIGN_RND_BYTES when \a rnd_32 is not NULL,
+         * otherwise must be 0.
+         */
+        size_t rnd_len;
         /**
          * If non-zero, \a msg is a pre-computed \mu value (exactly
          * IMB_ML_DSA_MU_BYTES bytes)
@@ -1958,14 +1982,17 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @retval IMB_ERR_PQC_MSG_LEN \a params->msg_is_mu is set but \a msg_len is
  *         not IMB_ML_DSA_MU_BYTES
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
- * @retval IMB_ERR_PQC_BUFFER_TOO_SMALL \a *sig_len on entry is smaller than
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a *sig_len on entry is smaller than
  *         the variant's SIG_BYTES
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_DSA_SIGN_PARAMS), or \a params->reserved is not
  *         all zero
  * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
  *         IMB_ML_DSA_MAX_CTX_BYTES
- * @retval IMB_ERR_PQC_SIGNOP signing operation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->rnd_len does not match the
+ *         randomizer size fixed by FIPS 204 (or is not zero for a NULL
+ *         \a params->rnd_32)
+ * @retval IMB_ERR_PQC_SIGNOP the signing operation failed
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, size_t msg_len,
@@ -2017,7 +2044,9 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a pk_len or the key is invalid
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a pk_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk, size_t pk_len);
@@ -2033,7 +2062,9 @@ imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk, size_t pk_len);
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a sk_len or the key is invalid
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a sk_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len);
@@ -2046,15 +2077,22 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len);
  * @param [in]  sk_len  Size of \a sk in bytes, must match the variant
  *                      PRIVKEY_BYTES
  * @param [out] pk      Encoded public key buffer (variant PUBKEY_BYTES)
+ * @param [in]  pk_len  Capacity of \a pk in bytes, must be at least the
+ *                      variant PUBKEY_BYTES
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
  * @retval IMB_ERR_NULL_DST invalid \a pk pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a sk_len or derivation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a pk_len is smaller than the
+ *         variant's PUBKEY_BYTES
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a sk_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP derivation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len, void *pk);
+imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len, void *pk,
+                               size_t pk_len);
 
 /*
  * =========================================================
@@ -2109,6 +2147,9 @@ typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB
 
 /* Key generation seed (FIPS 203 "d" || "z") size in bytes. */
 #define IMB_ML_KEM_KEYGEN_SEED_BYTES 64
+
+/* Encapsulation randomness (FIPS 203 "m") size in bytes. */
+#define IMB_ML_KEM_ENCAP_SEED_BYTES 32
 
 /**
  * @brief Allocate and initialize an ML-KEM context for a parameter set.
@@ -2195,10 +2236,14 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
  *                      PUBKEY_BYTES, e.g. IMB_ML_KEM_768_PUBKEY_BYTES for
  *                      IMB_ML_KEM_768 - see the IMB_ML_KEM_*_PUBKEY_BYTES
  *                      macros above)
+ * @param [in]  ek_len  Capacity of \a ek in bytes, must be at least the
+ *                      variant PUBKEY_BYTES
  * @param [out] dk      Encoded decapsulation key buffer (fixed size: variant
  *                      PRIVKEY_BYTES, e.g. IMB_ML_KEM_768_PRIVKEY_BYTES for
  *                      IMB_ML_KEM_768 - see the IMB_ML_KEM_*_PRIVKEY_BYTES
  *                      macros above)
+ * @param [in]  dk_len  Capacity of \a dk in bytes, must be at least the
+ *                      variant PRIVKEY_BYTES
  * @param [in]  params  Optional key generation parameters, or NULL for
  *                      fresh-random key generation
  *
@@ -2206,12 +2251,18 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek or \a dk pointer
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a ek_len or \a dk_len is smaller than
+ *         the variant's PUBKEY_BYTES / PRIVKEY_BYTES
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_KEM_KEYGEN_PARAMS)
- * @retval IMB_ERR_PQC_KEYOP key generation operation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->seed_d_z_len does not match the
+ *         seed size fixed by FIPS 203 (or is not zero for a NULL
+ *         \a params->seed_d_z)
+ * @retval IMB_ERR_PQC_KEYOP the key generation operation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN_PARAMS *params);
+imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, size_t ek_len, void *dk, size_t dk_len,
+                   const IMB_ML_KEM_KEYGEN_PARAMS *params);
 
 /**
  * @brief Bind an encoded ML-KEM decapsulation (private) key to the context,
@@ -2231,7 +2282,9 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, void *dk, const IMB_ML_KEM_KEYGEN
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a dk pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a dk_len or key decode/validation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a dk_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP key decode/validation failed
  */
 IMB_DLL_EXPORT int
 imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk, size_t dk_len);
@@ -2253,7 +2306,9 @@ imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk, size_t dk_len);
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a ek_len or key decode failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a ek_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP key decode failed
  */
 IMB_DLL_EXPORT int
 imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek, size_t ek_len);
@@ -2288,6 +2343,12 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
          * testing).
          */
         const void *m_32;
+        /**
+         * Size of the randomness pointed to by \a m_32 in bytes.
+         * Must be IMB_ML_KEM_ENCAP_SEED_BYTES when \a m_32 is not NULL,
+         * otherwise must be 0.
+         */
+        size_t m_len;
 } IMB_ML_KEM_ENCAP_PARAMS;
 
 /**
@@ -2307,8 +2368,12 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
  *
  * @param [in]  self           ML-KEM context with a bound encapsulation key
  * @param [out] ct             Ciphertext buffer (variant CIPHERTEXT_BYTES)
+ * @param [in]  ct_len         Capacity of \a ct in bytes, must be at least the
+ *                             variant CIPHERTEXT_BYTES
  * @param [out] shared_secret  Shared secret buffer
  *                             (IMB_ML_KEM_SHARED_SECRET_BYTES)
+ * @param [in]  ss_len         Capacity of \a shared_secret in bytes, must be at
+ *                             least IMB_ML_KEM_SHARED_SECRET_BYTES
  * @param [in]  params         Optional encapsulation parameters, or NULL for
  *                             fresh-random encapsulation
  *
@@ -2317,12 +2382,17 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a ct or \a shared_secret pointer
  * @retval IMB_ERR_PQC_NO_KEY no encapsulation key bound to \a self
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a ct_len or \a ss_len is smaller than
+ *         the variant's CIPHERTEXT_BYTES / IMB_ML_KEM_SHARED_SECRET_BYTES
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_KEM_ENCAP_PARAMS)
- * @retval IMB_ERR_PQC_KEMOP encapsulation operation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->m_len does not match the
+ *         randomness size fixed by FIPS 203 (or is not zero for a NULL
+ *         \a params->m_32)
+ * @retval IMB_ERR_PQC_KEMOP the encapsulation operation failed
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, void *shared_secret,
+imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, size_t ct_len, void *shared_secret, size_t ss_len,
                  const IMB_ML_KEM_ENCAP_PARAMS *params);
 
 /**
@@ -2348,6 +2418,8 @@ typedef struct IMB_ML_KEM_DECAP_PARAMS IMB_ML_KEM_DECAP_PARAMS;
  * @param [in]  self           ML-KEM context with a bound decapsulation key
  * @param [out] shared_secret  Shared secret buffer
  *                             (IMB_ML_KEM_SHARED_SECRET_BYTES)
+ * @param [in]  ss_len         Capacity of \a shared_secret in bytes, must be at
+ *                             least IMB_ML_KEM_SHARED_SECRET_BYTES
  * @param [in]  ct             Ciphertext buffer
  * @param [in]  ct_len         Ciphertext length in bytes (must equal the
  *                             bound parameter set's CIPHERTEXT_BYTES)
@@ -2359,11 +2431,13 @@ typedef struct IMB_ML_KEM_DECAP_PARAMS IMB_ML_KEM_DECAP_PARAMS;
  * @retval IMB_ERR_NULL_DST invalid \a shared_secret pointer
  * @retval IMB_ERR_NULL_SRC invalid \a ct pointer
  * @retval IMB_ERR_PQC_NO_KEY no decapsulation key bound to \a self
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a ss_len is smaller than
+ *         IMB_ML_KEM_SHARED_SECRET_BYTES
  * @retval IMB_ERR_PQC_KEMOP decapsulation failed (e.g. \a ct_len mismatch)
  */
 IMB_DLL_EXPORT int
-imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t ct_len,
-                 const IMB_ML_KEM_DECAP_PARAMS *params);
+imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, size_t ss_len, const void *ct,
+                 size_t ct_len, const IMB_ML_KEM_DECAP_PARAMS *params);
 
 /**
  * @brief Validate an encoded ML-KEM encapsulation (public) key.
@@ -2376,7 +2450,9 @@ imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, const void *ct, size_t c
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a ek_len or the key is invalid
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a ek_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
 imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek, size_t ek_len);
@@ -2393,7 +2469,9 @@ imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek, size_t ek_len);
  * @retval 0 the key is valid
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a dk pointer
- * @retval IMB_ERR_PQC_KEYOP invalid \a dk_len or the key is invalid
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a dk_len does not match the encoded key
+ *         size fixed by the parameter set
+ * @retval IMB_ERR_PQC_KEYOP the key is invalid
  */
 IMB_DLL_EXPORT int
 imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk, size_t dk_len);

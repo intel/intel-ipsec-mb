@@ -60,15 +60,21 @@ extern "C" {
  *                                 signing). Pass 32 zero bytes for FIPS 204
  *                                 deterministic signing (e.g. ACVP conformance
  *                                 testing).
+ * @param [in]      rnd_len        Size of \a rnd_32_or_null in bytes. Must be
+ *                                 IMB_ML_DSA_SIGN_RND_BYTES when
+ *                                 \a rnd_32_or_null is not NULL, otherwise must
+ *                                 be 0.
  * @return Operation status
  * @retval 0 success
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_DST invalid \a sig or \a sig_len pointer
  * @retval IMB_ERR_NULL_SRC invalid \a msg pointer
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
- * @retval IMB_ERR_PQC_BUFFER_TOO_SMALL \a *sig_len on entry is smaller than
- *         the variant's SIG_BYTES
- * @retval IMB_ERR_PQC_SIGNOP signing operation failed
+ * @retval IMB_ERR_PQC_BUFFER_SIZE \a *sig_len on entry is smaller than
+ *         the variant's SIG_BYTES, or \a rnd_len does not match the
+ *         randomizer size fixed by FIPS 204 (or is not zero for a NULL
+ *         \a rnd_32_or_null)
+ * @retval IMB_ERR_PQC_SIGNOP the signing operation failed
  *
  * @warning Per FIPS 204 Section 6, the internal Sign_internal interface is
  * exported ONLY to support ACVP/CAVP conformance testing and MUST NOT be
@@ -79,7 +85,7 @@ extern "C" {
  */
 IMB_DLL_EXPORT int
 imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg,
-                         size_t msg_len, const void *rnd_32_or_null);
+                         size_t msg_len, const void *rnd_32_or_null, size_t rnd_len);
 
 /**
  * @brief Verify a signature over a message using the FIPS 204 internal interface

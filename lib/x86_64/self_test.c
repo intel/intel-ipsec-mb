@@ -3260,7 +3260,7 @@ self_test_ml_dsa(IMB_MGR *p_mgr, const struct self_test_ml_dsa_vector *v)
                 return 0;
 
         /* Standalone key-derivation self-check (does not bind a key). */
-        if (imb_ml_dsa_pubkey_from_privkey(handle, v->sk, v->sk_len, pk) != 0)
+        if (imb_ml_dsa_pubkey_from_privkey(handle, v->sk, v->sk_len, pk, sizeof(pk)) != 0)
                 goto end;
 
         if (imb_ml_dsa_set_privkey(handle, v->sk, v->sk_len) != 0)
@@ -3272,6 +3272,7 @@ self_test_ml_dsa(IMB_MGR *p_mgr, const struct self_test_ml_dsa_vector *v)
         sign_params.ctx = v->ctx;
         sign_params.ctx_len = v->ctx_len;
         sign_params.rnd_32 = zero_rnd;
+        sign_params.rnd_len = sizeof(zero_rnd);
 
         if (imb_ml_dsa_sign(handle, sig, &sig_len, msg, v->msg_len, &sign_params) != 0)
                 goto end;
@@ -3655,10 +3656,10 @@ self_test_ml_kem(IMB_MGR *p_mgr, const struct self_test_ml_kem_vector *v)
         keygen_params.seed_d_z = v->seed;
         keygen_params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
 
-        if (imb_ml_kem_keypair(handle, ek, dk, &keygen_params) != 0)
+        if (imb_ml_kem_keypair(handle, ek, sizeof(ek), dk, sizeof(dk), &keygen_params) != 0)
                 goto end;
 
-        if (imb_ml_kem_decap(handle, ss, ct, v->ct_len, NULL) != 0)
+        if (imb_ml_kem_decap(handle, ss, sizeof(ss), ct, v->ct_len, NULL) != 0)
                 goto end;
 
         if (memcmp(ss, v->ss, IMB_ML_KEM_SHARED_SECRET_BYTES) != 0)
