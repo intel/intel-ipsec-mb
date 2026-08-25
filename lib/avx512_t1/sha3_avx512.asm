@@ -465,8 +465,9 @@ align_label
         vmovdqu64       [rsp + 32*7], ymm0
 
 %ifdef SAFE_DATA
-        ;; Clear keccak state registers (xmm0-xmm24)
-        call    keccak_1600_init_state
+        ;; Clear keccak state registers (xmm0-xmm24) and the
+        ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
+        clear_all_zmms_asm
 %endif ; SAFE_DATA
 
         add     rsp, 8*32
@@ -526,8 +527,9 @@ align_label
         vmovdqu64       [rsp + 32*7], ymm0
 
 %ifdef SAFE_DATA
-        ;; Clear keccak state registers (xmm0-xmm24)
-        call    keccak_1600_init_state
+        ;; Clear keccak state registers (xmm0-xmm24) and the
+        ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
+        clear_all_zmms_asm
 %endif ; SAFE_DATA
 
         add     rsp, 8*32
@@ -587,8 +589,9 @@ align_label
         vmovdqu64       [rsp + 32*7], ymm0
 
 %ifdef SAFE_DATA
-        ;; Clear keccak state registers (xmm0-xmm24)
-        call    keccak_1600_init_state
+        ;; Clear keccak state registers (xmm0-xmm24) and the
+        ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
+        clear_all_zmms_asm
 %endif ; SAFE_DATA
 
         add     rsp, 8*32
@@ -648,8 +651,9 @@ align_label
         vmovdqu64       [rsp + 32*7], ymm0
 
 %ifdef SAFE_DATA
-        ;; Clear keccak state registers (xmm0-xmm24)
-        call    keccak_1600_init_state
+        ;; Clear keccak state registers (xmm0-xmm24) and the
+        ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
+        clear_all_zmms_asm
 %endif ; SAFE_DATA
 
         add     rsp, 8*32
@@ -729,8 +733,9 @@ align_label
         vmovdqu64       [rsp + 32*7], ymm0
 
 %ifdef SAFE_DATA
-        ;; Clear keccak state registers (xmm0-xmm24)
-        call    keccak_1600_init_state
+        ;; Clear keccak state registers (xmm0-xmm24) and the
+        ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
+        clear_all_zmms_asm
 %endif ; SAFE_DATA
 
         add     rsp, 8*32
@@ -810,8 +815,9 @@ align_label
         vmovdqu64       [rsp + 32*7], ymm0
 
 %ifdef SAFE_DATA
-        ;; Clear keccak state registers (xmm0-xmm24)
-        call    keccak_1600_init_state
+        ;; Clear keccak state registers (xmm0-xmm24) and the
+        ;; keccak1600_block_64bit temporaries (ymm25-ymm31)
+        clear_all_zmms_asm
 %endif ; SAFE_DATA
 
         add     rsp, 32 * 8
