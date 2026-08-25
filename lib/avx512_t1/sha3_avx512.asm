@@ -22,6 +22,50 @@ default rel
 %include "include/cet.inc"
 %include "include/clear_regs.inc"
 
+;; Stack frame layout of the exported functions (offsets from rsp
+;; after 'sub rsp, FRAME_SZ'):
+;;
+;;   [rsp + _PARTIAL]  256-byte scratch buffer (padded message block / digest)
+;;   [rsp + _XMM_SAVE] xmm6-xmm15 save area (Windows only, 10 * 16 = 160 B)
+;;
+%define PARTIAL_SZ      256             ; 8 x 32-byte YMM = 256 bytes
+%define XMM_SAVE_SZ     (10 * 16)       ; xmm6-xmm15 = 160 bytes
+
+%define _PARTIAL        0
+%define _XMM_SAVE       (_PARTIAL + PARTIAL_SZ)
+
+%ifdef LINUX
+%define FRAME_SZ        PARTIAL_SZ
+%else
+%define FRAME_SZ        (PARTIAL_SZ + XMM_SAVE_SZ)
+%endif
+
+;; Save the Windows x64 callee-saved XMM registers.
+;; The keccak state occupies xmm0-xmm24, so xmm6-xmm15 get clobbered.
+;; Note: VEX encoded unaligned moves are used on purpose, since the frame
+;; is not 16-byte aligned and to avoid AVX to SSE transition penalties.
+%macro SAVE_WIN_XMMS 0
+%ifndef LINUX
+%assign i 6
+%rep 10
+        vmovdqu [rsp + _XMM_SAVE + (i - 6)*16], xmm %+ i
+%assign i (i + 1)
+%endrep
+%endif
+%endmacro
+
+;; Restore the Windows x64 callee-saved XMM registers.
+;; Must be placed after any SAFE_DATA register clearing.
+%macro RESTORE_WIN_XMMS 0
+%ifndef LINUX
+%assign i 6
+%rep 10
+        vmovdqu xmm %+ i, [rsp + _XMM_SAVE + (i - 6)*16]
+%assign i (i + 1)
+%endrep
+%endif
+%endmacro
+
 mksection .text
 
 ; ============================================================
@@ -426,7 +470,8 @@ sha3_224_avx512:
         push    r13
         push    r14
         push    r15
-        sub     rsp, 8*32
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
         mov     rbx, arg3               ; save output ptr (Win: arg3=r8, clobbered by lea r8 below)
         mov     r9d, SHA3_224_RATE      ; Initialize the rate for SHA3-224
         mov     r11, arg2               ; copy message length to r11
@@ -470,7 +515,8 @@ align_label
         clear_all_zmms_asm
 %endif ; SAFE_DATA
 
-        add     rsp, 8*32
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
         pop     r15
         pop     r14
         pop     r13
@@ -490,7 +536,8 @@ sha3_256_avx512:
         push    r13
         push    r14
         push    r15
-        sub     rsp, 8*32
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
         mov     rbx, arg3               ; save output ptr (Win: arg3=r8, clobbered by lea r8 below)
         mov     r9d, SHA3_256_RATE
         mov     r11, arg2
@@ -532,7 +579,8 @@ align_label
         clear_all_zmms_asm
 %endif ; SAFE_DATA
 
-        add     rsp, 8*32
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
         pop     r15
         pop     r14
         pop     r13
@@ -552,7 +600,8 @@ sha3_384_avx512:
         push    r13
         push    r14
         push    r15
-        sub     rsp, 8*32
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
         mov     rbx, arg3               ; save output ptr (Win: arg3=r8, clobbered by lea r8 below)
         mov     r9d, SHA3_384_RATE
         mov     r11, arg2
@@ -594,7 +643,8 @@ align_label
         clear_all_zmms_asm
 %endif ; SAFE_DATA
 
-        add     rsp, 8*32
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
         pop     r15
         pop     r14
         pop     r13
@@ -614,7 +664,8 @@ sha3_512_avx512:
         push    r13
         push    r14
         push    r15
-        sub     rsp, 8*32
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
         mov     rbx, arg3               ; save output ptr (Win: arg3=r8, clobbered by lea r8 below)
         mov     r9d, SHA3_512_RATE
         mov     r11, arg2
@@ -656,7 +707,8 @@ align_label
         clear_all_zmms_asm
 %endif ; SAFE_DATA
 
-        add     rsp, 8*32
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
         pop     r15
         pop     r14
         pop     r13
@@ -677,7 +729,8 @@ shake128_avx512:
         push    r13
         push    r14
         push    r15
-        sub     rsp, 8*32
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
         mov     r11, arg2
         mov     rbx, arg3               ; save output ptr (Win: arg3=r8, clobbered by lea r8 below)
         mov     rbp, arg4               ; save outlen   (Win: arg4=r9, clobbered by mov r9d,RATE)
@@ -738,7 +791,8 @@ align_label
         clear_all_zmms_asm
 %endif ; SAFE_DATA
 
-        add     rsp, 8*32
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
         pop     r15
         pop     r14
         pop     r13
@@ -759,7 +813,8 @@ shake256_avx512:
         push    r13
         push    r14
         push    r15
-        sub     rsp, 32 * 8
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
         mov     r11, arg2
         mov     rbx, arg3               ; save output ptr (Win: arg3=r8, clobbered by lea r8 below)
         mov     rbp, arg4               ; save outlen   (Win: arg4=r9, clobbered by mov r9d,RATE)
@@ -820,7 +875,8 @@ align_label
         clear_all_zmms_asm
 %endif ; SAFE_DATA
 
-        add     rsp, 32 * 8
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
         pop     r15
         pop     r14
         pop     r13
