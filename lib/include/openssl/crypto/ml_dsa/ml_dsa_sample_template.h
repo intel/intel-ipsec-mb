@@ -92,6 +92,8 @@ ML_DSA_REJ_NTT_POLY_MB(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const s
                 }
         }
 
+        OPENSSL_cleanse(blocks, sizeof(blocks));
+        OPENSSL_cleanse(&ctx, sizeof(ctx));
         return 1;
 }
 
