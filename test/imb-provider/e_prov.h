@@ -19,4 +19,7 @@ prov_sw_cpu_support(void);
 mb_thread_data *
 mb_check_thread_local(void);
 
+void
+mb_cleanup_thread_local(void);
+
 #endif /* E_PROV_H */

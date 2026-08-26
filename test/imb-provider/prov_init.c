@@ -97,6 +97,7 @@ PROV_PARAMS prov_params;
 static void
 prov_teardown(void *provctx)
 {
+        mb_cleanup_thread_local();
         free_ipsec_mb_mgr();
         if (provctx) {
                 PROV_CTX *prov_ctx = (PROV_CTX *) provctx;

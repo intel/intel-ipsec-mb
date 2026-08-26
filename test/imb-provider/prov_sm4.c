@@ -22,6 +22,7 @@
 /* Local Includes */
 #include "e_prov.h"
 #include "prov_evp.h"
+#include "prov_ciphers.h"
 #include "prov_sm4.h"
 #include "prov_sw_request.h"
 #include "prov_events.h"

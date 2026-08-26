@@ -48,6 +48,6 @@ hmac_sha_async_update(ALG_CTX *ctx, const unsigned char *actual_data, const size
 int
 hmac_sha_async_final(ALG_CTX *ctx, unsigned char *md);
 int
-hmac_sha_async_cleanup();
+hmac_sha_async_cleanup(ALG_CTX *ctx);
 
 #endif /* PROV_SW_HMAC_SHA_H */

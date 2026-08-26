@@ -95,28 +95,51 @@ static void
 cleanup_global_tlv()
 {
         if (global_tlv != NULL) {
-                global_tlv->keep_polling = 0;
-
                 op_data *req;
+
+                /*
+                 * Stop the polling thread and wait for it before anything it
+                 * touches goes away: it dereferences the job queue and the
+                 * semaphore on every iteration. Posting the semaphore breaks it
+                 * out of sem_timedwait() at once instead of after another
+                 * polling period.
+                 */
+                global_tlv->keep_polling = 0;
+                sem_post(&global_tlv->mb_polling_thread_sem);
+                pthread_join(global_tlv->polling_thread, NULL);
+                sem_destroy(&global_tlv->mb_polling_thread_sem);
+
                 queue_async_disable(global_tlv->jobs);
                 if (global_tlv->jobs) {
+                        /* Anything still queued belongs to an operation that
+                         * will never complete; release its waiter. */
                         while ((req = queue_async_dequeue(global_tlv->jobs)) != NULL) {
-                                *req->sts = -1;
                                 prov_wake_job(req->job);
                                 OPENSSL_free(req);
                         }
                         queue_async_cleanup(global_tlv->jobs);
                 }
 
-                pthread_join(global_tlv->polling_thread, NULL);
-                sem_destroy(&global_tlv->mb_polling_thread_sem);
                 flist_async_cleanup(global_tlv->freelist_jobs);
+
+                if (global_tlv->imb_mgr != NULL) {
+                        free_mb_mgr(global_tlv->imb_mgr);
+                        global_tlv->imb_mgr = NULL;
+                }
 
                 OPENSSL_free(global_tlv);
                 global_tlv = NULL;
 
                 atomic_store(&global_tlv_initialized, 0);
         }
+}
+
+void
+mb_cleanup_thread_local(void)
+{
+        pthread_mutex_lock(&global_tlv_init_mutex);
+        cleanup_global_tlv();
+        pthread_mutex_unlock(&global_tlv_init_mutex);
 }
 
 mb_thread_data *
