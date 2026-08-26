@@ -117,8 +117,10 @@ aes_cfb_set_ctx_params(ALG_CTX *ctx, const OSSL_PARAM params[])
 static void
 aes_freectx(ALG_CTX *ctx)
 {
-        if (ctx != NULL)
+        if (ctx != NULL) {
                 OPENSSL_free(ctx->tlsmac);
+                aes_cfb_async_cleanup(ctx);
+        }
 
         OPENSSL_clear_free(ctx, sizeof(*ctx));
 }
@@ -150,6 +152,11 @@ aes_init_internal(ALG_CTX *ctx, const unsigned char *key, size_t keylen, const u
 
         if (!prov_is_running())
                 return FAILURE;
+
+        /* A new operation starts on a block boundary, with no keystream carried
+         * over from the previous one. An explicit OSSL_CIPHER_PARAM_NUM in
+         * |params| still wins: those are applied at the end. */
+        ctx->num = 0;
 
         // Only handle IV initialization here
         if (iv != NULL) {
