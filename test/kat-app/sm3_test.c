@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 int
 sm3_test(struct IMB_MGR *mb_mgr);
@@ -26,118 +27,13 @@ free_sm3_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static int
-sm3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-           const uint8_t *padding, const size_t sizeof_padding)
-{
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("line:%d job error status:%d ", __LINE__, job->status);
-                return 0;
-        }
-
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
-                        sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp((const void *) vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", (const void *) vec->tag, vec->tagSize / 8);
-                return 0;
-        }
-        return 1;
-}
-
-static int
 test_sm3(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        const struct kat_hash_job_ops ops = {
+                .hash_alg = IMB_AUTH_SM3,
+        };
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
-
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
-
-                auths[i] = malloc(alloc_len);
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-                memset(auths[i], -1, alloc_len);
-        }
-
-        /* empty the manager */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-
-                memset(job, 0, sizeof(*job));
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-                job->src = (const void *) vec->msg;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_SM3;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (!sm3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (!sm3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        /* empty the manager before next tests */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static void
@@ -169,7 +65,8 @@ sm3_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_mac_vectors(kat_vector_dir, "sm3_test.json", &sm3_vectors, &jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "sm3_test.json", &sm3_vectors, &jctx) < 0 ||
+            sm3_vectors == NULL)
                 return 1;
 
         test_suite_start(&ctx, "SM3");

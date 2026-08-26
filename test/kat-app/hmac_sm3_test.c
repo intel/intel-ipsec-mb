@@ -19,7 +19,6 @@ int
 hmac_sm3_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *hmac_sm3_vectors;
-static int hmac_sm3_unused_ctx;
 
 static void
 free_hmac_sm3_vectors(struct test_json_alloc_ctx *ctx)
@@ -66,7 +65,6 @@ test_hmac_sm3(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t
         const struct kat_hash_job_ops ops = {
                 .prepare = hmac_sm3_job_prepare,
                 .cleanup = hmac_sm3_job_cleanup,
-                .ctx = &hmac_sm3_unused_ctx,
                 .hash_alg = IMB_AUTH_HMAC_SM3,
         };
 
@@ -79,7 +77,6 @@ test_hmac_sm3_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const ui
         const struct kat_hash_job_ops ops = {
                 .prepare = hmac_sm3_job_prepare,
                 .cleanup = hmac_sm3_job_cleanup,
-                .ctx = &hmac_sm3_unused_ctx,
                 .hash_alg = IMB_AUTH_HMAC_SM3,
         };
 
