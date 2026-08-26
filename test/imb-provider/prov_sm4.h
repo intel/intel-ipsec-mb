@@ -65,6 +65,8 @@ void *
 prov_sm4_ctr_newctx(void *provctx);
 void
 prov_sm4_freectx(void *vctx);
+void *
+prov_sm4_dupctx(void *vctx);
 int
 prov_sm4_encrypt_init(void *vctx, const unsigned char *key, const int keylen,
                       const unsigned char *iv, const int ivlen, const int enc);
@@ -98,6 +100,7 @@ prov_sm4_set_ctx_params(void *vctx, const OSSL_PARAM params[]);
         const OSSL_DISPATCH alg##lc##_functions[] = {                                              \
                 { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) alg##lc##_newctx },                    \
                 { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) prov_sm4_freectx },                   \
+                { OSSL_FUNC_CIPHER_DUPCTX, (void (*)(void)) prov_sm4_dupctx },                     \
                 { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) prov_sm4_encrypt_init },         \
                 { OSSL_FUNC_CIPHER_DECRYPT_INIT, (void (*)(void)) prov_sm4_decrypt_init },         \
                 { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) prov_sm4_update },                     \

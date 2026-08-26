@@ -336,6 +336,107 @@ prov_aes_gcm_freectx(void *vctx)
         OPENSSL_clear_free(ctx, sizeof(*ctx));
 }
 
+int
+prov_cipher_dup_buf(unsigned char **dst, const unsigned char *src, size_t len)
+{
+        if (src == NULL || len == 0) {
+                *dst = NULL;
+                return 1;
+        }
+
+        *dst = OPENSSL_memdup(src, len);
+        return *dst != NULL;
+}
+
+ALG_CTX *
+prov_alg_ctx_dup_base(const ALG_CTX *src)
+{
+        ALG_CTX *dst;
+
+        if (src == NULL || !prov_is_running())
+                return NULL;
+
+        dst = OPENSSL_malloc(sizeof(*dst));
+        if (dst == NULL)
+                return NULL;
+
+        *dst = *src;
+
+        /* Owned by the context: cleared here, deep-copied by the caller for
+         * whichever buffers its algorithm actually uses. */
+        dst->key = NULL;
+        dst->enc_keys = NULL;
+        dst->dec_keys = NULL;
+        dst->aad = NULL;
+        dst->tag = NULL;
+        dst->tlsmac = NULL;
+        dst->xof_buf = NULL;
+        dst->cipher = NULL;
+
+        /* Not owned: the MAC and digest handles belong to HMAC, which has its
+         * own dupctx, while imb_job/out/ks live only for a single operation. */
+        dst->mac_ctx = NULL;
+        memset(&dst->digest, 0, sizeof(dst->digest));
+        dst->imb_job = NULL;
+        dst->out = NULL;
+        dst->ks = NULL;
+
+        return dst;
+}
+
+static void *
+prov_aes_gcm_dupctx(void *vctx)
+{
+        PROV_AES_GCM_CTX *in = (PROV_AES_GCM_CTX *) vctx;
+        PROV_AES_GCM_CTX *ret;
+
+        if (in == NULL || !prov_is_running())
+                return NULL;
+
+        ret = OPENSSL_malloc(sizeof(*ret));
+        if (ret == NULL)
+                return NULL;
+
+        *ret = *in;
+
+        /* Clear the owned pointers before any allocation so that an error path
+         * below can safely hand the partial copy to prov_aes_gcm_freectx(). */
+        ret->cipher = NULL;
+        ret->base.iv = NULL;
+        ret->base.next_iv = NULL;
+        ret->base.tls_aad = NULL;
+        ret->base.tag = NULL;
+        ret->base.calculated_tag = NULL;
+
+        if (in->cipher != NULL) {
+                ret->cipher = OPENSSL_memdup(in->cipher, sizeof(*in->cipher));
+                if (ret->cipher == NULL)
+                        goto err;
+        }
+
+        /* tag_len and tls_aad_len start out as UNINITIALISED_SIZET, so the
+         * lengths are only trustworthy once the matching buffer exists. */
+        if (in->base.iv_len > 0 &&
+            (!prov_cipher_dup_buf(&ret->base.iv, in->base.iv, in->base.iv_len) ||
+             !prov_cipher_dup_buf(&ret->base.next_iv, in->base.next_iv, in->base.iv_len)))
+                goto err;
+
+        if (!prov_cipher_dup_buf(&ret->base.tls_aad, in->base.tls_aad, EVP_AEAD_TLS1_AAD_LEN))
+                goto err;
+
+        if (in->base.tag_len > 0 &&
+            (!prov_cipher_dup_buf(&ret->base.tag, in->base.tag, in->base.tag_len) ||
+             !prov_cipher_dup_buf(&ret->base.calculated_tag, in->base.calculated_tag,
+                                  in->base.tag_len)))
+                goto err;
+
+        return ret;
+
+err:
+        prov_aes_gcm_freectx(ret);
+        return NULL;
+}
+
 static const OSSL_PARAM prov_cipher_known_gettable_params[] = {
         OSSL_PARAM_uint(OSSL_CIPHER_PARAM_MODE, NULL),
         OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_KEYLEN, NULL),

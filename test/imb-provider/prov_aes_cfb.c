@@ -123,6 +123,25 @@ aes_freectx(ALG_CTX *ctx)
         OPENSSL_clear_free(ctx, sizeof(*ctx));
 }
 
+static void *
+aes_cfb_dupctx(void *vctx)
+{
+        ALG_CTX *in = (ALG_CTX *) vctx;
+        ALG_CTX *ret = prov_alg_ctx_dup_base(in);
+
+        if (ret == NULL)
+                return NULL;
+
+        if (!prov_cipher_dup_buf(&ret->enc_keys, in->enc_keys, PROV_ENC_DEC_KEY_SIZE * 16) ||
+            !prov_cipher_dup_buf(&ret->dec_keys, in->dec_keys, PROV_ENC_DEC_KEY_SIZE * 16) ||
+            !prov_cipher_dup_buf(&ret->tlsmac, in->tlsmac, in->tlsmacsize)) {
+                aes_freectx(ret);
+                return NULL;
+        }
+
+        return ret;
+}
+
 static int
 aes_init_internal(ALG_CTX *ctx, const unsigned char *key, size_t keylen, const unsigned char *iv,
                   const size_t ivlen, const OSSL_PARAM params[], const int enc)
@@ -264,6 +283,7 @@ cipher_generic_initkey(ALG_CTX *ctx, size_t kbits, size_t blkbits, size_t ivbits
         const OSSL_DISPATCH prov_##alg##kbits##lcmode##_functions[] = {                            \
                 { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) alg##_##kbits##_##lcmode##_newctx },   \
                 { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) alg##_freectx },                      \
+                { OSSL_FUNC_CIPHER_DUPCTX, (void (*)(void)) aes_cfb_dupctx },                      \
                 { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) aes_cfb_einit },                 \
                 { OSSL_FUNC_CIPHER_DECRYPT_INIT, (void (*)(void)) aes_cfb_dinit },                 \
                 { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) aes_cfb_##typ##_update },              \

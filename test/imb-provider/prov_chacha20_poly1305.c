@@ -72,6 +72,24 @@ chacha20_poly1305_freectx(void *ctx)
         }
 }
 
+static void *
+chacha20_poly1305_dupctx(void *vctx)
+{
+        ALG_CTX *in = (ALG_CTX *) vctx;
+        ALG_CTX *ret = prov_alg_ctx_dup_base(in);
+
+        if (ret == NULL)
+                return NULL;
+
+        if (!prov_cipher_dup_buf(&ret->tag, in->tag, CHACHA20_POLY1305_TAG_SIZE) ||
+            !prov_cipher_dup_buf(&ret->aad, in->aad, in->aad_len)) {
+                chacha20_poly1305_freectx(ret);
+                return NULL;
+        }
+
+        return ret;
+}
+
 int
 chacha20_poly1305_einit(void *ctx, const unsigned char *key, const int keylen,
                         const unsigned char *iv, const int ivlen)
@@ -327,6 +345,7 @@ chacha20_poly1305_gettable_ctx_params(void *ctx, void *provctx)
 const OSSL_DISPATCH prov_chacha20_poly1305_functions[] = {
         { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) chacha20_poly1305_newctx },
         { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) chacha20_poly1305_freectx },
+        { OSSL_FUNC_CIPHER_DUPCTX, (void (*)(void)) chacha20_poly1305_dupctx },
         { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) chacha20_poly1305_einit },
         { OSSL_FUNC_CIPHER_DECRYPT_INIT, (void (*)(void)) chacha20_poly1305_dinit },
         { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) chacha20_poly1305_stream_update },

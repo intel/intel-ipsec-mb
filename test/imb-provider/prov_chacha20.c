@@ -100,6 +100,24 @@ chacha20_freectx(ALG_CTX *ctx)
         }
 }
 
+static void *
+chacha20_dupctx(void *vctx)
+{
+        ALG_CTX *in = (ALG_CTX *) vctx;
+        ALG_CTX *ret = prov_alg_ctx_dup_base(in);
+
+        if (ret == NULL)
+                return NULL;
+
+        if (!prov_cipher_dup_buf(&ret->enc_keys, in->enc_keys, sizeof(in->chacha20_key)) ||
+            !prov_cipher_dup_buf(&ret->dec_keys, in->dec_keys, sizeof(in->chacha20_key))) {
+                chacha20_freectx(ret);
+                return NULL;
+        }
+
+        return ret;
+}
+
 static int
 chacha20_einit(ALG_CTX *ctx, const unsigned char *inkey, const size_t keylen,
                const unsigned char *iv, const size_t ivlen, const OSSL_PARAM params[])
@@ -254,6 +272,7 @@ cipher_generic_initkey_cha(ALG_CTX *ctx, const int kbits, const int blkbits, con
         const OSSL_DISPATCH prov_chacha20_functions[] = {                                          \
                 { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) alg##_##kbits##_##lcmode##_newctx },   \
                 { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) chacha20_freectx },                   \
+                { OSSL_FUNC_CIPHER_DUPCTX, (void (*)(void)) chacha20_dupctx },                     \
                 { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) chacha20_einit },                \
                 { OSSL_FUNC_CIPHER_DECRYPT_INIT, (void (*)(void)) chacha20_dinit },                \
                 { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) chacha20_stream_update_cha },          \

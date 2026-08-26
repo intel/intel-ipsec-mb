@@ -294,6 +294,38 @@ prov_aes_ccm_freectx(ALG_CTX *ctx)
         }
 }
 
+static void *
+prov_aes_ccm_dupctx(void *vctx)
+{
+        ALG_CTX *in = (ALG_CTX *) vctx;
+        ALG_CTX *ret = prov_alg_ctx_dup_base(in);
+
+        if (ret == NULL)
+                return NULL;
+
+        if (in->cipher != NULL) {
+                ret->cipher = OPENSSL_memdup(in->cipher, sizeof(*in->cipher));
+                if (ret->cipher == NULL)
+                        goto err;
+        }
+
+        if (!prov_cipher_dup_buf(&ret->key, in->key, in->keylen))
+                goto err;
+
+        if (in->aad_len > 0 && !prov_cipher_dup_buf(&ret->aad, in->aad, in->aad_len))
+                goto err;
+
+        if (!prov_cipher_dup_buf(&ret->enc_keys, in->enc_keys,
+                                 (in->keylen == 16) ? 11 * 16 : 15 * 16))
+                goto err;
+
+        return ret;
+
+err:
+        prov_aes_ccm_freectx(ret);
+        return NULL;
+}
+
 static const OSSL_PARAM prov_aes_ccm_known_gettable_params[] = {
         OSSL_PARAM_uint(OSSL_CIPHER_PARAM_MODE, NULL),
         OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_KEYLEN, NULL),

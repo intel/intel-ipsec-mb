@@ -177,6 +177,15 @@ prov_cipher_generic_get_params(OSSL_PARAM params[], unsigned int md, uint64_t fl
 const OSSL_PARAM *
 prov_cipher_generic_gettable_params(void *provctx);
 
+/*
+ * Helpers shared by the cipher dupctx implementations.
+ */
+int
+prov_cipher_dup_buf(unsigned char **dst, const unsigned char *src, size_t len);
+
+ALG_CTX *
+prov_alg_ctx_dup_base(const ALG_CTX *src);
+
 #define PROV_aes_gcm_cipher(alg, lc, UCMODE, flags, kbits, blkbits, ivbits, nid)                   \
         static OSSL_FUNC_cipher_get_params_fn alg##_##kbits##_##lc##_get_params;                   \
         static int alg##_##kbits##_##lc##_get_params(OSSL_PARAM params[])                          \
@@ -192,6 +201,7 @@ prov_cipher_generic_gettable_params(void *provctx);
         const OSSL_DISPATCH alg##kbits##lc##_functions[] = {                                       \
                 { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) alg##kbits##lc##_newctx },             \
                 { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) alg##_##lc##_freectx },               \
+                { OSSL_FUNC_CIPHER_DUPCTX, (void (*)(void)) alg##_##lc##_dupctx },                 \
                 { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) prov_##lc##_einit },             \
                 { OSSL_FUNC_CIPHER_DECRYPT_INIT, (void (*)(void)) prov_##lc##_dinit },             \
                 { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) prov_##lc##_stream_update },           \

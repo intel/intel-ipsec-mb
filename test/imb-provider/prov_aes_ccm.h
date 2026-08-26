@@ -66,6 +66,7 @@ prov_aes_ccm_do_cipher(ALG_CTX *ctx, unsigned char *out, size_t *outl, const siz
         const OSSL_DISPATCH alg##kbits##lc##_functions[] = {                                       \
                 { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) alg##_##kbits##_##lc##_newctx },       \
                 { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) alg##_##lc##_freectx },               \
+                { OSSL_FUNC_CIPHER_DUPCTX, (void (*)(void)) alg##_##lc##_dupctx },                 \
                 { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) alg##_##lc##_einit },            \
                 { OSSL_FUNC_CIPHER_DECRYPT_INIT, (void (*)(void)) alg##_##lc##_dinit },            \
                 { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) alg##_##lc##_stream_update },          \

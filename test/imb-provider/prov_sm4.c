@@ -372,6 +372,29 @@ prov_sm4_freectx(void *vctx)
         }
 }
 
+void *
+prov_sm4_dupctx(void *vctx)
+{
+        ALG_CTX *in = (ALG_CTX *) vctx;
+        ALG_CTX *ret = prov_alg_ctx_dup_base(in);
+
+        if (ret == NULL)
+                return NULL;
+
+        if (!prov_cipher_dup_buf(&ret->enc_keys, in->enc_keys, PROV_ENC_DEC_KEY_SIZE * 16) ||
+            !prov_cipher_dup_buf(&ret->dec_keys, in->dec_keys, PROV_ENC_DEC_KEY_SIZE * 16)) {
+                prov_sm4_freectx(ret);
+                return NULL;
+        }
+
+        if (in->aad_len > 0 && !prov_cipher_dup_buf(&ret->aad, in->aad, in->aad_len)) {
+                prov_sm4_freectx(ret);
+                return NULL;
+        }
+
+        return ret;
+}
+
 int
 prov_sm4_encrypt_init(void *vctx, const unsigned char *key, const int keylen,
                       const unsigned char *iv, const int ivlen, const int enc)
