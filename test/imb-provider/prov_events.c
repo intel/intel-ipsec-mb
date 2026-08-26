@@ -88,6 +88,32 @@ prov_clear_async_event_notification(ASYNC_JOB *job)
         return 1;
 }
 
+/*
+ * prov_reset_async_event_notification - reset the wake counter of a resumed job.
+ */
+int
+prov_reset_async_event_notification(ASYNC_JOB *job)
+{
+        ASYNC_WAIT_CTX *waitctx;
+        OSSL_ASYNC_FD efd;
+        void *custom = NULL;
+        uint64_t buf = 0;
+
+        if ((waitctx = ASYNC_get_wait_ctx((ASYNC_JOB *) job)) == NULL)
+                return 0;
+
+        if (ASYNC_WAIT_CTX_get_fd(waitctx, prov_id, &efd, &custom) <= 0)
+                return 1;
+
+        /* EAGAIN simply means the counter was already zero. */
+        if (read(efd, &buf, sizeof(buf)) == -1 && errno != EAGAIN) {
+                fprintf(stderr, "Failed to read fd: %d - error: %d\n", efd, errno);
+                return 0;
+        }
+
+        return 1;
+}
+
 int
 prov_pause_job(ASYNC_JOB *job)
 {
@@ -96,6 +122,8 @@ prov_pause_job(ASYNC_JOB *job)
                 fprintf(stderr, "Failed to pause the job\n");
                 return PROV_JOB_RESUMED_UNEXPECTEDLY;
         }
+
+        prov_reset_async_event_notification(job);
 
         return 1;
 }

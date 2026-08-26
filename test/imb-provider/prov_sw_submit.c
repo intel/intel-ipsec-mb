@@ -101,49 +101,91 @@ async_update(mb_thread_data *tlv, ALG_CTX *ctx, ASYNC_JOB *async_job, IMB_JOB *i
                 }
         }
 
-        // Pause the current async job if a different one is returned
-        if (ret_async_job != async_job) {
-                int job_ret;
-                do {
-                        job_ret = ASYNC_pause_job();
-                        if (job_ret == 0) {
-                                fprintf(stderr, "Error: Failed to pause the job.\n");
-                                return 0;
+        /*
+         * Wait for this job's own IMB_JOB to be processed.
+         *
+         * A resume is only a hint: the application decides when to call
+         * ASYNC_start_job() again, and a wake can be left over from an earlier
+         * operation on the same wait context. So the completion of |imb_job| -
+         * not the fact that we were resumed - is what ends the wait; anything
+         * else is treated as a wake and we go back to sleep after
+         * re-arming the watchdog.
+         *
+         * "Complete" means IMB_STATUS_COMPLETED, i.e. both the cipher and the
+         * auth stage have reported.
+         */
+        int paused = (ret_async_job != async_job);
+
+        for (;;) {
+                if (paused) {
+                        int job_ret;
+                        do {
+                                job_ret = ASYNC_pause_job();
+                                if (job_ret == 0) {
+                                        fprintf(stderr, "Error: Failed to pause the job.\n");
+                                        return 0;
+                                }
+                        } while (PROV_CHK_JOB_RESUMED_UNEXPECTEDLY(job_ret));
+
+                        /* Consume the wake, or the next pause would return at
+                         * once on this eventfd's stale counter. */
+                        prov_reset_async_event_notification(async_job);
+                }
+
+                // Find and dequeue the async job data
+                op_data *op_data = queue_async_dequeue_find(tlv->jobs, async_job);
+                if (op_data == NULL) {
+                        fprintf(stderr, "Error: Failed to find async job data.\n");
+                        return 0;
+                }
+
+                /*
+                 * Handle flush if required - for stuck jobs woken up by the
+                 * watchdog/polling thread.
+                 */
+                if (op_data->flush == 1) {
+                        while (imb_job->status < IMB_STATUS_COMPLETED) {
+                                struct IMB_JOB *flush_job = IMB_FLUSH_JOB(tlv->imb_mgr);
+
+                                const int err = imb_get_errno(tlv->imb_mgr);
+                                if (err != 0) {
+                                        fprintf(stderr, "Error: Flush job error %d : '%s'\n", err,
+                                                imb_get_strerror(err));
+                                }
+
+                                /* Manager reset - nothing left to flush. */
+                                if (flush_job == NULL)
+                                        break;
+
+                                ASYNC_JOB *flush_async_job = (ASYNC_JOB *) flush_job->user_data2;
+                                if (flush_async_job != async_job) {
+                                        // If the flush async job is not the same as the current
+                                        // async job, wake it up
+                                        prov_wake_job(flush_async_job);
+                                }
                         }
-                } while (PROV_CHK_JOB_RESUMED_UNEXPECTEDLY(job_ret));
+                }
+
+                if (imb_job->status >= IMB_STATUS_COMPLETED) {
+                        // Clean up and return the op_data to the freelist
+                        OPENSSL_cleanse(op_data, sizeof(*op_data));
+                        flist_async_push(tlv->freelist_jobs, op_data);
+                        break;
+                }
+
+                /* Re-queue with a fresh timestamp so the polling
+                 * thread starts a new stuck-job period, and wait again. */
+                op_data->flush = 0;
+                clock_gettime(CLOCK_MONOTONIC, &op_data->timestamp);
+                queue_async_enqueue(tlv->jobs, op_data);
+                paused = 1;
         }
 
-        // Find and dequeue the async job data
-        op_data *op_data = queue_async_dequeue_find(tlv->jobs, async_job);
-        if (op_data == NULL) {
-                fprintf(stderr, "Error: Failed to find async job data.\n");
+        if (imb_job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Error: IMB_JOB %p failed, status = %d\n", (void *) imb_job,
+                        imb_job->status);
                 return 0;
         }
-
-        // Handle flush if required - for stuck jobs woken up by the watchdog/polling thread
-        if (op_data->flush == 1) {
-                // Flush the oldest job
-                struct IMB_JOB *flush_job = IMB_FLUSH_JOB(tlv->imb_mgr);
-
-                const int err = imb_get_errno(tlv->imb_mgr);
-                if (err != 0) {
-                        fprintf(stderr, "Error: Flush job error %d : '%s'\n", err,
-                                imb_get_strerror(err));
-                }
-
-                if (flush_job != NULL) {
-                        ASYNC_JOB *flush_async_job = (ASYNC_JOB *) flush_job->user_data2;
-                        if (flush_async_job != async_job) {
-                                // If the flush async job is not the same as the current async job,
-                                // wake it up
-                                prov_wake_job(flush_async_job);
-                        }
-                }
-        }
-
-        // Clean up and return the op_data to the freelist
-        OPENSSL_cleanse(op_data, sizeof(*op_data));
-        flist_async_push(tlv->freelist_jobs, op_data);
 
         return 1;
 }

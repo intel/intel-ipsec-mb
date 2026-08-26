@@ -16,6 +16,8 @@ prov_setup_async_event_notification(ASYNC_JOB *job);
 int
 prov_clear_async_event_notification(ASYNC_JOB *job);
 int
+prov_reset_async_event_notification(ASYNC_JOB *job);
+int
 prov_pause_job(ASYNC_JOB *job);
 int
 prov_wake_job(ASYNC_JOB *job);
