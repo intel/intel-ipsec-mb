@@ -37,6 +37,8 @@ struct kat_hash_job_ops {
         void *ctx;
         /* Algorithm assigned to each prepared job. */
         IMB_HASH_ALG hash_alg;
+        /* Optional allocation size for the authentication tag buffer. */
+        size_t tag_alloc_size;
 };
 
 /**

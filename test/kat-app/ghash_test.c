@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 int
 ghash_test(struct IMB_MGR *mb_mgr);
@@ -53,6 +54,45 @@ check_data(const uint8_t *test, const char *expected, uint64_t len, const char *
         return is_error;
 }
 
+struct ghash_job_ctx {
+        struct gcm_key_data *key;
+};
+
+static int
+ghash_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                  void *ctx)
+{
+        struct ghash_job_ctx *ghash = calloc(1, sizeof(*ghash));
+
+        (void) ctx;
+        if (ghash == NULL)
+                return -1;
+
+        job->user_data = ghash;
+        ghash->key = test_aligned_alloc(16, sizeof(*ghash->key));
+        if (ghash->key == NULL)
+                return -1;
+
+        IMB_GHASH_PRE(mb_mgr, vec->key, ghash->key);
+        memset(job->auth_tag_output, 0, IMB_AES_BLOCK_SIZE);
+        job->u.GHASH._key = ghash->key;
+        job->u.GHASH._init_tag = job->auth_tag_output;
+        return 0;
+}
+
+static void
+ghash_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct ghash_job_ctx *ghash = job->user_data;
+
+        (void) ctx;
+        if (ghash != NULL) {
+                test_aligned_free(ghash->key);
+                free(ghash);
+        }
+        job->user_data = NULL;
+}
+
 int
 ghash_test(struct IMB_MGR *mb_mgr)
 {
@@ -60,7 +100,8 @@ ghash_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int use_job_api = 0;
 
-        if (load_mac_vectors(kat_vector_dir, "ghash_test.json", &ghash_vectors, &jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "ghash_test.json", &ghash_vectors, &jctx) < 0 ||
+            ghash_vectors == NULL)
                 return 1;
 
         test_suite_start(&ts, "GHASH");
@@ -81,33 +122,20 @@ ghash_test(struct IMB_MGR *mb_mgr)
                                 IMB_GHASH(mb_mgr, &gdata_key, vec->msg, (vec->msgSize / 8), T_test,
                                           vec->tagSize / 8);
                         } else {
-                                IMB_JOB *job = IMB_GET_NEXT_JOB(mb_mgr);
+                                const struct kat_hash_job_ops ops = {
+                                        .prepare = ghash_job_prepare,
+                                        .cleanup = ghash_job_cleanup,
+                                        .hash_alg = IMB_AUTH_GHASH,
+                                        .tag_alloc_size = IMB_AES_BLOCK_SIZE,
+                                };
+                                const struct mac_test *vec_ptr = vec;
 
-                                if (!job) {
-                                        fprintf(stderr, "failed to get job for ghash\n");
+                                if (kat_hash_test_submit_flush(mb_mgr, &vec_ptr, 1, 1, &ops))
                                         test_suite_update(&ts, 0, 1);
-                                        free_ghash_vectors(jctx);
-                                        return test_suite_end(&ts);
-                                }
-
-                                job->cipher_mode = IMB_CIPHER_NULL;
-                                job->hash_alg = IMB_AUTH_GHASH;
-                                job->u.GHASH._key = &gdata_key;
-                                job->u.GHASH._init_tag = T_test;
-                                job->src = (const void *) vec->msg;
-                                job->msg_len_to_hash_in_bytes = (vec->msgSize / 8);
-                                job->hash_start_src_offset_in_bytes = UINT64_C(0);
-                                job->auth_tag_output = T_test;
-                                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                                job = IMB_SUBMIT_JOB(mb_mgr);
-
-                                if (job == NULL)
-                                        job = IMB_FLUSH_JOB(mb_mgr);
-                                if (job == NULL)
-                                        fprintf(stderr, "No job retrieved\n");
-                                else if (job->status != IMB_STATUS_COMPLETED)
-                                        fprintf(stderr, "failed job, status:%d\n", job->status);
+                                else
+                                        test_suite_update(&ts, 1, 0);
+                                vec++;
+                                continue;
                         }
 
                         if (check_data(T_test, vec->tag, vec->tagSize / 8, "generated tag (T)"))

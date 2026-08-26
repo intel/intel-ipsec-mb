@@ -99,9 +99,11 @@ kat_job_prepare_hash(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct m
                      const struct kat_hash_job_ops *ops)
 {
         const size_t tag_size = vec->tagSize / 8;
+        const size_t tag_alloc_size =
+                ops->tag_alloc_size > tag_size ? ops->tag_alloc_size : tag_size;
 
         /* Common ownership: this helper allocates the tag buffer and always frees it. */
-        job->auth_tag_output = malloc(tag_size);
+        job->auth_tag_output = malloc(tag_alloc_size);
         if (job->auth_tag_output == NULL)
                 return -1;
 
