@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 int
 sha3_test(struct IMB_MGR *mb_mgr);
@@ -42,214 +43,25 @@ free_shake256_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static int
-sha3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-            const uint8_t *padding, const size_t sizeof_padding)
-{
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("line:%d job error status:%d ", __LINE__, job->status);
-                return 0;
-        }
-
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
-                        sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp((const void *) vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", (const void *) vec->tag, vec->tagSize / 8);
-                return 0;
-        }
-        return 1;
-}
-
-static int
 test_sha3(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
           const IMB_HASH_ALG sha_type)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        const struct kat_hash_job_ops ops = {
+                .hash_alg = sha_type,
+        };
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
-
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
-
-                auths[i] = malloc(alloc_len);
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-                memset(auths[i], -1, alloc_len);
-        }
-
-        /* empty the manager */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-
-                memset(job, 0, sizeof(*job));
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-                job->src = (const void *) vec->msg;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = sha_type;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (!sha3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (!sha3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        /* empty the manager before next tests */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static int
 test_sha3_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
                 const IMB_HASH_ALG sha_type)
 {
-        struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        uint32_t i = 0, jobs_rx = 0;
-        int ret = -1, err;
-        uint32_t completed_jobs = 0;
+        const struct kat_hash_job_ops ops = {
+                .hash_alg = sha_type,
+        };
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
-
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
-
-                auths[i] = malloc(alloc_len);
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-                memset(auths[i], -1, alloc_len);
-        }
-
-        /* empty the manager */
-        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
-                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
-
-        for (i = 0; i < num_jobs; i++) {
-                job = jobs[i];
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-                job->src = (const void *) vec->msg;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = sha_type;
-
-                job->user_data = auths[i];
-
-                imb_set_session(mb_mgr, job);
-        }
-
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
-        err = imb_get_errno(mb_mgr);
-
-        if (err != 0) {
-                printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                goto end;
-        }
-
-check_burst_jobs:
-        for (i = 0; i < completed_jobs; i++) {
-                job = jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i + 1);
-                        goto end;
-                }
-
-                if (!sha3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
-                if (completed_jobs == 0) {
-                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                        goto end;
-                }
-                goto check_burst_jobs;
-        }
-        ret = 0;
-
-end:
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_burst(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static void
@@ -381,15 +193,18 @@ sha3_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         unsigned i;
 
-        if (load_mac_vectors(kat_vector_dir, "sha3_test.json", &sha3_vectors, &ctx_sha3) < 0)
+        if (load_mac_vectors(kat_vector_dir, "sha3_test.json", &sha3_vectors, &ctx_sha3) < 0 ||
+            sha3_vectors == NULL)
                 return 1;
         if (load_mac_vectors(kat_vector_dir, "shake128_test.json", &shake128_vectors, &ctx_128) <
-            0) {
+                    0 ||
+            shake128_vectors == NULL) {
                 free_sha3_vectors(ctx_sha3);
                 return 1;
         }
         if (load_mac_vectors(kat_vector_dir, "shake256_test.json", &shake256_vectors, &ctx_256) <
-            0) {
+                    0 ||
+            shake256_vectors == NULL) {
                 free_sha3_vectors(ctx_sha3);
                 free_shake128_vectors(ctx_128);
                 return 1;
