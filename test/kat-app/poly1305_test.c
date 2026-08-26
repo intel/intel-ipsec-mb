@@ -12,11 +12,20 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 int
 poly1305_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *poly1305_vectors;
+
+struct poly1305_job_ctx {
+        uint8_t *key;
+};
+
+struct poly1305_job_prepare_ctx {
+        int dir;
+};
 
 static void
 free_poly1305_vectors(struct test_json_alloc_ctx *ctx)
@@ -26,126 +35,57 @@ free_poly1305_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static int
-poly1305_job_ok(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct IMB_JOB *job,
-                const uint8_t *auth, const uint8_t *padding, const size_t sizeof_padding)
+poly1305_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                     void *ctx)
 {
-        const size_t auth_len = job->auth_tag_output_len_in_bytes;
+        const struct poly1305_job_prepare_ctx *prepare_ctx = ctx;
+        struct poly1305_job_ctx *poly = calloc(1, sizeof(*poly));
+        const size_t key_size = vec->keySize / 8;
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                const int errcode = imb_get_errno(mb_mgr);
+        (void) mb_mgr;
 
-                printf("Error!: job status %d, errno %d => %s\n", job->status, errcode,
-                       imb_get_strerror(errcode));
-                return 0;
+        if (poly == NULL)
+                return -1;
+
+        job->user_data = poly;
+
+        poly->key = test_aligned_alloc(16, key_size);
+        if (poly->key == NULL)
+                return -1;
+
+        memcpy(poly->key, vec->key, key_size);
+
+        job->cipher_direction = prepare_ctx->dir;
+        job->u.POLY1305._key = poly->key;
+
+        return 0;
+}
+
+static void
+poly1305_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct poly1305_job_ctx *poly = job->user_data;
+
+        (void) ctx;
+        if (poly != NULL) {
+                test_aligned_free(poly->key);
+                free(poly);
         }
-
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + auth_len], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + auth_len], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp((const void *) vec->tag, &auth[sizeof_padding], auth_len)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], auth_len);
-                hexdump(stderr, "Expected", (const void *) vec->tag, auth_len);
-                return 0;
-        }
-        return 1;
+        job->user_data = NULL;
 }
 
 static int
 test_poly1305(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int dir, const int num_jobs)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        struct poly1305_job_prepare_ctx prepare_ctx = { dir };
+        const struct kat_hash_job_ops ops = {
+                .prepare = poly1305_job_prepare,
+                .cleanup = poly1305_job_cleanup,
+                .ctx = &prepare_ctx,
+                .hash_alg = IMB_AUTH_POLY1305,
+        };
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
-
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
-        }
-
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        /**
-         * Submit all jobs then flush any outstanding jobs
-         */
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_POLY1305;
-
-                job->u.POLY1305._key = vec->key;
-                job->src = (const void *) vec->msg;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = 16;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (!poly1305_job_ok(mb_mgr, vec, job, job->user_data, padding,
-                                             sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-
-                if (!poly1305_job_ok(mb_mgr, vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static void
@@ -190,7 +130,8 @@ poly1305_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int i, errors;
 
-        if (load_mac_vectors(kat_vector_dir, "poly1305_test.json", &poly1305_vectors, &jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "poly1305_test.json", &poly1305_vectors, &jctx) < 0 ||
+            poly1305_vectors == NULL)
                 return 1;
 
         test_suite_start(&ctx, "POLY1305");
