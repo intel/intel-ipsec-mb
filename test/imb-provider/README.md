@@ -101,5 +101,47 @@ The `imb-provider` supports the following cryptographic algorithms:
 
     To test the OpenSSL speed, use ```-evp poly1305``` option.
 
+- **Post-Quantum Signatures (ML-DSA)**:
+    - ML-DSA-44
+    - ML-DSA-65
+    - ML-DSA-87
+
+    Exposed as `OSSL_OP_KEYMGMT` and `OSSL_OP_SIGNATURE`, i.e. `EVP_PKEY_keygen()`,
+    `EVP_PKEY_sign_init()`/`EVP_PKEY_sign()` and
+    `EVP_PKEY_verify_init()`/`EVP_PKEY_verify()`.
+
+- **Post-Quantum Key Encapsulation (ML-KEM)**:
+    - ML-KEM-512
+    - ML-KEM-768
+    - ML-KEM-1024
+
+    Exposed as `OSSL_OP_KEYMGMT` and `OSSL_OP_KEM`, i.e. `EVP_PKEY_keygen()`,
+    `EVP_PKEY_encapsulate_init()`/`EVP_PKEY_encapsulate()` and
+    `EVP_PKEY_decapsulate_init()`/`EVP_PKEY_decapsulate()`.
+
+    Note: ML-DSA and ML-KEM require OpenSSL 3.0 or later, but do not need the
+    native OpenSSL 3.5 ML-DSA/ML-KEM implementations. Keys are handled as raw
+    encodings through `EVP_PKEY_fromdata()`/`EVP_PKEY_get_octet_string_param()`
+    with the `pub`, `priv` and `seed` key parameters.
+
+### Post-quantum key caching
+
+```c
+EVP_PKEY_CTX *genctx = EVP_PKEY_CTX_new_from_name(libctx, "ML-KEM-768",
+                                                  "provider=imb-provider");
+EVP_PKEY_keygen_init(genctx);
+EVP_PKEY_keygen(genctx, &pkey);                     /* key decoded and cached here */
+
+EVP_PKEY_CTX *encctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey,
+                                                  "provider=imb-provider");
+EVP_PKEY_encapsulate_init(encctx, NULL);            /* reuses the cached key */
+for (i = 0; i < iterations; i++)
+        EVP_PKEY_encapsulate(encctx, ct, &ct_len, ss, &ss_len);
+```
+
+An IMB PQC context is not safe for concurrent use, so neither is a key object
+built on top of one - use one `EVP_PKEY` per thread. `EVP_PKEY_dup()` gives the
+copy its own IMB context with its own cached key.
+
 These algorithms are optimized for performance using the IPSecMB library.
 ##

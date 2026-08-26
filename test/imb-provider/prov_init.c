@@ -78,6 +78,20 @@ extern const OSSL_DISPATCH prov_sm4gcm_functions[];
 extern const OSSL_DISPATCH prov_chacha20_poly1305_functions[];
 extern const OSSL_DISPATCH prov_chacha20_functions[];
 
+extern const OSSL_DISPATCH prov_ml_dsa_44_keymgmt_functions[];
+extern const OSSL_DISPATCH prov_ml_dsa_65_keymgmt_functions[];
+extern const OSSL_DISPATCH prov_ml_dsa_87_keymgmt_functions[];
+extern const OSSL_DISPATCH prov_ml_dsa_44_signature_functions[];
+extern const OSSL_DISPATCH prov_ml_dsa_65_signature_functions[];
+extern const OSSL_DISPATCH prov_ml_dsa_87_signature_functions[];
+
+extern const OSSL_DISPATCH prov_ml_kem_512_keymgmt_functions[];
+extern const OSSL_DISPATCH prov_ml_kem_768_keymgmt_functions[];
+extern const OSSL_DISPATCH prov_ml_kem_1024_keymgmt_functions[];
+extern const OSSL_DISPATCH prov_ml_kem_512_kem_functions[];
+extern const OSSL_DISPATCH prov_ml_kem_768_kem_functions[];
+extern const OSSL_DISPATCH prov_ml_kem_1024_kem_functions[];
+
 PROV_PARAMS prov_params;
 
 static void
@@ -148,9 +162,29 @@ static OSSL_ALGORITHM prov_exported_ciphers[IMB_DIM(prov_deflt_ciphers)];
 
 static const OSSL_ALGORITHM prov_keyexch[] = { { NULL, NULL, NULL } };
 
-static const OSSL_ALGORITHM prov_keymgmt[] = { { NULL, NULL, NULL } };
+static const OSSL_ALGORITHM prov_keymgmt[] = {
+        { PROV_NAMES_ML_DSA_44, PROV_DEFAULT_PROPERTIES, prov_ml_dsa_44_keymgmt_functions },
+        { PROV_NAMES_ML_DSA_65, PROV_DEFAULT_PROPERTIES, prov_ml_dsa_65_keymgmt_functions },
+        { PROV_NAMES_ML_DSA_87, PROV_DEFAULT_PROPERTIES, prov_ml_dsa_87_keymgmt_functions },
+        { PROV_NAMES_ML_KEM_512, PROV_DEFAULT_PROPERTIES, prov_ml_kem_512_keymgmt_functions },
+        { PROV_NAMES_ML_KEM_768, PROV_DEFAULT_PROPERTIES, prov_ml_kem_768_keymgmt_functions },
+        { PROV_NAMES_ML_KEM_1024, PROV_DEFAULT_PROPERTIES, prov_ml_kem_1024_keymgmt_functions },
+        { NULL, NULL, NULL }
+};
 
-static const OSSL_ALGORITHM prov_signature[] = { { NULL, NULL, NULL } };
+static const OSSL_ALGORITHM prov_signature[] = {
+        { PROV_NAMES_ML_DSA_44, PROV_DEFAULT_PROPERTIES, prov_ml_dsa_44_signature_functions },
+        { PROV_NAMES_ML_DSA_65, PROV_DEFAULT_PROPERTIES, prov_ml_dsa_65_signature_functions },
+        { PROV_NAMES_ML_DSA_87, PROV_DEFAULT_PROPERTIES, prov_ml_dsa_87_signature_functions },
+        { NULL, NULL, NULL }
+};
+
+static const OSSL_ALGORITHM prov_kem[] = {
+        { PROV_NAMES_ML_KEM_512, PROV_DEFAULT_PROPERTIES, prov_ml_kem_512_kem_functions },
+        { PROV_NAMES_ML_KEM_768, PROV_DEFAULT_PROPERTIES, prov_ml_kem_768_kem_functions },
+        { PROV_NAMES_ML_KEM_1024, PROV_DEFAULT_PROPERTIES, prov_ml_kem_1024_kem_functions },
+        { NULL, NULL, NULL }
+};
 
 static const OSSL_ALGORITHM prov_digests[] = {
         { PROV_NAMES_SHA1, PROV_DEFAULT_PROPERTIES, prov_sha1_functions },
@@ -198,6 +232,8 @@ prov_query(void *provctx, int operation_id, int *no_cache)
                 return prov_keymgmt;
         case OSSL_OP_KEYEXCH:
                 return prov_keyexch;
+        case OSSL_OP_KEM:
+                return prov_kem;
         }
         return OSSL_PROVIDER_query_operation(prov, operation_id, no_cache);
 }

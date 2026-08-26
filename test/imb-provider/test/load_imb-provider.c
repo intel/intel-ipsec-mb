@@ -7,6 +7,7 @@
 #include <openssl/evp.h>
 #include <openssl/provider.h>
 #include <openssl/core_names.h>
+#include <openssl/err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -780,6 +781,535 @@ test_provider_fetch_all_ciphers()
         }
 }
 
+/* Number of operations run against a single cached key */
+#define PQC_OPS 4
+
+/*
+ * Test one ML-KEM parameter set following the provider's caching model:
+ * generate the key once, call EVP_PKEY_encapsulate_init()/decapsulate_init()
+ * once each, then run several encapsulations/decapsulations that all reuse the
+ * key cached in the operation context.
+ */
+void
+test_provider_ml_kem(const char *name)
+{
+        OSSL_LIB_CTX *libctx = OSSL_LIB_CTX_new();
+        OSSL_PROVIDER *provider;
+        EVP_PKEY_CTX *genctx = NULL, *encctx = NULL, *decctx = NULL;
+        EVP_PKEY *pkey = NULL;
+        unsigned char *ct = NULL, *ss_enc = NULL, *ss_dec = NULL;
+        size_t ct_len = 0, ss_len = 0, ss_dec_len = 0;
+        int i;
+
+        if (libctx == NULL) {
+                fprintf(stderr, "Failed to create library context\n");
+                exit(EXIT_FAILURE);
+        }
+
+        provider = load_imb_provider(libctx);
+        if (provider == NULL) {
+                fprintf(stderr, "Failed to load provider\n");
+                OSSL_LIB_CTX_free(libctx);
+                exit(EXIT_FAILURE);
+        }
+
+        /* Key generation - done exactly once */
+        genctx = EVP_PKEY_CTX_new_from_name(libctx, name, "provider=imb-provider");
+        if (genctx == NULL || EVP_PKEY_keygen_init(genctx) <= 0 ||
+            EVP_PKEY_keygen(genctx, &pkey) <= 0) {
+                fprintf(stderr, "%s: key generation failed\n", name);
+                goto err;
+        }
+
+        /* Encapsulation context - initialized once, used PQC_OPS times */
+        encctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey, "provider=imb-provider");
+        if (encctx == NULL || EVP_PKEY_encapsulate_init(encctx, NULL) <= 0) {
+                fprintf(stderr, "%s: encapsulate init failed\n", name);
+                goto err;
+        }
+        if (EVP_PKEY_encapsulate(encctx, NULL, &ct_len, NULL, &ss_len) <= 0) {
+                fprintf(stderr, "%s: encapsulate size query failed\n", name);
+                goto err;
+        }
+
+        /* Decapsulation context - initialized once, used PQC_OPS times */
+        decctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey, "provider=imb-provider");
+        if (decctx == NULL || EVP_PKEY_decapsulate_init(decctx, NULL) <= 0) {
+                fprintf(stderr, "%s: decapsulate init failed\n", name);
+                goto err;
+        }
+
+        ct = OPENSSL_malloc(ct_len);
+        ss_enc = OPENSSL_malloc(ss_len);
+        ss_dec = OPENSSL_malloc(ss_len);
+        if (ct == NULL || ss_enc == NULL || ss_dec == NULL) {
+                fprintf(stderr, "%s: allocation failed\n", name);
+                goto err;
+        }
+
+        for (i = 0; i < PQC_OPS; i++) {
+                size_t this_ct_len = ct_len, this_ss_len = ss_len;
+
+                if (EVP_PKEY_encapsulate(encctx, ct, &this_ct_len, ss_enc, &this_ss_len) <= 0) {
+                        fprintf(stderr, "%s: encapsulate %d failed\n", name, i);
+                        goto err;
+                }
+                if (this_ct_len != ct_len || this_ss_len != ss_len) {
+                        fprintf(stderr, "%s: unexpected encapsulate output sizes\n", name);
+                        goto err;
+                }
+
+                ss_dec_len = ss_len;
+                if (EVP_PKEY_decapsulate(decctx, ss_dec, &ss_dec_len, ct, ct_len) <= 0) {
+                        fprintf(stderr, "%s: decapsulate %d failed\n", name, i);
+                        goto err;
+                }
+                if (ss_dec_len != ss_len || memcmp(ss_enc, ss_dec, ss_len) != 0) {
+                        fprintf(stderr, "%s: shared secret mismatch on iteration %d\n", name, i);
+                        goto err;
+                }
+        }
+
+        OPENSSL_free(ct);
+        OPENSSL_free(ss_enc);
+        OPENSSL_free(ss_dec);
+        EVP_PKEY_CTX_free(decctx);
+        EVP_PKEY_CTX_free(encctx);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        printf("test_provider_%s passed\n", name);
+        return;
+
+err:
+        ERR_print_errors_fp(stderr);
+        OPENSSL_free(ct);
+        OPENSSL_free(ss_enc);
+        OPENSSL_free(ss_dec);
+        EVP_PKEY_CTX_free(decctx);
+        EVP_PKEY_CTX_free(encctx);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        exit(EXIT_FAILURE);
+}
+
+/* Test that all supported ML-KEM parameter sets encapsulate and decapsulate */
+void
+test_provider_all_ml_kem()
+{
+        const char *names[] = { "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024" };
+        for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+                test_provider_ml_kem(names[i]);
+        }
+}
+
+/*
+ * Test one ML-DSA parameter set: generate the key once, call
+ * EVP_PKEY_sign_init()/verify_init() once each, then sign and verify several
+ * times reusing the key cached in the operation context.
+ */
+void
+test_provider_ml_dsa(const char *name)
+{
+        static const unsigned char msg[] = "imb-provider ML-DSA test message";
+        OSSL_LIB_CTX *libctx = OSSL_LIB_CTX_new();
+        OSSL_PROVIDER *provider;
+        EVP_PKEY_CTX *genctx = NULL, *signctx = NULL, *verifyctx = NULL;
+        EVP_PKEY *pkey = NULL;
+        unsigned char *sig = NULL;
+        size_t sig_len = 0;
+        int i;
+
+        if (libctx == NULL) {
+                fprintf(stderr, "Failed to create library context\n");
+                exit(EXIT_FAILURE);
+        }
+
+        provider = load_imb_provider(libctx);
+        if (provider == NULL) {
+                fprintf(stderr, "Failed to load provider\n");
+                OSSL_LIB_CTX_free(libctx);
+                exit(EXIT_FAILURE);
+        }
+
+        /* Key generation - done exactly once */
+        genctx = EVP_PKEY_CTX_new_from_name(libctx, name, "provider=imb-provider");
+        if (genctx == NULL || EVP_PKEY_keygen_init(genctx) <= 0 ||
+            EVP_PKEY_keygen(genctx, &pkey) <= 0) {
+                fprintf(stderr, "%s: key generation failed\n", name);
+                goto err;
+        }
+
+        /* Signing context - initialized once, used PQC_OPS times */
+        signctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey, "provider=imb-provider");
+        if (signctx == NULL || EVP_PKEY_sign_init(signctx) <= 0) {
+                fprintf(stderr, "%s: sign init failed\n", name);
+                goto err;
+        }
+        if (EVP_PKEY_sign(signctx, NULL, &sig_len, msg, sizeof(msg) - 1) <= 0) {
+                fprintf(stderr, "%s: signature size query failed\n", name);
+                goto err;
+        }
+
+        /* Verification context - initialized once, used PQC_OPS times */
+        verifyctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey, "provider=imb-provider");
+        if (verifyctx == NULL || EVP_PKEY_verify_init(verifyctx) <= 0) {
+                fprintf(stderr, "%s: verify init failed\n", name);
+                goto err;
+        }
+
+        sig = OPENSSL_malloc(sig_len);
+        if (sig == NULL) {
+                fprintf(stderr, "%s: allocation failed\n", name);
+                goto err;
+        }
+
+        for (i = 0; i < PQC_OPS; i++) {
+                size_t this_sig_len = sig_len;
+
+                if (EVP_PKEY_sign(signctx, sig, &this_sig_len, msg, sizeof(msg) - 1) <= 0) {
+                        fprintf(stderr, "%s: sign %d failed\n", name, i);
+                        goto err;
+                }
+                if (this_sig_len != sig_len) {
+                        fprintf(stderr, "%s: unexpected signature length\n", name);
+                        goto err;
+                }
+                if (EVP_PKEY_verify(verifyctx, sig, this_sig_len, msg, sizeof(msg) - 1) != 1) {
+                        fprintf(stderr, "%s: verify %d failed\n", name, i);
+                        goto err;
+                }
+
+                /* A corrupted signature must not verify */
+                sig[0] ^= 0x01;
+                if (EVP_PKEY_verify(verifyctx, sig, this_sig_len, msg, sizeof(msg) - 1) == 1) {
+                        fprintf(stderr, "%s: corrupted signature verified on iteration %d\n", name,
+                                i);
+                        goto err;
+                }
+                ERR_clear_error();
+                sig[0] ^= 0x01;
+        }
+
+        OPENSSL_free(sig);
+        EVP_PKEY_CTX_free(verifyctx);
+        EVP_PKEY_CTX_free(signctx);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        printf("test_provider_%s passed\n", name);
+        return;
+
+err:
+        ERR_print_errors_fp(stderr);
+        OPENSSL_free(sig);
+        EVP_PKEY_CTX_free(verifyctx);
+        EVP_PKEY_CTX_free(signctx);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        exit(EXIT_FAILURE);
+}
+
+/* Test that all supported ML-DSA parameter sets sign and verify */
+void
+test_provider_all_ml_dsa()
+{
+        const char *names[] = { "ML-DSA-44", "ML-DSA-65", "ML-DSA-87" };
+        for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+                test_provider_ml_dsa(names[i]);
+        }
+}
+
+/* Build an EVP_PKEY from a single raw key component */
+static EVP_PKEY *
+pqc_key_fromdata(OSSL_LIB_CTX *libctx, const char *name, const char *param_name,
+                 const unsigned char *buf, size_t buf_len, int selection)
+{
+        EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(libctx, name, "provider=imb-provider");
+        EVP_PKEY *pkey = NULL;
+        OSSL_PARAM params[2];
+
+        if (ctx == NULL)
+                return NULL;
+
+        params[0] = OSSL_PARAM_construct_octet_string(param_name, (void *) buf, buf_len);
+        params[1] = OSSL_PARAM_construct_end();
+
+        if (EVP_PKEY_fromdata_init(ctx) <= 0 ||
+            EVP_PKEY_fromdata(ctx, &pkey, selection, params) <= 0) {
+                EVP_PKEY_CTX_free(ctx);
+                EVP_PKEY_free(pkey);
+                return NULL;
+        }
+        EVP_PKEY_CTX_free(ctx);
+        return pkey;
+}
+
+/*
+ * Export the raw key components of a generated ML-KEM key, re-import them into
+ * separate encapsulation-only and decapsulation-only keys, and check that the
+ * two halves still agree on the shared secret. This exercises the import path,
+ * where key material is decoded and cached exactly once.
+ */
+void
+test_provider_ml_kem_import(const char *name)
+{
+        OSSL_LIB_CTX *libctx = OSSL_LIB_CTX_new();
+        OSSL_PROVIDER *provider;
+        EVP_PKEY_CTX *genctx = NULL, *encctx = NULL, *decctx = NULL;
+        EVP_PKEY *pkey = NULL, *enckey = NULL, *deckey = NULL;
+        unsigned char *pub = NULL, *priv = NULL, *ct = NULL, *ss_enc = NULL, *ss_dec = NULL;
+        size_t pub_len = 0, priv_len = 0, ct_len = 0, ss_len = 0, ss_dec_len = 0;
+
+        if (libctx == NULL) {
+                fprintf(stderr, "Failed to create library context\n");
+                exit(EXIT_FAILURE);
+        }
+
+        provider = load_imb_provider(libctx);
+        if (provider == NULL) {
+                fprintf(stderr, "Failed to load provider\n");
+                OSSL_LIB_CTX_free(libctx);
+                exit(EXIT_FAILURE);
+        }
+
+        genctx = EVP_PKEY_CTX_new_from_name(libctx, name, "provider=imb-provider");
+        if (genctx == NULL || EVP_PKEY_keygen_init(genctx) <= 0 ||
+            EVP_PKEY_keygen(genctx, &pkey) <= 0) {
+                fprintf(stderr, "%s: key generation failed\n", name);
+                goto err;
+        }
+
+        if (EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, NULL, 0, &pub_len) !=
+                    1 ||
+            EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, NULL, 0, &priv_len) !=
+                    1) {
+                fprintf(stderr, "%s: raw key size query failed\n", name);
+                goto err;
+        }
+        pub = OPENSSL_malloc(pub_len);
+        priv = OPENSSL_malloc(priv_len);
+        if (pub == NULL || priv == NULL) {
+                fprintf(stderr, "%s: allocation failed\n", name);
+                goto err;
+        }
+        if (EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, pub, pub_len,
+                                            &pub_len) != 1 ||
+            EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, priv, priv_len,
+                                            &priv_len) != 1) {
+                fprintf(stderr, "%s: raw key export failed\n", name);
+                goto err;
+        }
+
+        enckey = pqc_key_fromdata(libctx, name, OSSL_PKEY_PARAM_PUB_KEY, pub, pub_len,
+                                  EVP_PKEY_PUBLIC_KEY);
+        deckey = pqc_key_fromdata(libctx, name, OSSL_PKEY_PARAM_PRIV_KEY, priv, priv_len,
+                                  EVP_PKEY_KEYPAIR);
+        if (enckey == NULL || deckey == NULL) {
+                fprintf(stderr, "%s: raw key import failed\n", name);
+                goto err;
+        }
+
+        /* The decapsulation key embeds the encapsulation key - they must match */
+        if (EVP_PKEY_eq(enckey, deckey) != 1) {
+                fprintf(stderr, "%s: imported public and private keys do not match\n", name);
+                goto err;
+        }
+
+        encctx = EVP_PKEY_CTX_new_from_pkey(libctx, enckey, "provider=imb-provider");
+        decctx = EVP_PKEY_CTX_new_from_pkey(libctx, deckey, "provider=imb-provider");
+        if (encctx == NULL || decctx == NULL || EVP_PKEY_encapsulate_init(encctx, NULL) <= 0 ||
+            EVP_PKEY_decapsulate_init(decctx, NULL) <= 0) {
+                fprintf(stderr, "%s: import operation init failed\n", name);
+                goto err;
+        }
+
+        if (EVP_PKEY_encapsulate(encctx, NULL, &ct_len, NULL, &ss_len) <= 0) {
+                fprintf(stderr, "%s: encapsulate size query failed\n", name);
+                goto err;
+        }
+        ct = OPENSSL_malloc(ct_len);
+        ss_enc = OPENSSL_malloc(ss_len);
+        ss_dec = OPENSSL_malloc(ss_len);
+        if (ct == NULL || ss_enc == NULL || ss_dec == NULL) {
+                fprintf(stderr, "%s: allocation failed\n", name);
+                goto err;
+        }
+
+        ss_dec_len = ss_len;
+        if (EVP_PKEY_encapsulate(encctx, ct, &ct_len, ss_enc, &ss_len) <= 0 ||
+            EVP_PKEY_decapsulate(decctx, ss_dec, &ss_dec_len, ct, ct_len) <= 0) {
+                fprintf(stderr, "%s: imported key encap/decap failed\n", name);
+                goto err;
+        }
+        if (ss_dec_len != ss_len || memcmp(ss_enc, ss_dec, ss_len) != 0) {
+                fprintf(stderr, "%s: imported key shared secret mismatch\n", name);
+                goto err;
+        }
+
+        OPENSSL_free(pub);
+        OPENSSL_free(priv);
+        OPENSSL_free(ct);
+        OPENSSL_free(ss_enc);
+        OPENSSL_free(ss_dec);
+        EVP_PKEY_CTX_free(decctx);
+        EVP_PKEY_CTX_free(encctx);
+        EVP_PKEY_free(deckey);
+        EVP_PKEY_free(enckey);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        printf("test_provider_%s_import passed\n", name);
+        return;
+
+err:
+        ERR_print_errors_fp(stderr);
+        OPENSSL_free(pub);
+        OPENSSL_free(priv);
+        OPENSSL_free(ct);
+        OPENSSL_free(ss_enc);
+        OPENSSL_free(ss_dec);
+        EVP_PKEY_CTX_free(decctx);
+        EVP_PKEY_CTX_free(encctx);
+        EVP_PKEY_free(deckey);
+        EVP_PKEY_free(enckey);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        exit(EXIT_FAILURE);
+}
+
+/*
+ * Sign with a generated ML-DSA key, then verify with a public key re-imported
+ * from the exported raw encoding.
+ */
+void
+test_provider_ml_dsa_import(const char *name)
+{
+        static const unsigned char msg[] = "imb-provider ML-DSA import test message";
+        OSSL_LIB_CTX *libctx = OSSL_LIB_CTX_new();
+        OSSL_PROVIDER *provider;
+        EVP_PKEY_CTX *genctx = NULL, *signctx = NULL, *verifyctx = NULL;
+        EVP_PKEY *pkey = NULL, *pubkey = NULL;
+        unsigned char *pub = NULL, *sig = NULL;
+        size_t pub_len = 0, sig_len = 0;
+
+        if (libctx == NULL) {
+                fprintf(stderr, "Failed to create library context\n");
+                exit(EXIT_FAILURE);
+        }
+
+        provider = load_imb_provider(libctx);
+        if (provider == NULL) {
+                fprintf(stderr, "Failed to load provider\n");
+                OSSL_LIB_CTX_free(libctx);
+                exit(EXIT_FAILURE);
+        }
+
+        genctx = EVP_PKEY_CTX_new_from_name(libctx, name, "provider=imb-provider");
+        if (genctx == NULL || EVP_PKEY_keygen_init(genctx) <= 0 ||
+            EVP_PKEY_keygen(genctx, &pkey) <= 0) {
+                fprintf(stderr, "%s: key generation failed\n", name);
+                goto err;
+        }
+
+        if (EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, NULL, 0, &pub_len) !=
+            1) {
+                fprintf(stderr, "%s: raw public key size query failed\n", name);
+                goto err;
+        }
+        pub = OPENSSL_malloc(pub_len);
+        if (pub == NULL) {
+                fprintf(stderr, "%s: allocation failed\n", name);
+                goto err;
+        }
+        if (EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, pub, pub_len,
+                                            &pub_len) != 1) {
+                fprintf(stderr, "%s: raw public key export failed\n", name);
+                goto err;
+        }
+
+        pubkey = pqc_key_fromdata(libctx, name, OSSL_PKEY_PARAM_PUB_KEY, pub, pub_len,
+                                  EVP_PKEY_PUBLIC_KEY);
+        if (pubkey == NULL) {
+                fprintf(stderr, "%s: raw public key import failed\n", name);
+                goto err;
+        }
+
+        signctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey, "provider=imb-provider");
+        verifyctx = EVP_PKEY_CTX_new_from_pkey(libctx, pubkey, "provider=imb-provider");
+        if (signctx == NULL || verifyctx == NULL || EVP_PKEY_sign_init(signctx) <= 0 ||
+            EVP_PKEY_verify_init(verifyctx) <= 0) {
+                fprintf(stderr, "%s: import operation init failed\n", name);
+                goto err;
+        }
+
+        if (EVP_PKEY_sign(signctx, NULL, &sig_len, msg, sizeof(msg) - 1) <= 0) {
+                fprintf(stderr, "%s: signature size query failed\n", name);
+                goto err;
+        }
+        sig = OPENSSL_malloc(sig_len);
+        if (sig == NULL) {
+                fprintf(stderr, "%s: allocation failed\n", name);
+                goto err;
+        }
+        if (EVP_PKEY_sign(signctx, sig, &sig_len, msg, sizeof(msg) - 1) <= 0) {
+                fprintf(stderr, "%s: sign failed\n", name);
+                goto err;
+        }
+        if (EVP_PKEY_verify(verifyctx, sig, sig_len, msg, sizeof(msg) - 1) != 1) {
+                fprintf(stderr, "%s: verify with imported public key failed\n", name);
+                goto err;
+        }
+
+        OPENSSL_free(pub);
+        OPENSSL_free(sig);
+        EVP_PKEY_CTX_free(verifyctx);
+        EVP_PKEY_CTX_free(signctx);
+        EVP_PKEY_free(pubkey);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        printf("test_provider_%s_import passed\n", name);
+        return;
+
+err:
+        ERR_print_errors_fp(stderr);
+        OPENSSL_free(pub);
+        OPENSSL_free(sig);
+        EVP_PKEY_CTX_free(verifyctx);
+        EVP_PKEY_CTX_free(signctx);
+        EVP_PKEY_free(pubkey);
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(genctx);
+        OSSL_PROVIDER_unload(provider);
+        OSSL_LIB_CTX_free(libctx);
+        exit(EXIT_FAILURE);
+}
+
+/* Test raw key import/export round-trips for all PQC parameter sets */
+void
+test_provider_all_pqc_import()
+{
+        const char *dsa_names[] = { "ML-DSA-44", "ML-DSA-65", "ML-DSA-87" };
+        const char *kem_names[] = { "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024" };
+        size_t i;
+
+        for (i = 0; i < sizeof(dsa_names) / sizeof(dsa_names[0]); i++)
+                test_provider_ml_dsa_import(dsa_names[i]);
+        for (i = 0; i < sizeof(kem_names) / sizeof(kem_names[0]); i++)
+                test_provider_ml_kem_import(kem_names[i]);
+}
+
 int
 main()
 {
@@ -812,6 +1342,10 @@ main()
         test_provider_fetch_all_hashes();
         test_provider_fetch_all_ciphers();
         test_provider_fetch_all_shake_xoflen();
+
+        test_provider_all_ml_dsa();
+        test_provider_all_ml_kem();
+        test_provider_all_pqc_import();
 
         test_provider_self_test();
 
