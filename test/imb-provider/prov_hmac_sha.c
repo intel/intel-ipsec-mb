@@ -18,19 +18,36 @@
 #include "e_prov.h"
 #include <intel-ipsec-mb.h>
 
+int
+prov_hmac_set_ctx_params(void *vctx, const OSSL_PARAM params[]);
+
 static int
-prov_hmac_sha_init(void *vctx, const OSSL_PARAM params[])
+prov_hmac_sha_init(void *vctx, const unsigned char *key, size_t keylen, const OSSL_PARAM params[])
 {
         ALG_CTX *ctx = (ALG_CTX *) vctx;
 
-        if (ctx->mac_ctx != NULL && ctx->key != NULL) {
-                if (EVP_MAC_init(ctx->mac_ctx, ctx->key, ctx->keylen, params) != 1)
+        if (!prov_is_running())
+                return 0;
+
+        if (!prov_hmac_set_ctx_params(ctx, params))
+                return 0;
+
+        if (key != NULL) {
+                unsigned char *tmp;
+
+                if (keylen == 0)
                         return 0;
 
-                return hmac_sha_async_init(ctx);
+                tmp = OPENSSL_memdup(key, keylen);
+                if (tmp == NULL)
+                        return 0;
+
+                OPENSSL_clear_free(ctx->key, ctx->keylen);
+                ctx->key = tmp;
+                ctx->keylen = keylen;
         }
 
-        return 0;
+        return hmac_sha_async_init(ctx);
 }
 
 static int
@@ -66,76 +83,131 @@ prov_hmac_sha_final(void *vctx, unsigned char *out, size_t *outl, const size_t o
         return ret;
 }
 
-static const OSSL_PARAM prov_hmac_sha_default_known_gettable_params[] = {
+static const OSSL_PARAM prov_hmac_sha_known_gettable_ctx_params[] = {
         OSSL_PARAM_size_t(OSSL_MAC_PARAM_SIZE, NULL),
         OSSL_PARAM_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, NULL), OSSL_PARAM_END
 };
 
 static const OSSL_PARAM *
-prov_hmac_sha_digest_default_gettable_params()
+prov_hmac_sha_gettable_ctx_params(ossl_unused void *cctx, ossl_unused void *provctx)
 {
-        return prov_hmac_sha_default_known_gettable_params;
+        return prov_hmac_sha_known_gettable_ctx_params;
+}
+
+static int
+prov_hmac_sha_get_ctx_params(void *vctx, OSSL_PARAM params[])
+{
+        ALG_CTX *ctx = (ALG_CTX *) vctx;
+        OSSL_PARAM *p;
+
+        p = OSSL_PARAM_locate(params, OSSL_MAC_PARAM_SIZE);
+        if (p != NULL && !OSSL_PARAM_set_size_t(p, ctx->md_size))
+                return 0;
+
+        p = OSSL_PARAM_locate(params, OSSL_MAC_PARAM_BLOCK_SIZE);
+        if (p != NULL && !OSSL_PARAM_set_size_t(p, ctx->block_size))
+                return 0;
+
+        return 1;
 }
 
 static void *
 prov_hmac_sha_dupctx(void *ctx)
 {
-        ALG_CTX *src_ctx = (ALG_CTX *) ctx;
-        ALG_CTX *dst_ctx = OPENSSL_zalloc(sizeof(ALG_CTX));
+        ALG_CTX *src = (ALG_CTX *) ctx;
+        ALG_CTX *dst;
 
-        if (dst_ctx == NULL)
+        if (src == NULL || !prov_is_running())
                 return NULL;
 
-        dst_ctx->mac_ctx = EVP_MAC_CTX_dup(src_ctx->mac_ctx);
-        if (dst_ctx->mac_ctx == NULL) {
-                OPENSSL_free(dst_ctx);
+        dst = OPENSSL_memdup(src, sizeof(*src));
+        if (dst == NULL)
                 return NULL;
+
+        /*
+         * The key is owned by the context, so it has to be duplicated - both
+         * copies free it. Everything else the MAC path uses (hash_alg, md_size,
+         * block_size, auths) is by value and came across with the memdup.
+         */
+        dst->key = NULL;
+        dst->keylen = 0;
+        if (src->key != NULL && src->keylen > 0) {
+                dst->key = OPENSSL_memdup(src->key, src->keylen);
+                if (dst->key == NULL) {
+                        OPENSSL_clear_free(dst, sizeof(*dst));
+                        return NULL;
+                }
+                dst->keylen = src->keylen;
         }
 
-        return dst_ctx;
+        /* The fetched EVP_MD is only consulted while parsing params, and
+         * PROV_DIGEST owns its reference; do not share it with the copy. */
+        memset(&dst->digest, 0, sizeof(dst->digest));
+
+        /* Per-operation state that must not be shared. */
+        dst->mac_ctx = NULL;
+        dst->imb_job = NULL;
+
+        return dst;
 }
 
-static void
-set_sha_ctx_params(ALG_CTX *ctx, const int bitlen)
+/*
+ * The SHA3 rates have no macro in intel-ipsec-mb.h, unlike the SHA2 block
+ * sizes, so they are spelled out here: 1600 bits of state less twice the
+ * digest length, in bytes.
+ */
+#define PROV_SHA3_224_BLOCK_SIZE 144
+#define PROV_SHA3_256_BLOCK_SIZE 136
+#define PROV_SHA3_384_BLOCK_SIZE 104
+#define PROV_SHA3_512_BLOCK_SIZE 72
+
+static const struct {
+        const char *name;
+        IMB_HASH_ALG hash_alg;
+        size_t md_size;
+        size_t block_size;
+} prov_hmac_algs[] = {
+        { "SHA1", IMB_AUTH_HMAC_SHA_1, IMB_SHA1_DIGEST_SIZE_IN_BYTES, IMB_SHA1_BLOCK_SIZE },
+        { "SHA2-224", IMB_AUTH_HMAC_SHA_224, IMB_SHA224_DIGEST_SIZE_IN_BYTES,
+          IMB_SHA_224_BLOCK_SIZE },
+        { "SHA2-256", IMB_AUTH_HMAC_SHA_256, IMB_SHA256_DIGEST_SIZE_IN_BYTES,
+          IMB_SHA_256_BLOCK_SIZE },
+        { "SHA2-384", IMB_AUTH_HMAC_SHA_384, IMB_SHA384_DIGEST_SIZE_IN_BYTES,
+          IMB_SHA_384_BLOCK_SIZE },
+        { "SHA2-512", IMB_AUTH_HMAC_SHA_512, IMB_SHA512_DIGEST_SIZE_IN_BYTES,
+          IMB_SHA_512_BLOCK_SIZE },
+        { "SHA3-224", IMB_AUTH_HMAC_SHA3_224, IMB_SHA3_224_DIGEST_SIZE_IN_BYTES,
+          PROV_SHA3_224_BLOCK_SIZE },
+        { "SHA3-256", IMB_AUTH_HMAC_SHA3_256, IMB_SHA3_256_DIGEST_SIZE_IN_BYTES,
+          PROV_SHA3_256_BLOCK_SIZE },
+        { "SHA3-384", IMB_AUTH_HMAC_SHA3_384, IMB_SHA3_384_DIGEST_SIZE_IN_BYTES,
+          PROV_SHA3_384_BLOCK_SIZE },
+        { "SHA3-512", IMB_AUTH_HMAC_SHA3_512, IMB_SHA3_512_DIGEST_SIZE_IN_BYTES,
+          PROV_SHA3_512_BLOCK_SIZE },
+};
+
+/*
+ * set_sha_ctx_params - select the ipsec-mb algorithm for a fetched digest.
+ *
+ * Matching is done with EVP_MD_is_a() on the fetched EVP_MD rather than by
+ * comparing the caller's string, so every OpenSSL alias for a digest resolves
+ * to the same algorithm - "SHA2-256", "SHA-256" and "sha256" all name the one
+ * that a plain strcmp() against a single short name would miss.
+ */
+static int
+set_sha_ctx_params(ALG_CTX *ctx, const EVP_MD *md)
 {
-        switch (bitlen) {
-        case 1:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA_1;
-                ctx->md_size = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 224:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA_224;
-                ctx->md_size = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 256:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA_256;
-                ctx->md_size = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 384:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA_384;
-                ctx->md_size = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 512:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA_512;
-                ctx->md_size = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 3224:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_224;
-                ctx->md_size = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 3256:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_256;
-                ctx->md_size = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 3384:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_384;
-                ctx->md_size = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
-                break;
-        case 3512:
-                ctx->hash_alg = IMB_AUTH_HMAC_SHA3_512;
-                ctx->md_size = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
-                break;
+        for (size_t i = 0; i < sizeof(prov_hmac_algs) / sizeof(prov_hmac_algs[0]); i++) {
+                if (!EVP_MD_is_a(md, prov_hmac_algs[i].name))
+                        continue;
+
+                ctx->hash_alg = prov_hmac_algs[i].hash_alg;
+                ctx->md_size = prov_hmac_algs[i].md_size;
+                ctx->block_size = prov_hmac_algs[i].block_size;
+                return 1;
         }
+
+        return 0;
 }
 
 static const OSSL_PARAM known_settable_ctx_params[] = {
@@ -212,176 +284,42 @@ prov_hmac_common_set_ctx_params(ALG_CTX *actx, const OSSL_PARAM params[])
         return pd->md != NULL;
 }
 
-static int
-prov_prov_set_macctx(EVP_MAC_CTX *macctx, const OSSL_PARAM params[], const char *mdname,
-                     const char *properties, const unsigned char *key, size_t keylen)
-{
-        const OSSL_PARAM *p;
-        OSSL_PARAM mac_params[6], *mp = mac_params;
-
-        if (params != NULL) {
-                if (mdname == NULL) {
-                        if ((p = OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_DIGEST)) != NULL) {
-                                if (p->data_type != OSSL_PARAM_UTF8_STRING)
-                                        return 0;
-                                mdname = p->data;
-                        }
-                }
-        }
-
-        if (mdname != NULL)
-                *mp++ = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST, (char *) mdname, 0);
-        if (properties != NULL)
-                *mp++ = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_PROPERTIES,
-                                                         (char *) properties, 0);
-
-        if (key != NULL)
-                *mp++ = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (unsigned char *) key,
-                                                          keylen);
-
-        *mp = OSSL_PARAM_construct_end();
-
-        return EVP_MAC_CTX_set_params(macctx, mac_params);
-}
-
-static int
-prov_prov_macctx_load_from_params(ALG_CTX *hctx, EVP_MAC_CTX **macctx, const OSSL_PARAM params[],
-                                  const char *macname, const char *ciphername, const char *mdname,
-                                  OSSL_LIB_CTX *libctx)
-{
-        const OSSL_PARAM *p;
-        const char *properties = NULL;
-
-        if (macname == NULL && (p = OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_MAC)) != NULL) {
-                if (p->data_type != OSSL_PARAM_UTF8_STRING)
-                        return 0;
-                macname = p->data;
-        }
-        if ((p = OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_PROPERTIES)) != NULL) {
-                if (p->data_type != OSSL_PARAM_UTF8_STRING)
-                        return 0;
-                properties = p->data;
-        }
-
-        for (p = params; p != NULL && p->key != NULL; p++) {
-                if (strcmp(p->key, OSSL_MAC_PARAM_KEY) == 0) {
-                        if (p->data_type != OSSL_PARAM_OCTET_STRING) {
-                                return 0;
-                        }
-
-                        // Allocate memory for the key and copy it
-                        hctx->key = OPENSSL_malloc(p->data_size);
-                        if (hctx->key == NULL) {
-                                return 0;
-                        }
-                        memcpy(hctx->key, p->data, p->data_size);
-                        hctx->keylen = p->data_size;
-                }
-        }
-
-        /* If we got a new mac name, we make a new EVP_MAC_CTX */
-        if (macname != NULL) {
-                EVP_MAC *mac = EVP_MAC_fetch(libctx, macname, properties);
-
-                EVP_MAC_CTX_free(*macctx);
-                *macctx = mac == NULL ? NULL : EVP_MAC_CTX_new(mac);
-                /* The context holds on to the MAC */
-                EVP_MAC_free(mac);
-                if (*macctx == NULL)
-                        return 0;
-        }
-
-        /*
-         * If there is no MAC yet (and therefore, no MAC context), we ignore
-         * all other parameters.
-         */
-        if (*macctx == NULL)
-                return 1;
-
-        if (prov_prov_set_macctx(*macctx, params, mdname, properties, hctx->key, hctx->keylen))
-                return 1;
-
-        EVP_MAC_CTX_free(*macctx);
-        *macctx = NULL;
-        return 0;
-}
-
 int
 prov_hmac_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
         const OSSL_PARAM *p;
         ALG_CTX *hctx = vctx;
-        hctx->libctx = OSSL_LIB_CTX_new();
 
         if (params == NULL)
                 return 1;
 
+        if ((p = OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_KEY)) != NULL) {
+                unsigned char *key;
+
+                if (p->data_type != OSSL_PARAM_OCTET_STRING || p->data == NULL ||
+                    p->data_size == 0) {
+                        ERR_raise(ERR_LIB_PROV, PROV_R_FAILED_TO_GET_PARAMETER);
+                        return 0;
+                }
+
+                key = OPENSSL_memdup(p->data, p->data_size);
+                if (key == NULL)
+                        return 0;
+
+                /* A second set of params must replace the key, not leak the
+                 * first one. */
+                OPENSSL_clear_free(hctx->key, hctx->keylen);
+                hctx->key = key;
+                hctx->keylen = p->data_size;
+        }
+
         if ((p = OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_DIGEST)) != NULL) {
                 if (!prov_hmac_common_set_ctx_params(hctx, params))
                         return 0;
-                if (strcasecmp(p->data, SN_sha1) == 0) {
-                        set_sha_ctx_params(hctx, 1);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL, SN_sha1,
-                                                               hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha224) == 0) {
-                        set_sha_ctx_params(hctx, 224);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL, SN_sha224,
-                                                               hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha256) == 0) {
-                        set_sha_ctx_params(hctx, 256);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL, SN_sha256,
-                                                               hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha384) == 0) {
-                        set_sha_ctx_params(hctx, 384);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL, SN_sha384,
-                                                               hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha512) == 0) {
-                        set_sha_ctx_params(hctx, 512);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL, SN_sha512,
-                                                               hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha3_224) == 0) {
-                        set_sha_ctx_params(hctx, 3224);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL,
-                                                               SN_sha3_224, hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha3_256) == 0) {
-                        set_sha_ctx_params(hctx, 3256);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL,
-                                                               SN_sha3_256, hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha3_384) == 0) {
-                        set_sha_ctx_params(hctx, 3384);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL,
-                                                               SN_sha3_384, hctx->libctx)) {
-                                return 0;
-                        }
-                } else if (strcasecmp(p->data, SN_sha3_512) == 0) {
-                        set_sha_ctx_params(hctx, 3512);
-                        if (!prov_prov_macctx_load_from_params(hctx, &hctx->mac_ctx, params,
-                                                               OSSL_MAC_NAME_HMAC, NULL,
-                                                               SN_sha3_512, hctx->libctx)) {
-                                return 0;
-                        }
+
+                if (!set_sha_ctx_params(hctx, hctx->digest.md)) {
+                        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_DIGEST);
+                        return 0;
                 }
         }
 
@@ -392,29 +330,34 @@ static void
 prov_hmac_sha_freectx(void *vctx)
 {
         ALG_CTX *ctx = (ALG_CTX *) vctx;
+
+        if (ctx == NULL)
+                return;
+
+        /* Released here rather than in hmac_sha_async_cleanup(), which clears
+         * and frees the context itself and so cannot see these afterwards. */
+        OPENSSL_clear_free(ctx->key, ctx->keylen);
+        ctx->key = NULL;
+        ctx->keylen = 0;
+        EVP_MD_free(ctx->digest.alloc_md);
+        memset(&ctx->digest, 0, sizeof(ctx->digest));
+
         hmac_sha_async_cleanup(ctx);
-}
-
-static int
-prov_hmac_sha_get_params(OSSL_PARAM params[])
-{
-        OSSL_PARAM *p;
-
-        p = OSSL_PARAM_locate(params, OSSL_MAC_PARAM_SIZE);
-        if (p != NULL)
-                return 0;
-
-        p = OSSL_PARAM_locate(params, OSSL_MAC_PARAM_BLOCK_SIZE);
-        if (p != NULL)
-                return 0;
-
-        return 1;
 }
 
 static ALG_CTX *
 prov_hmac_sha_newctx(void *provctx)
 {
         ALG_CTX *ctx = prov_is_running() ? OPENSSL_zalloc(sizeof(*ctx)) : NULL;
+
+        if (ctx == NULL)
+                return NULL;
+
+        /* Digests are fetched against this; the provider's own context owns it,
+         * so it must not be replaced (and leaked) on every set_ctx_params(). */
+        ctx->provctx = provctx;
+        ctx->libctx = prov_libctx_of(provctx);
+
         return ctx;
 }
 
@@ -425,9 +368,8 @@ const OSSL_DISPATCH prov_hmac_sha_functions[] = {
         { OSSL_FUNC_MAC_INIT, (void (*)(void)) prov_hmac_sha_init },
         { OSSL_FUNC_MAC_UPDATE, (void (*)(void)) prov_hmac_sha_update },
         { OSSL_FUNC_MAC_FINAL, (void (*)(void)) prov_hmac_sha_final },
-        { OSSL_FUNC_MAC_GET_PARAMS, (void (*)(void)) prov_hmac_sha_get_params },
-        { OSSL_FUNC_MAC_GETTABLE_PARAMS,
-          (void (*)(void)) prov_hmac_sha_digest_default_gettable_params },
+        { OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS, (void (*)(void)) prov_hmac_sha_gettable_ctx_params },
+        { OSSL_FUNC_MAC_GET_CTX_PARAMS, (void (*)(void)) prov_hmac_sha_get_ctx_params },
         { OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS, (void (*)(void)) prov_hmac_settable_ctx_params },
         { OSSL_FUNC_MAC_SET_CTX_PARAMS, (void (*)(void)) prov_hmac_set_ctx_params },
         { 0, NULL }
