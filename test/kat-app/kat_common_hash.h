@@ -30,6 +30,7 @@ typedef void (*kat_job_cleanup_hash_fn)(struct IMB_JOB *job, void *ctx);
  * @brief Hash test callback bundle.
  */
 struct kat_hash_job_ops {
+        /* Optional preparation for algorithm-specific fields. */
         kat_job_prepare_hash_fn prepare;
         /* Optional cleanup for per-job resources allocated by prepare(). */
         kat_job_cleanup_hash_fn cleanup;

@@ -100,7 +100,7 @@ kat_job_prepare_hash(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct m
 
         kat_hash_job_init(job, (const void *) vec->msg, vec->msgSize / 8, tag_size);
 
-        if (ops->prepare(mb_mgr, job, vec, ops->ctx) < 0) {
+        if (ops->prepare != NULL && ops->prepare(mb_mgr, job, vec, ops->ctx) < 0) {
                 kat_hash_job_cleanup(job, ops);
                 return -1;
         }
@@ -131,7 +131,7 @@ kat_hash_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *const 
         uint32_t jobs_rx = 0;
         int ret = -1;
 
-        if (ops == NULL || ops->prepare == NULL) {
+        if (ops == NULL) {
                 printf("Invalid hash job operations\n");
                 return -1;
         }
@@ -186,7 +186,7 @@ kat_hash_test_burst(struct IMB_MGR *mb_mgr, const struct mac_test *const *vec_ta
         uint32_t jobs_rx = 0, completed_jobs = 0, prepared_jobs = 0;
         int ret = -1;
 
-        if (ops == NULL || ops->prepare == NULL) {
+        if (ops == NULL) {
                 printf("Invalid hash job operations\n");
                 return -1;
         }
@@ -260,7 +260,7 @@ kat_hash_test_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *const *v
         uint32_t completed_jobs = 0, prepared_jobs = 0;
         int ret = -1;
 
-        if (ops == NULL || ops->prepare == NULL) {
+        if (ops == NULL) {
                 printf("Invalid hash job operations\n");
                 return -1;
         }

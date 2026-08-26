@@ -13,6 +13,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 int
 sha_test(struct IMB_MGR *mb_mgr);
@@ -27,135 +28,44 @@ free_sha_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static int
-sha_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-           const uint8_t *padding, const size_t sizeof_padding)
+sha_hash_alg(const int sha_type, IMB_HASH_ALG *hash_alg)
 {
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("line:%d job error status:%d ", __LINE__, job->status);
-                return 0;
+        switch (sha_type) {
+        case 1:
+                *hash_alg = IMB_AUTH_SHA_1;
+                break;
+        case 224:
+                *hash_alg = IMB_AUTH_SHA_224;
+                break;
+        case 256:
+                *hash_alg = IMB_AUTH_SHA_256;
+                break;
+        case 384:
+                *hash_alg = IMB_AUTH_SHA_384;
+                break;
+        case 512:
+                *hash_alg = IMB_AUTH_SHA_512;
+                break;
+        default:
+                return -1;
         }
 
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
-                        sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp((const void *) vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", (const void *) vec->tag, vec->tagSize / 8);
-                return 0;
-        }
-        return 1;
+        return 0;
 }
 
 static int
 test_sha(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs, const int sha_type)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        IMB_HASH_ALG hash_alg;
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
+        if (sha_hash_alg(sha_type, &hash_alg) < 0)
+                return -1;
 
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
+        const struct kat_hash_job_ops ops = {
+                .hash_alg = hash_alg,
+        };
 
-        for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
-
-                auths[i] = malloc(alloc_len);
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-                memset(auths[i], -1, alloc_len);
-        }
-
-        /* empty the manager */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-
-                memset(job, 0, sizeof(*job));
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-                job->src = (const void *) vec->msg;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                switch (sha_type) {
-                case 1:
-                        job->hash_alg = IMB_AUTH_SHA_1;
-                        break;
-                case 224:
-                        job->hash_alg = IMB_AUTH_SHA_224;
-                        break;
-                case 256:
-                        job->hash_alg = IMB_AUTH_SHA_256;
-                        break;
-                case 384:
-                        job->hash_alg = IMB_AUTH_SHA_384;
-                        break;
-                case 512:
-                default:
-                        job->hash_alg = IMB_AUTH_SHA_512;
-                        break;
-                }
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (!sha_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (!sha_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        /* empty the manager before next tests */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static int
@@ -226,112 +136,16 @@ static int
 test_sha_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
                     const int sha_type)
 {
-        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE] = { 0 };
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
-        int completed_jobs = 0;
         IMB_HASH_ALG hash_alg;
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
+        if (sha_hash_alg(sha_type, &hash_alg) < 0)
+                return -1;
 
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
+        const struct kat_hash_job_ops ops = {
+                .hash_alg = hash_alg,
+        };
 
-        switch (sha_type) {
-        case 1:
-                hash_alg = IMB_AUTH_SHA_1;
-                break;
-        case 224:
-                hash_alg = IMB_AUTH_SHA_224;
-                break;
-        case 256:
-                hash_alg = IMB_AUTH_SHA_256;
-                break;
-        case 384:
-                hash_alg = IMB_AUTH_SHA_384;
-                break;
-        case 512:
-        default:
-                hash_alg = IMB_AUTH_SHA_512;
-                break;
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
-
-                auths[i] = malloc(alloc_len);
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-                memset(auths[i], -1, alloc_len);
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-
-                job->enc_keys = NULL;
-                job->dec_keys = NULL;
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-                job->src = (const void *) vec->msg;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = hash_alg;
-
-                job->user_data = auths[i];
-        }
-
-        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, hash_alg);
-        if (completed_jobs != num_jobs) {
-                int err = imb_get_errno(mb_mgr);
-
-                if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                        goto end;
-                } else {
-                        printf("submit_burst error: not enough "
-                               "jobs returned!\n");
-                        goto end;
-                }
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i + 1);
-                        goto end;
-                }
-
-                if (!sha_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_hash_burst(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 
 static void
@@ -412,7 +226,8 @@ sha_test(struct IMB_MGR *mb_mgr)
         int errors;
         unsigned i;
 
-        if (load_mac_vectors(kat_vector_dir, "sha_test.json", &sha_vectors, &ctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "sha_test.json", &sha_vectors, &ctx) < 0 ||
+            sha_vectors == NULL)
                 return 1;
 
         test_suite_start(&sha1_ctx, "SHA1");
