@@ -60,6 +60,7 @@ allocate_array(void **array, const unsigned num_elems, const size_t elem_size)
                 array[i] = malloc(elem_size);
                 if (array[i] == NULL)
                         return -1;
+                memset(array[i], 0, elem_size);
         }
 
         return 0;
@@ -109,12 +110,17 @@ main(void)
         uint8_t key[KEY_SIZE];
         struct gcm_key_data gdata_key;
 
+        memset(key, 0xaa, sizeof(key));
+
         /* IMB API: Expand AES keys and precompute GHASH keys for AES-GCM */
         IMB_AES128_GCM_PRE(mb_mgr, key, &gdata_key);
 
         /* Allocate memory for IV and AAD */
         uint8_t iv[BURST_SIZE][IV_SIZE];
         uint8_t aad[BURST_SIZE][AAD_SIZE];
+
+        memset(iv, 0, sizeof(iv));
+        memset(aad, 0, sizeof(aad));
 
         /* Prepare IMB_JOB's (one job per buffer) */
         IMB_JOB *jobs[BURST_SIZE];
