@@ -106,12 +106,12 @@ kat_job_prepare_hash(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct m
                 return -1;
 
         kat_hash_job_init(job, (const void *) vec->msg, vec->msgSize / 8, tag_size);
+        job->hash_alg = ops->hash_alg;
 
         if (ops->prepare != NULL && ops->prepare(mb_mgr, job, vec, ops->ctx) < 0) {
                 kat_hash_job_cleanup(job, ops);
                 return -1;
         }
-        job->hash_alg = ops->hash_alg;
 
         return 0;
 }

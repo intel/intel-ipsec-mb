@@ -13,6 +13,7 @@
 #include "utils.h"
 #include "mac_test.h"
 #include "wycheproof_test.h"
+#include "kat_common_hash.h"
 
 int
 gmac_test(struct IMB_MGR *mb_mgr);
@@ -55,47 +56,61 @@ check_data(const uint8_t *test, const uint8_t *expected, uint64_t len, const cha
         return is_error;
 }
 
-static void
-aes_gmac_job(IMB_MGR *mb_mgr, const uint8_t *k, struct gcm_key_data *gmac_key,
-             const uint64_t key_len, const uint8_t *in, const uint64_t len, const uint8_t *iv,
-             const uint64_t iv_len, uint8_t *auth_tag, const uint64_t auth_tag_len)
+struct gmac_job_ctx {
+        struct gcm_key_data *key;
+        uint8_t *raw_key;
+        uint8_t *iv;
+};
+
+static int
+gmac_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec, void *ctx)
 {
-        IMB_JOB *job;
+        struct gmac_job_ctx *gmac = calloc(1, sizeof(*gmac));
+        const size_t key_len = vec->keySize / 8;
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        if (!job) {
-                fprintf(stderr, "failed to get job\n");
-                return;
-        }
+        (void) ctx;
+        if (gmac == NULL)
+                return -1;
 
-        if (key_len == 16) {
-                IMB_AES128_GCM_PRE(mb_mgr, k, gmac_key);
+        job->user_data = gmac;
+        gmac->key = test_aligned_alloc(16, sizeof(*gmac->key));
+        gmac->raw_key = test_aligned_alloc(16, key_len);
+        gmac->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        if (gmac->key == NULL || gmac->raw_key == NULL || gmac->iv == NULL)
+                return -1;
+
+        memcpy(gmac->raw_key, vec->key, key_len);
+        memcpy(gmac->iv, vec->iv, vec->ivSize / 8);
+        if (key_len == IMB_KEY_128_BYTES) {
+                IMB_AES128_GCM_PRE(mb_mgr, gmac->raw_key, gmac->key);
                 job->hash_alg = IMB_AUTH_AES_GMAC_128;
-        } else if (key_len == 24) {
-                IMB_AES192_GCM_PRE(mb_mgr, k, gmac_key);
+        } else if (key_len == IMB_KEY_192_BYTES) {
+                IMB_AES192_GCM_PRE(mb_mgr, gmac->raw_key, gmac->key);
                 job->hash_alg = IMB_AUTH_AES_GMAC_192;
-        } else { /* key_len == 32 */
-                IMB_AES256_GCM_PRE(mb_mgr, k, gmac_key);
+        } else {
+                IMB_AES256_GCM_PRE(mb_mgr, gmac->raw_key, gmac->key);
                 job->hash_alg = IMB_AUTH_AES_GMAC_256;
         }
 
-        job->cipher_mode = IMB_CIPHER_NULL;
-        job->u.GMAC._key = gmac_key;
-        job->u.GMAC._iv = iv;
-        job->u.GMAC.iv_len_in_bytes = iv_len;
-        job->src = in;
-        job->msg_len_to_hash_in_bytes = len;
-        job->hash_start_src_offset_in_bytes = UINT64_C(0);
-        job->auth_tag_output = auth_tag;
-        job->auth_tag_output_len_in_bytes = auth_tag_len;
+        job->u.GMAC._key = gmac->key;
+        job->u.GMAC._iv = gmac->iv;
+        job->u.GMAC.iv_len_in_bytes = vec->ivSize / 8;
+        return 0;
+}
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job == NULL)
-                fprintf(stderr, "No job retrieved\n");
-        else if (job->status != IMB_STATUS_COMPLETED)
-                fprintf(stderr, "failed job, status:%d\n", job->status);
+static void
+gmac_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct gmac_job_ctx *gmac = job->user_data;
+
+        (void) ctx;
+        if (gmac != NULL) {
+                test_aligned_free(gmac->key);
+                test_aligned_free(gmac->raw_key);
+                test_aligned_free(gmac->iv);
+                free(gmac);
+        }
+        job->user_data = NULL;
 }
 
 #define MAX_SEG_SIZE 64
@@ -110,7 +125,6 @@ gmac_test_vector(IMB_MGR *mb_mgr, const struct mac_test *vector, const uint64_t 
         const uint64_t iv_len = vector->ivSize / 8;
         const uint64_t nb_segs = ((vector->msgSize / 8) / seg_size);
         const uint64_t last_partial_seg = ((vector->msgSize / 8) % seg_size);
-        const uint8_t *in_ptr = (const void *) vector->msg;
         uint8_t T_test[16];
         struct test_suite_context *ts = ts128;
 
@@ -122,17 +136,31 @@ gmac_test_vector(IMB_MGR *mb_mgr, const struct mac_test *vector, const uint64_t 
 
         memset(&key, 0, sizeof(struct gcm_key_data));
         if (job_api) {
-                aes_gmac_job(mb_mgr, (const void *) vector->key, &key, vector->keySize / 8, in_ptr,
-                             seg_size, iv, iv_len, T_test, vector->tagSize / 8);
+                const struct kat_hash_job_ops ops = {
+                        .prepare = gmac_job_prepare,
+                        .cleanup = gmac_job_cleanup,
+                        .hash_alg = IMB_AUTH_AES_GMAC_128,
+                };
+
+                if (kat_hash_test_submit_flush(mb_mgr, &vector, 1, 1, &ops))
+                        test_suite_update(ts, 0, 1);
+                else
+                        test_suite_update(ts, 1, 0);
+                return;
         } else {
                 uint8_t in_seg[MAX_SEG_SIZE];
                 uint32_t i;
 
+                if (vector->msg == NULL) {
+                        test_suite_update(ts, 0, 1);
+                        return;
+                }
+
+                const uint8_t *in_ptr = (const void *) vector->msg;
                 switch (vector->keySize / 8) {
                 case IMB_KEY_128_BYTES:
                         IMB_AES128_GCM_PRE(mb_mgr, vector->key, &key);
                         IMB_AES128_GMAC_INIT(mb_mgr, &key, &ctx, iv, iv_len);
-                        in_ptr = (const void *) vector->msg;
                         for (i = 0; i < nb_segs; i++) {
                                 memcpy(in_seg, in_ptr, seg_size);
                                 IMB_AES128_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg, seg_size);
@@ -150,7 +178,6 @@ gmac_test_vector(IMB_MGR *mb_mgr, const struct mac_test *vector, const uint64_t 
                 case IMB_KEY_192_BYTES:
                         IMB_AES192_GCM_PRE(mb_mgr, vector->key, &key);
                         IMB_AES192_GMAC_INIT(mb_mgr, &key, &ctx, iv, iv_len);
-                        in_ptr = (const void *) vector->msg;
                         for (i = 0; i < nb_segs; i++) {
                                 memcpy(in_seg, in_ptr, seg_size);
                                 IMB_AES192_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg, seg_size);
@@ -169,7 +196,6 @@ gmac_test_vector(IMB_MGR *mb_mgr, const struct mac_test *vector, const uint64_t 
                 default:
                         IMB_AES256_GCM_PRE(mb_mgr, vector->key, &key);
                         IMB_AES256_GMAC_INIT(mb_mgr, &key, &ctx, iv, iv_len);
-                        in_ptr = (const void *) vector->msg;
                         for (i = 0; i < nb_segs; i++) {
                                 memcpy(in_seg, in_ptr, seg_size);
                                 IMB_AES256_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg, seg_size);
@@ -201,7 +227,8 @@ gmac_test(IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int errors = 0;
 
-        if (load_mac_vectors(kat_vector_dir, "gmac_test.json", &gmac_vectors, &jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "gmac_test.json", &gmac_vectors, &jctx) < 0 ||
+            gmac_vectors == NULL)
                 return 1;
 
         test_suite_start(&ts128, "AES-GMAC-128");
