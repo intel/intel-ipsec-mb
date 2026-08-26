@@ -17,9 +17,16 @@
 static int
 kat_hash_validate_vec_tab(const struct mac_test *const *vec_tab, const uint32_t vec_tab_num)
 {
-        if (vec_tab == NULL || vec_tab_num != 1 || vec_tab[0] == NULL) {
-                printf("Invalid vec table configuration: vec_tab_num must be 1\n");
+        if (vec_tab == NULL || vec_tab_num == 0) {
+                printf("Invalid vec table configuration\n");
                 return -1;
+        }
+
+        for (uint32_t i = 0; i < vec_tab_num; i++) {
+                if (vec_tab[i] == NULL) {
+                        printf("Invalid vec table configuration\n");
+                        return -1;
+                }
         }
 
         return 0;
@@ -136,6 +143,11 @@ kat_hash_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *const 
                 return -1;
         }
 
+        if (num_jobs == 0) {
+                printf("Invalid number of jobs: 0\n");
+                return -1;
+        }
+
         if (kat_hash_validate_vec_tab(vec_tab, vec_tab_num) < 0)
                 return -1;
 
@@ -146,6 +158,10 @@ kat_hash_test_submit_flush(struct IMB_MGR *mb_mgr, const struct mac_test *const 
                 const struct mac_test *vec = kat_hash_get_vec(vec_tab, vec_tab_num, i);
 
                 job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (job == NULL) {
+                        printf("Failed to get job\n");
+                        goto end;
+                }
                 if (kat_job_prepare_hash(mb_mgr, job, vec, ops) < 0)
                         goto end;
                 job->user_data2 = (void *) (uintptr_t) i;

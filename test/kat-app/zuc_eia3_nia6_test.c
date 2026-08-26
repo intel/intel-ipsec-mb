@@ -22,14 +22,10 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
-#define MAXBUFS     17
 #define PASS_STATUS 0
 #define FAIL_STATUS -1
-#define DIM(_x)     (sizeof(_x) / sizeof(_x[0]))
-
-#define MAX_BUFFER_LENGTH_IN_BITS  5670 /* biggest test is EIA test 5 */
-#define MAX_BUFFER_LENGTH_IN_BYTES ((MAX_BUFFER_LENGTH_IN_BITS) + 7) / 8
 
 enum api_type { TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 
@@ -47,12 +43,15 @@ free_zuc_eia3_128_vectors(struct test_json_alloc_ctx *ctx)
 
 static struct mac_test *zuc_nia6_vectors;
 
-static void
-free_zuc_nia6_vectors(struct test_json_alloc_ctx *ctx)
-{
-        json_free_test_ctx(ctx);
-        zuc_nia6_vectors = NULL;
-}
+struct zuc_nia6_job_ctx {
+        uint8_t *key;
+        uint8_t *iv;
+};
+
+struct zuc_eia3_job_ctx {
+        uint8_t *key;
+        uint8_t *iv;
+};
 
 struct zuc_eia3_128_params {
         const uint32_t *count;
@@ -60,335 +59,9 @@ struct zuc_eia3_128_params {
         const uint8_t *direction;
 };
 
-int
-validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData, uint8_t *pKeys,
-                       uint8_t *pIV);
-int
-validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
-                         uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
-                         const enum api_type type);
-int
-validate_zuc_NIA6(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData, uint8_t **pKeys,
-                  uint8_t **pIV, uint32_t numBuffs, const enum api_type type);
-
-/******************************************************************************
- * @ingroup zuc_functionalTest_app
- *
- * @description
- * This function allocates memory for buffers and set random data in each buffer
- *
- * pSrcData = pointers to the new source buffers
- * numOfBuffs = number of buffers
- * ************************************************/
-static uint32_t
-createData(uint8_t *pSrcData[MAXBUFS], uint32_t numOfBuffs)
-{
-        uint32_t i = 0;
-
-        for (i = 0; i < numOfBuffs; i++) {
-                pSrcData[i] = (uint8_t *) malloc(MAX_BUFFER_LENGTH_IN_BYTES);
-
-                if (!pSrcData[i]) {
-                        uint32_t j;
-
-                        printf("malloc(pSrcData[i]): failed!\n");
-
-                        for (j = 0; j < i; j++) {
-                                free(pSrcData[j]);
-                                pSrcData[j] = NULL;
-                        }
-
-                        return FAIL_STATUS;
-                }
-        }
-        return PASS_STATUS;
-}
-
-/******************************************************************************
- * @ingroup zuc_functionalTest_app
- *
- * @description
- * This function creates source data and vector buffers.
- *
- * keyLen = key length
- * pKeys = array of pointers to the new key buffers
- * ivLen = vector length
- * pIV = array of pointers to the new vector buffers
- * numOfBuffs = number of buffers
- ************************************************/
-static uint32_t
-createKeyVecData(uint32_t keyLen, uint8_t *pKeys[MAXBUFS], uint32_t ivLen, uint8_t *pIV[MAXBUFS],
-                 uint32_t numOfBuffs)
-{
-        uint32_t i = 0;
-
-        for (i = 0; i < numOfBuffs; i++) {
-                uint32_t j;
-
-                pIV[i] = (uint8_t *) malloc(ivLen);
-
-                if (!pIV[i]) {
-                        printf("malloc(pIV[i]): failed!\n");
-
-                        for (j = 0; j < i; j++) {
-                                free(pIV[j]);
-                                free(pKeys[j]);
-                        }
-
-                        return FAIL_STATUS;
-                }
-
-                pKeys[i] = malloc(keyLen);
-
-                if (!pKeys[i]) {
-                        printf("malloc(pKeys[i]): failed!\n");
-
-                        for (j = 0; j <= i; j++) {
-                                free(pIV[j]);
-
-                                if (j < i)
-                                        free(pKeys[j]);
-                        }
-                        return FAIL_STATUS;
-                }
-        }
-
-        return PASS_STATUS;
-}
-
-/******************************************************************************
- * @ingroup zuc_benchmark_app
- *
- * @description
- * This function free memory pointed to by an array of pointers
- *
- * arr = array of memory pointers
- * length = length of pointer array (or number of pointers whose buffers
- * should be freed)
- * ************************************************/
 static void
-freePtrArray(uint8_t *pArr[MAXBUFS], uint32_t arrayLength)
-{
-        uint32_t i = 0;
+zuc_eia3_128_set_params(const struct mac_test *v, struct zuc_eia3_128_params *p);
 
-        for (i = 0; i < arrayLength; i++)
-                free(pArr[i]);
-}
-
-int
-zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr)
-{
-
-        const uint32_t numBuffs[] = { 4, 8, 9, 16, 17 };
-        uint32_t i;
-        int errors = 0;
-        uint8_t *pKeys[MAXBUFS] = { 0 };
-        uint8_t *pIV[MAXBUFS] = { 0 };
-        uint8_t *pSrcData[MAXBUFS] = { 0 };
-        uint8_t *pDstData[MAXBUFS] = { 0 };
-        struct test_suite_context eia3_ctx;
-        struct test_suite_context nia6_ctx;
-        struct test_json_alloc_ctx *eia3_jctx = NULL;
-        struct test_json_alloc_ctx *nia6_jctx = NULL;
-
-        if (load_mac_vectors(kat_vector_dir, "zuc_eia3_128_test.json", &zuc_eia3_128_vectors,
-                             &eia3_jctx) < 0)
-                return 1;
-        if (load_mac_vectors(kat_vector_dir, "zuc_nia6_test.json", &zuc_nia6_vectors, &nia6_jctx) <
-            0) {
-                free_zuc_eia3_128_vectors(eia3_jctx);
-                return 1;
-        }
-
-        test_suite_start(&eia3_ctx, "ZUC-EIA3");
-        test_suite_start(&nia6_ctx, "ZUC-NIA6");
-
-        /*Create test data buffers + populate with random data*/
-        if (createData(pSrcData, MAXBUFS)) {
-                printf("createData() error\n");
-                test_suite_update(&eia3_ctx, 0, 1);
-                goto exit_zuc_eia3_nia6_test;
-        }
-        if (createData(pDstData, MAXBUFS)) {
-                printf("createData() error\n");
-                freePtrArray(pSrcData, MAXBUFS);
-                test_suite_update(&eia3_ctx, 0, 1);
-                goto exit_zuc_eia3_nia6_test;
-        }
-
-        /* Create random keys and vectors */
-        if (createKeyVecData(IMB_ZUC_NEA6_KEY_LEN_IN_BYTES, pKeys, IMB_ZUC_IV_LEN_IN_BYTES, pIV,
-                             MAXBUFS)) {
-                printf("createKeyVecData() error\n");
-                freePtrArray(pSrcData, MAXBUFS);
-                freePtrArray(pDstData, MAXBUFS);
-                test_suite_update(&eia3_ctx, 0, 1);
-                goto exit_zuc_eia3_nia6_test;
-        }
-
-        /* Job API tests */
-        for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
-                                             TEST_SINGLE_JOB_API))
-                        test_suite_update(&eia3_ctx, 0, 1);
-                else
-                        test_suite_update(&eia3_ctx, 1, 0);
-        }
-
-        for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_NIA6(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
-                                      TEST_SINGLE_JOB_API))
-                        test_suite_update(&nia6_ctx, 0, 1);
-                else
-                        test_suite_update(&nia6_ctx, 1, 0);
-        }
-
-        for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_NIA6(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
-                                      TEST_BURST_JOB_API))
-                        test_suite_update(&nia6_ctx, 0, 1);
-                else
-                        test_suite_update(&nia6_ctx, 1, 0);
-        }
-
-exit_zuc_eia3_nia6_test:
-        freePtrArray(pKeys, MAXBUFS);    /*Free the key buffers*/
-        freePtrArray(pIV, MAXBUFS);      /*Free the vector buffers*/
-        freePtrArray(pSrcData, MAXBUFS); /*Free the source buffers*/
-        freePtrArray(pDstData, MAXBUFS); /*Free the destination buffers*/
-
-        errors += test_suite_end(&eia3_ctx);
-        errors += test_suite_end(&nia6_ctx);
-
-        free_zuc_eia3_128_vectors(eia3_jctx);
-        free_zuc_nia6_vectors(nia6_jctx);
-        return errors;
-}
-
-static inline int
-submit_burst_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const iv,
-                       uint8_t **const src, uint8_t **const tags, const uint32_t *lens,
-                       const unsigned int num_jobs, const size_t *tag_lens, IMB_HASH_ALG hash_alg)
-{
-        IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
-        unsigned int i;
-        unsigned int jobs_rx = 0;
-        uint32_t completed_jobs = 0;
-        int err;
-
-        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
-                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
-
-        for (i = 0; i < num_jobs; i++) {
-                job = jobs[i];
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->src = src[i];
-                if (hash_alg == IMB_AUTH_ZUC_NIA6) {
-                        job->u.NIA._key = keys[i];
-                        job->u.NIA._iv = iv[i];
-                } else {
-                        job->u.ZUC_EIA3._key = keys[i];
-                        job->u.ZUC_EIA3._iv = iv[i];
-                }
-
-                job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = lens[i];
-                job->hash_alg = hash_alg;
-                job->auth_tag_output = tags[i];
-                job->auth_tag_output_len_in_bytes = tag_lens[i];
-
-                imb_set_session(mb_mgr, job);
-        }
-
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
-        err = imb_get_errno(mb_mgr);
-
-        if (err != 0) {
-                printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                return -1;
-        }
-
-check_eia3_burst_jobs:
-        for (i = 0; i < completed_jobs; i++) {
-                job = jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i + 1);
-                        return -1;
-                }
-
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
-                if (completed_jobs == 0) {
-                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                        return -1;
-                }
-                goto check_eia3_burst_jobs;
-        }
-        return 0;
-}
-
-static inline int
-submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const iv,
-                 uint8_t **const src, uint8_t **const tags, const uint32_t *lens,
-                 const unsigned int num_jobs, const size_t *tag_lens, IMB_HASH_ALG hash_alg)
-{
-        IMB_JOB *job;
-        unsigned int i;
-        unsigned int jobs_rx = 0;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->src = src[i];
-                if (hash_alg == IMB_AUTH_ZUC_NIA6) {
-                        job->u.NIA._key = keys[i];
-                        job->u.NIA._iv = iv[i];
-                } else {
-                        job->u.ZUC_EIA3._key = keys[i];
-                        job->u.ZUC_EIA3._iv = iv[i];
-                }
-
-                job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = lens[i];
-                job->hash_alg = hash_alg;
-                job->auth_tag_output = tags[i];
-                job->auth_tag_output_len_in_bytes = tag_lens[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        jobs_rx++;
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %u", __LINE__, job->status, i);
-                                return -1;
-                        }
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d, job %u", __LINE__, job->status, i);
-                        return -1;
-                }
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                return -1;
-        }
-
-        return 0;
-}
-
-/**
- * Count, Bearer and Direction stored in vector IV field
- */
 static void
 zuc_eia3_128_set_params(const struct mac_test *v, struct zuc_eia3_128_params *p)
 {
@@ -399,230 +72,281 @@ zuc_eia3_128_set_params(const struct mac_test *v, struct zuc_eia3_128_params *p)
         p->direction = &params[5];
 }
 
-int
-validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
-                         uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
-                         const enum api_type type)
+static void
+free_zuc_nia6_vectors(struct test_json_alloc_ctx *ctx)
 {
-        uint32_t i, j, num_vectors = 0;
-        int retTmp, ret = 0;
-        uint32_t byteLength[MAXBUFS];
-        size_t tag_lens[MAXBUFS];
-        const struct mac_test *v = zuc_eia3_128_vectors;
-
-        /* calculate number of test vectors */
-        for (i = 0; v[i].msg != NULL; i++)
-                num_vectors++;
-
-        if (num_vectors == 0) {
-                printf("ZUC-EIA3 128 N block - No vectors found!\n");
-                return 1;
-        }
-
-        for (i = 0; i < num_vectors; i++) {
-                for (j = 0; j < numBuffs; j++) {
-                        struct zuc_eia3_128_params p = { 0 };
-                        memcpy(pKeys[j], v[i].key, IMB_ZUC_KEY_LEN_IN_BYTES);
-
-                        zuc_eia3_128_set_params(&v[i], &p);
-                        zuc_eia3_iv_gen(*p.count, *p.bearer, *p.direction, pIV[j]);
-                        byteLength[j] = (uint32_t) (v[i].msgSize / 8);
-                        memcpy(pSrcData[j], v[i].msg, byteLength[j]);
-                        tag_lens[j] = v[i].tagSize / 8;
-                }
-                if (type == TEST_SINGLE_JOB_API)
-                        submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength,
-                                         numBuffs, tag_lens, IMB_AUTH_ZUC_EIA3);
-                else
-                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength,
-                                               numBuffs, tag_lens, IMB_AUTH_ZUC_EIA3);
-
-                for (j = 0; j < numBuffs; j++) {
-                        retTmp = memcmp(pDstData[j], v[i].tag, IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                        if (retTmp) {
-                                printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
-                                       "length: %zu, Tag length: %zu\n",
-                                       numBuffs, v[i].tcId, v[i].msgSize / 8, v[i].tagSize / 8);
-                                byte_hexdump("Expected", (const uint8_t *) v[i].tag,
-                                             IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                                byte_hexdump("Found", pDstData[j], IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                                ret = retTmp;
-                        }
-#ifdef DEBUG
-                        else {
-                                if (!quiet_mode)
-                                        printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
-                                               "length: %zu, Tag length: %zu\n",
-                                               numBuffs, v[i].tcId, v[i].msgSize / 8,
-                                               v[i].tagSize / 8);
-                        }
-#endif
-                        fflush(stdout);
-                }
-        }
-
-        /* Generate digests for n different test vectors,
-         * grouping all available tests vectors in groups of N buffers */
-        for (i = 0; i < numBuffs; i++) {
-                const int vec_idx = i % num_vectors;
-                struct zuc_eia3_128_params p = { 0 };
-                memcpy(pKeys[i], v[vec_idx].key, IMB_ZUC_KEY_LEN_IN_BYTES);
-
-                zuc_eia3_128_set_params(&v[vec_idx], &p);
-                zuc_eia3_iv_gen(*p.count, *p.bearer, *p.direction, pIV[i]);
-                byteLength[i] = (uint32_t) (v[vec_idx].msgSize / 8);
-                memcpy(pSrcData[i], v[vec_idx].msg, byteLength[i]);
-                tag_lens[i] = v[vec_idx].tagSize / 8;
-        }
-
-        if (type == TEST_SINGLE_JOB_API)
-                submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength, numBuffs,
-                                 tag_lens, IMB_AUTH_ZUC_EIA3);
-        else
-                submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength, numBuffs,
-                                       tag_lens, IMB_AUTH_ZUC_EIA3);
-
-        for (i = 0; i < numBuffs; i++) {
-                const int vec_idx = i % num_vectors;
-                retTmp = memcmp(pDstData[i], v[vec_idx].tag, v[vec_idx].tagSize / 8);
-                if (retTmp) {
-                        printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
-                               "length: %zu, Tag length: %zu\n",
-                               numBuffs, v[vec_idx].tcId, v[vec_idx].msgSize / 8,
-                               v[vec_idx].tagSize / 8);
-                        byte_hexdump("Expected", (const uint8_t *) v[vec_idx].tag,
-                                     IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                        byte_hexdump("Found", pDstData[i], IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                        ret = retTmp;
-                }
-#ifdef DEBUG
-                else {
-                        if (!quiet_mode)
-                                printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
-                                       "length: %zu, Tag length: %zu\n",
-                                       numBuffs, v[vec_idx].tcId, v[vec_idx].msgSize / 8,
-                                       v[vec_idx].tagSize / 8);
-                }
-#endif
-                fflush(stdout);
-        }
-        return ret;
-};
+        json_free_test_ctx(ctx);
+        zuc_nia6_vectors = NULL;
+}
 
 static int
-verify_tag_256(void *mac, const struct mac_test *vector, uint32_t n_jobs, uint32_t job_idx,
-               const int multi_vector, const char *zuc_algo)
+zuc_eia3_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                     void *ctx)
 {
-        int ret = memcmp(mac, vector->tag, vector->tagSize / 8);
-        if (ret) {
-                if (multi_vector) {
-                        printf("Validate %s n block multi-vector test "
-                               "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): FAIL\n",
-                               zuc_algo, n_jobs, job_idx, vector->tcId, vector->tagSize / 8);
+        struct zuc_eia3_job_ctx *eia = calloc(1, sizeof(*eia));
+        struct zuc_eia3_128_params params;
 
-                } else {
-                        printf("Validate %s n block test "
-                               "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): FAIL\n",
-                               zuc_algo, n_jobs, job_idx, vector->tcId, vector->tagSize / 8);
-                }
-                byte_hexdump("Expected", (const uint8_t *) vector->tag, (int) vector->tagSize / 8);
-                byte_hexdump("Found", mac, (int) vector->tagSize / 8);
-        }
-#ifdef DEBUG
-        else {
-                if (!quiet_mode) {
-                        if (multi_vector) {
-                                printf("Validate %s n block multi-vector test "
-                                       "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): "
-                                       "PASS\n",
-                                       zuc_algo, n_jobs, job_idx, vector->tcId,
-                                       vector->tagSize / 8);
+        (void) ctx;
+        if (eia == NULL)
+                return -1;
 
-                        } else {
-                                printf("Validate %s n block test "
-                                       "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): "
-                                       "PASS\n",
-                                       zuc_algo, n_jobs, job_idx, vector->tcId,
-                                       vector->tagSize / 8);
-                        }
-                }
+        job->user_data = eia;
+        eia->key = test_aligned_alloc(16, vec->keySize / 8);
+        eia->iv = test_aligned_alloc(16, IMB_ZUC_IV_LEN_IN_BYTES);
+        if (eia->key == NULL || eia->iv == NULL)
+                return -1;
+
+        zuc_eia3_128_set_params(vec, &params);
+        memcpy(eia->key, vec->key, vec->keySize / 8);
+        zuc_eia3_iv_gen(*params.count, *params.bearer, *params.direction, eia->iv);
+        job->u.ZUC_EIA3._key = eia->key;
+        job->u.ZUC_EIA3._iv = eia->iv;
+
+        (void) mb_mgr;
+        return 0;
+}
+
+static void
+zuc_eia3_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct zuc_eia3_job_ctx *eia = job->user_data;
+
+        (void) ctx;
+        if (eia != NULL) {
+                test_aligned_free(eia->key);
+                test_aligned_free(eia->iv);
+                free(eia);
         }
-#endif
-        fflush(stdout);
+        job->user_data = NULL;
+}
+
+static int
+validate_zuc_EIA_common(struct IMB_MGR *mb_mgr, const uint32_t num_jobs, const enum api_type type)
+{
+        const struct kat_hash_job_ops ops = {
+                .prepare = zuc_eia3_job_prepare,
+                .cleanup = zuc_eia3_job_cleanup,
+                .hash_alg = IMB_AUTH_ZUC_EIA3,
+        };
+        const struct mac_test *vec = zuc_eia3_128_vectors;
+        int ret = 0;
+
+        for (; vec->msg != NULL; vec++) {
+                const int err =
+                        (type == TEST_SINGLE_JOB_API)
+                                ? kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops)
+                                : kat_hash_test_burst(mb_mgr, &vec, 1, num_jobs, &ops);
+                if (err)
+                        ret = err;
+        }
 
         return ret;
 }
 
-int
-validate_zuc_NIA6(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData, uint8_t **pKeys,
-                  uint8_t **pIV, uint32_t numBuffs, const enum api_type type)
+static int
+validate_zuc_EIA_mixed_common(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
+                              const enum api_type type)
 {
-        uint32_t i, j, num_vectors = 0;
-        int retTmp, ret = 0;
-        uint32_t byteLength[MAXBUFS];
-        size_t tag_lens[MAXBUFS];
+        const struct kat_hash_job_ops ops = {
+                .prepare = zuc_eia3_job_prepare,
+                .cleanup = zuc_eia3_job_cleanup,
+                .hash_alg = IMB_AUTH_ZUC_EIA3,
+        };
+        const struct mac_test *vec = zuc_eia3_128_vectors;
+        const struct mac_test *vec_tab[17];
+        uint32_t num_vectors = 0;
 
-        const struct mac_test *vector = zuc_nia6_vectors;
-
-        /* calculate number of test vectors */
-        for (i = 0; vector[i].msg != NULL; i++)
+        for (; vec->msg != NULL; vec++)
                 num_vectors++;
 
-        if (num_vectors == 0) {
-                printf("ZUC-NIA6 - No vectors found!\n");
+        if (num_vectors == 0 || num_jobs == 0 || num_jobs > 17)
+                return -1;
+
+        for (uint32_t i = 0; i < num_jobs; i++)
+                vec_tab[i] = &zuc_eia3_128_vectors[i % num_vectors];
+
+        return (type == TEST_SINGLE_JOB_API)
+                       ? kat_hash_test_submit_flush(mb_mgr, vec_tab, num_jobs, num_jobs, &ops)
+                       : kat_hash_test_burst(mb_mgr, vec_tab, num_jobs, num_jobs, &ops);
+}
+
+static int
+zuc_nia6_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                     void *ctx)
+{
+        struct zuc_nia6_job_ctx *nia = calloc(1, sizeof(*nia));
+
+        (void) mb_mgr;
+        (void) ctx;
+        if (nia == NULL)
+                return -1;
+
+        job->user_data = nia;
+        nia->key = test_aligned_alloc(16, vec->keySize / 8);
+        if (nia->key == NULL)
+                return -1;
+
+        nia->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        if (nia->iv == NULL)
+                return -1;
+
+        memcpy(nia->key, vec->key, vec->keySize / 8);
+        memcpy(nia->iv, vec->iv, vec->ivSize / 8);
+        job->u.NIA._key = nia->key;
+        job->u.NIA._iv = nia->iv;
+
+        return 0;
+}
+
+static void
+zuc_nia6_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct zuc_nia6_job_ctx *nia = job->user_data;
+
+        (void) ctx;
+        if (nia != NULL) {
+                test_aligned_free(nia->key);
+                test_aligned_free(nia->iv);
+                free(nia);
+        }
+        job->user_data = NULL;
+}
+
+static int
+validate_zuc_NIA6_common(struct IMB_MGR *mb_mgr, const uint32_t num_jobs, const enum api_type type)
+{
+        const struct kat_hash_job_ops ops = {
+                .prepare = zuc_nia6_job_prepare,
+                .cleanup = zuc_nia6_job_cleanup,
+                .hash_alg = IMB_AUTH_ZUC_NIA6,
+        };
+        const struct mac_test *vec = zuc_nia6_vectors;
+        int ret = 0;
+
+        for (; vec->msg != NULL; vec++) {
+                const int err =
+                        (type == TEST_SINGLE_JOB_API)
+                                ? kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops)
+                                : kat_hash_test_burst(mb_mgr, &vec, 1, num_jobs, &ops);
+                if (err)
+                        ret = err;
+        }
+
+        return ret;
+}
+
+static int
+validate_zuc_NIA6_mixed_common(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
+                               const enum api_type type)
+{
+        const struct kat_hash_job_ops ops = {
+                .prepare = zuc_nia6_job_prepare,
+                .cleanup = zuc_nia6_job_cleanup,
+                .hash_alg = IMB_AUTH_ZUC_NIA6,
+        };
+        const struct mac_test *vec = zuc_nia6_vectors;
+        const struct mac_test *vec_tab[17];
+        uint32_t num_vectors = 0;
+
+        for (; vec->msg != NULL; vec++)
+                num_vectors++;
+
+        if (num_vectors == 0 || num_jobs == 0 || num_jobs > 17)
+                return -1;
+
+        for (uint32_t i = 0; i < num_jobs; i++)
+                vec_tab[i] = &zuc_nia6_vectors[i % num_vectors];
+
+        return (type == TEST_SINGLE_JOB_API)
+                       ? kat_hash_test_submit_flush(mb_mgr, vec_tab, num_jobs, num_jobs, &ops)
+                       : kat_hash_test_burst(mb_mgr, vec_tab, num_jobs, num_jobs, &ops);
+}
+
+int
+zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr)
+{
+
+        int errors = 0;
+        struct test_suite_context eia3_ctx;
+        struct test_suite_context nia6_ctx;
+        struct test_json_alloc_ctx *eia3_jctx = NULL;
+        struct test_json_alloc_ctx *nia6_jctx = NULL;
+
+        if (load_mac_vectors(kat_vector_dir, "zuc_eia3_128_test.json", &zuc_eia3_128_vectors,
+                             &eia3_jctx) < 0 ||
+            zuc_eia3_128_vectors == NULL)
+                return 1;
+        if (load_mac_vectors(kat_vector_dir, "zuc_nia6_test.json", &zuc_nia6_vectors, &nia6_jctx) <
+                    0 ||
+            zuc_nia6_vectors == NULL) {
+                free_zuc_eia3_128_vectors(eia3_jctx);
                 return 1;
         }
 
-        for (i = 0; i < num_vectors; i++) {
-                for (j = 0; j < numBuffs; j++) {
-                        /* copy data for N buffers / jobs */
-                        memcpy(pKeys[j], vector[i].key, IMB_ZUC_NEA6_KEY_LEN_IN_BYTES);
-                        memcpy(pIV[j], vector[i].iv, vector[i].ivSize / 8);
-                        byteLength[j] = (uint32_t) vector[i].msgSize / 8;
-                        memcpy(pSrcData[j], vector[i].msg, byteLength[j]);
-                        tag_lens[j] = vector[i].tagSize / 8;
-                }
-                if (type == TEST_SINGLE_JOB_API)
-                        submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength,
-                                         numBuffs, tag_lens, IMB_AUTH_ZUC_NIA6);
-                else /* TEST_BURST_JOB_API */
-                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength,
-                                               numBuffs, tag_lens, IMB_AUTH_ZUC_NIA6);
+        test_suite_start(&eia3_ctx, "ZUC-EIA3");
+        test_suite_start(&nia6_ctx, "ZUC-NIA6");
 
-                for (j = 0; j < numBuffs; j++) {
-
-                        retTmp =
-                                verify_tag_256(pDstData[j], &vector[i], numBuffs, j, 0, "ZUC-NIA6");
-                        if (retTmp)
-                                ret = retTmp;
-                }
+        /* Job API tests */
+        for (uint32_t i = 1; i <= 17; i++) {
+                if (validate_zuc_EIA_common(mb_mgr, i, TEST_SINGLE_JOB_API))
+                        test_suite_update(&eia3_ctx, 0, 1);
+                else
+                        test_suite_update(&eia3_ctx, 1, 0);
         }
 
-        /* Generate digests for n different test vectors,
-         * grouping all available tests vectors in groups of N buffers */
-        for (i = 0; i < numBuffs; i++) {
-                const int vec_idx = i % num_vectors;
-                memcpy(pKeys[i], vector[vec_idx].key, IMB_ZUC_NEA6_KEY_LEN_IN_BYTES);
-                memcpy(pIV[i], vector[vec_idx].iv, vector[vec_idx].ivSize / 8);
-
-                byteLength[i] = (uint32_t) vector[vec_idx].msgSize / 8;
-                memcpy(pSrcData[i], vector[vec_idx].msg, byteLength[i]);
-                tag_lens[i] = vector[vec_idx].tagSize / 8;
+        for (uint32_t i = 1; i <= 17; i++) {
+                if (validate_zuc_EIA_common(mb_mgr, i, TEST_BURST_JOB_API))
+                        test_suite_update(&eia3_ctx, 0, 1);
+                else
+                        test_suite_update(&eia3_ctx, 1, 0);
         }
 
-        if (type == TEST_SINGLE_JOB_API)
-                submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength, numBuffs,
-                                 tag_lens, IMB_AUTH_ZUC_NIA6);
-        else /* TEST_BURST_JOB_API */
-                submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength, numBuffs,
-                                       tag_lens, IMB_AUTH_ZUC_NIA6);
-
-        for (i = 0; i < numBuffs; i++) {
-                const int vec_idx = i % num_vectors;
-
-                retTmp = verify_tag_256(pDstData[i], &vector[vec_idx], numBuffs, i, 1, "ZUC-NIA6");
-                if (retTmp)
-                        ret = retTmp;
+        for (uint32_t i = 4; i <= 17; i++) {
+                if (validate_zuc_EIA_mixed_common(mb_mgr, i, TEST_SINGLE_JOB_API))
+                        test_suite_update(&eia3_ctx, 0, 1);
+                else
+                        test_suite_update(&eia3_ctx, 1, 0);
         }
-        return ret;
-};
+
+        for (uint32_t i = 4; i <= 17; i++) {
+                if (validate_zuc_EIA_mixed_common(mb_mgr, i, TEST_BURST_JOB_API))
+                        test_suite_update(&eia3_ctx, 0, 1);
+                else
+                        test_suite_update(&eia3_ctx, 1, 0);
+        }
+
+        for (uint32_t i = 1; i <= 17; i++) {
+                if (validate_zuc_NIA6_common(mb_mgr, i, TEST_SINGLE_JOB_API))
+                        test_suite_update(&nia6_ctx, 0, 1);
+                else
+                        test_suite_update(&nia6_ctx, 1, 0);
+        }
+
+        for (uint32_t i = 1; i <= 17; i++) {
+                if (validate_zuc_NIA6_common(mb_mgr, i, TEST_BURST_JOB_API))
+                        test_suite_update(&nia6_ctx, 0, 1);
+                else
+                        test_suite_update(&nia6_ctx, 1, 0);
+        }
+
+        for (uint32_t i = 4; i <= 17; i++) {
+                if (validate_zuc_NIA6_mixed_common(mb_mgr, i, TEST_SINGLE_JOB_API))
+                        test_suite_update(&nia6_ctx, 0, 1);
+                else
+                        test_suite_update(&nia6_ctx, 1, 0);
+        }
+
+        for (uint32_t i = 4; i <= 17; i++) {
+                if (validate_zuc_NIA6_mixed_common(mb_mgr, i, TEST_BURST_JOB_API))
+                        test_suite_update(&nia6_ctx, 0, 1);
+                else
+                        test_suite_update(&nia6_ctx, 1, 0);
+        }
+
+        errors += test_suite_end(&eia3_ctx);
+        errors += test_suite_end(&nia6_ctx);
+
+        free_zuc_eia3_128_vectors(eia3_jctx);
+        free_zuc_nia6_vectors(nia6_jctx);
+        return errors;
+}
