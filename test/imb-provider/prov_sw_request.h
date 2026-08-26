@@ -41,6 +41,13 @@ typedef struct _alg_context {
         size_t block_size;
         IMB_HASH_ALG hash_alg;
         unsigned char msg_hash[64];
+        /*
+         * Set once a message has actually been submitted to ipsec-mb.
+         * EVP_DigestUpdate()/EVP_MAC_update() return early for a zero-length
+         * input, so the provider never sees an empty message and has to hash
+         * it from the final() call instead.
+         */
+        unsigned int data_hashed : 1;
 
         int nid;
         block128_f block;

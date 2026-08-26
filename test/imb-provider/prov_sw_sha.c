@@ -37,6 +37,8 @@ sha_async_init(ALG_CTX *ctx)
         else
                 OPENSSL_cleanse(ctx->auths, sizeof(ctx->auths));
 
+        ctx->data_hashed = 0;
+
         return 1;
 }
 
@@ -81,6 +83,8 @@ sha_async_update(ALG_CTX *ctx, const unsigned char *in, size_t len)
                 return 0;
         }
 
+        ctx->data_hashed = 1;
+
         return ret;
 }
 
@@ -90,6 +94,19 @@ sha_async_final(ALG_CTX *ctx, unsigned char *md)
         if (ctx == NULL || md == NULL) {
                 fprintf(stderr, "Error: ctx (type ALG_CTX) or md (output buffer) is NULL.\n");
                 return 0;
+        }
+
+        /*
+         * EVP_DigestUpdate() returns success without calling the provider when
+         * the input length is zero, so an empty message reaches us with nothing
+         * hashed. Submit the empty message now; otherwise the caller would get
+         * the cleared auths buffer instead of the digest of "".
+         */
+        if (!ctx->data_hashed) {
+                static const unsigned char empty[1] = { 0 };
+
+                if (!sha_async_update(ctx, empty, 0))
+                        return 0;
         }
 
         const uint8_t *src = ctx->xof_buf ? ctx->xof_buf : ctx->auths;

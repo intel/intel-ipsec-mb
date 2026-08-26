@@ -32,6 +32,14 @@ hmac_sha_async_init(ALG_CTX *ctx)
                 return 0;
         }
 
+        if (ctx->md_size == 0) {
+                fprintf(stderr, "HMAC digest is not set\n");
+                return 0;
+        }
+
+        OPENSSL_cleanse(ctx->auths, sizeof(ctx->auths));
+        ctx->data_hashed = 0;
+
         return 1;
 }
 
@@ -85,6 +93,8 @@ hmac_sha_async_update(ALG_CTX *ctx, const unsigned char *in, const size_t len)
                 return 0;
         }
 
+        ctx->data_hashed = 1;
+
         return ret;
 }
 
@@ -94,6 +104,19 @@ hmac_sha_async_final(ALG_CTX *ctx, unsigned char *md)
         if (ctx == NULL || md == NULL) {
                 fprintf(stderr, "Error: ctx (type ALG_CTX) or md (output buffer) is NULL.\n");
                 return 0;
+        }
+
+        /*
+         * EVP_MAC_update() returns success without reaching the provider when
+         * the input length is zero, so an empty message arrives here with
+         * nothing hashed. HMAC over an empty message is well defined, so submit
+         * it now instead of returning the cleared auths buffer.
+         */
+        if (!ctx->data_hashed) {
+                static const unsigned char empty[1] = { 0 };
+
+                if (!hmac_sha_async_update(ctx, empty, 0))
+                        return 0;
         }
 
         memcpy(md, ctx->auths, ctx->md_size);
