@@ -15,6 +15,7 @@
 
 #include "cipher_test.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 #define IMB_SNOW3G_PAD_LEN               16
 #define IMB_SNOW3G_MAX_DATA_LEN          3048
@@ -108,6 +109,58 @@ snow3g_hexdump(const char *message, const uint8_t *ptr, int len)
         printf("\n");
 }
 
+struct snow3g_uia2_job_ctx {
+        snow3g_key_schedule_t *key_sched;
+        uint8_t *key;
+        uint8_t *iv;
+};
+
+static int
+snow3g_uia2_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                        void *ctx)
+{
+        struct snow3g_uia2_job_ctx *uia2 = calloc(1, sizeof(*uia2));
+        const size_t key_sched_size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
+
+        (void) ctx;
+        if (uia2 == NULL)
+                return -1;
+
+        job->user_data = uia2;
+        if (key_sched_size == 0)
+                return -1;
+
+        uia2->key = test_aligned_alloc(16, vec->keySize / 8);
+        uia2->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        uia2->key_sched = test_aligned_alloc(16, key_sched_size);
+        if (uia2->key == NULL || uia2->iv == NULL || uia2->key_sched == NULL)
+                return -1;
+
+        memcpy(uia2->key, vec->key, vec->keySize / 8);
+        memcpy(uia2->iv, vec->iv, vec->ivSize / 8);
+        if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, uia2->key, uia2->key_sched) != 0)
+                return -1;
+
+        job->u.SNOW3G_UIA2._key = uia2->key_sched;
+        job->u.SNOW3G_UIA2._iv = uia2->iv;
+        return 0;
+}
+
+static void
+snow3g_uia2_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct snow3g_uia2_job_ctx *uia2 = job->user_data;
+
+        (void) ctx;
+        if (uia2 != NULL) {
+                test_aligned_free(uia2->key_sched);
+                test_aligned_free(uia2->key);
+                test_aligned_free(uia2->iv);
+                free(uia2);
+        }
+        job->user_data = NULL;
+}
+
 static inline int
 submit_uea2_jobs(struct IMB_MGR *mb_mgr, snow3g_key_schedule_t *const *keys, uint8_t **const ivs,
                  uint8_t **const src, uint8_t **const dst, const uint32_t *bytelens,
@@ -157,91 +210,6 @@ submit_uea2_jobs(struct IMB_MGR *mb_mgr, snow3g_key_schedule_t *const *keys, uin
         }
 
         return 0;
-}
-
-static inline int
-submit_uia2_job(struct IMB_MGR *mb_mgr, uint8_t *key, uint8_t *iv, uint8_t *src, uint8_t *tag,
-                const uint32_t byte_len, const uint8_t *exp_out, const int num_jobs)
-{
-        int i, err, jobs_rx = 0;
-        IMB_JOB *job;
-
-        /* flush the scheduler */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->src = src;
-                job->u.SNOW3G_UIA2._iv = iv;
-                job->u.SNOW3G_UIA2._key = key;
-
-                job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = byte_len;
-                job->hash_alg = IMB_AUTH_SNOW3G_UIA2;
-                job->auth_tag_output = tag;
-                job->auth_tag_output_len_in_bytes = 4;
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        /* got job back */
-                        jobs_rx++;
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d", __LINE__, job->status);
-                                goto end;
-                        }
-                        /*Compare the digest with the expected in the vectors*/
-                        if (memcmp(job->auth_tag_output, exp_out, IMB_SNOW3G_DIGEST_LEN) != 0) {
-                                printf("IMB_AUTH_SNOW3G_UIA2 "
-                                       "job num:%d\n",
-                                       i);
-                                snow3g_hexdump("Actual:", job->auth_tag_output,
-                                               IMB_SNOW3G_DIGEST_LEN);
-                                snow3g_hexdump("Expected:", exp_out, IMB_SNOW3G_DIGEST_LEN);
-                                goto end;
-                        }
-                } else {
-                        /* no job returned - check for error */
-                        err = imb_get_errno(mb_mgr);
-                        if (err != 0) {
-                                printf("Error: %s!\n", imb_get_strerror(err));
-                                goto end;
-                        }
-                }
-        }
-
-        /* flush any outstanding jobs */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-
-                err = imb_get_errno(mb_mgr);
-                if (err != 0) {
-                        printf("Error: %s!\n", imb_get_strerror(err));
-                        goto end;
-                }
-
-                if (memcmp(job->auth_tag_output, exp_out, IMB_SNOW3G_DIGEST_LEN) != 0) {
-                        printf("IMB_AUTH_SNOW3G_UIA2 job num:%d\n", i);
-                        snow3g_hexdump("Actual:", job->auth_tag_output, IMB_SNOW3G_DIGEST_LEN);
-                        snow3g_hexdump("Expected:", exp_out, IMB_SNOW3G_DIGEST_LEN);
-                        goto end;
-                }
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-
-        return 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        return -1;
 }
 
 /******************************************************************************
@@ -437,15 +405,8 @@ validate_snow3g_f9(struct IMB_MGR *mb_mgr, struct test_suite_context *uea2_ctx,
                    struct test_suite_context *uia2_ctx)
 {
         int numVectors = 0, i;
-        size_t size = 0;
         const struct mac_test *testVectors = snow3g_f9_vectors;
 
-        snow3g_key_schedule_t *pKeySched = NULL;
-        uint8_t *pKey = NULL;
-        int keyLen = IMB_KEY_256_BYTES;
-        uint8_t srcBuff[IMB_SNOW3G_MAX_DATA_LEN];
-        uint8_t digest[IMB_SNOW3G_DIGEST_LEN] = { 0 };
-        uint8_t *pIV = NULL;
         int status = -1;
 
         (void) uea2_ctx;
@@ -462,66 +423,27 @@ validate_snow3g_f9(struct IMB_MGR *mb_mgr, struct test_suite_context *uea2_ctx,
                 goto snow3g_f9_1_buffer_exit;
         }
 
-        pIV = malloc(IMB_SNOW3G_IV_LEN_IN_BYTES);
-        if (!pIV) {
-                printf("malloc(pIV):failed !\n");
-                goto snow3g_f9_1_buffer_exit;
-        }
+        const struct kat_hash_job_ops ops = {
+                .prepare = snow3g_uia2_job_prepare,
+                .cleanup = snow3g_uia2_job_cleanup,
+                .hash_alg = IMB_AUTH_SNOW3G_UIA2,
+        };
 
-        pKey = malloc(keyLen);
-        if (!pKey) {
-                printf("malloc(pKey):failed !\n");
-                goto snow3g_f9_1_buffer_exit;
-        }
-        size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
-        if (!size)
-                goto snow3g_f9_1_buffer_exit;
-
-        pKeySched = malloc(size);
-        if (!pKeySched) {
-                printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): "
-                       "failed !\n");
-                goto snow3g_f9_1_buffer_exit;
-        }
-
-        /*Get test data for for Snow3g 1 Packet version*/
         for (i = 0; i < numVectors; i++) {
-                const int inputLen = ((int) testVectors[i].msgSize + 7) / 8;
+                const struct mac_test *vec = &testVectors[i];
 
-                memcpy(pKey, testVectors[i].key, testVectors[i].keySize / 8);
-                memcpy(srcBuff, testVectors[i].msg, inputLen);
-                memcpy(pIV, testVectors[i].iv, testVectors[i].ivSize / 8);
-
-                /*Only 1 key sched is used*/
-                if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey, pKeySched) != 0) {
-                        printf("IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr): error\n");
-                        goto snow3g_f9_1_buffer_exit;
-                }
-
-                /*test the integrity for f9_user with IV*/
-                unsigned j;
-
-                for (j = 0; j < test_num_jobs_size; j++) {
-                        int ret = submit_uia2_job(
-                                mb_mgr, (uint8_t *) pKeySched, pIV, srcBuff, digest,
-                                (const uint32_t)(testVectors[i].msgSize / 8),
-                                (const uint8_t *) testVectors[i].tag, test_num_jobs[j]);
-                        if (ret < 0) {
+                for (unsigned j = 0; j < test_num_jobs_size; j++) {
+                        if (kat_hash_test_submit_flush(mb_mgr, &vec, 1, test_num_jobs[j], &ops)) {
                                 printf("IMB_SNOW3G_F9 JOB API vector num:%zu\n",
                                        testVectors[i].tcId);
                                 goto snow3g_f9_1_buffer_exit;
                         }
                 }
-
         } /* for numVectors */
         /* no errors detected */
         status = 0;
 
 snow3g_f9_1_buffer_exit:
-        free(pIV);
-        free(pKey);
-        free(pKeySched);
-
         if (status < 0)
                 test_suite_update(uia2_ctx, 0, 1);
         else
@@ -628,7 +550,8 @@ snow3g_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *f8_linear_jctx = NULL;
 
         if (load_mac_vectors(kat_vector_dir, "snow3g_f9_test.json", &snow3g_f9_vectors, &f9_jctx) <
-            0)
+                    0 ||
+            snow3g_f9_vectors == NULL)
                 return 1;
         if (load_snow3g_f8_vectors(&f8_jctx, &f8_linear_jctx) < 0) {
                 free_snow3g_f8_vectors(f8_jctx, f8_linear_jctx);
