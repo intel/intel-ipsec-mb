@@ -337,12 +337,13 @@ public_from_private(const IMB_ML_DSA *self, const ML_DSA_KEY *key, EVP_MD_CTX *m
         int ret = 0;
         const ML_DSA_PARAMS *params = key->params;
         uint32_t k = (uint32_t) params->k, l = (uint32_t) params->l;
+        const size_t num_polys = (size_t) k + (size_t) l + (size_t) k * l;
         POLY *polys;
         MATRIX a_ntt;
         VECTOR s1_ntt;
         VECTOR t;
 
-        polys = OPENSSL_malloc_array(k + l + k * l, sizeof(*polys));
+        polys = OPENSSL_secure_malloc_array(num_polys, sizeof(*polys));
         if (polys == NULL)
                 return 0;
 
@@ -369,7 +370,7 @@ public_from_private(const IMB_ML_DSA *self, const ML_DSA_KEY *key, EVP_MD_CTX *m
         vector_zero(&s1_ntt);
         ret = 1;
 err:
-        OPENSSL_free(polys);
+        OPENSSL_secure_clear_free(polys, num_polys * sizeof(*polys));
         return ret;
 }
 
@@ -380,7 +381,7 @@ ossl_ml_dsa_key_public_from_private(const IMB_ML_DSA *self, ML_DSA_KEY *key)
         VECTOR t0;
         EVP_MD_CTX *md_ctx = NULL;
 
-        if (!vector_alloc(&t0, key->params->k)) /* t0 is already in the private key */
+        if (!vector_secure_alloc(&t0, key->params->k)) /* t0 is already in the private key */
                 return 0;
         ret = ((md_ctx = EVP_MD_CTX_new()) != NULL) &&
               ossl_ml_dsa_key_pub_alloc(key) /* allocate space for t1 */
@@ -389,7 +390,8 @@ ossl_ml_dsa_key_public_from_private(const IMB_ML_DSA *self, ML_DSA_KEY *key)
               && ossl_ml_dsa_pk_encode(key) &&
               shake_xof(md_ctx, key->shake256_md, key->pub_encoding, key->params->pk_len, key->tr,
                         sizeof(key->tr));
-        vector_free(&t0);
+        /* |t0| is a private key component - wipe it, do not just free it */
+        vector_secure_free(&t0, key->params->k);
         EVP_MD_CTX_free(md_ctx);
         return ret;
 }
@@ -406,7 +408,7 @@ ossl_ml_dsa_key_pairwise_check(const IMB_ML_DSA *self, const ML_DSA_KEY *key)
         if (key->pub_encoding == NULL || key->priv_encoding == 0)
                 return 0;
 
-        polys = OPENSSL_malloc_array(2 * k, sizeof(*polys));
+        polys = OPENSSL_secure_malloc_array(2 * k, sizeof(*polys));
         if (polys == NULL)
                 return 0;
         md_ctx = EVP_MD_CTX_new();
@@ -421,7 +423,8 @@ ossl_ml_dsa_key_pairwise_check(const IMB_ML_DSA *self, const ML_DSA_KEY *key)
         ret = vector_equal(&t1, &key->t1) && vector_equal(&t0, &key->t0);
 err:
         EVP_MD_CTX_free(md_ctx);
-        OPENSSL_free(polys);
+        /* |polys| holds a recomputed copy of the private t0 - wipe before free */
+        OPENSSL_secure_clear_free(polys, (size_t) (2 * k) * sizeof(*polys));
         return ret;
 }
 
@@ -487,7 +490,7 @@ ossl_ml_dsa_generate_key(const IMB_ML_DSA *self, ML_DSA_KEY *out)
                 if ((out->seed = OPENSSL_secure_malloc(seed_len)) == NULL)
                         return 0;
                 if (RAND_priv_bytes_ex(out->libctx, out->seed, seed_len, 0) <= 0) {
-                        OPENSSL_secure_free(out->seed);
+                        OPENSSL_secure_clear_free(out->seed, seed_len);
                         out->seed = NULL;
                         return 0;
                 }
