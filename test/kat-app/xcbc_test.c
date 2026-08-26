@@ -13,11 +13,22 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 int
 xcbc_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *xcbc_vectors;
+
+struct xcbc_job_ctx {
+        uint32_t *k1_exp;
+        uint8_t *k2;
+        uint8_t *k3;
+};
+
+struct xcbc_job_prepare_ctx {
+        int dir;
+};
 
 static void
 free_xcbc_vectors(struct test_json_alloc_ctx *ctx)
@@ -27,171 +38,68 @@ free_xcbc_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static int
-xcbc_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-            const uint8_t *padding, const size_t sizeof_padding)
+xcbc_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec, void *ctx)
 {
-        const size_t auth_len = job->auth_tag_output_len_in_bytes;
+        const struct xcbc_job_prepare_ctx *prepare_ctx = ctx;
+        struct xcbc_job_ctx *xcbc = calloc(1, sizeof(*xcbc));
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d Error status:%d", __LINE__, job->status);
-                return 0;
-        }
+        if (xcbc == NULL)
+                return -1;
 
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + auth_len], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + auth_len], sizeof_padding);
-                return 0;
-        }
+        job->user_data = xcbc;
 
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
+        xcbc->k1_exp = test_aligned_alloc(16, 11 * IMB_AES_BLOCK_SIZE);
+        if (xcbc->k1_exp == NULL)
+                return -1;
 
-        if (memcmp((const void *) vec->tag, &auth[sizeof_padding], auth_len)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], auth_len);
-                hexdump(stderr, "Expected", (const void *) vec->tag, auth_len);
-                return 0;
+        xcbc->k2 = test_aligned_alloc(16, IMB_AES_BLOCK_SIZE);
+        if (xcbc->k2 == NULL)
+                return -1;
+
+        xcbc->k3 = test_aligned_alloc(16, IMB_AES_BLOCK_SIZE);
+        if (xcbc->k3 == NULL)
+                return -1;
+
+        IMB_AES_XCBC_KEYEXP(mb_mgr, (const void *) vec->key, xcbc->k1_exp, xcbc->k2, xcbc->k3);
+
+        job->cipher_direction = prepare_ctx->dir;
+        job->u.XCBC._k1_expanded = xcbc->k1_exp;
+        job->u.XCBC._k2 = xcbc->k2;
+        job->u.XCBC._k3 = xcbc->k3;
+
+        return 0;
+}
+
+static void
+xcbc_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct xcbc_job_ctx *xcbc = job->user_data;
+
+        (void) ctx;
+        if (xcbc != NULL) {
+                test_aligned_free(xcbc->k1_exp);
+                test_aligned_free(xcbc->k2);
+                test_aligned_free(xcbc->k3);
+                free(xcbc);
         }
-        return 1;
+        job->user_data = NULL;
 }
 
 static int
 test_xcbc(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int dir, const int num_jobs)
 {
-        DECLARE_ALIGNED(uint32_t k1_exp[4 * 11], 16);
-        uint8_t k2[16], k3[16];
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        struct xcbc_job_prepare_ctx prepare_ctx = { dir };
+        const struct kat_hash_job_ops ops = {
+                .prepare = xcbc_job_prepare,
+                .cleanup = xcbc_job_cleanup,
+                .ctx = &prepare_ctx,
+                .hash_alg = IMB_AUTH_AES_XCBC,
+        };
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
+        if (kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops))
+                return -1;
 
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
-        }
-
-        IMB_AES_XCBC_KEYEXP(mb_mgr, (const void *) vec->key, k1_exp, k2, k3);
-
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        /**
-         * Submit all jobs then flush any outstanding jobs
-         */
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_AES_XCBC;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->u.XCBC._k1_expanded = k1_exp;
-                job->u.XCBC._k2 = k2;
-                job->u.XCBC._k3 = k3;
-                job->src = (const void *) vec->msg;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (num_jobs < 4) {
-                                printf("%d Unexpected return from submit_job\n", __LINE__);
-                                goto end;
-                        }
-                        if (!xcbc_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-
-                if (!xcbc_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-
-        /**
-         * Submit each job and flush immediately
-         */
-        for (i = 0; i < num_jobs; i++) {
-                struct IMB_JOB *first_job = NULL;
-
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                first_job = job;
-
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_AES_XCBC;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->u.XCBC._k1_expanded = k1_exp;
-                job->u.XCBC._k2 = k2;
-                job->u.XCBC._k3 = k3;
-                job->src = (const void *) vec->msg;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        printf("Received job, expected NULL\n");
-                        goto end;
-                }
-
-                while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                        if (job != first_job) {
-                                printf("Invalid return job received\n");
-                                goto end;
-                        }
-                        if (!xcbc_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return 0;
 }
 
 static void
@@ -238,7 +146,8 @@ xcbc_test(struct IMB_MGR *mb_mgr)
         struct test_json_alloc_ctx *jctx = NULL;
         int i, errors;
 
-        if (load_mac_vectors(kat_vector_dir, "xcbc_test.json", &xcbc_vectors, &jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "xcbc_test.json", &xcbc_vectors, &jctx) < 0 ||
+            xcbc_vectors == NULL)
                 return 1;
 
         test_suite_start(&ctx, "AES-XCBC-128");
