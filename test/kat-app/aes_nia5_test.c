@@ -13,11 +13,17 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "mac_test.h"
+#include "kat_common_hash.h"
 
 int
 aes_nia5_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *aes_nia5_vectors;
+
+struct aes_nia5_job_ctx {
+        uint32_t *expkey;
+        uint8_t *iv;
+};
 
 static void
 free_aes_nia5_vectors(struct test_json_alloc_ctx *ctx)
@@ -27,126 +33,57 @@ free_aes_nia5_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static int
-aes_nia5_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-                const uint8_t *padding, const size_t sizeof_padding)
+aes_nia5_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct mac_test *vec,
+                     void *ctx)
 {
-        const size_t auth_len = job->auth_tag_output_len_in_bytes;
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
+        struct aes_nia5_job_ctx *nia = calloc(1, sizeof(*nia));
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d Error status:%d", __LINE__, job->status);
-                return 0;
-        }
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + auth_len], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + auth_len], sizeof_padding);
-                return 0;
-        }
+        (void) ctx;
+        if (nia == NULL)
+                return -1;
 
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
+        job->user_data = nia;
+        nia->expkey = test_aligned_alloc(16, 15 * IMB_AES_BLOCK_SIZE);
+        if (nia->expkey == NULL)
+                return -1;
 
-        if (memcmp(vec->tag, &auth[sizeof_padding], auth_len)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], auth_len);
-                hexdump(stderr, "Expected", vec->tag, auth_len);
-                return 0;
+        nia->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        if (nia->iv == NULL)
+                return -1;
+
+        memcpy(nia->iv, vec->iv, vec->ivSize / 8);
+        IMB_AES_KEYEXP_256(mb_mgr, vec->key, nia->expkey, dust);
+        job->u.NIA._key = nia->expkey;
+        job->u.NIA._iv = nia->iv;
+
+        return 0;
+}
+
+static void
+aes_nia5_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct aes_nia5_job_ctx *nia = job->user_data;
+
+        (void) ctx;
+        if (nia != NULL) {
+                test_aligned_free(nia->expkey);
+                test_aligned_free(nia->iv);
+                free(nia);
         }
-        return 1;
+        job->user_data = NULL;
 }
 
 static int
 test_aes_nia5(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs)
 {
-        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        const struct kat_hash_job_ops ops = {
+                .prepare = aes_nia5_job_prepare,
+                .cleanup = aes_nia5_job_cleanup,
+                .hash_alg = IMB_AUTH_AES_NIA5,
+        };
 
-        if (auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
-
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
-        }
-
-        IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
-
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        /**
-         * Submit all jobs then flush any outstanding jobs
-         */
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-
-                job->hash_alg = IMB_AUTH_AES_NIA5;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->u.NIA._key = expkey;
-                job->src = (const void *) vec->msg;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-                job->u.NIA._iv = vec->iv;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (!aes_nia5_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-
-                if (!aes_nia5_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        return kat_hash_test_submit_flush(mb_mgr, &vec, 1, num_jobs, &ops);
 }
 static void
 test_aes_nia5_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
@@ -185,7 +122,8 @@ aes_nia5_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *jctx = NULL;
 
-        if (load_mac_vectors(kat_vector_dir, "aes_nia5_test.json", &aes_nia5_vectors, &jctx) < 0)
+        if (load_mac_vectors(kat_vector_dir, "aes_nia5_test.json", &aes_nia5_vectors, &jctx) < 0 ||
+            aes_nia5_vectors == NULL)
                 return 1;
 
         /* AES-NIA5 with standard vectors */
