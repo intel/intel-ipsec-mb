@@ -17,13 +17,10 @@
 #include "include/arch_avx512_type2.h"
 #include "include/zuc_internal.h"
 #include "include/wireless_common.h"
-#include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
 
-#define SAVE_XMMS               save_xmms
-#define RESTORE_XMMS            restore_xmms
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_zmms
 
 #define NUM_AVX512_BUFS 16

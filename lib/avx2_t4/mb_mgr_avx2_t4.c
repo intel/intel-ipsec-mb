@@ -19,7 +19,6 @@
 #include "include/gcm.h"
 #include "include/chacha20_poly1305.h"
 
-#include "include/save_xmms.h"
 #include "include/des.h"
 #include "include/cpu_feature.h"
 #include "include/error.h"
@@ -33,9 +32,6 @@
 #include "include/arch_avx2_type4.h"
 
 #include "include/ooo_mgr_reset.h"
-
-#define SAVE_XMMS    save_xmms_avx
-#define RESTORE_XMMS restore_xmms_avx
 
 /* JOB API */
 #define SUBMIT_JOB                  submit_job_avx2_t4

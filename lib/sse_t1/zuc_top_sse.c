@@ -16,7 +16,6 @@
 
 #include "include/zuc_internal.h"
 #include "include/wireless_common.h"
-#include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 #include "intel-ipsec-mb.h"
 #include "include/error.h"

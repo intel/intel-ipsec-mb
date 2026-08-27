@@ -19,7 +19,6 @@
 #include "include/chacha20_poly1305.h"
 #include "include/snow3g_submit.h"
 
-#include "include/save_xmms.h"
 #include "include/des.h"
 #include "include/cpu_feature.h"
 #include "include/error.h"
@@ -27,9 +26,6 @@
 #include "include/arch_sse_type1.h"
 
 #include "include/ooo_mgr_reset.h"
-
-#define SAVE_XMMS    save_xmms
-#define RESTORE_XMMS restore_xmms
 
 /* JOB API */
 #define SUBMIT_JOB                  submit_job_sse_t1

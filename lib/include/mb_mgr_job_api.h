@@ -4213,12 +4213,6 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
                 }
         }
 
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
-
         job = JOBS(state, state->next_job);
 
         if (run_check) {
@@ -4268,9 +4262,6 @@ exit:
         /* release public outputs of the completed job (no-op if job is NULL) */
         imb_ct_job_declassify(job);
 
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
         return job;
 }
 
@@ -4299,15 +4290,10 @@ FLUSH_JOB(IMB_MGR *state)
         }
 #endif
         IMB_JOB *job;
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-#endif
+
         if (state->earliest_job < 0)
                 return NULL; /* empty */
 
-#ifndef LINUX
-        SAVE_XMMS(xmm_save);
-#endif
         job = JOBS(state, state->earliest_job);
         (void) complete_job(state, job);
 
@@ -4319,9 +4305,6 @@ FLUSH_JOB(IMB_MGR *state)
         /* release public outputs of the completed job */
         imb_ct_job_declassify(job);
 
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
         return job;
 }
 

@@ -6,17 +6,15 @@
 
 #include <limits.h>
 
+#include "intel-ipsec-mb.h"
+
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
 
-#include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 #include "include/kasumi_internal.h"
 #include "include/arch_avx2_type1.h"
 #include "include/arch_avx512_type1.h"
 #include "include/error.h"
-
-#define SAVE_XMMS    save_xmms_avx
-#define RESTORE_XMMS restore_xmms_avx
 
 void
 KASUMI_F8_1_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
