@@ -1329,7 +1329,7 @@ exit:
 static void
 run_tests(void)
 {
-        struct params_s params;
+        struct params_s params = { 0 };
         struct data *variant_data = NULL;
         IMB_ARCH arch;
 #ifdef PIN_BASED_CEC
