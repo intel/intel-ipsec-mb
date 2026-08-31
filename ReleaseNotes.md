@@ -45,6 +45,7 @@ Library
 - Added AVX2 Type 2 CRC implementations using VPCLMULQDQ 256-bit polynomial folding for all CRC types.
 - Added constant time library build based on Valgrind memory check.
 - Removed QUIC API support.
+- Removed custom cipher mode support (`IMB_CIPHER_CUSTOM` and `IMB_JOB::cipher_func`).
 
 Test Applications
 - Added new `imb-safe-check` application scanning all algorithms, message sizes,
@@ -57,6 +58,7 @@ Test Applications
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
+- Removed custom cipher mode test coverage.
 - Added SHA3 and SHAKE support to imb-kat, imb-xvalid and imb-acvp applications.
 - Added new zero length message test application.
 - Added zero-length message HMAC-SHA and HMAC-MD5 test vectors.

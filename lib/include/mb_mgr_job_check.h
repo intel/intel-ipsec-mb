@@ -31,7 +31,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         }
         switch (cipher_mode) {
         case IMB_CIPHER_NULL:
-        case IMB_CIPHER_CUSTOM:
                 break;
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_ECB:
@@ -891,13 +890,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->u.NCA.aad_len_in_bytes > NCA_AAD_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
-                        return 1;
-                }
-                break;
-        case IMB_CIPHER_CUSTOM:
-                /* no checks here */
-                if (job->cipher_func == NULL) {
-                        imb_set_errno(state, EFAULT);
                         return 1;
                 }
                 break;

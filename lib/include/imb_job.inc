@@ -135,7 +135,6 @@ FIELD   _hash_alg,                      4,      4       ; IMB_JOB_HASH_ALG
 FIELD   _chain_order,                   4,      4       ; IMB_JOB_CHAIN_ORDER
 FIELD   _user_data,                     8,      8
 FIELD   _user_data2,                    8,      8
-FIELD   _cipher_func,                   8,      8
 FIELD   _hash_func,                     8,      8
 FIELD   _sgl_state,                     4,      4       ; IMB_SGL_STATE
 END_FIELDS

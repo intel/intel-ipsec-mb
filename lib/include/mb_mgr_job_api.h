@@ -318,32 +318,8 @@ SUBMIT_JOB_AES_CFB_DEC(IMB_JOB *job, const uint64_t key_sz)
 }
 
 /* ========================================================================= */
-/* Custom hash / cipher */
+/* Custom hash */
 /* ========================================================================= */
-
-__forceinline IMB_JOB *
-JOB_CUSTOM_CIPHER(IMB_JOB *job)
-{
-        if (!(job->status & IMB_STATUS_COMPLETED_CIPHER)) {
-                if (job->cipher_func(job))
-                        job->status = IMB_STATUS_INTERNAL_ERROR;
-                else
-                        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        }
-        return job;
-}
-
-__forceinline IMB_JOB *
-SUBMIT_JOB_CUSTOM_CIPHER(IMB_JOB *job)
-{
-        return JOB_CUSTOM_CIPHER(job);
-}
-
-__forceinline IMB_JOB *
-FLUSH_JOB_CUSTOM_CIPHER(IMB_JOB *job)
-{
-        return JOB_CUSTOM_CIPHER(job);
-}
 
 __forceinline IMB_JOB *
 JOB_CUSTOM_HASH(IMB_JOB *job)
@@ -415,8 +391,6 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                         return SUBMIT_JOB_PON_ENC_NO_CTR(job);
                 else
                         return SUBMIT_JOB_PON_ENC(job);
-        } else if (IMB_CIPHER_CUSTOM == cipher_mode) {
-                return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_DES == cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_ENC
                 MB_MGR_DES_OOO *des_enc_ooo = state->des_enc_ooo;
@@ -566,8 +540,6 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
 
                 return FLUSH_JOB_DOCSIS_DES_ENC(docsis_des_enc_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_ENC */
-        } else if (IMB_CIPHER_CUSTOM == cipher_mode) {
-                return FLUSH_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_ZUC_EEA3 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
 
@@ -693,8 +665,6 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 #else
                 return DES3_CBC_DEC(job);
 #endif
-        } else if (IMB_CIPHER_CUSTOM == cipher_mode) {
-                return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_CCM == cipher_mode) {
                 if (16 == key_sz) {
                         return AES_CNTR_CCM_128(job);
@@ -886,13 +856,6 @@ submit_cipher_dec_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 #define submit_cipher_dec_aes_gcm_128 AES_GCM_DEC_IV_128
 #define submit_cipher_dec_aes_gcm_192 AES_GCM_DEC_IV_192
 #define submit_cipher_dec_aes_gcm_256 AES_GCM_DEC_IV_256
-
-/* CUSTOM */
-static IMB_JOB *
-submit_cipher_dec_custom(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
-}
 
 /* DES */
 static IMB_JOB *
@@ -1174,13 +1137,6 @@ submit_cipher_enc_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 #define submit_cipher_enc_aes_gcm_192 AES_GCM_ENC_IV_192
 #define submit_cipher_enc_aes_gcm_256 AES_GCM_ENC_IV_256
 
-/* CUSTOM */
-static IMB_JOB *
-submit_cipher_enc_custom(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
-}
-
 /* DES */
 static IMB_JOB *
 submit_cipher_enc_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
@@ -1440,133 +1396,133 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_aes_gcm_128,
         submit_cipher_dec_aes_gcm_192,
         submit_cipher_dec_aes_gcm_256,
-        /* [6] CUSTOM */
-        submit_cipher_dec_custom,
-        submit_cipher_dec_custom,
-        submit_cipher_dec_custom,
-        submit_cipher_dec_custom,
-        /* [7] DES */
+        /* [6] DES */
         submit_cipher_dec_des_cbc_64,
         submit_cipher_dec_des_cbc_64,
         submit_cipher_dec_des_cbc_64,
         submit_cipher_dec_des_cbc_64,
-        /* [8] DOCSIS DES */
+        /* [7] DOCSIS DES */
         submit_cipher_dec_des_docsis_64,
         submit_cipher_dec_des_docsis_64,
         submit_cipher_dec_des_docsis_64,
         submit_cipher_dec_des_docsis_64,
-        /* [9] AES-CCM */
+        /* [8] AES-CCM */
         submit_cipher_dec_null,
         submit_cipher_dec_aes_ccm_128,
         submit_cipher_dec_null,
         submit_cipher_dec_aes_ccm_256,
-        /* [10] 3DES */
+        /* [9] 3DES */
         submit_cipher_dec_des3_cbc_192,
         submit_cipher_dec_des3_cbc_192,
         submit_cipher_dec_des3_cbc_192,
         submit_cipher_dec_des3_cbc_192,
-        /* [11] PON AES-CTR */
+        /* [10] PON AES-CTR */
         submit_cipher_dec_aes_ctr_pon_128,
         submit_cipher_dec_aes_ctr_pon_128,
         submit_cipher_dec_aes_ctr_pon_128,
         submit_cipher_dec_aes_ctr_pon_128,
-        /* [12] AES-ECB */
+        /* [11] AES-ECB */
         submit_cipher_dec_null,
         submit_cipher_dec_aes_ecb_128,
         submit_cipher_dec_aes_ecb_192,
         submit_cipher_dec_aes_ecb_256,
-        /* [13] ZUC EEA3 */
+        /* [12] ZUC EEA3 */
         submit_cipher_dec_null,
         submit_cipher_dec_zuc_eea3_128,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [14] SNOW3G UEA2 */
+        /* [13] SNOW3G UEA2 */
         submit_cipher_dec_snow3g_uea2,
         submit_cipher_dec_snow3g_uea2,
         submit_cipher_dec_snow3g_uea2,
         submit_cipher_dec_snow3g_uea2,
-        /* [15] KASUMI F8 UEA1 */
+        /* [14] KASUMI F8 UEA1 */
         submit_cipher_dec_kasumi_uea1,
         submit_cipher_dec_kasumi_uea1,
         submit_cipher_dec_kasumi_uea1,
         submit_cipher_dec_kasumi_uea1,
-        /* [16] CHACHA20 */
+        /* [15] CHACHA20 */
         submit_cipher_dec_chacha20,
         submit_cipher_dec_chacha20,
         submit_cipher_dec_chacha20,
         submit_cipher_dec_chacha20,
-        /* [17] CHACHA20-POLY1305 */
+        /* [16] CHACHA20-POLY1305 */
         submit_cipher_dec_chacha20_poly1305,
         submit_cipher_dec_chacha20_poly1305,
         submit_cipher_dec_chacha20_poly1305,
         submit_cipher_dec_chacha20_poly1305,
-        /* [18] CHACHA20-POLY1305 SGL */
+        /* [17] CHACHA20-POLY1305 SGL */
         submit_cipher_dec_chacha20_poly1305_sgl,
         submit_cipher_dec_chacha20_poly1305_sgl,
         submit_cipher_dec_chacha20_poly1305_sgl,
         submit_cipher_dec_chacha20_poly1305_sgl,
-        /* [19] AES-GCM SGL */
+        /* [18] AES-GCM SGL */
         submit_cipher_dec_null,
         submit_cipher_dec_aes_gcm_128_sgl,
         submit_cipher_dec_aes_gcm_192_sgl,
         submit_cipher_dec_aes_gcm_256_sgl,
-        /* [20] SM4-ECB */
+        /* [19] SM4-ECB */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_ecb,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [21] SM4-CBC */
+        /* [20] SM4-CBC */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_cbc,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [22] AES-CFB */
+        /* [21] AES-CFB */
         submit_cipher_dec_null,
         submit_cipher_dec_cfb_128,
         submit_cipher_dec_cfb_192,
         submit_cipher_dec_cfb_256,
-        /* [23] SM4-CTR */
+        /* [22] SM4-CTR */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_ctr,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [24] SM4-GCM */
+        /* [23] SM4-GCM */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_gcm,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [25] ZUC NEA6 */
+        /* [24] ZUC NEA6 */
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_zuc_nea6,
-        /* [26] SNOW5G NEA4 */
+        /* [25] SNOW5G NEA4 */
         submit_cipher_dec_snow5g,
         submit_cipher_dec_snow5g,
         submit_cipher_dec_snow5g,
         submit_cipher_dec_snow5g,
-        /* [27] AES NEA5 */
+        /* [26] AES NEA5 */
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_aes_nea5,
-        /* [28] AES NCA5 */
+        /* [27] AES NCA5 */
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_aes_nca5,
-        /* [29] ZUC NCA6 */
+        /* [28] ZUC NCA6 */
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_zuc_nca6,
-        /* [30] SNOW5G NCA4 */
+        /* [29] SNOW5G NCA4 */
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_snow5g_nca4,
         /* add new cipher decrypt here */
-        /* [31] NULL */
+        /* [30] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [31] unused - padding up to ENCRYPT_DECRYPT_GAP */
         NULL,
         NULL,
         NULL,
@@ -1606,133 +1562,133 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_aes_gcm_128,
         submit_cipher_enc_aes_gcm_192,
         submit_cipher_enc_aes_gcm_256,
-        /* [6] CUSTOM */
-        submit_cipher_enc_custom,
-        submit_cipher_enc_custom,
-        submit_cipher_enc_custom,
-        submit_cipher_enc_custom,
-        /* [7] DES */
+        /* [6] DES */
         submit_cipher_enc_des_cbc_64,
         submit_cipher_enc_des_cbc_64,
         submit_cipher_enc_des_cbc_64,
         submit_cipher_enc_des_cbc_64,
-        /* [8] DOCSIS DES */
+        /* [7] DOCSIS DES */
         submit_cipher_enc_des_docsis_64,
         submit_cipher_enc_des_docsis_64,
         submit_cipher_enc_des_docsis_64,
         submit_cipher_enc_des_docsis_64,
-        /* [9] AES-CCM */
+        /* [8] AES-CCM */
         submit_cipher_enc_null,
         submit_cipher_enc_aes_ccm_128,
         submit_cipher_enc_null,
         submit_cipher_enc_aes_ccm_256,
-        /* [10] 3DES */
+        /* [9] 3DES */
         submit_cipher_enc_des3_cbc_192,
         submit_cipher_enc_des3_cbc_192,
         submit_cipher_enc_des3_cbc_192,
         submit_cipher_enc_des3_cbc_192,
-        /* [11] PON AES-CTR */
+        /* [10] PON AES-CTR */
         submit_cipher_enc_aes_ctr_pon_128,
         submit_cipher_enc_aes_ctr_pon_128,
         submit_cipher_enc_aes_ctr_pon_128,
         submit_cipher_enc_aes_ctr_pon_128,
-        /* [12] AES-ECB */
+        /* [11] AES-ECB */
         submit_cipher_enc_null,
         submit_cipher_enc_aes_ecb_128,
         submit_cipher_enc_aes_ecb_192,
         submit_cipher_enc_aes_ecb_256,
-        /* [13] ZUC EEA3 */
+        /* [12] ZUC EEA3 */
         submit_cipher_enc_null,
         submit_cipher_enc_zuc_eea3_128,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-        /* [14] SNOW3G UEA2 */
+        /* [13] SNOW3G UEA2 */
         submit_cipher_enc_snow3g_uea2,
         submit_cipher_enc_snow3g_uea2,
         submit_cipher_enc_snow3g_uea2,
         submit_cipher_enc_snow3g_uea2,
-        /* [15] KASUMI F8 UEA1 */
+        /* [14] KASUMI F8 UEA1 */
         submit_cipher_enc_kasumi_uea1,
         submit_cipher_enc_kasumi_uea1,
         submit_cipher_enc_kasumi_uea1,
         submit_cipher_enc_kasumi_uea1,
-        /* [16] CHACHA20 */
+        /* [15] CHACHA20 */
         submit_cipher_enc_chacha20,
         submit_cipher_enc_chacha20,
         submit_cipher_enc_chacha20,
         submit_cipher_enc_chacha20,
-        /* [17] CHACHA20-POLY1305 */
+        /* [16] CHACHA20-POLY1305 */
         submit_cipher_enc_chacha20_poly1305,
         submit_cipher_enc_chacha20_poly1305,
         submit_cipher_enc_chacha20_poly1305,
         submit_cipher_enc_chacha20_poly1305,
-        /* [18] CHACHA20-POLY1305 SGL */
+        /* [17] CHACHA20-POLY1305 SGL */
         submit_cipher_enc_chacha20_poly1305_sgl,
         submit_cipher_enc_chacha20_poly1305_sgl,
         submit_cipher_enc_chacha20_poly1305_sgl,
         submit_cipher_enc_chacha20_poly1305_sgl,
-        /* [19] AES-GCM SGL */
+        /* [18] AES-GCM SGL */
         submit_cipher_enc_null,
         submit_cipher_enc_aes_gcm_128_sgl,
         submit_cipher_enc_aes_gcm_192_sgl,
         submit_cipher_enc_aes_gcm_256_sgl,
-        /* [20] SM4-ECB */
+        /* [19] SM4-ECB */
         submit_cipher_enc_null,
         submit_cipher_enc_sm4_ecb,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-        /* [21] SM4-CBC */
+        /* [20] SM4-CBC */
         submit_cipher_enc_null,
         submit_cipher_enc_sm4_cbc,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-        /* [22] AES-CFB */
+        /* [21] AES-CFB */
         submit_cipher_enc_null,
         submit_cipher_enc_cfb_128,
         submit_cipher_enc_cfb_192,
         submit_cipher_enc_cfb_256,
-        /* [23] SM4-CTR */
+        /* [22] SM4-CTR */
         submit_cipher_enc_null,
         submit_cipher_enc_sm4_ctr,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-        /* [24] SM4-GCM */
+        /* [23] SM4-GCM */
         submit_cipher_dec_null,
         submit_cipher_enc_sm4_gcm,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [25] ZUC NEA6 */
+        /* [24] ZUC NEA6 */
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_zuc_nea6,
-        /* [26] SNOW5G NEA4 */
+        /* [25] SNOW5G NEA4 */
         submit_cipher_enc_snow5g,
         submit_cipher_enc_snow5g,
         submit_cipher_enc_snow5g,
         submit_cipher_enc_snow5g,
-        /* [27] AES NEA5 */
+        /* [26] AES NEA5 */
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_aes_nea5,
-        /* [28] AES NCA5 */
+        /* [27] AES NCA5 */
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_aes_nca5,
-        /* [29] ZUC NCA6 */
+        /* [28] ZUC NCA6 */
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_zuc_nca6,
-        /* [30] SNOW5G NCA4 */
+        /* [29] SNOW5G NCA4 */
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_snow5g_nca4,
         /* add new cipher encrypt here */
-        /* [31] NULL */
+        /* [30] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [31] unused - padding up to ENCRYPT_DECRYPT_GAP */
         NULL,
         NULL,
         NULL,
@@ -1823,13 +1779,6 @@ static IMB_JOB *
 flush_cipher_dec_aes_gcm_256(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM, IMB_KEY_256_BYTES);
-}
-
-/* CUSTOM */
-static IMB_JOB *
-flush_cipher_dec_custom(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
 }
 
 /* DES */
@@ -2122,13 +2071,6 @@ flush_cipher_enc_aes_gcm_256(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM, IMB_KEY_256_BYTES);
 }
 
-/* CUSTOM */
-static IMB_JOB *
-flush_cipher_enc_custom(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
-}
-
 /* DES */
 static IMB_JOB *
 flush_cipher_enc_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
@@ -2380,133 +2322,133 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_aes_gcm_128,
         flush_cipher_dec_aes_gcm_192,
         flush_cipher_dec_aes_gcm_256,
-        /* [6] CUSTOM */
-        flush_cipher_dec_custom,
-        flush_cipher_dec_custom,
-        flush_cipher_dec_custom,
-        flush_cipher_dec_custom,
-        /* [7] DES */
+        /* [6] DES */
         flush_cipher_dec_des_cbc_64,
         flush_cipher_dec_des_cbc_64,
         flush_cipher_dec_des_cbc_64,
         flush_cipher_dec_des_cbc_64,
-        /* [8] DOCSIS DES */
+        /* [7] DOCSIS DES */
         flush_cipher_dec_des_docsis_64,
         flush_cipher_dec_des_docsis_64,
         flush_cipher_dec_des_docsis_64,
         flush_cipher_dec_des_docsis_64,
-        /* [9] AES-CCM */
+        /* [8] AES-CCM */
         flush_cipher_dec_null,
         flush_cipher_dec_aes_ccm_128,
         flush_cipher_dec_null,
         flush_cipher_dec_aes_ccm_256,
-        /* [10] 3DES */
+        /* [9] 3DES */
         flush_cipher_dec_des3_cbc_192,
         flush_cipher_dec_des3_cbc_192,
         flush_cipher_dec_des3_cbc_192,
         flush_cipher_dec_des3_cbc_192,
-        /* [11] PON AES-CTR */
+        /* [10] PON AES-CTR */
         flush_cipher_dec_aes_ctr_pon_128,
         flush_cipher_dec_aes_ctr_pon_128,
         flush_cipher_dec_aes_ctr_pon_128,
         flush_cipher_dec_aes_ctr_pon_128,
-        /* [12] AES-ECB */
+        /* [11] AES-ECB */
         flush_cipher_dec_null,
         flush_cipher_dec_aes_ecb_128,
         flush_cipher_dec_aes_ecb_192,
         flush_cipher_dec_aes_ecb_256,
-        /* [13] ZUC EEA3 */
+        /* [12] ZUC EEA3 */
         flush_cipher_dec_null,
         flush_cipher_dec_zuc_eea3_128,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [14] SNOW3G UEA2 */
+        /* [13] SNOW3G UEA2 */
         flush_cipher_dec_snow3g_uea2,
         flush_cipher_dec_snow3g_uea2,
         flush_cipher_dec_snow3g_uea2,
         flush_cipher_dec_snow3g_uea2,
-        /* [15] KASUMI F8 UEA1 */
+        /* [14] KASUMI F8 UEA1 */
         flush_cipher_dec_kasumi_uea1,
         flush_cipher_dec_kasumi_uea1,
         flush_cipher_dec_kasumi_uea1,
         flush_cipher_dec_kasumi_uea1,
-        /* [16] CHACHA20 */
+        /* [15] CHACHA20 */
         flush_cipher_dec_chacha20,
         flush_cipher_dec_chacha20,
         flush_cipher_dec_chacha20,
         flush_cipher_dec_chacha20,
-        /* [17] CHACHA20-POLY1305 */
+        /* [16] CHACHA20-POLY1305 */
         flush_cipher_dec_chacha20_poly1305,
         flush_cipher_dec_chacha20_poly1305,
         flush_cipher_dec_chacha20_poly1305,
         flush_cipher_dec_chacha20_poly1305,
-        /* [18] CHACHA20-POLY1305 SGL */
+        /* [17] CHACHA20-POLY1305 SGL */
         flush_cipher_dec_chacha20_poly1305_sgl,
         flush_cipher_dec_chacha20_poly1305_sgl,
         flush_cipher_dec_chacha20_poly1305_sgl,
         flush_cipher_dec_chacha20_poly1305_sgl,
-        /* [19] AES-GCM SGL */
+        /* [18] AES-GCM SGL */
         flush_cipher_dec_null,
         flush_cipher_dec_aes_gcm_128_sgl,
         flush_cipher_dec_aes_gcm_192_sgl,
         flush_cipher_dec_aes_gcm_256_sgl,
-        /* [20] SM4-ECB */
+        /* [19] SM4-ECB */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_ecb,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [21] SM4-CBC */
+        /* [20] SM4-CBC */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_cbc,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [22] AES-CFB */
+        /* [21] AES-CFB */
         flush_cipher_dec_null,
         flush_cipher_dec_cfb_128,
         flush_cipher_dec_cfb_192,
         flush_cipher_dec_cfb_256,
-        /* [23] SM4-CTR */
+        /* [22] SM4-CTR */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_ctr,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [24] SM4-GCM */
+        /* [23] SM4-GCM */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_gcm,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [25] ZUC NEA6 */
+        /* [24] ZUC NEA6 */
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_zuc_nea6,
-        /* [26] SNOW5G NEA4 */
+        /* [25] SNOW5G NEA4 */
         flush_cipher_dec_snow5g,
         flush_cipher_dec_snow5g,
         flush_cipher_dec_snow5g,
         flush_cipher_dec_snow5g,
-        /* [27] AES NEA5 */
+        /* [26] AES NEA5 */
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_aes_nea5,
-        /* [28] AES NCA5 */
+        /* [27] AES NCA5 */
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_aes_nca5,
-        /* [29] ZUC NCA6 */
+        /* [28] ZUC NCA6 */
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_zuc_nca6,
-        /* [30] SNOW5G NCA4 */
+        /* [29] SNOW5G NCA4 */
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_snow5g_nca4,
         /* add new cipher decrypt here */
-        /* [31] NULL */
+        /* [30] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [31] unused - padding up to ENCRYPT_DECRYPT_GAP */
         NULL,
         NULL,
         NULL,
@@ -2545,133 +2487,133 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_aes_gcm_128,
         flush_cipher_enc_aes_gcm_192,
         flush_cipher_enc_aes_gcm_256,
-        /* [6] CUSTOM */
-        flush_cipher_enc_custom,
-        flush_cipher_enc_custom,
-        flush_cipher_enc_custom,
-        flush_cipher_enc_custom,
-        /* [7] DES */
+        /* [6] DES */
         flush_cipher_enc_des_cbc_64,
         flush_cipher_enc_des_cbc_64,
         flush_cipher_enc_des_cbc_64,
         flush_cipher_enc_des_cbc_64,
-        /* [8] DOCSIS DES */
+        /* [7] DOCSIS DES */
         flush_cipher_enc_des_docsis_64,
         flush_cipher_enc_des_docsis_64,
         flush_cipher_enc_des_docsis_64,
         flush_cipher_enc_des_docsis_64,
-        /* [9] AES-CCM */
+        /* [8] AES-CCM */
         flush_cipher_enc_null,
         flush_cipher_enc_aes_ccm_128,
         flush_cipher_enc_null,
         flush_cipher_enc_aes_ccm_256,
-        /* [10] 3DES */
+        /* [9] 3DES */
         flush_cipher_enc_des3_cbc_192,
         flush_cipher_enc_des3_cbc_192,
         flush_cipher_enc_des3_cbc_192,
         flush_cipher_enc_des3_cbc_192,
-        /* [11] PON AES-CTR */
+        /* [10] PON AES-CTR */
         flush_cipher_enc_aes_ctr_pon_128,
         flush_cipher_enc_aes_ctr_pon_128,
         flush_cipher_enc_aes_ctr_pon_128,
         flush_cipher_enc_aes_ctr_pon_128,
-        /* [12] AES-ECB */
+        /* [11] AES-ECB */
         flush_cipher_enc_null,
         flush_cipher_enc_aes_ecb_128,
         flush_cipher_enc_aes_ecb_192,
         flush_cipher_enc_aes_ecb_256,
-        /* [13] ZUC EEA3 */
+        /* [12] ZUC EEA3 */
         flush_cipher_enc_null,
         flush_cipher_enc_zuc_eea3_128,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [14] SNOW3G UEA2 */
+        /* [13] SNOW3G UEA2 */
         flush_cipher_enc_snow3g_uea2,
         flush_cipher_enc_snow3g_uea2,
         flush_cipher_enc_snow3g_uea2,
         flush_cipher_enc_snow3g_uea2,
-        /* [15] KASUMI F8 UEA1 */
+        /* [14] KASUMI F8 UEA1 */
         flush_cipher_enc_kasumi_uea1,
         flush_cipher_enc_kasumi_uea1,
         flush_cipher_enc_kasumi_uea1,
         flush_cipher_enc_kasumi_uea1,
-        /* [16] CHACHA20 */
+        /* [15] CHACHA20 */
         flush_cipher_enc_chacha20,
         flush_cipher_enc_chacha20,
         flush_cipher_enc_chacha20,
         flush_cipher_enc_chacha20,
-        /* [17] CHACHA20-POLY1305 */
+        /* [16] CHACHA20-POLY1305 */
         flush_cipher_enc_chacha20_poly1305,
         flush_cipher_enc_chacha20_poly1305,
         flush_cipher_enc_chacha20_poly1305,
         flush_cipher_enc_chacha20_poly1305,
-        /* [18] CHACHA20-POLY1305 SGL */
+        /* [17] CHACHA20-POLY1305 SGL */
         flush_cipher_enc_chacha20_poly1305_sgl,
         flush_cipher_enc_chacha20_poly1305_sgl,
         flush_cipher_enc_chacha20_poly1305_sgl,
         flush_cipher_enc_chacha20_poly1305_sgl,
-        /* [19] AES-GCM SGL */
+        /* [18] AES-GCM SGL */
         flush_cipher_enc_null,
         flush_cipher_enc_aes_gcm_128_sgl,
         flush_cipher_enc_aes_gcm_192_sgl,
         flush_cipher_enc_aes_gcm_256_sgl,
-        /* [20] SM4-ECB */
+        /* [19] SM4-ECB */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_ecb,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [21] SM4-CBC */
+        /* [20] SM4-CBC */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_cbc,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [22] AES-CFB */
+        /* [21] AES-CFB */
         flush_cipher_enc_null,
         flush_cipher_enc_cfb_128,
         flush_cipher_enc_cfb_192,
         flush_cipher_enc_cfb_256,
-        /* [23] SM4-CTR */
+        /* [22] SM4-CTR */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_ctr,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [24] SM4-GCM */
+        /* [23] SM4-GCM */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_gcm,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [25] ZUC NEA6 */
+        /* [24] ZUC NEA6 */
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_zuc_nea6,
-        /* [26] SNOW5G */
+        /* [25] SNOW5G */
         flush_cipher_enc_snow5g,
         flush_cipher_enc_snow5g,
         flush_cipher_enc_snow5g,
         flush_cipher_enc_snow5g,
-        /* [27] AES NEA5 */
+        /* [26] AES NEA5 */
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_aes_nea5,
-        /* [28] AES NCA5 */
+        /* [27] AES NCA5 */
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_aes_nca5,
-        /* [29] ZUC NCA6 */
+        /* [28] ZUC NCA6 */
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_zuc_nca6,
-        /* [30] SNOW5G NCA4 */
+        /* [29] SNOW5G NCA4 */
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_snow5g_nca4,
         /* add new cipher encrypt here */
-        /* [31] NULL */
+        /* [30] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [31] unused - padding up to ENCRYPT_DECRYPT_GAP */
         NULL,
         NULL,
         NULL,

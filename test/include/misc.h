@@ -139,8 +139,6 @@ misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
                 return "aes-docsis";
         case IMB_CIPHER_GCM:
                 return "aead-aes-gcm";
-        case IMB_CIPHER_CUSTOM:
-                return "custom";
         case IMB_CIPHER_DES:
                 return "des-cbc";
         case IMB_CIPHER_DOCSIS_DES:

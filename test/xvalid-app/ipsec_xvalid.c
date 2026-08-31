@@ -757,10 +757,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
         for (c_mode = IMB_CIPHER_CBC; c_mode < IMB_CIPHER_NUM; c_mode++) {
                 IMB_HASH_ALG hash_alg;
 
-                /* Skip IMB_CIPHER_CUSTOM */
-                if (c_mode == IMB_CIPHER_CUSTOM)
-                        continue;
-
                 params->cipher_mode = c_mode;
 
                 for (hash_alg = IMB_AUTH_HMAC_SHA_1; hash_alg < IMB_AUTH_NUM; hash_alg++) {

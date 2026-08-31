@@ -1931,7 +1931,6 @@ check_algorithm_coverage(void)
 
         /* Algorithms tested in run_special_oob_tests() or intentionally skipped */
         cipher_seen[IMB_CIPHER_NULL] = 1;
-        cipher_seen[IMB_CIPHER_CUSTOM] = 1;
         cipher_seen[IMB_CIPHER_PON_AES_CNTR] = 1;          /* tested in run_special_oob_tests */
         cipher_seen[IMB_CIPHER_GCM_SGL] = 1;               /* SGL variant */
         cipher_seen[IMB_CIPHER_CHACHA20_POLY1305_SGL] = 1; /* SGL variant */

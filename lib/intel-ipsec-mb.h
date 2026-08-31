@@ -393,7 +393,6 @@ typedef enum {
         IMB_CIPHER_NULL,
         IMB_CIPHER_DOCSIS_SEC_BPI,
         IMB_CIPHER_GCM,
-        IMB_CIPHER_CUSTOM,
         IMB_CIPHER_DES,
         IMB_CIPHER_DOCSIS_DES,
         IMB_CIPHER_CCM,
@@ -672,8 +671,6 @@ typedef struct IMB_JOB {
         void *user_data;  /**< Pointer 1 to user data */
         void *user_data2; /**< Pointer 2 to user data */
 
-        int (*cipher_func)(struct IMB_JOB *);
-        /**< Customer cipher function */
         int (*hash_func)(struct IMB_JOB *);
         /**< Customer hash function */
 

@@ -81,9 +81,6 @@ fill_additional_cipher_data(struct IMB_JOB *job, struct IMB_SGL_IOV *sgl_segs,
         const IMB_CIPHER_MODE cipherMode = job->cipher_mode;
 
         switch (cipherMode) {
-        case IMB_CIPHER_CUSTOM:
-                job->cipher_func = custom_op;
-                break;
         case IMB_CIPHER_CCM:
                 if (job->u.CCM.aad != NULL)
                         job->u.CCM.aad = buff;
@@ -424,8 +421,6 @@ cipher_selection(void)
                         return IMB_CIPHER_DOCSIS_SEC_BPI;
                 else if (strcmp(a, "IMB_CIPHER_GCM") == 0)
                         return IMB_CIPHER_GCM;
-                else if (strcmp(a, "IMB_CIPHER_CUSTOM") == 0)
-                        return IMB_CIPHER_CUSTOM;
                 else if (strcmp(a, "IMB_CIPHER_DES") == 0)
                         return IMB_CIPHER_DES;
                 else if (strcmp(a, "IMB_CIPHER_DOCSIS_DES") == 0)

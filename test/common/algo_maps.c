@@ -266,7 +266,6 @@ const uint8_t key_sizes[][3] = {
         { 0, 0, 1 },    /* IMB_CIPHER_NULL */
         { 16, 32, 16 }, /* IMB_CIPHER_DOCSIS_SEC_BPI */
         { 16, 32, 8 },  /* IMB_CIPHER_GCM */
-        { 0, 0, 1 },    /* IMB_CIPHER_CUSTOM */
         { 8, 8, 1 },    /* IMB_CIPHER_DES */
         { 8, 8, 1 },    /* IMB_CIPHER_DOCSIS_DES */
         { 16, 32, 16 }, /* IMB_CIPHER_CCM */

@@ -314,9 +314,6 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(12);
                 break;
-        case IMB_CIPHER_CUSTOM:
-                job->cipher_func = dummy_cipher_hash_func;
-                break;
         case IMB_CIPHER_DES:
                 job->key_len_in_bytes = UINT64_C(8);
                 job->iv_len_in_bytes = UINT64_C(8);
@@ -1696,7 +1693,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
+                                if (cipher == IMB_CIPHER_NULL)
                                         continue;
 
                                 /*
@@ -1727,7 +1724,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
+                                if (cipher == IMB_CIPHER_NULL)
                                         continue;
 
                                 /*
@@ -1758,7 +1755,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
+                                if (cipher == IMB_CIPHER_NULL)
                                         continue;
 
                                 /*
@@ -1796,7 +1793,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                 for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
 
-                        if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
+                        if (cipher == IMB_CIPHER_NULL)
                                 continue;
 
                         /*
@@ -1840,7 +1837,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                         switch (cipher) {
                         case IMB_CIPHER_NULL:
-                        case IMB_CIPHER_CUSTOM:
                                 break;
                         default:
                                 template_job.enc_keys = NULL;
@@ -1943,7 +1939,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
                                 break;
                         case IMB_CIPHER_NULL:
-                        case IMB_CIPHER_CUSTOM:
                         default:
                                 break;
                         }
@@ -1956,7 +1951,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
+                                if (cipher == IMB_CIPHER_NULL)
                                         continue;
 
                                 /*
@@ -2005,7 +2000,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
+                                if (cipher == IMB_CIPHER_NULL)
                                         continue;
 
                                 /*
@@ -2024,7 +2019,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_GCM:
                                 case IMB_CIPHER_SM4_GCM:
                                 case IMB_CIPHER_GCM_SGL:
-                                case IMB_CIPHER_CUSTOM:
                                 case IMB_CIPHER_CNTR:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW5G_NEA4:
