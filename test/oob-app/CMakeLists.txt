@@ -68,12 +68,20 @@ add_test(
   COMMAND ${TEST_APP} --max-len ${OOB_CTEST_MAX_LEN}
   WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
 
+# GFNI and SHA-NI do not change the PQC code paths, so skip the (slower) PQC
+# tests in these runs - they are already covered by OOB::DEFAULT and OOB::PQC
 add_test(
   NAME OOB::GFNIOFF
-  COMMAND ${TEST_APP} --gfni-off --max-len ${OOB_CTEST_MAX_LEN}
+  COMMAND ${TEST_APP} --gfni-off --no-pqc --max-len ${OOB_CTEST_MAX_LEN}
   WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
 
 add_test(
   NAME OOB::SHANIOFF
-  COMMAND ${TEST_APP} --shani-off --max-len ${OOB_CTEST_MAX_LEN}
+  COMMAND ${TEST_APP} --shani-off --no-pqc --max-len ${OOB_CTEST_MAX_LEN}
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+
+# PQC (ML-DSA / ML-KEM) tests over the full message length range
+add_test(
+  NAME OOB::PQC
+  COMMAND ${TEST_APP} --pqc-only --max-len 2048
   WORKING_DIRECTORY ${TEST_APP_BIN_DIR})

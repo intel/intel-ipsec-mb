@@ -9,7 +9,8 @@
  *
  * Verifies that submitting cipher, hash and AEAD jobs through checked and
  * NOCHECK single-job, type-specific burst and generic burst submit paths
- * does not read or write past the declared message boundaries.
+ * does not read or write past the declared message boundaries. The same is
+ * verified for the direct PQC (ML-DSA and ML-KEM) APIs.
  *
  * Technique: each data buffer (src, dst, AAD, tag, IV) is placed immediately
  * adjacent to a guard page (PROT_NONE / PAGE_NOACCESS).
@@ -1796,6 +1797,946 @@ run_special_oob_tests(IMB_MGR *mgr, const IMB_ARCH arch, struct oob_mem *mem,
 }
 
 /* ========================================================================== */
+/* PQC (ML-DSA / ML-KEM) OOB tests                                            */
+/* ========================================================================== */
+
+/*
+ * The PQC APIs are direct, context based APIs rather than IMB_JOB based ones,
+ * so they need their own buffers, test vectors and runner.
+ *
+ * Detection works exactly as for the job API tests: every buffer handed to the
+ * library is sized to exactly the length declared to the API and placed flush
+ * against a guard page, so any access past the declared boundary faults. PQC
+ * buffer sizes are fixed by the parameter set, so the overrun and underrun
+ * passes together cover both ends of every buffer.
+ *
+ * Return codes are checked on every call, and results are cross-checked where
+ * the API allows it (a derived public key must match the reference, a
+ * decapsulated shared secret must match the encapsulated one), which catches
+ * short writes that no guard page can see.
+ */
+
+/** Largest encoded PQC object: ML-DSA-87 private key */
+#define PQC_MAX_KEY_BYTES IMB_ML_DSA_87_PRIVKEY_BYTES
+/** Largest PQC signature / ciphertext: ML-DSA-87 signature */
+#define PQC_MAX_SIG_BYTES IMB_ML_DSA_87_SIG_BYTES
+/** Largest PQC public key: ML-DSA-87 public key */
+#define PQC_MAX_PUB_BYTES IMB_ML_DSA_87_PUBKEY_BYTES
+/** Largest PQC seed / randomizer / mu input */
+#define PQC_MAX_SEED_BYTES IMB_ML_DSA_MU_BYTES
+
+/** Set to zero by the --no-pqc command line option */
+static int pqc_enabled = 1;
+
+/** Set to zero by the --pqc-only command line option */
+static int job_api_enabled = 1;
+
+/**
+ * @brief Guard memory allocations for PQC OOB testing.
+ *
+ * Kept separate from struct oob_mem because PQC objects (up to 4896 bytes)
+ * are larger than the job API message lengths this tool sweeps over, and
+ * because several distinct inputs are live at the same time within a single
+ * API call.
+ */
+struct pqc_oob_mem {
+        struct guard_mem pubkey;  /**< ML-DSA pk / ML-KEM ek */
+        struct guard_mem privkey; /**< ML-DSA sk / ML-KEM dk */
+        struct guard_mem sig;     /**< ML-DSA signature / ML-KEM ciphertext */
+        struct guard_mem msg;     /**< message or pre-computed mu */
+        struct guard_mem ctxstr;  /**< ML-DSA context string */
+        struct guard_mem seed;    /**< keygen seed / sign randomizer / encap m */
+        struct guard_mem ss;      /**< ML-KEM shared secret */
+};
+
+/**
+ * @brief Allocate all guard memory regions for PQC OOB testing.
+ *
+ * @param [in,out] mem      PQC OOB memory structure to initialize
+ * @param [in]     msg_size usable size of the message region
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 failure
+ */
+static int
+pqc_mem_alloc(struct pqc_oob_mem *mem, const size_t msg_size)
+{
+        memset(mem, 0, sizeof(*mem));
+
+        if (guard_mem_alloc(&mem->pubkey, PQC_MAX_PUB_BYTES) != 0 ||
+            guard_mem_alloc(&mem->privkey, PQC_MAX_KEY_BYTES) != 0 ||
+            guard_mem_alloc(&mem->sig, PQC_MAX_SIG_BYTES) != 0 ||
+            guard_mem_alloc(&mem->msg, msg_size) != 0 ||
+            guard_mem_alloc(&mem->ctxstr, IMB_ML_DSA_MAX_CTX_BYTES) != 0 ||
+            guard_mem_alloc(&mem->seed, PQC_MAX_SEED_BYTES) != 0 ||
+            guard_mem_alloc(&mem->ss, IMB_ML_KEM_SHARED_SECRET_BYTES) != 0)
+                return -1;
+
+        return 0;
+}
+
+/**
+ * @brief Free all PQC guard memory regions.
+ *
+ * @param [in] mem PQC OOB memory structure to free
+ */
+static void
+pqc_mem_free(struct pqc_oob_mem *mem)
+{
+        guard_mem_free(&mem->pubkey);
+        guard_mem_free(&mem->privkey);
+        guard_mem_free(&mem->sig);
+        guard_mem_free(&mem->msg);
+        guard_mem_free(&mem->ctxstr);
+        guard_mem_free(&mem->seed);
+        guard_mem_free(&mem->ss);
+}
+
+/** Shared state for a sequence of PQC OOB sub-tests */
+struct pqc_test_ctx {
+        const char *variant; /**< e.g. "ML-DSA-87" */
+        const char *op;      /**< current operation name, for messages */
+        enum oob_type oob;   /**< overrun / underrun */
+        unsigned *pass;      /**< running pass count */
+        unsigned *fail;      /**< running fail count */
+        unsigned vec_fail;   /**< failures recorded for this variant */
+};
+
+/**
+ * @brief Report a PQC sub-test failure, honouring the per-vector print limit.
+ *
+ * @param [in] t    PQC test context
+ * @param [in] what failure description
+ */
+static void
+pqc_fail(const struct pqc_test_ctx *t, const char *what)
+{
+        if (fail_print_remaining > 0) {
+                fail_print_remaining--;
+                printf("  FAIL: %s %s: %s (%s)\n", t->variant, t->op, what, oob_type_name[t->oob]);
+        }
+}
+
+/**
+ * @brief Check an unexpected PQC API return code.
+ *
+ * @param [in] t  PQC test context
+ * @param [in] rc return code from the API
+ *
+ * @return Check status
+ * @retval 0 success (rc == 0)
+ * @retval -1 unexpected error
+ */
+static int
+pqc_check_rc(const struct pqc_test_ctx *t, const int rc)
+{
+        if (rc == 0)
+                return 0;
+
+        pqc_fail(t, imb_get_strerror(rc));
+        return -1;
+}
+
+/**
+ * @brief Record the outcome of a PQC sub-test.
+ *
+ * @param [in,out] t  PQC test context
+ * @param [in]     ok 0 for pass, non-zero for fail
+ */
+static void
+pqc_record(struct pqc_test_ctx *t, const int ok)
+{
+        if (ok == 0) {
+                (*t->pass)++;
+        } else {
+                (*t->fail)++;
+                t->vec_fail++;
+        }
+}
+
+/**
+ * @brief Set up a guarded PQC operation checkpoint.
+ *
+ * Names the operation for failure messages and installs the SEGFAULT
+ * recovery point. Evaluates to non-zero when a fault was caught.
+ */
+#define PQC_GUARD(t, opname) (((t)->op = (opname)), TEST_SETJMP())
+
+/* -------------------------------------------------------------------------- */
+/* ML-DSA                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** ML-DSA variant descriptor */
+struct ml_dsa_test_vec {
+        const char *name;   /**< display name */
+        IMB_ML_DSA_ALG alg; /**< parameter set selector */
+        size_t pk_len;      /**< encoded public key size */
+        size_t sk_len;      /**< encoded private key size */
+        size_t sig_len;     /**< signature size */
+};
+
+static const struct ml_dsa_test_vec ml_dsa_tests[] = {
+        { "ML-DSA-44", IMB_ML_DSA_44, IMB_ML_DSA_44_PUBKEY_BYTES, IMB_ML_DSA_44_PRIVKEY_BYTES,
+          IMB_ML_DSA_44_SIG_BYTES },
+        { "ML-DSA-65", IMB_ML_DSA_65, IMB_ML_DSA_65_PUBKEY_BYTES, IMB_ML_DSA_65_PRIVKEY_BYTES,
+          IMB_ML_DSA_65_SIG_BYTES },
+        { "ML-DSA-87", IMB_ML_DSA_87, IMB_ML_DSA_87_PUBKEY_BYTES, IMB_ML_DSA_87_PRIVKEY_BYTES,
+          IMB_ML_DSA_87_SIG_BYTES },
+};
+
+/** ML-KEM variant descriptor */
+struct ml_kem_test_vec {
+        const char *name;   /**< display name */
+        IMB_ML_KEM_ALG alg; /**< parameter set selector */
+        size_t ek_len;      /**< encoded encapsulation (public) key size */
+        size_t dk_len;      /**< encoded decapsulation (private) key size */
+        size_t ct_len;      /**< ciphertext size */
+};
+
+static const struct ml_kem_test_vec ml_kem_tests[] = {
+        { "ML-KEM-512", IMB_ML_KEM_512, IMB_ML_KEM_512_PUBKEY_BYTES, IMB_ML_KEM_512_PRIVKEY_BYTES,
+          IMB_ML_KEM_512_CIPHERTEXT_BYTES },
+        { "ML-KEM-768", IMB_ML_KEM_768, IMB_ML_KEM_768_PUBKEY_BYTES, IMB_ML_KEM_768_PRIVKEY_BYTES,
+          IMB_ML_KEM_768_CIPHERTEXT_BYTES },
+        { "ML-KEM-1024", IMB_ML_KEM_1024, IMB_ML_KEM_1024_PUBKEY_BYTES,
+          IMB_ML_KEM_1024_PRIVKEY_BYTES, IMB_ML_KEM_1024_CIPHERTEXT_BYTES },
+};
+
+/**
+ * @brief Message lengths swept by the ML-DSA sign/verify OOB tests.
+ *
+ * A coarse list rather than a dense sweep: ML-DSA sign is ~0.4 ms, so a
+ * per-byte sweep would dominate the tool's run time without adding coverage.
+ * The values cluster around the SHAKE256 rate (136 bytes) and power-of-two
+ * boundaries, where block handling bugs are most likely to appear. Values
+ * above max_test_len are skipped.
+ */
+static const unsigned pqc_msg_lens[] = {
+        0,   1,   2,   3,   15,  16,  17,  31,  32,  33,  63,  64,   65,   127,  128,  129, 135,
+        136, 137, 255, 256, 257, 271, 272, 273, 511, 512, 513, 1023, 1024, 1025, 2047, 2048
+};
+
+/** ML-DSA context string lengths exercised by sign/verify */
+static const unsigned pqc_ctx_lens[] = { 0, 1, 135, 136, IMB_ML_DSA_MAX_CTX_BYTES };
+
+/** Reference key material and signature, held in normal (non-guarded) memory */
+static uint8_t ref_pk[PQC_MAX_PUB_BYTES];
+static uint8_t ref_sk[PQC_MAX_KEY_BYTES];
+static uint8_t ref_sig[PQC_MAX_SIG_BYTES];
+static uint8_t ref_ct[PQC_MAX_SIG_BYTES];
+static uint8_t ref_seed[PQC_MAX_SEED_BYTES];
+static uint8_t ref_ctxstr[IMB_ML_DSA_MAX_CTX_BYTES];
+
+/**
+ * @brief Deterministically fill a buffer with a test pattern.
+ *
+ * @param [out] buf  buffer to fill
+ * @param [in]  len  buffer length in bytes
+ * @param [in]  salt pattern salt (distinguishes different buffers)
+ */
+static void
+pqc_fill_pattern(uint8_t *buf, const size_t len, const uint8_t salt)
+{
+        for (size_t i = 0; i < len; i++)
+                buf[i] = (uint8_t) ((i * 7u) + salt);
+}
+
+/**
+ * @brief Test imb_ml_dsa_keypair() for OOB accesses.
+ *
+ * @param [in,out] t      PQC test context
+ * @param [in]     ctx    ML-DSA context
+ * @param [in]     tv     ML-DSA variant descriptor
+ * @param [in]     mem    PQC guard memory
+ * @param [in]     seeded non-zero to supply a 32-byte seed (deterministic keygen)
+ *
+ * @return Test status
+ * @retval 0 pass
+ * @retval -1 fail
+ */
+static int
+test_ml_dsa_keypair_oob(struct pqc_test_ctx *t, IMB_ML_DSA *ctx, const struct ml_dsa_test_vec *tv,
+                        struct pqc_oob_mem *mem, const int seeded)
+{
+        uint8_t *const pk = oob_buf(&mem->pubkey, tv->pk_len, t->oob);
+        uint8_t *const sk = oob_buf(&mem->privkey, tv->sk_len, t->oob);
+        uint8_t *const xi = oob_buf(&mem->seed, IMB_ML_DSA_KEYGEN_SEED_BYTES, t->oob);
+        IMB_ML_DSA_KEYGEN_PARAMS params;
+
+        memcpy(xi, ref_seed, IMB_ML_DSA_KEYGEN_SEED_BYTES);
+
+        IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
+        if (seeded) {
+                params.xi_32 = xi;
+                params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
+        }
+
+        if (PQC_GUARD(t, seeded ? "keypair (seeded)" : "keypair")) {
+                pqc_fail(t, "SEGFAULT");
+                return -1;
+        }
+
+        if (pqc_check_rc(t, imb_ml_dsa_keypair(ctx, pk, tv->pk_len, sk, tv->sk_len, &params)) != 0)
+                return -1;
+
+        return 0;
+}
+
+/**
+ * @brief Test the ML-DSA key binding and validation entry points for OOB
+ *        accesses: set_privkey, set_pubkey, privkey_validate, pubkey_validate
+ *        and pubkey_from_privkey.
+ *
+ * Each call receives an exactly sized, guard-page adjacent copy of the
+ * reference key material.
+ *
+ * @param [in,out] t   PQC test context
+ * @param [in]     ctx ML-DSA context
+ * @param [in]     tv  ML-DSA variant descriptor
+ * @param [in]     mem PQC guard memory
+ *
+ * @return number of failed sub-tests
+ */
+static int
+test_ml_dsa_keyops_oob(struct pqc_test_ctx *t, IMB_ML_DSA *ctx, const struct ml_dsa_test_vec *tv,
+                       struct pqc_oob_mem *mem)
+{
+        static const struct {
+                const char *name;
+                int is_pubkey; /**< operates on pk (1) or sk (0) */
+                int is_bind;   /**< set_*key (1) or *_validate (0) */
+        } ops[] = {
+                { "set_privkey", 0, 1 },
+                { "set_pubkey", 1, 1 },
+                { "privkey_validate", 0, 0 },
+                { "pubkey_validate", 1, 0 },
+        };
+        int fails = 0;
+
+        /* volatile: these stay live across the TEST_SETJMP() checkpoint below */
+        for (volatile unsigned i = 0; i < DIM(ops); i++) {
+                struct guard_mem *const volatile gm =
+                        ops[i].is_pubkey ? &mem->pubkey : &mem->privkey;
+                const volatile size_t len = ops[i].is_pubkey ? tv->pk_len : tv->sk_len;
+                const uint8_t *const ref = ops[i].is_pubkey ? ref_pk : ref_sk;
+                uint8_t *const volatile key = oob_buf(gm, len, t->oob);
+                int rc;
+
+                memcpy(key, ref, len);
+
+                if (PQC_GUARD(t, ops[i].name)) {
+                        pqc_fail(t, "SEGFAULT");
+                        pqc_record(t, -1);
+                        fails++;
+                        continue;
+                }
+
+                if (ops[i].is_bind)
+                        rc = ops[i].is_pubkey ? imb_ml_dsa_set_pubkey(ctx, key, len)
+                                              : imb_ml_dsa_set_privkey(ctx, key, len);
+                else
+                        rc = ops[i].is_pubkey ? imb_ml_dsa_pubkey_validate(ctx, key, len)
+                                              : imb_ml_dsa_privkey_validate(ctx, key, len);
+
+                const int ok = (pqc_check_rc(t, rc) != 0) ? -1 : 0;
+
+                pqc_record(t, ok);
+                if (ok != 0)
+                        fails++;
+        }
+
+        /* pubkey_from_privkey(): guarded sk input and guarded pk output */
+        {
+                /* volatile: live across the TEST_SETJMP() checkpoint below */
+                uint8_t *const volatile sk = oob_buf(&mem->privkey, tv->sk_len, t->oob);
+                uint8_t *const volatile pk = oob_buf(&mem->pubkey, tv->pk_len, t->oob);
+                int ok = 0;
+
+                memcpy(sk, ref_sk, tv->sk_len);
+
+                if (PQC_GUARD(t, "pubkey_from_privkey")) {
+                        pqc_fail(t, "SEGFAULT");
+                        pqc_record(t, -1);
+                        return fails + 1;
+                }
+
+                if (pqc_check_rc(t, imb_ml_dsa_pubkey_from_privkey(ctx, sk, tv->sk_len, pk,
+                                                                   tv->pk_len)) != 0)
+                        ok = -1;
+                else if (memcmp(pk, ref_pk, tv->pk_len) != 0) {
+                        pqc_fail(t, "derived public key mismatch");
+                        ok = -1;
+                }
+
+                pqc_record(t, ok);
+                if (ok != 0)
+                        fails++;
+        }
+
+        /* re-bind the private key: it carries the public component too */
+        if (PQC_GUARD(t, "set_privkey (re-bind)")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return fails + 1;
+        }
+        if (pqc_check_rc(t, imb_ml_dsa_set_privkey(ctx, ref_sk, tv->sk_len)) != 0) {
+                pqc_record(t, -1);
+                return fails + 1;
+        }
+
+        return fails;
+}
+
+/**
+ * @brief Test imb_ml_dsa_sign() followed by imb_ml_dsa_verify() for OOB accesses.
+ *
+ * All of msg, sig, ctx string and the optional randomizer are placed flush
+ * against guard pages. The signature produced by the guarded sign call is
+ * copied out and fed back into a guarded verify call, which additionally
+ * proves the sign path did not silently truncate its output.
+ *
+ * @param [in,out] t        PQC test context
+ * @param [in]     ctx      ML-DSA context with a bound private key
+ * @param [in]     tv       ML-DSA variant descriptor
+ * @param [in]     mem      PQC guard memory
+ * @param [in]     msg_len  message length in bytes
+ * @param [in]     ctx_len  context string length in bytes
+ * @param [in]     hedged   non-zero for hedged signing (NULL randomizer)
+ * @param [in]     msg_is_mu non-zero to pass a pre-computed mu instead of a message
+ *
+ * @return number of failed sub-tests
+ */
+static int
+test_ml_dsa_sign_verify_oob(struct pqc_test_ctx *t, IMB_ML_DSA *ctx,
+                            const struct ml_dsa_test_vec *tv, struct pqc_oob_mem *mem,
+                            const unsigned msg_len, const unsigned ctx_len, const int hedged,
+                            const int msg_is_mu)
+{
+        uint8_t *msg = oob_buf(&mem->msg, msg_len, t->oob);
+        uint8_t *sig = oob_buf(&mem->sig, tv->sig_len, t->oob);
+        uint8_t *cstr = oob_buf(&mem->ctxstr, ctx_len, t->oob);
+        uint8_t *rnd = oob_buf(&mem->seed, IMB_ML_DSA_SIGN_RND_BYTES, t->oob);
+        IMB_ML_DSA_SIGN_PARAMS sp;
+        IMB_ML_DSA_VERIFY_PARAMS vp;
+        size_t sig_len = tv->sig_len;
+        int fails = 0;
+
+        pqc_fill_pattern(msg, msg_len, 1);
+        memcpy(cstr, ref_ctxstr, ctx_len);
+        memcpy(rnd, ref_seed, IMB_ML_DSA_SIGN_RND_BYTES);
+
+        IMB_ML_DSA_SIGN_PARAMS_INIT(&sp);
+        sp.msg_is_mu = msg_is_mu;
+        if (!msg_is_mu && ctx_len != 0) {
+                sp.ctx = cstr;
+                sp.ctx_len = ctx_len;
+        }
+        if (!hedged) {
+                sp.rnd_32 = rnd;
+                sp.rnd_len = IMB_ML_DSA_SIGN_RND_BYTES;
+        }
+
+        if (PQC_GUARD(t, msg_is_mu ? "sign (mu)" : "sign")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return 1;
+        }
+
+        if (pqc_check_rc(t, imb_ml_dsa_sign(ctx, sig, &sig_len, msg, msg_len, &sp)) != 0) {
+                pqc_record(t, -1);
+                return 1;
+        }
+
+        if (sig_len != tv->sig_len) {
+                pqc_fail(t, "unexpected signature length");
+                pqc_record(t, -1);
+                return 1;
+        }
+
+        pqc_record(t, 0);
+
+        /* keep a copy: the guard buffers are re-armed for the verify call */
+        memcpy(ref_sig, sig, sig_len);
+
+        msg = oob_buf(&mem->msg, msg_len, t->oob);
+        sig = oob_buf(&mem->sig, tv->sig_len, t->oob);
+        cstr = oob_buf(&mem->ctxstr, ctx_len, t->oob);
+
+        pqc_fill_pattern(msg, msg_len, 1);
+        memcpy(sig, ref_sig, tv->sig_len);
+        memcpy(cstr, ref_ctxstr, ctx_len);
+
+        IMB_ML_DSA_VERIFY_PARAMS_INIT(&vp);
+        vp.msg_is_mu = msg_is_mu;
+        if (!msg_is_mu && ctx_len != 0) {
+                vp.ctx = cstr;
+                vp.ctx_len = ctx_len;
+        }
+
+        if (PQC_GUARD(t, msg_is_mu ? "verify (mu)" : "verify")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return fails + 1;
+        }
+
+        if (pqc_check_rc(t, imb_ml_dsa_verify(ctx, msg, msg_len, sig, tv->sig_len, &vp)) != 0) {
+                pqc_record(t, -1);
+                fails++;
+        } else {
+                pqc_record(t, 0);
+        }
+
+        /*
+         * Rejection path: corrupting the last signature byte forces the
+         * decode/verify code down a different, early-exit branch.
+         */
+        sig = oob_buf(&mem->sig, tv->sig_len, t->oob);
+        memcpy(sig, ref_sig, tv->sig_len);
+        sig[tv->sig_len - 1] ^= 0xff;
+
+        if (PQC_GUARD(t, "verify (corrupted)")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return fails + 1;
+        }
+
+        const int rc = imb_ml_dsa_verify(ctx, msg, msg_len, sig, tv->sig_len, &vp);
+
+        if (rc != IMB_ERR_PQC_VERIFY_FAILED) {
+                pqc_fail(t, rc == 0 ? "corrupted signature accepted" : imb_get_strerror(rc));
+                pqc_record(t, -1);
+                fails++;
+        } else {
+                pqc_record(t, 0);
+        }
+
+        return fails;
+}
+
+/**
+ * @brief Run all ML-DSA OOB tests for one parameter set.
+ *
+ * @param [in]     mgr  multi-buffer manager
+ * @param [in]     tv   ML-DSA variant descriptor
+ * @param [in]     mem  PQC guard memory
+ * @param [in]     oob  overrun / underrun
+ * @param [in,out] pass running pass count
+ * @param [in,out] fail running fail count
+ */
+static void
+run_ml_dsa_variant(IMB_MGR *mgr, const struct ml_dsa_test_vec *tv, struct pqc_oob_mem *mem,
+                   const enum oob_type oob, unsigned *pass, unsigned *fail)
+{
+        struct pqc_test_ctx tctx = { tv->name, "new", oob, pass, fail, 0 };
+        IMB_ML_DSA *ctx = NULL;
+        int rc;
+
+        fail_print_remaining = MAX_FAIL_PRINT;
+
+        if (PQC_GUARD(&tctx, "new")) {
+                pqc_fail(&tctx, "SEGFAULT");
+                pqc_record(&tctx, -1);
+                return;
+        }
+
+        rc = imb_ml_dsa_new(mgr, tv->alg, &ctx);
+        if (rc != 0 || ctx == NULL) {
+                pqc_fail(&tctx, imb_get_strerror(rc));
+                pqc_record(&tctx, -1);
+                return;
+        }
+
+        /* reference key material in normal memory - not part of the OOB test */
+        if (PQC_GUARD(&tctx, "reference keypair")) {
+                pqc_fail(&tctx, "SEGFAULT");
+                pqc_record(&tctx, -1);
+                return; /* context state is unknown - deliberately not freed */
+        }
+
+        rc = imb_ml_dsa_keypair(ctx, ref_pk, tv->pk_len, ref_sk, tv->sk_len, NULL);
+        if (rc != 0) {
+                tctx.op = "reference keypair";
+                pqc_fail(&tctx, imb_get_strerror(rc));
+                pqc_record(&tctx, -1);
+                goto done;
+        }
+
+        /* keygen with and without a caller supplied seed */
+        for (int seeded = 0; seeded <= 1; seeded++)
+                pqc_record(&tctx, test_ml_dsa_keypair_oob(&tctx, ctx, tv, mem, seeded));
+
+        (void) test_ml_dsa_keyops_oob(&tctx, ctx, tv, mem);
+
+        /*
+         * A caught fault unwinds out of the library, so the context may no
+         * longer be trustworthy - stop this variant rather than report a
+         * cascade of follow-on failures.
+         */
+        if (tctx.vec_fail >= MAX_VEC_FAIL)
+                goto done;
+
+        /* message length sweep, no context string, hedged signing */
+        for (unsigned i = 0; i < DIM(pqc_msg_lens); i++) {
+                if (pqc_msg_lens[i] > max_test_len)
+                        break;
+                (void) test_ml_dsa_sign_verify_oob(&tctx, ctx, tv, mem, pqc_msg_lens[i], 0, 1, 0);
+                if (tctx.vec_fail >= MAX_VEC_FAIL)
+                        goto done;
+        }
+
+        /* context string length sweep with a caller supplied randomizer */
+        for (unsigned i = 0; i < DIM(pqc_ctx_lens); i++) {
+                (void) test_ml_dsa_sign_verify_oob(&tctx, ctx, tv, mem, 32, pqc_ctx_lens[i], 0, 0);
+                if (tctx.vec_fail >= MAX_VEC_FAIL)
+                        goto done;
+        }
+
+        /* pre-computed mu path: the message is exactly IMB_ML_DSA_MU_BYTES */
+        (void) test_ml_dsa_sign_verify_oob(&tctx, ctx, tv, mem, IMB_ML_DSA_MU_BYTES, 0, 1, 1);
+
+done:
+        /*
+         * A fault caught earlier unwound out of the library, so the context may
+         * be inconsistent and freeing it could fault again. Guard the free and
+         * leak the context rather than take down the whole test run - the leak
+         * is bounded by the number of variants.
+         */
+        if (PQC_GUARD(&tctx, "free")) {
+                pqc_fail(&tctx, "SEGFAULT");
+                pqc_record(&tctx, -1);
+        } else {
+                imb_ml_dsa_free(ctx);
+        }
+
+        if (!quiet_mode && tctx.vec_fail == 0)
+                printf("    %-28s PASS (%s)\n", tv->name, oob_type_name[oob]);
+        else if (tctx.vec_fail > 0)
+                printf("    %-28s %u FAIL(s) (%s)\n", tv->name, tctx.vec_fail, oob_type_name[oob]);
+}
+
+/* -------------------------------------------------------------------------- */
+/* ML-KEM                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Test imb_ml_kem_keypair() for OOB accesses.
+ *
+ * @param [in,out] t      PQC test context
+ * @param [in]     ctx    ML-KEM context
+ * @param [in]     tv     ML-KEM variant descriptor
+ * @param [in]     mem    PQC guard memory
+ * @param [in]     seeded non-zero to supply a 64-byte (d || z) seed
+ *
+ * @return Test status
+ * @retval 0 pass
+ * @retval -1 fail
+ */
+static int
+test_ml_kem_keypair_oob(struct pqc_test_ctx *t, IMB_ML_KEM *ctx, const struct ml_kem_test_vec *tv,
+                        struct pqc_oob_mem *mem, const int seeded)
+{
+        uint8_t *const ek = oob_buf(&mem->pubkey, tv->ek_len, t->oob);
+        uint8_t *const dk = oob_buf(&mem->privkey, tv->dk_len, t->oob);
+        uint8_t *const seed = oob_buf(&mem->seed, IMB_ML_KEM_KEYGEN_SEED_BYTES, t->oob);
+        IMB_ML_KEM_KEYGEN_PARAMS params;
+
+        memcpy(seed, ref_seed, IMB_ML_KEM_KEYGEN_SEED_BYTES);
+
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
+        if (seeded) {
+                params.seed_d_z = seed;
+                params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
+        }
+
+        if (PQC_GUARD(t, seeded ? "keypair (seeded)" : "keypair")) {
+                pqc_fail(t, "SEGFAULT");
+                return -1;
+        }
+
+        if (pqc_check_rc(t, imb_ml_kem_keypair(ctx, ek, tv->ek_len, dk, tv->dk_len, &params)) != 0)
+                return -1;
+
+        return 0;
+}
+
+/**
+ * @brief Test the ML-KEM key binding and validation entry points for OOB
+ *        accesses: set_privkey, set_pubkey, privkey_validate, pubkey_validate.
+ *
+ * @param [in,out] t   PQC test context
+ * @param [in]     ctx ML-KEM context
+ * @param [in]     tv  ML-KEM variant descriptor
+ * @param [in]     mem PQC guard memory
+ */
+static void
+test_ml_kem_keyops_oob(struct pqc_test_ctx *t, IMB_ML_KEM *ctx, const struct ml_kem_test_vec *tv,
+                       struct pqc_oob_mem *mem)
+{
+        static const struct {
+                const char *name;
+                int is_pubkey;
+                int is_bind;
+        } ops[] = {
+                { "set_privkey", 0, 1 },
+                { "set_pubkey", 1, 1 },
+                { "privkey_validate", 0, 0 },
+                { "pubkey_validate", 1, 0 },
+        };
+
+        /* volatile: these stay live across the TEST_SETJMP() checkpoint below */
+        for (volatile unsigned i = 0; i < DIM(ops); i++) {
+                struct guard_mem *const volatile gm =
+                        ops[i].is_pubkey ? &mem->pubkey : &mem->privkey;
+                const volatile size_t len = ops[i].is_pubkey ? tv->ek_len : tv->dk_len;
+                const uint8_t *const ref = ops[i].is_pubkey ? ref_pk : ref_sk;
+                uint8_t *const volatile key = oob_buf(gm, len, t->oob);
+                int rc;
+
+                memcpy(key, ref, len);
+
+                if (PQC_GUARD(t, ops[i].name)) {
+                        pqc_fail(t, "SEGFAULT");
+                        pqc_record(t, -1);
+                        continue;
+                }
+
+                if (ops[i].is_bind)
+                        rc = ops[i].is_pubkey ? imb_ml_kem_set_pubkey(ctx, key, len)
+                                              : imb_ml_kem_set_privkey(ctx, key, len);
+                else
+                        rc = ops[i].is_pubkey ? imb_ml_kem_pubkey_validate(ctx, key, len)
+                                              : imb_ml_kem_privkey_validate(ctx, key, len);
+
+                const int ok = (pqc_check_rc(t, rc) != 0) ? -1 : 0;
+
+                pqc_record(t, ok);
+        }
+}
+
+/**
+ * @brief Test imb_ml_kem_encap() followed by imb_ml_kem_decap() for OOB accesses.
+ *
+ * The shared secret recovered by decapsulation is compared against the one
+ * produced by encapsulation, which additionally proves neither side operated
+ * on truncated data. A corrupted ciphertext is then decapsulated to exercise
+ * the implicit rejection branch.
+ *
+ * @param [in,out] t      PQC test context
+ * @param [in]     ctx    ML-KEM context
+ * @param [in]     tv     ML-KEM variant descriptor
+ * @param [in]     mem    PQC guard memory
+ * @param [in]     seeded non-zero to supply the 32-byte encapsulation randomness
+ */
+static void
+test_ml_kem_encap_decap_oob(struct pqc_test_ctx *t, IMB_ML_KEM *ctx,
+                            const struct ml_kem_test_vec *tv, struct pqc_oob_mem *mem,
+                            const int seeded)
+{
+        uint8_t ref_ss[IMB_ML_KEM_SHARED_SECRET_BYTES];
+        uint8_t *ct = oob_buf(&mem->sig, tv->ct_len, t->oob);
+        uint8_t *ss = oob_buf(&mem->ss, IMB_ML_KEM_SHARED_SECRET_BYTES, t->oob);
+        uint8_t *const m = oob_buf(&mem->seed, IMB_ML_KEM_ENCAP_SEED_BYTES, t->oob);
+        IMB_ML_KEM_ENCAP_PARAMS params;
+
+        memcpy(m, ref_seed, IMB_ML_KEM_ENCAP_SEED_BYTES);
+
+        IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
+        if (seeded) {
+                params.m_32 = m;
+                params.m_len = IMB_ML_KEM_ENCAP_SEED_BYTES;
+        }
+
+        if (PQC_GUARD(t, "set_pubkey (encap)")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return;
+        }
+
+        if (pqc_check_rc(t, imb_ml_kem_set_pubkey(ctx, ref_pk, tv->ek_len)) != 0) {
+                pqc_record(t, -1);
+                return;
+        }
+
+        if (PQC_GUARD(t, seeded ? "encap (seeded)" : "encap")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return;
+        }
+
+        if (pqc_check_rc(t, imb_ml_kem_encap(ctx, ct, tv->ct_len, ss,
+                                             IMB_ML_KEM_SHARED_SECRET_BYTES, &params)) != 0) {
+                pqc_record(t, -1);
+                return;
+        }
+
+        pqc_record(t, 0);
+
+        memcpy(ref_ss, ss, sizeof(ref_ss));
+        memcpy(ref_ct, ct, tv->ct_len);
+
+        if (PQC_GUARD(t, "set_privkey (decap)")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return;
+        }
+
+        if (pqc_check_rc(t, imb_ml_kem_set_privkey(ctx, ref_sk, tv->dk_len)) != 0) {
+                pqc_record(t, -1);
+                return;
+        }
+
+        /* volatile: stays live across the TEST_SETJMP() checkpoint below */
+        for (volatile int corrupt = 0; corrupt <= 1; corrupt++) {
+                ct = oob_buf(&mem->sig, tv->ct_len, t->oob);
+                ss = oob_buf(&mem->ss, IMB_ML_KEM_SHARED_SECRET_BYTES, t->oob);
+
+                for (size_t i = 0; i < sizeof(ref_ss); i++)
+                        ss[i] = ref_ss[i] ^ 0xff;
+                memcpy(ct, ref_ct, tv->ct_len);
+                if (corrupt)
+                        ct[tv->ct_len - 1] ^= 0xff;
+
+                if (PQC_GUARD(t, corrupt ? "decap (implicit reject)" : "decap")) {
+                        pqc_fail(t, "SEGFAULT");
+                        pqc_record(t, -1);
+                        continue;
+                }
+
+                if (pqc_check_rc(t, imb_ml_kem_decap(ctx, ss, IMB_ML_KEM_SHARED_SECRET_BYTES, ct,
+                                                     tv->ct_len, NULL)) != 0) {
+                        pqc_record(t, -1);
+                        continue;
+                }
+
+                /*
+                 * A valid ciphertext must recover the encapsulated secret; a
+                 * corrupted one must implicitly reject and return a different
+                 * (but still fully written) secret.
+                 */
+                const int same = (memcmp(ss, ref_ss, sizeof(ref_ss)) == 0);
+
+                if (same == corrupt) {
+                        pqc_fail(t, corrupt ? "implicit reject returned the real secret"
+                                            : "shared secret mismatch");
+                        pqc_record(t, -1);
+                } else {
+                        pqc_record(t, 0);
+                }
+        }
+}
+
+/**
+ * @brief Run all ML-KEM OOB tests for one parameter set.
+ *
+ * @param [in]     mgr  multi-buffer manager
+ * @param [in]     tv   ML-KEM variant descriptor
+ * @param [in]     mem  PQC guard memory
+ * @param [in]     oob  overrun / underrun
+ * @param [in,out] pass running pass count
+ * @param [in,out] fail running fail count
+ */
+static void
+run_ml_kem_variant(IMB_MGR *mgr, const struct ml_kem_test_vec *tv, struct pqc_oob_mem *mem,
+                   const enum oob_type oob, unsigned *pass, unsigned *fail)
+{
+        struct pqc_test_ctx tctx = { tv->name, "new", oob, pass, fail, 0 };
+        IMB_ML_KEM *ctx = NULL;
+        int rc;
+
+        fail_print_remaining = MAX_FAIL_PRINT;
+
+        if (PQC_GUARD(&tctx, "new")) {
+                pqc_fail(&tctx, "SEGFAULT");
+                pqc_record(&tctx, -1);
+                return;
+        }
+
+        rc = imb_ml_kem_new(mgr, tv->alg, &ctx);
+        if (rc != 0 || ctx == NULL) {
+                pqc_fail(&tctx, imb_get_strerror(rc));
+                pqc_record(&tctx, -1);
+                return;
+        }
+
+        /* reference key material in normal memory - not part of the OOB test */
+        if (PQC_GUARD(&tctx, "reference keypair")) {
+                pqc_fail(&tctx, "SEGFAULT");
+                pqc_record(&tctx, -1);
+                return; /* context state is unknown - deliberately not freed */
+        }
+
+        rc = imb_ml_kem_keypair(ctx, ref_pk, tv->ek_len, ref_sk, tv->dk_len, NULL);
+        if (rc != 0) {
+                tctx.op = "reference keypair";
+                pqc_fail(&tctx, imb_get_strerror(rc));
+                pqc_record(&tctx, -1);
+                goto done;
+        }
+
+        for (int seeded = 0; seeded <= 1; seeded++)
+                pqc_record(&tctx, test_ml_kem_keypair_oob(&tctx, ctx, tv, mem, seeded));
+
+        test_ml_kem_keyops_oob(&tctx, ctx, tv, mem);
+
+        for (int seeded = 0; seeded <= 1; seeded++)
+                test_ml_kem_encap_decap_oob(&tctx, ctx, tv, mem, seeded);
+
+done:
+        /* see run_ml_dsa_variant(): guard the free, leak on fault */
+        if (PQC_GUARD(&tctx, "free")) {
+                pqc_fail(&tctx, "SEGFAULT");
+                pqc_record(&tctx, -1);
+        } else {
+                imb_ml_kem_free(ctx);
+        }
+
+        if (!quiet_mode && tctx.vec_fail == 0)
+                printf("    %-28s PASS (%s)\n", tv->name, oob_type_name[oob]);
+        else if (tctx.vec_fail > 0)
+                printf("    %-28s %u FAIL(s) (%s)\n", tv->name, tctx.vec_fail, oob_type_name[oob]);
+}
+
+/**
+ * @brief Run the PQC (ML-DSA and ML-KEM) OOB tests.
+ *
+ * @param [in]     mgr  multi-buffer manager
+ * @param [in]     arch architecture (for reinit after SEGFAULT)
+ * @param [in]     mem  PQC guard memory
+ * @param [in]     oob  overrun / underrun
+ * @param [in,out] pass running pass count
+ * @param [in,out] fail running fail count
+ */
+static void
+run_pqc_oob_tests(IMB_MGR *mgr, const IMB_ARCH arch, struct pqc_oob_mem *mem,
+                  const enum oob_type oob, unsigned *pass, unsigned *fail)
+{
+        if (!pqc_enabled)
+                return;
+
+        if (!quiet_mode)
+                printf("  PQC tests (%s):\n", oob_type_name[oob]);
+
+        pqc_fill_pattern(ref_seed, sizeof(ref_seed), 0x31);
+        pqc_fill_pattern(ref_ctxstr, sizeof(ref_ctxstr), 0x42);
+
+        const unsigned fail_before = *fail;
+
+        for (unsigned i = 0; i < DIM(ml_dsa_tests); i++)
+                run_ml_dsa_variant(mgr, &ml_dsa_tests[i], mem, oob, pass, fail);
+
+        for (unsigned i = 0; i < DIM(ml_kem_tests); i++)
+                run_ml_kem_variant(mgr, &ml_kem_tests[i], mem, oob, pass, fail);
+
+        /*
+         * A caught SEGFAULT unwinds out of the library, so restore the manager
+         * to a known good state before the next test category runs.
+         */
+        if (*fail != fail_before)
+                init_mgr_for_arch(mgr, arch);
+}
+
+/* ========================================================================== */
 /* Top-level test runner                                                      */
 /* ========================================================================== */
 
@@ -1808,16 +2749,18 @@ run_special_oob_tests(IMB_MGR *mgr, const IMB_ARCH arch, struct oob_mem *mem,
  * Each test vector is exercised across a range of message lengths from
  * min_len to max_test_len in algorithm-appropriate steps.
  *
- * @param [in] mgr  multi-buffer manager
- * @param [in] arch architecture type (for manager reinitialization after SEGFAULT)
- * @param [in] mem  OOB memory allocations
+ * @param [in] mgr      multi-buffer manager
+ * @param [in] arch     architecture type (for manager reinitialization after SEGFAULT)
+ * @param [in] mem      OOB memory allocations
+ * @param [in] pqc_mem  PQC OOB memory allocations
  *
  * @return Aggregate status
  * @retval 0 all tests passed
  * @retval -1 one or more tests failed
  */
 static int
-run_tests_for_arch(IMB_MGR *mgr, const IMB_ARCH arch, struct oob_mem *mem)
+run_tests_for_arch(IMB_MGR *mgr, const IMB_ARCH arch, struct oob_mem *mem,
+                   struct pqc_oob_mem *pqc_mem)
 {
         /* Install signal/exception handler */
 #ifdef _WIN32
@@ -1834,21 +2777,43 @@ run_tests_for_arch(IMB_MGR *mgr, const IMB_ARCH arch, struct oob_mem *mem)
 #endif
 
         unsigned pass = 0, fail = 0;
-        const int total_passes = OOB_NUM * 2;
+        /* with --pqc-only there is no CHECKED / NOCHECK dimension to sweep */
+        const int total_passes = job_api_enabled ? (OOB_NUM * 2) : OOB_NUM;
         int combo = 0;
 
         for (enum oob_type oob = OOB_OVERRUN; oob < OOB_NUM; oob++) {
                 for (int use_nocheck = 0; use_nocheck <= 1; use_nocheck++) {
                         const char *api_name = use_nocheck ? "NOCHECK" : "CHECKED";
 
+                        /*
+                         * The PQC API's have no CHECKED / NOCHECK distinction.
+                         * Here, they are tested together with CHECKED JOB API test iteration.
+                         * If JOB API is disabled and NOCHECK variant is to be tested then
+                         * there is nothing to do in this iteration.
+                         */
+                        if (!job_api_enabled && use_nocheck)
+                                continue;
+
                         printf("  [%d/%d] Testing %s %s (pass=%u, fail=%u) ...\n", ++combo,
                                total_passes, oob_type_name[oob], api_name, pass, fail);
                         fflush(stdout);
 
-                        run_cipher_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass, &fail);
-                        run_hash_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass, &fail);
-                        run_aead_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass, &fail);
-                        run_special_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass, &fail);
+                        if (job_api_enabled) {
+                                run_cipher_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass,
+                                                     &fail);
+                                run_hash_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass, &fail);
+                                run_aead_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass, &fail);
+                                run_special_oob_tests(mgr, arch, mem, oob, use_nocheck, &pass,
+                                                      &fail);
+                        }
+
+                        /*
+                         * The PQC APIs are direct APIs with no CHECKED /
+                         * NOCHECK distinction, so run them once per OOB
+                         * direction rather than once per submit path.
+                         */
+                        if (!use_nocheck)
+                                run_pqc_oob_tests(mgr, arch, pqc_mem, oob, &pass, &fail);
                 }
         }
 
@@ -1887,6 +2852,8 @@ usage(const char *prog)
                "  --gfni-on     Enable GFNI extensions\n"
                "  --gfni-off    Disable GFNI extensions\n"
                "  --max-len N   Maximum message length to test (default: %u)\n"
+               "  --no-pqc      Skip PQC (ML-DSA / ML-KEM) tests\n"
+               "  --pqc-only    Run only the PQC (ML-DSA / ML-KEM) tests\n"
                "  --verbose     Increase tool verbosity\n"
                "  -h, --help    Show this help\n",
                prog, MAX_TEST_LEN_DEFAULT);
@@ -1955,6 +2922,37 @@ check_algorithm_coverage(void)
                 }
         }
 
+        /*
+         * PQC parameter sets. The enums carry no _NUM sentinel, so the last
+         * defined value is used as the upper bound - a newly added parameter
+         * set needs this bound bumped along with the test vector arrays.
+         */
+        uint8_t ml_dsa_seen[IMB_ML_DSA_87 + 1];
+        uint8_t ml_kem_seen[IMB_ML_KEM_1024 + 1];
+
+        memset(ml_dsa_seen, 0, sizeof(ml_dsa_seen));
+        memset(ml_kem_seen, 0, sizeof(ml_kem_seen));
+
+        for (unsigned i = 0; i < DIM(ml_dsa_tests); i++)
+                ml_dsa_seen[ml_dsa_tests[i].alg] = 1;
+
+        for (unsigned i = 0; i < DIM(ml_kem_tests); i++)
+                ml_kem_seen[ml_kem_tests[i].alg] = 1;
+
+        for (int i = IMB_ML_DSA_44; i <= IMB_ML_DSA_87; i++) {
+                if (!ml_dsa_seen[i]) {
+                        printf("WARNING: ML-DSA parameter set %d not tested\n", i);
+                        missing++;
+                }
+        }
+
+        for (int i = IMB_ML_KEM_512; i <= IMB_ML_KEM_1024; i++) {
+                if (!ml_kem_seen[i]) {
+                        printf("WARNING: ML-KEM parameter set %d not tested\n", i);
+                        missing++;
+                }
+        }
+
         return missing;
 }
 
@@ -1968,6 +2966,7 @@ main(int argc, char **argv)
         uint8_t arch_support[IMB_ARCH_NUM];
         uint8_t arch_select[IMB_ARCH_NUM];
         struct oob_mem mem;
+        struct pqc_oob_mem pqc_mem;
         int errors = 0;
         uint64_t flags = 0;
 
@@ -1984,6 +2983,18 @@ main(int argc, char **argv)
                         continue;
                 } else if (strcmp(argv[i], "--verbose") == 0) {
                         quiet_mode = 0;
+                } else if (strcmp(argv[i], "--no-pqc") == 0) {
+                        if (!job_api_enabled) {
+                                printf("--no-pqc cannot be combined with --pqc-only\n");
+                                return EXIT_FAILURE;
+                        }
+                        pqc_enabled = 0;
+                } else if (strcmp(argv[i], "--pqc-only") == 0) {
+                        if (!pqc_enabled) {
+                                printf("--pqc-only cannot be combined with --no-pqc\n");
+                                return EXIT_FAILURE;
+                        }
+                        job_api_enabled = 0;
                 } else if (strcmp(argv[i], "--max-len") == 0) {
                         if (i + 1 >= argc) {
                                 printf("--max-len requires a numeric argument\n");
@@ -2015,6 +3026,17 @@ main(int argc, char **argv)
                 return EXIT_FAILURE;
         }
 
+        /* the ML-DSA mu path needs at least IMB_ML_DSA_MU_BYTES of message */
+        const size_t pqc_msg_size =
+                (max_test_len > IMB_ML_DSA_MU_BYTES) ? max_test_len : IMB_ML_DSA_MU_BYTES;
+
+        if (pqc_mem_alloc(&pqc_mem, pqc_msg_size) != 0) {
+                printf("Error allocating PQC OOB guard memory!\n");
+                pqc_mem_free(&pqc_mem);
+                oob_mem_free(&mem);
+                return EXIT_FAILURE;
+        }
+
         printf("Out-of-Bounds Memory Access Test\n"
                "Library version: %s\n",
                imb_get_version_str());
@@ -2024,6 +3046,7 @@ main(int argc, char **argv)
 
         /* Detect available architectures */
         if (detect_arch(arch_support, flags) < 0) {
+                pqc_mem_free(&pqc_mem);
                 oob_mem_free(&mem);
                 return EXIT_FAILURE;
         }
@@ -2040,6 +3063,7 @@ main(int argc, char **argv)
 
                 if (mgr == NULL) {
                         printf("Error allocating MB_MGR structure!\n");
+                        pqc_mem_free(&pqc_mem);
                         oob_mem_free(&mem);
                         return EXIT_FAILURE;
                 }
@@ -2054,12 +3078,13 @@ main(int argc, char **argv)
                 (void) imb_get_features(mgr, &features);
                 print_tested_arch(features, atype);
 
-                if (run_tests_for_arch(mgr, atype, &mem) != 0)
+                if (run_tests_for_arch(mgr, atype, &mem, &pqc_mem) != 0)
                         errors++;
 
                 free_mb_mgr(mgr);
         }
 
+        pqc_mem_free(&pqc_mem);
         oob_mem_free(&mem);
 
         if (errors == 0)
