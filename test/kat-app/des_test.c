@@ -14,6 +14,7 @@
 
 #include "utils.h"
 #include "cipher_test.h"
+#include "kat_common_cipher.h"
 
 int
 des_test(struct IMB_MGR *mb_mgr);
@@ -51,12 +52,74 @@ free_des_vectors(struct test_json_alloc_ctx *ctx_des, struct test_json_alloc_ctx
         des3_vectors = NULL;
 }
 
+struct des3_job_ctx {
+        uint64_t *ks1;
+        uint64_t *ks2;
+        uint64_t *ks3;
+        const void *des3_keys[3];
+};
+
 static int
-test_des_many(struct IMB_MGR *mb_mgr, const uint64_t *ks, const uint64_t *ks2, const uint64_t *ks3,
-              const void *iv, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
-              int dir, int order, IMB_CIPHER_MODE cipher, const int in_place, const int num_jobs)
+des3_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
+                 void *ctx)
 {
-        const void *ks_ptr[3]; /* 3DES */
+        struct des3_job_ctx *dc = calloc(1, sizeof(*dc));
+        /* vectors with an 8-byte key reuse the same schedule for all 3 rounds */
+        const int multi_key = (vec->keySize / 8) >= 24;
+
+        (void) mb_mgr;
+        (void) ctx;
+        if (dc == NULL)
+                return -1;
+
+        job->user_data = dc;
+
+        dc->ks1 = test_aligned_alloc(16, IMB_DES_KEY_SCHED_SIZE);
+        dc->ks2 = test_aligned_alloc(16, IMB_DES_KEY_SCHED_SIZE);
+        dc->ks3 = test_aligned_alloc(16, IMB_DES_KEY_SCHED_SIZE);
+        if (dc->ks1 == NULL || dc->ks2 == NULL || dc->ks3 == NULL)
+                return -1;
+
+        des_key_schedule(dc->ks1, vec->key);
+        if (multi_key) {
+                des_key_schedule(dc->ks2, vec->key + 8);
+                des_key_schedule(dc->ks3, vec->key + 16);
+        } else {
+                memcpy(dc->ks2, dc->ks1, IMB_DES_KEY_SCHED_SIZE);
+                memcpy(dc->ks3, dc->ks1, IMB_DES_KEY_SCHED_SIZE);
+        }
+
+        dc->des3_keys[0] = dc->ks1;
+        dc->des3_keys[1] = dc->ks2;
+        dc->des3_keys[2] = dc->ks3;
+        job->enc_keys = dc->des3_keys;
+        job->dec_keys = dc->des3_keys;
+        job->key_len_in_bytes = 24;
+        job->iv = (const uint8_t *) vec->iv;
+        job->iv_len_in_bytes = IMB_DES_BLOCK_SIZE;
+        return 0;
+}
+
+static void
+des3_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct des3_job_ctx *dc = job->user_data;
+
+        (void) ctx;
+        if (dc != NULL) {
+                test_aligned_free(dc->ks1);
+                test_aligned_free(dc->ks2);
+                test_aligned_free(dc->ks3);
+                free(dc);
+        }
+        job->user_data = NULL;
+}
+
+static int
+test_des_many(struct IMB_MGR *mb_mgr, const uint64_t *ks, const void *iv, const uint8_t *in_text,
+              const uint8_t *out_text, unsigned text_len, int dir, int order,
+              IMB_CIPHER_MODE cipher, const int in_place, const int num_jobs)
+{
         struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
@@ -75,11 +138,6 @@ test_des_many(struct IMB_MGR *mb_mgr, const uint64_t *ks, const uint64_t *ks2, c
                 }
         }
 
-        /* Used in 3DES only */
-        ks_ptr[0] = ks;
-        ks_ptr[1] = ks2;
-        ks_ptr[2] = ks3;
-
         /* flush the scheduler */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
@@ -96,15 +154,9 @@ test_des_many(struct IMB_MGR *mb_mgr, const uint64_t *ks, const uint64_t *ks2, c
                         job->src = targets[i] + sizeof(padding);
                 }
                 job->cipher_mode = cipher;
-                if (cipher == IMB_CIPHER_DES3) {
-                        job->enc_keys = (const void *) ks_ptr;
-                        job->dec_keys = (const void *) ks_ptr;
-                        job->key_len_in_bytes = 24; /* 3x keys only */
-                } else {
-                        job->enc_keys = ks;
-                        job->dec_keys = ks;
-                        job->key_len_in_bytes = 8;
-                }
+                job->enc_keys = ks;
+                job->dec_keys = ks;
+                job->key_len_in_bytes = 8;
                 job->iv = iv;
                 job->iv_len_in_bytes = 8;
                 job->cipher_start_src_offset_in_bytes = 0;
@@ -177,30 +229,16 @@ end:
 }
 
 static int
-test_des(struct IMB_MGR *mb_mgr, const uint64_t *ks, const uint64_t *ks2, const uint64_t *ks3,
-         const void *iv, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
-         int dir, int order, IMB_CIPHER_MODE cipher, const int in_place)
+test_des(struct IMB_MGR *mb_mgr, const uint64_t *ks, const void *iv, const uint8_t *in_text,
+         const uint8_t *out_text, unsigned text_len, int dir, int order, IMB_CIPHER_MODE cipher,
+         const int in_place)
 {
         int ret = 0;
 
-        if (cipher == IMB_CIPHER_DES3) {
-                if (ks2 == NULL && ks3 == NULL) {
-                        ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text, out_text, text_len,
-                                             dir, order, cipher, in_place, 1);
-                        ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text, out_text, text_len,
-                                             dir, order, cipher, in_place, 32);
-                } else {
-                        ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text, out_text, text_len,
-                                             dir, order, cipher, in_place, 1);
-                        ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text, out_text, text_len,
-                                             dir, order, cipher, in_place, 32);
-                }
-        } else {
-                ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text, out_text, text_len, dir,
-                                     order, cipher, in_place, 1);
-                ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text, out_text, text_len, dir,
-                                     order, cipher, in_place, 32);
-        }
+        ret |= test_des_many(mb_mgr, ks, iv, in_text, out_text, text_len, dir, order, cipher,
+                             in_place, 1);
+        ret |= test_des_many(mb_mgr, ks, iv, in_text, out_text, text_len, dir, order, cipher,
+                             in_place, 32);
         return ret;
 }
 
@@ -223,36 +261,36 @@ test_des_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const char
 
                 des_key_schedule(ks, v->key);
 
-                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->msg,
-                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                             IMB_ORDER_CIPHER_HASH, cipher, 0)) {
+                if (test_des(mb_mgr, ks, v->iv, (const void *) v->msg, (const void *) v->ct,
+                             (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
+                             cipher, 0)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->ct,
-                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
-                             IMB_ORDER_HASH_CIPHER, cipher, 0)) {
+                if (test_des(mb_mgr, ks, v->iv, (const void *) v->ct, (const void *) v->msg,
+                             (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
+                             cipher, 0)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->msg,
-                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                             IMB_ORDER_CIPHER_HASH, cipher, 1)) {
+                if (test_des(mb_mgr, ks, v->iv, (const void *) v->msg, (const void *) v->ct,
+                             (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
+                             cipher, 1)) {
                         printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->ct,
-                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
-                             IMB_ORDER_HASH_CIPHER, cipher, 1)) {
+                if (test_des(mb_mgr, ks, v->iv, (const void *) v->ct, (const void *) v->msg,
+                             (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
+                             cipher, 1)) {
                         printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -263,65 +301,101 @@ test_des_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const char
                 printf("\n");
 }
 
+/*
+ * Builds a vector table once and submits growing batch sizes so that each
+ * job in a batch uses a different vector's key schedule and IV.
+ */
 static void
 test_des3_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const char *banner,
                   struct test_suite_context *ctx)
 {
-        uint64_t ks1[16];
-        uint64_t ks2[16];
-        uint64_t ks3[16];
+        const struct cipher_test **vec_tab;
+        const struct cipher_test *vec;
+        uint32_t num_vectors = 0;
 
         printf("%s:\n", banner);
-        for (; v->msg != NULL; v++) {
-                if (!quiet_mode) {
-#ifdef DEBUG
-                        printf("Standard vector %zu  PTLen:%zu\n", v->tcId, v->msgSize / 8);
-#else
+
+        for (vec = v; vec->msg != NULL; vec++)
+                num_vectors++;
+
+        if (num_vectors == 0) {
+                if (!quiet_mode)
+                        printf("\n");
+                return;
+        }
+
+        vec_tab = malloc(num_vectors * sizeof(*vec_tab));
+        if (vec_tab == NULL) {
+                test_suite_update(ctx, 0, 1);
+                return;
+        }
+        for (uint32_t i = 0; i < num_vectors; i++)
+                vec_tab[i] = &v[i];
+
+        const struct kat_cipher_job_ops enc_ops = {
+                .prepare = des3_job_prepare,
+                .cleanup = des3_job_cleanup,
+                .cipher_mode = IMB_CIPHER_DES3,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = 24,
+                .in_place = 0,
+        };
+        const struct kat_cipher_job_ops dec_ops = {
+                .prepare = des3_job_prepare,
+                .cleanup = des3_job_cleanup,
+                .cipher_mode = IMB_CIPHER_DES3,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = 24,
+                .in_place = 0,
+        };
+        struct kat_cipher_job_ops enc_inplace = enc_ops;
+        struct kat_cipher_job_ops dec_inplace = dec_ops;
+
+        enc_inplace.in_place = 1;
+        dec_inplace.in_place = 1;
+
+        for (size_t j = 0; j < test_num_jobs_size; j++) {
+                const unsigned num_jobs = test_num_jobs[j];
+
+                if (!quiet_mode)
                         printf(".");
-#endif
-                }
-                des_key_schedule(ks1, v->key);
-                des_key_schedule(ks2, v->key + 8);
-                des_key_schedule(ks3, v->key + 16);
 
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->msg,
-                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                             IMB_ORDER_CIPHER_HASH, IMB_CIPHER_DES3, 0)) {
-                        printf("error #%zu encrypt\n", v->tcId);
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs, &enc_ops) <
+                    0) {
+                        printf("error encrypt, %u jobs\n", num_jobs);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->ct,
-                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
-                             IMB_ORDER_HASH_CIPHER, IMB_CIPHER_DES3, 0)) {
-                        printf("error #%zu decrypt\n", v->tcId);
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs, &dec_ops) <
+                    0) {
+                        printf("error decrypt, %u jobs\n", num_jobs);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->msg,
-                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                             IMB_ORDER_CIPHER_HASH, IMB_CIPHER_DES3, 1)) {
-                        printf("error #%zu encrypt in-place\n", v->tcId);
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs,
+                                                 &enc_inplace) < 0) {
+                        printf("error encrypt in-place, %u jobs\n", num_jobs);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->ct,
-                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
-                             IMB_ORDER_HASH_CIPHER, IMB_CIPHER_DES3, 1)) {
-                        printf("error #%zu decrypt in-place\n", v->tcId);
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs,
+                                                 &dec_inplace) < 0) {
+                        printf("error decrypt in-place, %u jobs\n", num_jobs);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
         }
+
         if (!quiet_mode)
                 printf("\n");
+
+        free(vec_tab);
 }
 
 static int
@@ -413,8 +487,7 @@ des_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "3DES-CBC-192");
-        test_des_vectors(mb_mgr, des_vectors, "3DES (single key) standard test vectors",
-                         IMB_CIPHER_DES3, &ctx);
+        test_des3_vectors(mb_mgr, des_vectors, "3DES (single key) standard test vectors", &ctx);
         test_des3_vectors(mb_mgr, des3_vectors, "3DES (multiple keys) test vectors", &ctx);
         errors += test_suite_end(&ctx);
 
