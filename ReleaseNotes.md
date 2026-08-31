@@ -62,6 +62,7 @@ Test Applications
 - Removed custom cipher mode test coverage.
 - Removed custom hash algorithm test coverage.
 - Added SHA3 and SHAKE support to imb-kat, imb-xvalid and imb-acvp applications.
+- Added mixed SHA3/SHAKE algorithm batch test to imb-kat application.
 - Added new zero length message test application.
 - Added zero-length message HMAC-SHA and HMAC-MD5 test vectors.
 - Added ML-DSA (FIPS 204) support for ML-DSA-44, ML-DSA-65 and ML-DSA-87 to imb-kat and imb-acvp applications.

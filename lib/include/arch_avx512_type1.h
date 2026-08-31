@@ -228,32 +228,15 @@ kasumi_f9_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
 IMB_DLL_LOCAL void
 kasumi_1_block_avx512(const uint16_t *key_sched, uint16_t *data);
 
-/* SHA3 multi-buffer submit/flush (sha3_mb_avx512.asm) */
+/* SHA3 / SHAKE multi-buffer submit / flush (sha3_mb_avx512.asm)
+ *
+ * One pair of functions serves SHA3-224/256/384/512 and SHAKE128/256.
+ * The sponge rate/domain-separation and output length are derived from
+ * job->hash_alg and job->auth_tag_output_len_in_bytes.
+ */
 IMB_DLL_LOCAL IMB_JOB *
-submit_job_sha3_224_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+submit_job_sha3_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
 IMB_DLL_LOCAL IMB_JOB *
-flush_job_sha3_224_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-submit_job_sha3_256_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-flush_job_sha3_256_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-submit_job_sha3_384_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-flush_job_sha3_384_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-submit_job_sha3_512_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-flush_job_sha3_512_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-
-/* SHAKE multi-buffer submit / flush (sha3_mb_avx512.asm) */
-IMB_DLL_LOCAL IMB_JOB *
-submit_job_shake128_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-flush_job_shake128_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-submit_job_shake256_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-flush_job_shake256_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
+flush_job_sha3_avx512(MB_MGR_SHA3_OOO *state, IMB_JOB *job);
 
 #endif /* IMB_ASM_AVX512_T1_H */

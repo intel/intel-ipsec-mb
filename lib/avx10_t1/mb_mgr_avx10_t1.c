@@ -165,21 +165,9 @@
 #define SUBMIT_JOB_SHA256 submit_job_sha256_avx512
 #define FLUSH_JOB_SHA256  flush_job_sha256_avx512
 
-/* SHA3-224/256/384/512 */
-#define SUBMIT_JOB_SHA3_224 submit_job_sha3_224_avx512
-#define FLUSH_JOB_SHA3_224  flush_job_sha3_224_avx512
-#define SUBMIT_JOB_SHA3_256 submit_job_sha3_256_avx512
-#define FLUSH_JOB_SHA3_256  flush_job_sha3_256_avx512
-#define SUBMIT_JOB_SHA3_384 submit_job_sha3_384_avx512
-#define FLUSH_JOB_SHA3_384  flush_job_sha3_384_avx512
-#define SUBMIT_JOB_SHA3_512 submit_job_sha3_512_avx512
-#define FLUSH_JOB_SHA3_512  flush_job_sha3_512_avx512
-
-/* SHAKE128/256 */
-#define SUBMIT_JOB_SHAKE128 submit_job_shake128_avx512
-#define FLUSH_JOB_SHAKE128  flush_job_shake128_avx512
-#define SUBMIT_JOB_SHAKE256 submit_job_shake256_avx512
-#define FLUSH_JOB_SHAKE256  flush_job_shake256_avx512
+/* SHA3-224/256/384/512 and SHAKE128/256 share one OOO manager. */
+#define SUBMIT_JOB_SHA3 submit_job_sha3_avx512
+#define FLUSH_JOB_SHA3  flush_job_sha3_avx512
 
 #ifdef SMX_NI
 #define SUBMIT_JOB_SHA384 submit_job_sha384_ni_avx2
@@ -483,15 +471,8 @@ reset_ooo_mgrs(IMB_MGR *state)
         /* Init SHA512 out-of-order fields */
         ooo_mgr_sha512_reset(state->sha_512_ooo, 2);
 
-        /* Init SHA3-224/256/384/512 out-of-order fields */
-        ooo_mgr_sha3_reset(state->sha3_224_ooo, AVX512_NUM_SHA3_LANES);
-        ooo_mgr_sha3_reset(state->sha3_256_ooo, AVX512_NUM_SHA3_LANES);
-        ooo_mgr_sha3_reset(state->sha3_384_ooo, AVX512_NUM_SHA3_LANES);
-        ooo_mgr_sha3_reset(state->sha3_512_ooo, AVX512_NUM_SHA3_LANES);
-
-        /* Init SHAKE128/256 out-of-order fields */
-        ooo_mgr_shake128_reset(state->shake128_ooo, AVX512_NUM_SHA3_LANES);
-        ooo_mgr_shake256_reset(state->shake256_ooo, AVX512_NUM_SHA3_LANES);
+        /* Init shared SHA3-224/256/384/512 + SHAKE128/256 out-of-order fields */
+        ooo_mgr_sha3_reset(state->sha3_ooo, AVX512_NUM_SHA3_LANES);
 
         /*  Init AES-CFB out-of-order fields */
         ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 16);

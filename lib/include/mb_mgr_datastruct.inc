@@ -545,6 +545,8 @@ FIELD   _sha3_kstate,           25*MAX_SHA3_LANES*8,            32      ; 4-lane
 FIELD   _sha3_data_ptr,         MAX_SHA3_LANES*8,               32      ; array of 4 pointers to input data
                                                                         ; 32B aligned: flush paths access the
                                                                         ; whole array with aligned YMM moves
+FIELD   _sha3_rate,             MAX_SHA3_LANES*8,               32      ; per-lane sponge rate in bytes
+FIELD   _sha3_pad,              MAX_SHA3_LANES*8,               32      ; per-lane domain separation byte
 END_FIELDS
 %assign _SHA3_ARGS_size         _FIELD_OFFSET
 %assign _SHA3_ARGS_align        _STRUCT_ALIGN
@@ -567,6 +569,7 @@ START_FIELDS    ; MB_MGR_SHA3_OOO
 FIELD   _sha3_args,                 _SHA3_ARGS_size,                            _SHA3_ARGS_align
 FIELD   _sha3_ldata,                _SHA3_LANE_DATA_size*MAX_SHA3_LANES,        _SHA3_LANE_DATA_align
 FIELD   _sha3_lens,                 MAX_SHA3_LANES*8,                           32      ; 4 x u64 byte lengths
+FIELD   _sha3_blocks,               MAX_SHA3_LANES*8,                           32      ; 4 x u64 whole rate-blocks left
 FIELD   _sha3_unused_lanes,         8,                                          8
 FIELD   _sha3_num_lanes_inuse,      4,                                          4
 END_FIELDS
@@ -575,5 +578,7 @@ END_FIELDS
 
 _sha3_args_kstate       equ     _sha3_args + _sha3_kstate
 _sha3_args_data_ptr     equ     _sha3_args + _sha3_data_ptr
+_sha3_args_rate         equ     _sha3_args + _sha3_rate
+_sha3_args_pad          equ     _sha3_args + _sha3_pad
 
 %endif ;; MB_MGR_DATASTRUCT_INC_INCLUDED

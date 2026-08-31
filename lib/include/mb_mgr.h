@@ -276,12 +276,7 @@ struct IMB_MGR {
         void *sha_256_ooo;
         void *sha_384_ooo;
         void *sha_512_ooo;
-        void *sha3_224_ooo;
-        void *sha3_256_ooo;
-        void *sha3_384_ooo;
-        void *sha3_512_ooo;
-        void *shake128_ooo;
-        void *shake256_ooo;
+        void *sha3_ooo; /* shared by SHA3-224/256/384/512 and SHAKE128/256 */
         void *aes_cfb_128_ooo;
         void *aes_cfb_192_ooo;
         void *aes_cfb_256_ooo;

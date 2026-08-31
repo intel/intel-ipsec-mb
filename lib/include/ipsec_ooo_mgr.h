@@ -127,12 +127,22 @@ typedef struct {
         /* 32-byte aligned: the flush paths load/store the whole array with
          * aligned YMM moves (vmovdqa/vmovdqa64) */
         DECLARE_ALIGNED(const uint8_t *data_ptr[AVX2_NUM_SHA3_LANES], 32);
+        /* per-lane sponge rate in bytes (72 / 104 / 136 / 144 / 168).
+         * Lanes may run different SHA3/SHAKE variants at the same time, so the
+         * rate is a per-lane property rather than a property of the manager.
+         * 32-byte aligned: loaded as a vector by the variable-rate absorb. */
+        DECLARE_ALIGNED(uint64_t rate[AVX512_NUM_SHA3_LANES], 32);
+        /* per-lane domain separation byte (0x06 for SHA3, 0x1f for SHAKE) */
+        DECLARE_ALIGNED(uint64_t pad[AVX512_NUM_SHA3_LANES], 32);
 } SHA3_ARGS;
 
 typedef struct {
         SHA3_ARGS args;
         SHA3_LANE_DATA ldata[AVX512_NUM_SHA3_LANES];
         DECLARE_ALIGNED(uint64_t lens[AVX512_NUM_SHA3_LANES], 32);
+        /* number of whole rate-blocks still to absorb: lens[i] / rate[i].
+         * Maintained incrementally so the lockstep loop never divides. */
+        DECLARE_ALIGNED(uint64_t blocks[AVX512_NUM_SHA3_LANES], 32);
         uint64_t unused_lanes;
         uint32_t num_lanes_inuse;
         uint32_t total_num_lanes;
