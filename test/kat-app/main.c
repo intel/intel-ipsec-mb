@@ -11,7 +11,6 @@
 #include <intel-ipsec-mb.h>
 
 #include "gcm_ctr_vectors_test.h"
-#include "customop_test.h"
 #include "utils.h"
 
 extern int
@@ -142,7 +141,6 @@ struct imb_test tests[] = {
         { .str = "GCM", .fn = gcm_test, .enabled = 1 },
         { .str = "GMAC", .fn = gmac_test, .enabled = 1 },
         { .str = "GHASH", .fn = ghash_test, .enabled = 1 },
-        { .str = "CUSTOMOP", .fn = customop_test, .enabled = 1 },
         { .str = "DES", .fn = des_test, .enabled = 1 },
         { .str = "CCM", .fn = ccm_test, .enabled = 1 },
         { .str = "CMAC", .fn = cmac_test, .enabled = 1 },

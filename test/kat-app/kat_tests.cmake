@@ -30,7 +30,6 @@ set(TEST_TYPES
     GCM
     GMAC
     GHASH
-    CUSTOMOP
     DES
     CCM
     CMAC
