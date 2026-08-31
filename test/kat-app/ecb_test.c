@@ -14,6 +14,7 @@
 
 #include "utils.h"
 #include "cipher_test.h"
+#include "kat_common_cipher.h"
 
 int
 ecb_test(struct IMB_MGR *mb_mgr);
@@ -27,191 +28,110 @@ free_ecb_vectors(struct test_json_alloc_ctx *ctx)
         ecb_vectors = NULL;
 }
 
-static int
-ecb_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *target,
-           const uint8_t *padding, const size_t sizeof_padding, const unsigned text_len)
-{
-        const int num = (const int) ((uint64_t) job->user_data2);
+struct ecb_job_prepare_ctx {
+        const void *enc_keys;
+        const void *dec_keys;
+        size_t key_sched_len;
+};
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d error status:%d, job %d", __LINE__, job->status, num);
-                return 0;
-        }
-        if (memcmp(out_text, target + sizeof_padding, text_len)) {
-                printf("%d mismatched\n", num);
-                return 0;
-        }
-        if (memcmp(padding, target, sizeof_padding)) {
-                printf("%d overwrite head\n", num);
-                return 0;
-        }
-        if (memcmp(padding, target + sizeof_padding + text_len, sizeof_padding)) {
-                printf("%d overwrite tail\n", num);
-                return 0;
-        }
-        return 1;
+struct ecb_job_ctx {
+        void *enc_keys;
+        void *dec_keys;
+};
+
+/* AES key schedule size, per FIPS-197: Nr = Nk + 6 rounds, Nr + 1 round keys of 16 bytes each. */
+static size_t
+aes_key_sched_len(const unsigned key_len_bytes)
+{
+        const unsigned key_len_words = key_len_bytes / 4; /* Nk */
+        const unsigned num_rounds = key_len_words + 6;    /* Nr */
+        const unsigned num_round_keys = num_rounds + 1;
+
+        return num_round_keys * 16;
 }
 
 static int
-test_ecb_many(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const uint8_t *in_text,
-              const uint8_t *out_text, unsigned text_len, int dir, int order,
-              IMB_CIPHER_MODE cipher, const int in_place, const int key_len, const int num_jobs)
+ecb_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
+                void *ctx)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        int i, jobs_rx = 0, ret = -1;
+        const struct ecb_job_prepare_ctx *prepare_ctx = ctx;
+        struct ecb_job_ctx *job_ctx = calloc(1, sizeof(*job_ctx));
 
-        assert(targets != NULL);
+        (void) mb_mgr;
+        (void) vec;
+        if (job_ctx == NULL)
+                return -1;
 
-        memset(padding, -1, sizeof(padding));
+        job->user_data = job_ctx;
 
-        for (i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(text_len + (sizeof(padding) * 2));
-                memset(targets[i], -1, text_len + (sizeof(padding) * 2));
-                if (in_place) {
-                        /* copy input text to the allocated buffer */
-                        memcpy(targets[i] + sizeof(padding), in_text, text_len);
-                }
+        /* each job gets its own exactly-sized copy of the key schedule */
+        job_ctx->enc_keys = test_aligned_alloc(16, prepare_ctx->key_sched_len);
+        job_ctx->dec_keys = test_aligned_alloc(16, prepare_ctx->key_sched_len);
+        if (job_ctx->enc_keys == NULL || job_ctx->dec_keys == NULL)
+                return -1;
+
+        memcpy(job_ctx->enc_keys, prepare_ctx->enc_keys, prepare_ctx->key_sched_len);
+        memcpy(job_ctx->dec_keys, prepare_ctx->dec_keys, prepare_ctx->key_sched_len);
+
+        job->enc_keys = job_ctx->enc_keys;
+        job->dec_keys = job_ctx->dec_keys;
+        return 0;
+}
+
+static void
+ecb_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct ecb_job_ctx *job_ctx = job->user_data;
+
+        (void) ctx;
+        if (job_ctx != NULL) {
+                test_aligned_free(job_ctx->enc_keys);
+                test_aligned_free(job_ctx->dec_keys);
+                free(job_ctx);
         }
-
-        /* flush the scheduler */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = order;
-                if (!in_place) {
-                        job->dst = targets[i] + sizeof(padding);
-                        job->src = in_text;
-                } else {
-                        job->dst = targets[i] + sizeof(padding);
-                        job->src = targets[i] + sizeof(padding);
-                }
-                job->cipher_mode = cipher;
-                job->enc_keys = enc_keys;
-                job->dec_keys = dec_keys;
-                job->key_len_in_bytes = key_len;
-
-                job->iv_len_in_bytes = 0;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = text_len;
-                job->user_data = targets[i];
-                job->user_data2 = (void *) ((uint64_t) i);
-
-                job->hash_alg = IMB_AUTH_NULL;
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        jobs_rx++;
-                        if (!ecb_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
-                                        text_len))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (!ecb_job_ok(job, out_text, job->user_data, padding, sizeof(padding), text_len))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++)
-                free(targets[i]);
-        free(targets);
-        return ret;
+        job->user_data = NULL;
 }
 
 static int
-test_ecb_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const uint8_t *in_text,
-               const uint8_t *out_text, unsigned text_len, int dir, IMB_CIPHER_MODE cipher,
-               const int in_place, const int key_len, const int num_jobs)
+test_ecb_many(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const struct cipher_test *vec,
+              int dir, int order, IMB_CIPHER_MODE cipher, const int in_place, const int key_len,
+              const int num_jobs)
 {
-        IMB_JOB burst_jobs[IMB_MAX_BURST_SIZE];
-        uint8_t padding[16];
-        uint32_t n_jobs = num_jobs;
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        int i, jobs_rx = 0, job_idx = 0, ret = -1;
-        const uint32_t burst_sz = (n_jobs > IMB_MAX_BURST_SIZE) ? IMB_MAX_BURST_SIZE : n_jobs;
+        struct ecb_job_prepare_ctx prepare_ctx = { enc_keys, dec_keys, aes_key_sched_len(key_len) };
+        const struct cipher_test *vec_ptr = vec;
+        const struct kat_cipher_job_ops ops = {
+                .prepare = ecb_job_prepare,
+                .cleanup = ecb_job_cleanup,
+                .ctx = &prepare_ctx,
+                .cipher_mode = cipher,
+                .cipher_direction = dir,
+                .chain_order = order,
+                .key_len_in_bytes = key_len,
+                .in_place = in_place,
+        };
 
-        if (targets == NULL)
-                return ret;
+        return kat_cipher_test_submit_flush(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
+}
 
-        memset(targets, 0, num_jobs * sizeof(void *));
-        memset(padding, -1, sizeof(padding));
+static int
+test_ecb_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys,
+               const struct cipher_test *vec, int dir, IMB_CIPHER_MODE cipher, const int in_place,
+               const int key_len, const int num_jobs)
+{
+        struct ecb_job_prepare_ctx prepare_ctx = { enc_keys, dec_keys, aes_key_sched_len(key_len) };
+        const struct cipher_test *vec_ptr = vec;
+        const struct kat_cipher_job_ops ops = {
+                .prepare = ecb_job_prepare,
+                .cleanup = ecb_job_cleanup,
+                .ctx = &prepare_ctx,
+                .cipher_mode = cipher,
+                .cipher_direction = dir,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = key_len,
+                .in_place = in_place,
+        };
 
-        for (i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(text_len + (sizeof(padding) * 2));
-                if (targets[i] == NULL)
-                        goto end;
-                memset(targets[i], -1, text_len + (sizeof(padding) * 2));
-                if (in_place) {
-                        /* copy input text to the allocated buffer */
-                        memcpy(targets[i] + sizeof(padding), in_text, text_len);
-                }
-        }
-
-        while (n_jobs) {
-                const int n = (n_jobs > burst_sz) ? burst_sz : n_jobs;
-
-                for (i = 0; i < n; i++) {
-                        IMB_JOB *job = &burst_jobs[i];
-
-                        if (!in_place)
-                                job->src = in_text;
-                        else
-                                job->src = targets[job_idx] + sizeof(padding);
-                        job->dst = targets[job_idx] + sizeof(padding);
-                        job->enc_keys = enc_keys;
-                        job->dec_keys = dec_keys;
-
-                        job->iv_len_in_bytes = 0;
-                        job->cipher_start_src_offset_in_bytes = 0;
-                        job->msg_len_to_cipher_in_bytes = text_len;
-                        job->user_data = targets[job_idx];
-                        job->user_data2 = (void *) ((uint64_t) job_idx);
-
-                        job_idx++;
-                }
-
-                jobs_rx = IMB_SUBMIT_CIPHER_BURST(mb_mgr, burst_jobs, n, cipher, dir, key_len);
-
-                if (jobs_rx != n) {
-                        printf("Expected %d jobs, received %d\n", n, jobs_rx);
-                        goto end;
-                }
-
-                for (i = 0; i < jobs_rx; i++) {
-                        IMB_JOB *job = &burst_jobs[i];
-
-                        if (!ecb_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
-                                        text_len))
-                                goto end;
-                }
-                n_jobs -= n;
-        }
-
-        ret = 0;
-
-end:
-        for (i = 0; i < num_jobs; i++)
-                if (targets[i] != NULL)
-                        free(targets[i]);
-        if (targets != NULL)
-                free(targets);
-        return ret;
+        return kat_cipher_test_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
 }
 
 static void
@@ -252,8 +172,7 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int
                         break;
                 }
 
-                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, (const void *) v->msg,
-                                  (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_ENCRYPT,
                                   IMB_ORDER_CIPHER_HASH, cipher, 0, (unsigned) v->keySize / 8,
                                   num_jobs)) {
                         printf("error #%zu encrypt\n", v->tcId);
@@ -262,8 +181,7 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, (const void *) v->ct,
-                                  (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
+                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_DECRYPT,
                                   IMB_ORDER_HASH_CIPHER, cipher, 0, (unsigned) v->keySize / 8,
                                   num_jobs)) {
                         printf("error #%zu decrypt\n", v->tcId);
@@ -272,8 +190,7 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, (const void *) v->msg,
-                                  (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_ENCRYPT,
                                   IMB_ORDER_CIPHER_HASH, cipher, 1, (unsigned) v->keySize / 8,
                                   num_jobs)) {
                         printf("error #%zu encrypt in-place\n", v->tcId);
@@ -282,8 +199,7 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, (const void *) v->ct,
-                                  (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
+                if (test_ecb_many(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_DECRYPT,
                                   IMB_ORDER_HASH_CIPHER, cipher, 1, (unsigned) v->keySize / 8,
                                   num_jobs)) {
                         printf("error #%zu decrypt in-place\n", v->tcId);
@@ -293,38 +209,32 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int
                 }
 
                 // test burst API
-                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->msg,
-                                   (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                                   cipher, 0, (unsigned) v->keySize / 8, num_jobs)) {
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_ENCRYPT, cipher, 0,
+                                   (unsigned) v->keySize / 8, num_jobs)) {
                         printf("error #%zu burst encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->ct,
-                                   (const void *) v->msg, (unsigned) v->msgSize / 8,
-                                   IMB_DIR_DECRYPT, cipher, 0, (unsigned) v->keySize / 8,
-                                   num_jobs)) {
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_DECRYPT, cipher, 0,
+                                   (unsigned) v->keySize / 8, num_jobs)) {
                         printf("error #%zu burst decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->msg,
-                                   (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                                   cipher, 1, (unsigned) v->keySize / 8, num_jobs)) {
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_ENCRYPT, cipher, 1,
+                                   (unsigned) v->keySize / 8, num_jobs)) {
                         printf("error #%zu burst encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->ct,
-                                   (const void *) v->msg, (unsigned) v->msgSize / 8,
-                                   IMB_DIR_DECRYPT, cipher, 1, (unsigned) v->keySize / 8,
-                                   num_jobs)) {
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, v, IMB_DIR_DECRYPT, cipher, 1,
+                                   (unsigned) v->keySize / 8, num_jobs)) {
                         printf("error #%zu burst decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
