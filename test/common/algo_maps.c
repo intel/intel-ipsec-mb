@@ -204,7 +204,6 @@ const uint8_t auth_tag_len_bytes[] = {
         12,                        /* IMB_AUTH_MD5 */
         0,                         /* IMB_AUTH_NULL */
         16,                        /* IMB_AUTH_AES_GMAC */
-        0,                         /* IMB_AUTH_CUSTOM HASH */
         16,                        /* IMB_AES_CCM */
         16,                        /* IMB_AES_CMAC */
         20,                        /* IMB_PLAIN_SHA1 */

@@ -760,10 +760,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
                 params->cipher_mode = c_mode;
 
                 for (hash_alg = IMB_AUTH_HMAC_SHA_1; hash_alg < IMB_AUTH_NUM; hash_alg++) {
-                        /* Skip IMB_AUTH_CUSTOM */
-                        if (hash_alg == IMB_AUTH_CUSTOM)
-                                continue;
-
                         /* Skip not supported combinations */
                         if (!is_valid_combination(c_mode, hash_alg))
                                 continue;

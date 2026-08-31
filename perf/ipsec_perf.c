@@ -162,8 +162,7 @@ enum test_hash_alg_e {
         TEST_HASH_CMAC_256,
         TEST_NULL_HASH,
         TEST_DOCSIS_CRC32,
-        TEST_HASH_GCM,    /* Additional field used by GCM, not translated */
-        TEST_CUSTOM_HASH, /* unused */
+        TEST_HASH_GCM, /* Additional field used by GCM, not translated */
         TEST_HASH_CCM,
         TEST_PON_CRC_BIP,
         TEST_ZUC_EIA3,
@@ -695,7 +694,6 @@ const uint32_t auth_tag_length_bytes[] = {
         12,                        /* MD5 */
         0,                         /* NULL_HASH */
         16,                        /* AES_GMAC */
-        0,                         /* CUSTOM HASH */
         16,                        /* AES_CCM */
         16,                        /* AES_CMAC */
         20,                        /* PLAIN_SHA1 */
@@ -3331,7 +3329,6 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                      "NULL_HASH",
                                                                      "CRC32",
                                                                      "GCM",
-                                                                     "CUSTOM",
                                                                      "CCM",
                                                                      "BIP-CRC32",
                                                                      "ZUC_EIA3",

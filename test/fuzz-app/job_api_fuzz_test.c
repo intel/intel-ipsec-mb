@@ -17,13 +17,6 @@
 int
 LLVMFuzzerTestOneInput(const uint8_t *, size_t);
 
-static int
-custom_op(struct IMB_JOB *job)
-{
-        (void) job;
-        return 0;
-}
-
 static void
 clamp_lengths(struct IMB_JOB *job, const uint64_t buffsize)
 {
@@ -144,9 +137,6 @@ fill_additional_hash_data(struct IMB_JOB *job, void *buff, uint64_t buffsize)
         const IMB_HASH_ALG hashMode = job->hash_alg;
 
         switch (hashMode) {
-        case IMB_AUTH_CUSTOM:
-                job->hash_func = custom_op;
-                break;
         case IMB_AUTH_HMAC_SHA_1:
         case IMB_AUTH_HMAC_SHA_224:
         case IMB_AUTH_HMAC_SHA_256:
@@ -299,8 +289,6 @@ hash_selection(void)
                         return IMB_AUTH_NULL;
                 else if (strcmp(a, "IMB_AUTH_AES_GMAC") == 0)
                         return IMB_AUTH_AES_GMAC;
-                else if (strcmp(a, "IMB_AUTH_CUSTOM") == 0)
-                        return IMB_AUTH_CUSTOM;
                 else if (strcmp(a, "IMB_AUTH_AES_CCM") == 0)
                         return IMB_AUTH_AES_CCM;
                 else if (strcmp(a, "IMB_AUTH_AES_CMAC") == 0)

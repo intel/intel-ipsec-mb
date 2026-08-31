@@ -153,16 +153,6 @@ test_job_api(struct IMB_MGR *mb_mgr)
 }
 
 /*
- * @brief Dummy function for custom hash and cipher modes
- */
-static int
-dummy_cipher_hash_func(struct IMB_JOB *job)
-{
-        (void) job;
-        return 0;
-}
-
-/*
  * @brief Fills in job structure with valid settings
  */
 static void
@@ -182,7 +172,6 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 12, /* IMB_AUTH_MD5 */
                 0,  /* IMB_AUTH_NULL */
                 16, /* IMB_AUTH_AES_GMAC */
-                0,  /* IMB_AUTH_CUSTOM */
                 16, /* IMB_AUTH_AES_CCM */
                 16, /* IMB_AUTH_AES_CMAC */
                 20, /* IMB_AUTH_SHA_1 */
@@ -441,9 +430,6 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->u.XCBC._k1_expanded = (const uint32_t *) dust_bin;
                 job->u.XCBC._k2 = dust_bin;
                 job->u.XCBC._k3 = dust_bin;
-                break;
-        case IMB_AUTH_CUSTOM:
-                job->hash_func = dummy_cipher_hash_func;
                 break;
         case IMB_AUTH_AES_GMAC:
                 job->u.GCM.aad = dust_bin;
@@ -1194,7 +1180,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
+                                if (hash == IMB_AUTH_NULL)
                                         continue;
 
                                 /*
@@ -1226,7 +1212,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
+                                if (hash == IMB_AUTH_NULL)
                                         continue;
 
                                 /*
@@ -1260,7 +1246,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
+                                if (hash == IMB_AUTH_NULL)
                                         continue;
 
                                 /*
@@ -1301,9 +1287,8 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
                                 /* skip algorithms with no max length limit */
-                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM ||
-                                    hash == IMB_AUTH_PON_CRC_BIP || hash == IMB_AUTH_AES_GMAC ||
-                                    hash == IMB_AUTH_AES_GMAC_128 ||
+                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_PON_CRC_BIP ||
+                                    hash == IMB_AUTH_AES_GMAC || hash == IMB_AUTH_AES_GMAC_128 ||
                                     hash == IMB_AUTH_AES_GMAC_192 ||
                                     hash == IMB_AUTH_AES_GMAC_256 ||
                                     hash == IMB_AUTH_CRC32_ETHERNET_FCS ||
@@ -2508,7 +2493,7 @@ test_reset_api(struct IMB_MGR *mb_mgr)
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++) {
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                         for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
+                                if (hash == IMB_AUTH_NULL)
                                         continue;
 
                                 /* Hash only */

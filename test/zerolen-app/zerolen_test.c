@@ -1471,7 +1471,6 @@ check_algorithm_coverage(void)
         cipher_seen[IMB_CIPHER_CHACHA20_POLY1305_SGL] = 1; /* SGL variant */
 
         hash_seen[IMB_AUTH_NULL] = 1;
-        hash_seen[IMB_AUTH_CUSTOM] = 1;
         hash_seen[IMB_AUTH_PON_CRC_BIP] = 1;           /* tested in special_tests */
         hash_seen[IMB_AUTH_DOCSIS_CRC32] = 1;          /* tested in special_tests */
         hash_seen[IMB_AUTH_GCM_SGL] = 1;               /* SGL variant */

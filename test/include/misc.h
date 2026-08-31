@@ -204,8 +204,6 @@ misc_hash_alg_to_str(const IMB_HASH_ALG mode)
                 return "null";
         case IMB_AUTH_AES_GMAC:
                 return "aead-aes-gcm";
-        case IMB_AUTH_CUSTOM:
-                return "custom";
         case IMB_AUTH_AES_CCM:
                 return "aes-ccm";
         case IMB_AUTH_AES_CMAC:

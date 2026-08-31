@@ -46,6 +46,7 @@ Library
 - Added constant time library build based on Valgrind memory check.
 - Removed QUIC API support.
 - Removed custom cipher mode support (`IMB_CIPHER_CUSTOM` and `IMB_JOB::cipher_func`).
+- Removed custom hash algorithm support (`IMB_AUTH_CUSTOM` and `IMB_JOB::hash_func`).
 
 Test Applications
 - Added new `imb-safe-check` application scanning all algorithms, message sizes,
@@ -59,6 +60,7 @@ Test Applications
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Removed custom cipher mode test coverage.
+- Removed custom hash algorithm test coverage.
 - Added SHA3 and SHAKE support to imb-kat, imb-xvalid and imb-acvp applications.
 - Added new zero length message test application.
 - Added zero-length message HMAC-SHA and HMAC-MD5 test vectors.

@@ -434,7 +434,6 @@ typedef enum {
         IMB_AUTH_MD5, /**< HMAC-MD5 */
         IMB_AUTH_NULL,
         IMB_AUTH_AES_GMAC,
-        IMB_AUTH_CUSTOM,
         IMB_AUTH_AES_CCM,  /**< AES128-CCM */
         IMB_AUTH_AES_CMAC, /**< AES128-CMAC */
         IMB_AUTH_SHA_1,    /**< SHA1 */
@@ -670,9 +669,6 @@ typedef struct IMB_JOB {
 
         void *user_data;  /**< Pointer 1 to user data */
         void *user_data2; /**< Pointer 2 to user data */
-
-        int (*hash_func)(struct IMB_JOB *);
-        /**< Customer hash function */
 
         IMB_SGL_STATE sgl_state;
         /**< SGL state (IMB_SGL_INIT/IMB_SGL_UPDATE/IMB_SGL_COMPLETE/

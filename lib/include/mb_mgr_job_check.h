@@ -210,7 +210,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_AUTH_CRC7_FP_HEADER:
         case IMB_AUTH_CRC6_IUUP_HEADER:
         case IMB_AUTH_GHASH:
-        case IMB_AUTH_CUSTOM:
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_256:
         case IMB_AUTH_SHA_1:
@@ -329,7 +328,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 16, /* IMB_AUTH_MD5 */
                 0,  /* IMB_AUTH_NULL */
                 16, /* IMB_AUTH_AES_GMAC */
-                0,  /* IMB_AUTH_CUSTOM */
                 0,  /* IMB_AUTH_AES_CCM */
                 16, /* IMB_AUTH_AES_CMAC */
                 20, /* IMB_AUTH_SHA_1 */
@@ -394,7 +392,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 12, /* IMB_AUTH_MD5 */
                 0,  /* IMB_AUTH_NULL */
                 16, /* IMB_AUTH_AES_GMAC */
-                0,  /* IMB_AUTH_CUSTOM */
                 0,  /* IMB_AUTH_AES_CCM */
                 16, /* IMB_AUTH_AES_CMAC */
                 20, /* IMB_AUTH_SHA_1 */
@@ -1821,12 +1818,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        return 1;
-                }
-                break;
-        case IMB_AUTH_CUSTOM:
-                if (job->hash_func == NULL) {
-                        imb_set_errno(state, EFAULT);
                         return 1;
                 }
                 break;
