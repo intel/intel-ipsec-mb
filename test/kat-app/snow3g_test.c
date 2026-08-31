@@ -16,6 +16,7 @@
 #include "cipher_test.h"
 #include "mac_test.h"
 #include "kat_common_hash.h"
+#include "kat_common_cipher.h"
 
 #define IMB_SNOW3G_PAD_LEN               16
 #define IMB_SNOW3G_MAX_DATA_LEN          3048
@@ -161,216 +162,144 @@ snow3g_uia2_job_cleanup(struct IMB_JOB *job, void *ctx)
         job->user_data = NULL;
 }
 
-static inline int
-submit_uea2_jobs(struct IMB_MGR *mb_mgr, snow3g_key_schedule_t *const *keys, uint8_t **const ivs,
-                 uint8_t **const src, uint8_t **const dst, const uint32_t *bytelens,
-                 const uint32_t *byte_offsets, const int dir, const unsigned int num_jobs)
+/******************************************************************************
+ * Validates SNOW3G F8 (UEA2) encryption/decryption using a given set of test
+ * vectors, submitting batches from 1 up to the number of supported buffers.
+ * Each job uses a different vector, exercising multi-key scheduling through
+ * the shared cipher submit/flush helper.
+ ******************************************************************************/
+struct snow3g_uea2_job_ctx {
+        snow3g_key_schedule_t *key_sched;
+        uint8_t *key;
+        uint8_t *iv;
+};
+
+static int
+snow3g_uea2_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
+                        void *ctx)
 {
-        IMB_JOB *job;
-        unsigned int i;
-        unsigned int jobs_rx = 0;
+        struct snow3g_uea2_job_ctx *uea2 = calloc(1, sizeof(*uea2));
+        const size_t key_sched_size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
 
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->cipher_mode = IMB_CIPHER_SNOW3G_UEA2;
-                job->src = src[i];
-                job->dst = dst[i];
-                job->iv = ivs[i];
-                job->iv_len_in_bytes = 16;
-                job->enc_keys = keys[i];
-                job->key_len_in_bytes = 16;
-
-                job->cipher_start_src_offset_in_bytes = byte_offsets[i];
-                job->msg_len_to_cipher_in_bytes = bytelens[i];
-                job->hash_alg = IMB_AUTH_NULL;
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        jobs_rx++;
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %u", __LINE__, job->status, i);
-                                return -1;
-                        }
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d\n", __LINE__, job->status);
-                        return -1;
-                }
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+        (void) ctx;
+        if (uea2 == NULL)
                 return -1;
-        }
 
+        job->user_data = uea2;
+        if (key_sched_size == 0)
+                return -1;
+
+        uea2->key = test_aligned_alloc(16, vec->keySize / 8);
+        uea2->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        uea2->key_sched = test_aligned_alloc(16, key_sched_size);
+        if (uea2->key == NULL || uea2->iv == NULL || uea2->key_sched == NULL)
+                return -1;
+
+        memcpy(uea2->key, vec->key, vec->keySize / 8);
+        memcpy(uea2->iv, vec->iv, vec->ivSize / 8);
+        if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, uea2->key, uea2->key_sched) != 0)
+                return -1;
+
+        job->enc_keys = uea2->key_sched;
+        job->dec_keys = uea2->key_sched;
+        job->iv = uea2->iv;
+        job->iv_len_in_bytes = IMB_SNOW3G_IV_LEN_IN_BYTES;
+        job->key_len_in_bytes = 16;
         return 0;
 }
 
-/******************************************************************************
- * Validates SNOW3G F8 (UEA2) encryption/decryption using a given set of test
- * vectors, submitting a growing number of jobs in a single batch (from 1 up
- * to IMB_SNOW3G_NUM_SUPPORTED_BUFFERS), cycling through all the available
- * test vectors, so that each job in the batch uses a different key/IV/
- * message pair.
- ******************************************************************************/
+static void
+snow3g_uea2_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct snow3g_uea2_job_ctx *uea2 = job->user_data;
+
+        (void) ctx;
+        if (uea2 != NULL) {
+                test_aligned_free(uea2->key_sched);
+                test_aligned_free(uea2->key);
+                test_aligned_free(uea2->iv);
+                free(uea2);
+        }
+        job->user_data = NULL;
+}
+
 static int
 validate_snow3g_f8_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *testVectors)
 {
-        int i, j, numVectors = 0;
+        const struct cipher_test **vec_tab;
+        const struct kat_cipher_job_ops enc_ops = {
+                .prepare = snow3g_uea2_job_prepare,
+                .cleanup = snow3g_uea2_job_cleanup,
+                .cipher_mode = IMB_CIPHER_SNOW3G_UEA2,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = 16,
+                .in_place = 0,
+        };
+        const struct kat_cipher_job_ops dec_ops = {
+                .prepare = snow3g_uea2_job_prepare,
+                .cleanup = snow3g_uea2_job_cleanup,
+                .cipher_mode = IMB_CIPHER_SNOW3G_UEA2,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = 16,
+                .in_place = 0,
+        };
+        uint32_t num_vectors = 0;
         int ret = -1;
-        size_t size = 0;
 
-        snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint8_t *pSrcBuff[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint8_t *pDstBuff[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint8_t *pSrcBuff_const[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint8_t *pDstBuff_const[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint8_t *pIV[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint32_t packetLen[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint32_t bitOffsets[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        uint32_t byteLens[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
-        int num_buffers;
-
-        memset(pKeySched, 0, sizeof(pKeySched));
-        memset(pKey, 0, sizeof(pKey));
-        memset(pSrcBuff, 0, sizeof(pSrcBuff));
-        memset(pDstBuff, 0, sizeof(pDstBuff));
-        memset(pSrcBuff_const, 0, sizeof(pSrcBuff_const));
-        memset(pDstBuff_const, 0, sizeof(pDstBuff_const));
-        memset(pIV, 0, sizeof(pIV));
-
-        /* calculate number of vectors */
-        for (i = 0; testVectors[i].msg != NULL; i++)
-                numVectors++;
-
-        if (!numVectors) {
-                printf("No Snow3G test vectors found !\n");
-                return -1;
-        }
-
-        size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
-        if (!size)
+        if (testVectors == NULL)
                 return -1;
 
-        num_buffers = (numVectors < IMB_SNOW3G_NUM_SUPPORTED_BUFFERS)
-                              ? numVectors
-                              : IMB_SNOW3G_NUM_SUPPORTED_BUFFERS;
+        while (testVectors[num_vectors].msg != NULL)
+                num_vectors++;
 
-        /* set up as many buffers as supported in a single job batch,
-         * cycling through the test vectors, so each buffer uses a
-         * different key/IV/message (multi-key testing) */
-        for (i = 0; i < num_buffers; i++) {
-                j = i % numVectors;
-                const int length = (int) testVectors[j].msgSize / 8;
+        if (num_vectors == 0)
+                return -1;
 
-                packetLen[i] = length;
-                byteLens[i] = (uint32_t) length;
-                bitOffsets[i] = 0;
+        vec_tab = malloc(num_vectors * sizeof(*vec_tab));
+        if (vec_tab == NULL)
+                return -1;
 
-                pKey[i] = malloc(testVectors[j].keySize / 8);
-                pKeySched[i] = malloc(size);
-                pSrcBuff[i] = calloc(1, length);
-                pDstBuff[i] = calloc(1, length);
-                pSrcBuff_const[i] = malloc(length);
-                pDstBuff_const[i] = malloc(length);
-                pIV[i] = malloc(testVectors[j].ivSize / 8);
-                if (!pKey[i] || !pKeySched[i] || !pSrcBuff[i] || !pDstBuff[i] ||
-                    !pSrcBuff_const[i] || !pDstBuff_const[i] || !pIV[i]) {
-                        printf("malloc() failed for buffer %d!\n", i);
-                        goto exit;
+        for (uint32_t i = 0; i < num_vectors; i++)
+                vec_tab[i] = &testVectors[i];
+
+        const uint32_t max_jobs = num_vectors < IMB_SNOW3G_NUM_SUPPORTED_BUFFERS
+                                          ? num_vectors
+                                          : IMB_SNOW3G_NUM_SUPPORTED_BUFFERS;
+
+        for (uint32_t num_jobs = 1; num_jobs <= max_jobs; num_jobs++) {
+                struct kat_cipher_job_ops enc_inplace = enc_ops;
+                struct kat_cipher_job_ops dec_inplace = dec_ops;
+
+                enc_inplace.in_place = 1;
+                dec_inplace.in_place = 1;
+
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs, &enc_ops) <
+                    0) {
+                        printf("SNOW3G F8 encrypt, %u jobs\n", num_jobs);
+                        goto end;
                 }
-
-                memcpy(pKey[i], testVectors[j].key, testVectors[j].keySize / 8);
-                memcpy(pSrcBuff_const[i], testVectors[j].msg, length);
-                memcpy(pDstBuff_const[i], testVectors[j].ct, length);
-                memcpy(pIV[i], testVectors[j].iv, testVectors[j].ivSize / 8);
-
-                if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey[i], pKeySched[i]) != 0) {
-                        printf("IMB_SNOW3G_INIT_KEY_SCHED() error\n");
-                        goto exit;
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs, &dec_ops) <
+                    0) {
+                        printf("SNOW3G F8 decrypt, %u jobs\n", num_jobs);
+                        goto end;
                 }
-        }
-
-        /* submit growing batch sizes (1 .. num_buffers) of jobs, each using
-         * a different key/vector, both out-of-place and in-place */
-        for (i = 0; i < num_buffers; i++) {
-                const int num_jobs = i + 1;
-
-                /* out-of-place encrypt */
-                if (submit_uea2_jobs(mb_mgr, pKeySched, pIV, pSrcBuff_const, pDstBuff, byteLens,
-                                     bitOffsets, IMB_DIR_ENCRYPT, num_jobs) != 0)
-                        goto exit;
-
-                for (j = 0; j < num_jobs; j++) {
-                        if (memcmp(pDstBuff[j], pDstBuff_const[j], packetLen[j]) != 0) {
-                                printf("SNOW3G F8(Enc) num_jobs:%d buffer:%d vector:%zu\n",
-                                       num_jobs, j, testVectors[j % numVectors].tcId);
-                                snow3g_hexdump("Actual:", pDstBuff[j], packetLen[j]);
-                                snow3g_hexdump("Expected:", pDstBuff_const[j], packetLen[j]);
-                                goto exit;
-                        }
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs,
+                                                 &enc_inplace) < 0) {
+                        printf("SNOW3G F8 encrypt in-place, %u jobs\n", num_jobs);
+                        goto end;
                 }
-
-                /* out-of-place decrypt */
-                if (submit_uea2_jobs(mb_mgr, pKeySched, pIV, pDstBuff_const, pSrcBuff, byteLens,
-                                     bitOffsets, IMB_DIR_DECRYPT, num_jobs) != 0)
-                        goto exit;
-
-                for (j = 0; j < num_jobs; j++) {
-                        if (memcmp(pSrcBuff[j], pSrcBuff_const[j], packetLen[j]) != 0) {
-                                printf("SNOW3G F8(Dec) num_jobs:%d buffer:%d vector:%zu\n",
-                                       num_jobs, j, testVectors[j % numVectors].tcId);
-                                snow3g_hexdump("Actual:", pSrcBuff[j], packetLen[j]);
-                                snow3g_hexdump("Expected:", pSrcBuff_const[j], packetLen[j]);
-                                goto exit;
-                        }
-                }
-
-                /* in-place encrypt/decrypt round trip on the last buffer of
-                 * the batch, to make sure in-place operation works too */
-                memcpy(pSrcBuff[i], pSrcBuff_const[i], packetLen[i]);
-
-                if (submit_uea2_jobs(mb_mgr, &pKeySched[i], &pIV[i], &pSrcBuff[i], &pSrcBuff[i],
-                                     &byteLens[i], &bitOffsets[i], IMB_DIR_ENCRYPT, 1) != 0)
-                        goto exit;
-
-                if (memcmp(pSrcBuff[i], pDstBuff_const[i], packetLen[i]) != 0) {
-                        printf("SNOW3G F8(Enc in-place) buffer:%d vector:%zu\n", i,
-                               testVectors[i % numVectors].tcId);
-                        goto exit;
-                }
-
-                if (submit_uea2_jobs(mb_mgr, &pKeySched[i], &pIV[i], &pSrcBuff[i], &pSrcBuff[i],
-                                     &byteLens[i], &bitOffsets[i], IMB_DIR_DECRYPT, 1) != 0)
-                        goto exit;
-
-                if (memcmp(pSrcBuff[i], pSrcBuff_const[i], packetLen[i]) != 0) {
-                        printf("SNOW3G F8(Dec in-place) buffer:%d vector:%zu\n", i,
-                               testVectors[i % numVectors].tcId);
-                        goto exit;
+                if (kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_vectors, num_jobs,
+                                                 &dec_inplace) < 0) {
+                        printf("SNOW3G F8 decrypt in-place, %u jobs\n", num_jobs);
+                        goto end;
                 }
         }
 
-        /* no errors detected */
         ret = 0;
-
-exit:
-        for (i = 0; i < num_buffers; i++) {
-                free(pKey[i]);
-                free(pKeySched[i]);
-                free(pSrcBuff[i]);
-                free(pDstBuff[i]);
-                free(pSrcBuff_const[i]);
-                free(pDstBuff_const[i]);
-                free(pIV[i]);
-        }
+end:
+        free(vec_tab);
         return ret;
 }
 
