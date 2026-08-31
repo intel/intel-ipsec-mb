@@ -526,6 +526,8 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         init_mb_mgr_avx2(p_mgr);
                 else if (strcasecmp(ar, "AVX512") == 0)
                         init_mb_mgr_avx512(p_mgr);
+                else if (strcasecmp(ar, "AVX10") == 0)
+                        init_mb_mgr_avx10(p_mgr);
                 else if (strcasecmp(ar, "SSE") == 0)
                         init_mb_mgr_sse(p_mgr);
                 else

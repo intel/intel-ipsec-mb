@@ -32,6 +32,8 @@ parse_matched(int argc, char **argv)
                         arch = IMB_ARCH_AVX2;
                 else if (strcasecmp(argv[i], "AVX512") == 0)
                         arch = IMB_ARCH_AVX512;
+                else if (strcasecmp(argv[i], "AVX10") == 0)
+                        arch = IMB_ARCH_AVX10;
                 else if (strcasecmp(argv[i], "SHANI-OFF") == 0)
                         flags |= IMB_FLAG_SHANI_OFF;
                 else if (strcasecmp(argv[i], "GFNI-OFF") == 0)
@@ -47,7 +49,7 @@ LLVMFuzzerInitialize(int *argc, char ***argv)
                  * Check if the current argument matches the
                  * argument we are looking for.
                  */
-                if (strcasecmp((*argv)[i], "custom") == 0) {
+                if (strcasecmp((*argv)[i], "--") == 0) {
                         parse_matched(*argc - (i + 1), &((*argv)[i + 1]));
                         /*
                          *  Remove the matching argument and all arguments
@@ -1633,6 +1635,8 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         init_mb_mgr_avx2(p_mgr);
                 else if (arch == IMB_ARCH_AVX512)
                         init_mb_mgr_avx512(p_mgr);
+                else if (arch == IMB_ARCH_AVX10)
+                        init_mb_mgr_avx10(p_mgr);
                 else
                         init_mb_mgr_auto(p_mgr, &arch_to_run);
         }
@@ -1640,6 +1644,10 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         const int idx = ((const int *) data)[0] % DIM(direct_apis);
         const int ret = direct_apis[idx].func(p_mgr, buff, newDataSize);
 
+        /**
+         * @note There is no call to free_mb_mgr() to recycle the same instance across
+         *       multiple iterations. Sanitizers do not consider it as a memory leak.
+         */
         free(buff);
         return ret;
 }
