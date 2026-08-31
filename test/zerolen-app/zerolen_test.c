@@ -20,6 +20,14 @@
  * Special combined modes (PON, DOCSIS-CRC32) that require a minimum non-zero
  * hash length use a small read/write buffer for the header portion, with the
  * cipher payload length set to zero.
+ *
+ * The same technique is applied to the PQC direct APIs. ML-DSA (FIPS 204)
+ * accepts a zero-length message and a zero-length context string, so the
+ * message and context pointers are aimed at the guard page while their lengths
+ * are set to zero. In addition to the fault check, the signature produced over
+ * the empty message must verify successfully, so that a zero length is not
+ * silently turned into a no-op. ML-KEM has no variable-length input and is
+ * therefore out of scope here.
  */
 
 #include <stdio.h>
@@ -1173,6 +1181,206 @@ test_docsis_crc32_zerolen(IMB_MGR *mgr, IMB_CIPHER_DIRECTION dir, const char *na
 }
 
 /* ========================================================================== */
+/* PQC (ML-DSA) test vectors and functions                                    */
+/* ========================================================================== */
+
+/**
+ * ML-DSA test vector descriptor.
+ *
+ * ML-KEM is intentionally not covered: none of its inputs are variable
+ * length, so it has no zero-length case to exercise.
+ */
+struct ml_dsa_test_vec {
+        const char *name;   /**< test name for display */
+        IMB_ML_DSA_ALG alg; /**< ML-DSA parameter set */
+        size_t pk_len;      /**< encoded public key length in bytes */
+        size_t sk_len;      /**< encoded private key length in bytes */
+        size_t sig_len;     /**< signature length in bytes */
+};
+
+/** Table of ML-DSA parameter sets to test with zero-length messages */
+static const struct ml_dsa_test_vec ml_dsa_tests[] = {
+        { "ML-DSA-44", IMB_ML_DSA_44, IMB_ML_DSA_44_PUBKEY_BYTES, IMB_ML_DSA_44_PRIVKEY_BYTES,
+          IMB_ML_DSA_44_SIG_BYTES },
+        { "ML-DSA-65", IMB_ML_DSA_65, IMB_ML_DSA_65_PUBKEY_BYTES, IMB_ML_DSA_65_PRIVKEY_BYTES,
+          IMB_ML_DSA_65_SIG_BYTES },
+        { "ML-DSA-87", IMB_ML_DSA_87, IMB_ML_DSA_87_PUBKEY_BYTES, IMB_ML_DSA_87_PRIVKEY_BYTES,
+          IMB_ML_DSA_87_SIG_BYTES },
+};
+
+/** Key and signature buffers, sized for the largest parameter set */
+static uint8_t ml_dsa_pk[IMB_ML_DSA_87_PUBKEY_BYTES];
+static uint8_t ml_dsa_sk[IMB_ML_DSA_87_PRIVKEY_BYTES];
+static uint8_t ml_dsa_sig[IMB_ML_DSA_87_SIG_BYTES];
+
+/**
+ * Zero-length sub-cases exercised for every ML-DSA parameter set.
+ *
+ * All three submit a zero-length message located on the guard page. They
+ * differ in the optional parameters passed alongside it.
+ */
+enum ml_dsa_zerolen_mode {
+        /**
+         * params == NULL: the common-case caller. No context string is
+         * supplied at all and signing is hedged.
+         */
+        ML_DSA_ZL_DEFAULT,
+        /**
+         * Context string pointer aimed at the guard page with ctx_len = 0.
+         * The only sub-case that passes a non-NULL context pointer, so the
+         * only one able to detect a context-string overread.
+         */
+        ML_DSA_ZL_ZERO_CTX,
+        /**
+         * As ML_DSA_ZL_ZERO_CTX, but with an all-zero randomizer selecting
+         * deterministic signing. Hedged signing draws fresh randomness per
+         * call, so this sub-case provides a reproducible run.
+         */
+        ML_DSA_ZL_DET,
+        ML_DSA_ZL_NUM /**< number of sub-cases */
+};
+
+/** Display names for the ML-DSA zero-length sub-cases */
+static const char *const ml_dsa_mode_names[ML_DSA_ZL_NUM] = { "default params", "zero-length ctx",
+                                                              "deterministic" };
+
+/**
+ * @brief Report an unexpected ML-DSA API return code.
+ *
+ * @param [in] name  test name for display
+ * @param [in] mode  zero-length sub-case
+ * @param [in] op    API operation name
+ * @param [in] rc    return code from the API
+ */
+static void
+ml_dsa_report_err(const char *name, const enum ml_dsa_zerolen_mode mode, const char *op,
+                  const int rc)
+{
+        printf("  FAIL: %s (%s) %s returned %d: %s\n", name, ml_dsa_mode_names[mode], op, rc,
+               imb_get_strerror(rc));
+}
+
+/**
+ * @brief Test zero-length ML-DSA signing and verification.
+ *
+ * Generates a key pair, then signs and verifies a zero-length message whose
+ * buffer pointer is aimed at a guard page. Depending on \a mode the FIPS 204
+ * context string is also zero length and aimed at the guard page. Any read of
+ * the message or context buffer triggers a fault, and the signature produced
+ * over the empty message must verify successfully so that a zero length is not
+ * silently treated as a no-op.
+ *
+ * @param [in] mgr  multi-buffer manager
+ * @param [in] tv   ML-DSA test vector
+ * @param [in] gp   guard page allocation
+ * @param [in] mode zero-length sub-case to exercise
+ *
+ * @return Test status
+ * @retval 0 pass
+ * @retval -1 fail (segfault, API error or verification failure)
+ */
+static int
+test_ml_dsa_zerolen(IMB_MGR *mgr, const struct ml_dsa_test_vec *tv, const struct guard_page *gp,
+                    const enum ml_dsa_zerolen_mode mode)
+{
+        static const uint8_t det_rnd[IMB_ML_DSA_SIGN_RND_BYTES] = { 0 };
+        /**
+         * static: the handle must survive the siglongjmp() out of a faulting
+         * sign or verify call so that it can still be released. An automatic
+         * variable would be indeterminate at that point.
+         */
+        static IMB_ML_DSA *ml_dsa_ctx;
+        IMB_ML_DSA_SIGN_PARAMS sign_params;
+        IMB_ML_DSA_VERIFY_PARAMS verify_params;
+        /*
+         * volatile: these are set before the fault checkpoint and only read
+         * afterwards, but the qualifier keeps them off the -Wclobbered list.
+         */
+        const IMB_ML_DSA_SIGN_PARAMS *volatile sp = NULL;
+        const IMB_ML_DSA_VERIFY_PARAMS *volatile vp = NULL;
+        size_t sig_len = tv->sig_len;
+        int rc;
+
+        ml_dsa_ctx = NULL;
+
+        /*
+         * Set the optional parameters up before the fault checkpoint, so that
+         * they are not modified across a siglongjmp().
+         */
+        if (mode != ML_DSA_ZL_DEFAULT) {
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&sign_params);
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&verify_params);
+
+                /* zero-length context string placed on the guard page */
+                sign_params.ctx = (const void *) gp->ptr;
+                sign_params.ctx_len = 0;
+                verify_params.ctx = (const void *) gp->ptr;
+                verify_params.ctx_len = 0;
+
+                if (mode == ML_DSA_ZL_DET) {
+                        sign_params.rnd_32 = det_rnd;
+                        sign_params.rnd_len = sizeof(det_rnd);
+                }
+
+                sp = &sign_params;
+                vp = &verify_params;
+        }
+
+        const int segfault = TEST_SETJMP();
+
+        if (segfault) {
+                printf("  FAIL: %s (%s) SEGFAULT during ML-DSA operation\n", tv->name,
+                       ml_dsa_mode_names[mode]);
+                imb_ml_dsa_free(ml_dsa_ctx);
+                ml_dsa_ctx = NULL;
+                return -1;
+        }
+
+        rc = imb_ml_dsa_new(mgr, tv->alg, &ml_dsa_ctx);
+        if (rc != 0) {
+                ml_dsa_report_err(tv->name, mode, "imb_ml_dsa_new", rc);
+                return -1;
+        }
+
+        rc = imb_ml_dsa_keypair(ml_dsa_ctx, ml_dsa_pk, tv->pk_len, ml_dsa_sk, tv->sk_len, NULL);
+        if (rc != 0) {
+                ml_dsa_report_err(tv->name, mode, "imb_ml_dsa_keypair", rc);
+                goto err;
+        }
+
+        /* sign a zero-length message located on the guard page */
+        rc = imb_ml_dsa_sign(ml_dsa_ctx, ml_dsa_sig, &sig_len, (const void *) gp->ptr, 0, sp);
+        if (rc != 0) {
+                ml_dsa_report_err(tv->name, mode, "imb_ml_dsa_sign", rc);
+                goto err;
+        }
+
+        if (sig_len != tv->sig_len) {
+                printf("  FAIL: %s (%s) unexpected signature length %zu (expected %zu)\n", tv->name,
+                       ml_dsa_mode_names[mode], sig_len, tv->sig_len);
+                goto err;
+        }
+
+        /* the signature over the empty message must verify */
+        rc = imb_ml_dsa_verify(ml_dsa_ctx, (const void *) gp->ptr, 0, ml_dsa_sig, sig_len, vp);
+        if (rc != 0) {
+                ml_dsa_report_err(tv->name, mode, "imb_ml_dsa_verify", rc);
+                goto err;
+        }
+
+        imb_ml_dsa_free(ml_dsa_ctx);
+        ml_dsa_ctx = NULL;
+
+        return 0;
+
+err:
+        imb_ml_dsa_free(ml_dsa_ctx);
+        ml_dsa_ctx = NULL;
+
+        return -1;
+}
+
+/* ========================================================================== */
 /* Test runner                                                                */
 /* ========================================================================== */
 
@@ -1185,16 +1393,17 @@ test_docsis_crc32_zerolen(IMB_MGR *mgr, IMB_CIPHER_DIRECTION dir, const char *na
  * single-job, type-specific burst and generic burst APIs.
  *
  * @param [in] mgr  multi-buffer manager
- * @param [in] arch architecture to test
  * @param [in] gp   guard page allocation
  * @param [in] gm   guard memory allocation (for PON tests)
+ * @param [in] run_pqc non-zero to also run the PQC (ML-DSA) tests
  *
  * @return Aggregate status
  * @retval 0 all tests passed
  * @retval -1 one or more tests failed
  */
 static int
-run_tests_for_arch(IMB_MGR *mgr, const struct guard_page *gp, const struct guard_mem *gm)
+run_tests_for_arch(IMB_MGR *mgr, const struct guard_page *gp, const struct guard_mem *gm,
+                   const int run_pqc)
 {
         unsigned pass = 0, fail = 0;
 #ifdef _WIN32
@@ -1391,6 +1600,31 @@ run_tests_for_arch(IMB_MGR *mgr, const struct guard_page *gp, const struct guard
                 }
         }
 
+        /*
+         * PQC tests. Run once per architecture: the ML-DSA API has no
+         * NOCHECK variant, so it is not part of the loop above.
+         */
+        if (run_pqc) {
+                if (!quiet_mode)
+                        printf("  PQC tests (msg_len=0):\n");
+
+                for (unsigned i = 0; i < DIM(ml_dsa_tests); i++) {
+                        for (enum ml_dsa_zerolen_mode m = ML_DSA_ZL_DEFAULT; m < ML_DSA_ZL_NUM;
+                             m++) {
+                                if (test_ml_dsa_zerolen(mgr, &ml_dsa_tests[i], gp, m) == 0) {
+                                        pass++;
+                                        if (!quiet_mode)
+                                                printf("    %-28s PASS (%s)\n",
+                                                       ml_dsa_tests[i].name, ml_dsa_mode_names[m]);
+                                } else {
+                                        fail++;
+                                        printf("    %-28s FAIL (%s)\n", ml_dsa_tests[i].name,
+                                               ml_dsa_mode_names[m]);
+                                }
+                        }
+                }
+        }
+
         /* Restore signal/exception handler */
 #ifdef _WIN32
         SetUnhandledExceptionFilter(prev_handler);
@@ -1424,6 +1658,7 @@ usage(const char *prog)
                "  --shani-off   Disable SHA-NI extensions\n"
                "  --gfni-on     Enable GFNI extensions\n"
                "  --gfni-off    Disable GFNI extensions\n"
+               "  --no-pqc      Skip PQC (ML-DSA) tests\n"
                "  --verbose     Increase tool verbosity\n"
                "  -h, --help    Show this help\n",
                prog);
@@ -1506,6 +1741,7 @@ main(int argc, char **argv)
         struct guard_mem gm;
         int errors = 0;
         uint64_t flags = 0;
+        int run_pqc = 1;
 
         memset(arch_select, 0xff, sizeof(arch_select));
 
@@ -1520,6 +1756,8 @@ main(int argc, char **argv)
                         continue;
                 } else if (strcmp(argv[i], "--verbose") == 0) {
                         quiet_mode = 0;
+                } else if (strcmp(argv[i], "--no-pqc") == 0) {
+                        run_pqc = 0;
                 } else {
                         printf("Unknown option: %s\n", argv[i]);
                         usage(argv[0]);
@@ -1587,7 +1825,7 @@ main(int argc, char **argv)
                 (void) imb_get_features(mgr, &features);
                 print_tested_arch(features, atype);
 
-                if (run_tests_for_arch(mgr, &gp, &gm) != 0)
+                if (run_tests_for_arch(mgr, &gp, &gm, run_pqc) != 0)
                         errors++;
 
                 free_mb_mgr(mgr);
