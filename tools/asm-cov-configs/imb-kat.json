@@ -43,7 +43,6 @@
         "GCM",
         "GMAC",
         "GHASH",
-        "CUSTOMOP",
         "DES",
         "CCM",
         "CMAC",
