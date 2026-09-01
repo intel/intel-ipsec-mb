@@ -32,12 +32,22 @@
 #define NID_sm4_ctr 1139
 #endif
 
-#define SM4_BLOCK_SIZE        16
-#define SM4_KEY_SIZE          16
-#define SM4_IV_SIZE           16
-#define SM4_GCM_IV_SIZE       12
-#define SM4_GCM_IV_MAX_SIZE   16
-#define PROV_ENC_DEC_KEY_SIZE (4 * 15)
+#define SM4_BLOCK_SIZE      16
+#define SM4_KEY_SIZE        16
+#define SM4_IV_SIZE         16
+#define SM4_GCM_IV_SIZE     12
+#define SM4_GCM_IV_MAX_SIZE 16
+#define SM4_GCM_TAG_SIZE    16
+
+/* Starting size of the SM4-GCM message buffers, doubled as needed. */
+#define SM4_GCM_MSG_ALLOC_MIN 64
+
+/*
+ * ipsec-mb ciphers SM4 from an expanded key schedule, never from the raw key:
+ * 32 rounds of 4 bytes for ECB/CBC/CTR. SM4-GCM instead wants a whole
+ * struct gcm_key_data.
+ */
+#define SM4_KEY_SCHED_SIZE (IMB_SM4_KEY_SCHEDULE_ROUNDS * sizeof(uint32_t))
 
 #define PROV_SM4_BASE_FLAGS                                                                        \
         (EVP_CIPH_FLAG_DEFAULT_ASN1 | EVP_CIPH_FLAG_PIPELINE | EVP_CIPH_CUSTOM_COPY)
@@ -97,6 +107,22 @@ prov_sm4_set_ctx_params(void *vctx, const OSSL_PARAM params[]);
         }                                                                                          \
         static OSSL_FUNC_cipher_newctx_fn alg##lc##_newctx;                                        \
         static void *alg##lc##_newctx(void *provctx) { return prov_sm4_##lc##_newctx(provctx); }   \
+        /* Only the AEAD table carries the tag parameters, so a mode that does                     \
+         * not advertise it can never be handed a tag. */                                          \
+        static OSSL_FUNC_cipher_gettable_ctx_params_fn alg##lc##_gettable_ctx_params;              \
+        static const OSSL_PARAM *alg##lc##_gettable_ctx_params(void *cctx, void *provctx)          \
+        {                                                                                          \
+                return (nid) == NID_sm4_gcm                                                        \
+                               ? prov_cipher_aead_gettable_ctx_params(cctx, provctx)               \
+                               : prov_cipher_generic_gettable_ctx_params(cctx, provctx);           \
+        }                                                                                          \
+        static OSSL_FUNC_cipher_settable_ctx_params_fn alg##lc##_settable_ctx_params;              \
+        static const OSSL_PARAM *alg##lc##_settable_ctx_params(void *cctx, void *provctx)          \
+        {                                                                                          \
+                return (nid) == NID_sm4_gcm                                                        \
+                               ? prov_cipher_aead_settable_ctx_params(cctx, provctx)               \
+                               : prov_cipher_generic_settable_ctx_params(cctx, provctx);           \
+        }                                                                                          \
         const OSSL_DISPATCH alg##lc##_functions[] = {                                              \
                 { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) alg##lc##_newctx },                    \
                 { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) prov_sm4_freectx },                   \
@@ -112,9 +138,9 @@ prov_sm4_set_ctx_params(void *vctx, const OSSL_PARAM params[]);
                 { OSSL_FUNC_CIPHER_GETTABLE_PARAMS,                                                \
                   (void (*)(void)) prov_cipher_generic_gettable_params },                          \
                 { OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,                                            \
-                  (void (*)(void)) prov_cipher_generic_gettable_ctx_params },                      \
+                  (void (*)(void)) alg##lc##_gettable_ctx_params },                                \
                 { OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,                                            \
-                  (void (*)(void)) prov_cipher_generic_settable_ctx_params },                      \
+                  (void (*)(void)) alg##lc##_settable_ctx_params },                                \
                 { 0, NULL }                                                                        \
         }
 

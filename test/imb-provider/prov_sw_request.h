@@ -92,6 +92,16 @@ typedef struct _alg_context {
         unsigned char *aad;
         int aad_len;
 
+        /*
+         * SM4-GCM only: ipsec-mb has no streaming SM4-GCM, so a message split
+         * over several update calls is re-ciphered from the start each time.
+         * |gcm_msg| accumulates the input, |gcm_buf| receives the output.
+         */
+        unsigned char *gcm_msg;
+        unsigned char *gcm_buf;
+        size_t gcm_len;
+        size_t gcm_alloc;
+
         int tls_aad_len;
         int tag_len;
         int iv_len;

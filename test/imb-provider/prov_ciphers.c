@@ -369,6 +369,8 @@ prov_alg_ctx_dup_base(const ALG_CTX *src)
         dst->dec_keys = NULL;
         dst->aad = NULL;
         dst->tag = NULL;
+        dst->gcm_msg = NULL;
+        dst->gcm_buf = NULL;
         dst->tlsmac = NULL;
         dst->xof_buf = NULL;
         dst->cipher = NULL;
