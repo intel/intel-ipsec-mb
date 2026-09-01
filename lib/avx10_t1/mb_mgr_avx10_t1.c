@@ -169,6 +169,14 @@
 #define SUBMIT_JOB_SHA3 submit_job_sha3_avx512
 #define FLUSH_JOB_SHA3  flush_job_sha3_avx512
 
+/* HMAC-SHA3-224/256/384/512 share one implementation, selected by
+ * job->hash_alg at run time (hmac_sha3_avx512.asm, AVX-512 type 1)
+ */
+#define SUBMIT_JOB_HMAC_SHA3_224 hmac_sha3_submit_avx512
+#define SUBMIT_JOB_HMAC_SHA3_256 hmac_sha3_submit_avx512
+#define SUBMIT_JOB_HMAC_SHA3_384 hmac_sha3_submit_avx512
+#define SUBMIT_JOB_HMAC_SHA3_512 hmac_sha3_submit_avx512
+
 #ifdef SMX_NI
 #define SUBMIT_JOB_SHA384 submit_job_sha384_ni_avx2
 #define FLUSH_JOB_SHA384  flush_job_sha384_ni_avx2

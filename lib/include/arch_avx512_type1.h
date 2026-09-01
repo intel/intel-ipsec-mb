@@ -206,15 +206,13 @@ IMB_DLL_LOCAL void
 shake256_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output,
                 uint64_t outputByteLen);
 
-/* HMAC-SHA3 single-buffer AVX-512 ASM functions (hmac_sha3_avx512.asm) */
+/*
+ * HMAC-SHA3 single-buffer AVX-512 ASM function (hmac_sha3_avx512.asm).
+ * One entry point serves HMAC-SHA3-224/256/384/512; the rate and digest size
+ * are derived from job->hash_alg at run time.
+ */
 IMB_DLL_LOCAL IMB_JOB *
-hmac_sha3_224_submit_avx512(IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-hmac_sha3_256_submit_avx512(IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-hmac_sha3_384_submit_avx512(IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-hmac_sha3_512_submit_avx512(IMB_JOB *job);
+hmac_sha3_submit_avx512(IMB_JOB *job);
 
 /* KASUMI */
 void
