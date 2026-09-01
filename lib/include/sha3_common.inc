@@ -50,7 +50,7 @@
 ;; a mismatch selects the wrong rate and is caught immediately by the SHA3
 ;; known answer tests and by the library self-test.
 ;; ---------------------------------------------------------------------------
-%define SHA3_MB_ALG_FIRST       47      ; IMB_AUTH_SHA3_224
+%define SHA3_MB_ALG_FIRST       46      ; IMB_AUTH_SHA3_224
 
 ;; Everything the multi-buffer code needs to know about an algorithm, one byte
 ;; per algorithm, with SHA3-224 in the least significant byte.  Each byte holds
