@@ -18,6 +18,7 @@
 #include "utils.h"
 #include "mac_test.h"
 #include "cipher_test.h"
+#include "kat_common_cipher.h"
 
 static struct mac_test *kasumi_f9_vectors;
 
@@ -45,49 +46,74 @@ static int
 validate_kasumi_f9(IMB_MGR *mgr);
 
 static int
-submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys, uint64_t **ivs,
-                      uint8_t **const src, uint8_t **const dst, const uint32_t *bytelens,
-                      const uint32_t *byte_offsets, const int dir, const unsigned int num_jobs)
+submit_kasumi_f9_job(struct IMB_MGR *mb_mgr, kasumi_key_sched_t *key, const void *src, void *tag,
+                     const uint32_t len);
+
+struct kasumi_f8_job_ctx {
+        kasumi_key_sched_t *key_sched;
+        uint8_t *key;
+        uint8_t *iv;
+};
+
+static int
+kasumi_f8_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
+                      void *ctx)
 {
-        unsigned int i;
-        unsigned int jobs_rx = 0;
+        struct kasumi_f8_job_ctx *job_ctx = calloc(1, sizeof(*job_ctx));
 
-        for (i = 0; i < num_jobs; i++) {
-                IMB_JOB *job = IMB_GET_NEXT_JOB(mb_mgr);
-
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->cipher_mode = IMB_CIPHER_KASUMI_UEA1;
-                job->src = src[i];
-                job->dst = dst[i];
-                job->iv = (void *) ivs[i];
-                job->iv_len_in_bytes = 8;
-                job->enc_keys = (uint8_t *) keys[i];
-                job->key_len_in_bytes = 16;
-
-                job->cipher_start_src_offset_in_bytes = byte_offsets[i];
-                job->msg_len_to_cipher_in_bytes = bytelens[i];
-                job->hash_alg = IMB_AUTH_NULL;
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        jobs_rx++;
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %u", __LINE__, job->status, i);
-                                return -1;
-                        }
-                } else {
-                        printf("Expected returned job, but got nothing\n");
-                        return -1;
-                }
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+        (void) ctx;
+        if (job_ctx == NULL)
                 return -1;
-        }
 
+        job->user_data = job_ctx;
+        job_ctx->key = test_aligned_alloc(16, vec->keySize / 8);
+        job_ctx->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        job_ctx->key_sched = test_aligned_alloc(16, IMB_KASUMI_KEY_SCHED_SIZE(mb_mgr));
+        if (job_ctx->key == NULL || job_ctx->iv == NULL || job_ctx->key_sched == NULL)
+                return -1;
+
+        memcpy(job_ctx->key, vec->key, vec->keySize / 8);
+        memcpy(job_ctx->iv, vec->iv, vec->ivSize / 8);
+        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mb_mgr, job_ctx->key, job_ctx->key_sched) != 0)
+                return -1;
+
+        job->enc_keys = job_ctx->key_sched;
+        job->dec_keys = job_ctx->key_sched;
+        job->iv = job_ctx->iv;
+        job->iv_len_in_bytes = IMB_KASUMI_IV_SIZE;
         return 0;
+}
+
+static void
+kasumi_f8_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct kasumi_f8_job_ctx *job_ctx = job->user_data;
+
+        (void) ctx;
+        if (job_ctx != NULL) {
+                test_aligned_free(job_ctx->key_sched);
+                test_aligned_free(job_ctx->key);
+                test_aligned_free(job_ctx->iv);
+                free(job_ctx);
+        }
+        job->user_data = NULL;
+}
+
+static int
+submit_kasumi_f8_job(struct IMB_MGR *mb_mgr, const struct cipher_test *vec, const int dir)
+{
+        const struct cipher_test *vec_ptr = vec;
+        const struct kat_cipher_job_ops ops = {
+                .prepare = kasumi_f8_job_prepare,
+                .cleanup = kasumi_f8_job_cleanup,
+                .cipher_mode = IMB_CIPHER_KASUMI_UEA1,
+                .cipher_direction = dir,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = IMB_KASUMI_KEY_SIZE,
+                .in_place = 1,
+        };
+
+        return kat_cipher_test_submit_flush(mb_mgr, &vec_ptr, 1, 1, &ops);
 }
 
 static int
@@ -122,286 +148,24 @@ submit_kasumi_f9_job(struct IMB_MGR *mb_mgr, kasumi_key_sched_t *key, const void
         return 0;
 }
 
-struct kasumi_f8_x_blocks {
-        size_t n;
-        void **key;
-        kasumi_key_sched_t **keySched;
-        uint64_t **pIV;
-        uint64_t *IV; /* for n buffer direct API */
-        uint32_t *packetLen;
-        uint32_t *byteOffsets;
-        const struct cipher_test **vt;
-
-        uint8_t **encBuff;
-        uint8_t **decBuff;
-};
-
-static void
-kasumi_f8_x_block_free(struct kasumi_f8_x_blocks *s)
-{
-        for (size_t i = 0; i < s->n; i++) {
-                if (s->pIV)
-                        if (s->pIV[i])
-                                free(s->pIV[i]);
-                if (s->key)
-                        if (s->key[i])
-                                free(s->key[i]);
-                if (s->keySched)
-                        if (s->keySched[i])
-                                free(s->keySched[i]);
-                if (s->encBuff)
-                        if (s->encBuff[i])
-                                free(s->encBuff[i]);
-                if (s->decBuff)
-                        if (s->decBuff[i])
-                                free(s->decBuff[i]);
-        }
-
-        if (s->key)
-                free(s->key);
-        if (s->keySched)
-                free(s->keySched);
-        if (s->pIV)
-                free(s->pIV);
-        if (s->IV)
-                free(s->IV);
-        if (s->packetLen)
-                free(s->packetLen);
-        if (s->byteOffsets)
-                free(s->byteOffsets);
-        if (s->vt)
-                free((void *) s->vt);
-        if (s->encBuff)
-                free(s->encBuff);
-        if (s->decBuff)
-                free(s->decBuff);
-
-        memset(s, 0, sizeof(*s));
-}
-
-static int
-kasumi_f8_x_block_alloc(IMB_MGR *mgr, struct kasumi_f8_x_blocks *s, const size_t n)
-{
-        memset(s, 0, sizeof(*s));
-        s->n = n;
-
-        s->key = malloc(n * sizeof(s->key[0]));
-        if (s->key)
-                memset(s->key, 0, n * sizeof(s->key[0]));
-
-        s->keySched = malloc(n * sizeof(s->keySched[0]));
-        if (s->keySched)
-                memset(s->keySched, 0, n * sizeof(s->keySched[0]));
-
-        s->pIV = malloc(n * sizeof(s->pIV[0]));
-        if (s->pIV)
-                memset(s->pIV, 0, n * sizeof(s->pIV[0]));
-
-        s->IV = malloc(n * sizeof(s->IV[0]));
-        if (s->IV)
-                memset(s->IV, 0, n * sizeof(s->IV[0]));
-
-        s->packetLen = malloc(n * sizeof(s->packetLen[0]));
-        if (s->packetLen)
-                memset(s->packetLen, 0, n * sizeof(s->packetLen[0]));
-
-        s->byteOffsets = malloc(n * sizeof(s->byteOffsets[0]));
-        if (s->byteOffsets)
-                memset(s->byteOffsets, 0, n * sizeof(s->byteOffsets[0]));
-
-        s->vt = malloc(n * sizeof(s->vt[0]));
-        if (s->vt) {
-                for (size_t i = 0; i < n; i++)
-                        s->vt[i] = NULL;
-        }
-
-        s->encBuff = malloc(n * sizeof(s->encBuff[0]));
-        if (s->encBuff)
-                memset(s->encBuff, 0, n * sizeof(s->encBuff[0]));
-
-        s->decBuff = malloc(n * sizeof(s->decBuff[0]));
-        if (s->decBuff)
-                memset(s->decBuff, 0, n * sizeof(s->decBuff[0]));
-
-        if (s->key == NULL || s->keySched == NULL || s->pIV == NULL || s->vt == NULL ||
-            s->packetLen == NULL || s->byteOffsets == NULL || s->IV == NULL) {
-                kasumi_f8_x_block_free(s);
-                return 0;
-        }
-
-        for (size_t i = 0; i < n; i++) {
-                s->pIV[i] = malloc(IMB_KASUMI_IV_SIZE);
-                s->key[i] = malloc(IMB_KASUMI_KEY_SIZE);
-                s->keySched[i] = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
-                s->byteOffsets[i] = 0;
-                if (s->pIV[i] == NULL || s->key[i] == NULL || s->keySched[i] == NULL) {
-                        kasumi_f8_x_block_free(s);
-                        return 0;
-                }
-        }
-
-        return 1;
-}
-
-static void
-kasumi_f8_x_block_clean_op(struct kasumi_f8_x_blocks *s)
-{
-        for (size_t i = 0; i < s->n; i++) {
-                if (s->encBuff) {
-                        if (s->encBuff[i]) {
-                                free(s->encBuff[i]);
-                                s->encBuff[i] = NULL;
-                        }
-                }
-                if (s->decBuff) {
-                        if (s->decBuff[i]) {
-                                free(s->decBuff[i]);
-                                s->decBuff[i] = NULL;
-                        }
-                }
-        }
-}
-
-static int
-kasumi_f8_x_block_prep_op(IMB_MGR *mgr, struct kasumi_f8_x_blocks *s, const struct cipher_test *v,
-                          const struct cipher_test *vstart)
-{
-        /* set up vt[] */
-        s->vt[0] = v;
-
-        for (size_t i = 1; i < s->n; i++) {
-                const struct cipher_test *vc = s->vt[i - 1];
-
-                vc++;
-                if (vc->msg == NULL)
-                        vc = vstart;
-
-                /* find byte aligned length vector */
-                while ((vc->msgSize % CHAR_BIT) != 0) {
-                        vc++;
-                        if (vc->msg == NULL)
-                                vc = vstart;
-                }
-
-                s->vt[i] = vc;
-        }
-
-        /*
-         * - copy key
-         * - alloc src/dst buffers
-         * - copy src/dst buffers
-         * - copy IV
-         */
-
-        for (size_t i = 0; i < s->n; i++) {
-                const size_t msg_len = s->vt[i]->msgSize / CHAR_BIT;
-
-                memcpy(s->key[i], s->vt[i]->key, s->vt[i]->keySize / CHAR_BIT);
-
-                s->packetLen[i] = (uint32_t) msg_len;
-                s->byteOffsets[i] = 0;
-
-                s->encBuff[i] = malloc(msg_len);
-                if (!s->encBuff[i]) {
-                        printf("malloc(encBuff[]):failed !\n");
-                        kasumi_f8_x_block_clean_op(s);
-                        return 0;
-                }
-
-                s->decBuff[i] = malloc(msg_len);
-                if (!s->decBuff[i]) {
-                        printf("malloc(decBuff[]): failed !\n");
-                        kasumi_f8_x_block_clean_op(s);
-                        return 0;
-                }
-
-                memcpy(s->encBuff[i], s->vt[i]->msg, msg_len);
-                memcpy(s->decBuff[i], s->vt[i]->ct, msg_len);
-
-                memcpy(s->pIV[i], s->vt[i]->iv, s->vt[i]->ivSize / CHAR_BIT);
-                memcpy(&s->IV[i], s->vt[i]->iv, s->vt[i]->ivSize / CHAR_BIT);
-        }
-
-        /* init key schedule */
-        for (size_t i = 0; i < s->n; i++) {
-                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, s->key[i], s->keySched[i])) {
-                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
-                        kasumi_f8_x_block_clean_op(s);
-                        return 0;
-                }
-        }
-
-        return 1;
-}
-
-static int
-kasumi_f8_x_block_check_op(struct kasumi_f8_x_blocks *s, const char *name)
-{
-        /* Compare the cipher-text with the encrypted plain-text */
-        for (size_t i = 0; i < s->n; i++) {
-                if (memcmp(s->encBuff[i], s->vt[i]->ct, s->packetLen[i]) != 0) {
-                        printf("%s(Enc)  tcId:%zu\n", name, s->vt[i]->tcId);
-                        hexdump(stdout, "Actual:", s->encBuff[i], s->packetLen[i]);
-                        hexdump(stdout, "Expected:", s->vt[i]->ct, s->packetLen[i]);
-                        return 0;
-                }
-        }
-
-        /* Compare the plain-text with the decrypted cipher-text */
-        for (size_t i = 0; i < s->n; i++) {
-                if (memcmp(s->decBuff[i], s->vt[i]->msg, s->packetLen[i]) != 0) {
-                        printf("%s(Dec)  tcId:%zu\n", name, s->vt[i]->tcId);
-                        hexdump(stdout, "Actual:", s->decBuff[i], s->packetLen[i]);
-                        hexdump(stdout, "Expected:", s->vt[i]->msg, s->packetLen[i]);
-                        return 0;
-                }
-        }
-        return 1;
-}
-
 static int
 validate_kasumi_f8_1_block(IMB_MGR *mgr)
 {
-        const uint32_t n = 1;
-        struct kasumi_f8_x_blocks s;
         const struct cipher_test *v;
 
         printf("Testing IMB_KASUMI_F8_1_BUFFER (Job API):\n");
 
-        if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
-                printf("F8 alloc failed !\n");
-                return 1;
-        }
-
         for (v = kasumi_f8_vectors; v->msg != NULL; v++) {
-
                 if ((v->msgSize % CHAR_BIT) != 0)
                         continue;
 
-                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_vectors)) {
-                        kasumi_f8_x_block_free(&s);
-                        printf("F8 prep failed !\n");
+                if (submit_kasumi_f8_job(mgr, v, IMB_DIR_ENCRYPT) < 0)
                         return 1;
-                }
-
-                /* Validate Encrypt */
-                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff, s.packetLen,
-                                      s.byteOffsets, IMB_DIR_ENCRYPT, n);
-
-                /*Validate Decrypt*/
-                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff, s.packetLen,
-                                      s.byteOffsets, IMB_DIR_DECRYPT, n);
-
-                if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__)) {
-                        kasumi_f8_x_block_free(&s);
+                if (submit_kasumi_f8_job(mgr, v, IMB_DIR_DECRYPT) < 0)
                         return 1;
-                }
-
-                kasumi_f8_x_block_clean_op(&s);
         }
 
         printf("[%s]:  PASS, for single buffers.\n", __FUNCTION__);
-        kasumi_f8_x_block_free(&s);
         return 0;
 }
 
