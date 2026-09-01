@@ -7,13 +7,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <assert.h>
 
 #include <intel-ipsec-mb.h>
 
 #include "utils.h"
 #include "cipher_test.h"
+#include "kat_common_cipher.h"
 
 int
 sm4_cbc_test(struct IMB_MGR *mb_mgr);
@@ -27,153 +26,73 @@ free_sm4_cbc_vectors(struct test_json_alloc_ctx *ctx)
         sm4_cbc_vectors = NULL;
 }
 
-static int
-sm4_job_ok(const struct IMB_JOB *job, IMB_MGR *mgr, const uint8_t *out_text, const uint8_t *target,
-           const uint8_t *padding, const size_t sizeof_padding, const unsigned text_len)
-{
-        const int num = (const int) ((uint64_t) job->user_data2);
-
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d error status:%d, job %d", __LINE__, job->status, num);
-                imb_get_strerror(imb_get_errno(mgr));
-                return 0;
-        }
-        if (memcmp(out_text, target + sizeof_padding, text_len)) {
-                printf("%d mismatched\n", num);
-                hexdump(stderr, "Expected", out_text, text_len);
-                hexdump(stderr, "Received", target + sizeof_padding, text_len);
-                return 0;
-        }
-        if (memcmp(padding, target, sizeof_padding)) {
-                printf("%d overwrite head\n", num);
-                return 0;
-        }
-        if (memcmp(padding, target + sizeof_padding + text_len, sizeof_padding)) {
-                printf("%d overwrite tail\n", num);
-                return 0;
-        }
-        return 1;
-}
+struct sm4_cbc_job_ctx {
+        uint32_t *enc_keys;
+        uint32_t *dec_keys;
+};
 
 static int
-test_sm4_cbc_many(struct IMB_MGR *mb_mgr, uint32_t *exp_enc_keys, uint32_t *exp_dec_keys,
-                  const void *iv, const uint8_t *in_text, const uint8_t *out_text,
-                  const unsigned text_len, const int dir, const int order,
-                  const IMB_CIPHER_MODE cipher, const int in_place, const int num_jobs)
+sm4_cbc_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
+                    void *ctx)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        int i, err, jobs_rx = 0, ret = -1;
+        const size_t key_sched_size = IMB_SM4_KEY_SCHEDULE_ROUNDS * sizeof(uint32_t);
+        struct sm4_cbc_job_ctx *job_ctx = calloc(1, sizeof(*job_ctx));
 
-        if (targets == NULL)
-                goto end_alloc;
+        (void) ctx;
+        if (job_ctx == NULL)
+                return -1;
 
-        memset(targets, 0, num_jobs * sizeof(void *));
-        memset(padding, -1, sizeof(padding));
+        job->user_data = job_ctx;
+        job_ctx->enc_keys = test_aligned_alloc(16, key_sched_size);
+        job_ctx->dec_keys = test_aligned_alloc(16, key_sched_size);
+        if (job_ctx->enc_keys == NULL || job_ctx->dec_keys == NULL)
+                return -1;
 
-        for (i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(text_len + (sizeof(padding) * 2));
-                if (targets[i] == NULL)
-                        goto end_alloc;
-                memset(targets[i], -1, text_len + (sizeof(padding) * 2));
-                if (in_place) {
-                        /* copy input text to the allocated buffer */
-                        memcpy(targets[i] + sizeof(padding), in_text, text_len);
-                }
-        }
-
-        /* flush the scheduler */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = order;
-                if (!in_place) {
-                        job->dst = targets[i] + sizeof(padding);
-                        job->src = in_text;
-                } else {
-                        job->dst = targets[i] + sizeof(padding);
-                        job->src = targets[i] + sizeof(padding);
-                }
-                job->cipher_mode = cipher;
-                job->enc_keys = exp_enc_keys;
-                job->dec_keys = exp_dec_keys;
-                job->key_len_in_bytes = 16;
-
-                job->iv = iv;
-                job->iv_len_in_bytes = 16;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = text_len;
-                job->user_data = targets[i];
-                job->user_data2 = (void *) ((uint64_t) i);
-
-                job->hash_alg = IMB_AUTH_NULL;
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL) {
-                        /* no job returned - check for error */
-                        err = imb_get_errno(mb_mgr);
-                        if (err != 0) {
-                                printf("Error: %s!\n", imb_get_strerror(err));
-                                goto end;
-                        }
-                } else {
-                        /* got job back */
-                        jobs_rx++;
-                        if (!sm4_job_ok(job, mb_mgr, out_text, job->user_data, padding,
-                                        sizeof(padding), text_len))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                err = imb_get_errno(mb_mgr);
-                if (err != 0) {
-                        printf("Error: %s!\n", imb_get_strerror(err));
-                        goto end;
-                }
-
-                jobs_rx++;
-                if (!sm4_job_ok(job, mb_mgr, out_text, job->user_data, padding, sizeof(padding),
-                                text_len))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL) {
-                err = imb_get_errno(mb_mgr);
-                if (err != 0) {
-                        printf("Error: %s!\n", imb_get_strerror(err));
-                        goto end;
-                }
-        }
-
-end_alloc:
-        if (targets != NULL) {
-                for (i = 0; i < num_jobs; i++)
-                        free(targets[i]);
-                free(targets);
-        }
-
-        return ret;
+        IMB_SM4_KEYEXP(mb_mgr, vec->key, job_ctx->enc_keys, job_ctx->dec_keys);
+        job->enc_keys = job_ctx->enc_keys;
+        job->dec_keys = job_ctx->dec_keys;
+        job->iv = (const uint8_t *) vec->iv;
+        job->iv_len_in_bytes = 16;
+        return 0;
 }
 
 static void
-test_sm4_cbc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
-                     const IMB_CIPHER_MODE cipher, const int num_jobs)
+sm4_cbc_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct sm4_cbc_job_ctx *job_ctx = job->user_data;
+
+        (void) ctx;
+        if (job_ctx != NULL) {
+                test_aligned_free(job_ctx->enc_keys);
+                test_aligned_free(job_ctx->dec_keys);
+                free(job_ctx);
+        }
+        job->user_data = NULL;
+}
+
+static int
+test_sm4_cbc_many(struct IMB_MGR *mb_mgr, const struct cipher_test *vec,
+                  const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order, const int in_place,
+                  const uint32_t num_jobs)
+{
+        const struct cipher_test *vec_ptr = vec;
+        const struct kat_cipher_job_ops ops = {
+                .prepare = sm4_cbc_job_prepare,
+                .cleanup = sm4_cbc_job_cleanup,
+                .cipher_mode = IMB_CIPHER_SM4_CBC,
+                .cipher_direction = dir,
+                .chain_order = order,
+                .key_len_in_bytes = IMB_KEY_128_BYTES,
+                .in_place = in_place,
+        };
+
+        return kat_cipher_test_submit_flush(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
+}
+
+static void
+test_sm4_cbc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
         const struct cipher_test *v = sm4_cbc_vectors;
-        DECLARE_ALIGNED(uint32_t exp_enc_keys[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
-        DECLARE_ALIGNED(uint32_t exp_dec_keys[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
 
         if (!quiet_mode)
                 printf("SM4-CBC Test (N jobs = %d):\n", num_jobs);
@@ -186,42 +105,32 @@ test_sm4_cbc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 #endif
                 }
 
-                IMB_SM4_KEYEXP(mb_mgr, v->key, exp_enc_keys, exp_dec_keys);
-
-                if (test_sm4_cbc_many(mb_mgr, exp_enc_keys, exp_dec_keys, v->iv,
-                                      (const void *) v->msg, (const void *) v->ct,
-                                      (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                                      IMB_ORDER_CIPHER_HASH, cipher, 0, num_jobs)) {
+                if (test_sm4_cbc_many(mb_mgr, v, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, 0,
+                                      num_jobs)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_sm4_cbc_many(mb_mgr, exp_enc_keys, exp_dec_keys, v->iv,
-                                      (const void *) v->ct, (const void *) v->msg,
-                                      (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
-                                      IMB_ORDER_HASH_CIPHER, cipher, 0, num_jobs)) {
+                if (test_sm4_cbc_many(mb_mgr, v, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, 0,
+                                      num_jobs)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_sm4_cbc_many(mb_mgr, exp_enc_keys, exp_dec_keys, v->iv,
-                                      (const void *) v->msg, (const void *) v->ct,
-                                      (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
-                                      IMB_ORDER_CIPHER_HASH, cipher, 1, num_jobs)) {
+                if (test_sm4_cbc_many(mb_mgr, v, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, 1,
+                                      num_jobs)) {
                         printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_sm4_cbc_many(mb_mgr, exp_enc_keys, exp_dec_keys, v->iv,
-                                      (const void *) v->ct, (const void *) v->msg,
-                                      (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
-                                      IMB_ORDER_HASH_CIPHER, cipher, 1, num_jobs)) {
+                if (test_sm4_cbc_many(mb_mgr, v, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, 1,
+                                      num_jobs)) {
                         printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -246,7 +155,7 @@ sm4_cbc_test(struct IMB_MGR *mb_mgr)
 
         test_suite_start(&ctx, "SM4-CBC-128");
         for (i = 0; i < test_num_jobs_size; i++)
-                test_sm4_cbc_vectors(mb_mgr, &ctx, IMB_CIPHER_SM4_CBC, test_num_jobs[i]);
+                test_sm4_cbc_vectors(mb_mgr, &ctx, test_num_jobs[i]);
         errors += test_suite_end(&ctx);
 
         free_sm4_cbc_vectors(jctx);
