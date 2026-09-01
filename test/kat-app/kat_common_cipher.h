@@ -52,6 +52,16 @@ kat_cipher_test_submit_flush(struct IMB_MGR *mb_mgr, const struct cipher_test *c
                              const struct kat_cipher_job_ops *ops);
 
 /**
+ * @brief Exercise generic burst APIs with caller-supplied preparation.
+ *
+ * @return 0 if all num_jobs completed and matched expected output, -1 otherwise.
+ */
+int
+kat_cipher_test_generic_burst(struct IMB_MGR *mb_mgr, const struct cipher_test *const *vec_tab,
+                              const uint32_t vec_tab_num, const uint32_t num_jobs,
+                              const struct kat_cipher_job_ops *ops);
+
+/**
  * @brief Exercise cipher burst API with caller-supplied preparation.
  *
  * @return 0 if all num_jobs completed and matched expected output, -1 otherwise.

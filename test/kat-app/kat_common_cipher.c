@@ -260,6 +260,87 @@ end:
 }
 
 int
+kat_cipher_test_generic_burst(struct IMB_MGR *mb_mgr, const struct cipher_test *const *vec_tab,
+                              const uint32_t vec_tab_num, const uint32_t num_jobs,
+                              const struct kat_cipher_job_ops *ops)
+{
+        struct IMB_JOB *job, *jobs[KAT_MAX_BURST_SIZE] = { NULL };
+        struct IMB_JOB *prepared[KAT_MAX_BURST_SIZE] = { NULL };
+        uint8_t processed[KAT_MAX_BURST_SIZE] = { 0 };
+        uint32_t jobs_rx = 0, completed_jobs = 0, prepared_jobs = 0;
+        int ret = -1;
+
+        if (ops == NULL) {
+                printf("Invalid cipher job operations\n");
+                return -1;
+        }
+
+        if (num_jobs == 0 || num_jobs > KAT_MAX_BURST_SIZE) {
+                printf("Invalid number of burst jobs: %u\n", num_jobs);
+                return -1;
+        }
+
+        if (kat_cipher_validate_vec_tab(vec_tab, vec_tab_num) < 0)
+                return -1;
+
+        uint8_t **targets = kat_cipher_alloc_targets(vec_tab, vec_tab_num, num_jobs);
+        if (targets == NULL)
+                return -1;
+
+        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
+                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
+
+        for (uint32_t i = 0; i < num_jobs; i++) {
+                const struct cipher_test *vec = kat_cipher_get_vec(vec_tab, vec_tab_num, i);
+
+                if (kat_cipher_prepare_job(mb_mgr, jobs[i], vec, ops, targets[i]) < 0)
+                        goto end;
+                jobs[i]->user_data2 = (void *) (uintptr_t) i;
+                prepared[prepared_jobs++] = jobs[i];
+                imb_set_session(mb_mgr, jobs[i]);
+        }
+
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
+        if (imb_get_errno(mb_mgr) != 0) {
+                printf("submit_burst error %d : '%s'\n", imb_get_errno(mb_mgr),
+                       imb_get_strerror(imb_get_errno(mb_mgr)));
+                goto end;
+        }
+
+        while (jobs_rx < num_jobs) {
+                for (uint32_t i = 0; i < completed_jobs; i++) {
+                        const uint32_t job_idx = (uint32_t) (uintptr_t) jobs[i]->user_data2;
+
+                        job = jobs[i];
+                        processed[job_idx] = 1;
+                        jobs_rx++;
+                        if (kat_cipher_job_process(job, vec_tab, vec_tab_num, ops, targets) < 0)
+                                goto end;
+                }
+
+                if (jobs_rx == num_jobs)
+                        break;
+
+                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - jobs_rx, jobs);
+                if (completed_jobs == 0) {
+                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+                        goto end;
+                }
+        }
+        ret = 0;
+
+end:
+        while (IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs) != 0)
+                ;
+        for (uint32_t i = 0; i < prepared_jobs; i++) {
+                if (processed[i] == 0)
+                        kat_cipher_job_cleanup(prepared[i], ops);
+        }
+        kat_cipher_free_targets(targets, num_jobs);
+        return ret;
+}
+
+int
 kat_cipher_test_burst(struct IMB_MGR *mb_mgr, const struct cipher_test *const *vec_tab,
                       const uint32_t vec_tab_num, const uint32_t num_jobs,
                       const struct kat_cipher_job_ops *ops)
