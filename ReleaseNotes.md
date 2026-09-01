@@ -47,6 +47,8 @@ Library
 - Removed QUIC API support.
 - Removed custom cipher mode support (`IMB_CIPHER_CUSTOM` and `IMB_JOB::cipher_func`).
 - Removed custom hash algorithm support (`IMB_AUTH_CUSTOM` and `IMB_JOB::hash_func`).
+- Added message length limit check (2^16 - 2 bytes) for AES-CBC and AES-CFB encrypt direction jobs.
+- Added support for zero-length messages in AES-CBC.
 
 Test Applications
 - Added new `imb-safe-check` application scanning all algorithms, message sizes,

@@ -1961,8 +1961,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW5G_NEA4:
                                 case IMB_CIPHER_AES_NEA5:
+                                case IMB_CIPHER_CBC:
                                 case IMB_CIPHER_CFB:
-
                                         break;
                                 default:
                                         job->msg_len_to_cipher_in_bytes = 0;
@@ -2009,11 +2009,18 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_SNOW5G_NEA4:
                                 case IMB_CIPHER_AES_NEA5:
                                 case IMB_CIPHER_NULL:
-                                case IMB_CIPHER_CFB:
                                 case IMB_CIPHER_SM4_ECB:
                                 case IMB_CIPHER_SM4_CNTR:
                                 case IMB_CIPHER_SM4_CBC:
                                         continue;
+                                case IMB_CIPHER_CBC:
+                                case IMB_CIPHER_CFB:
+                                        /* decrypt has no max limit; only test encrypt */
+                                        if (dir == IMB_DIR_DECRYPT)
+                                                continue;
+                                        /* use a 16-byte-aligned length above MB_MAX_LEN16 */
+                                        job->msg_len_to_cipher_in_bytes = (1 << 16);
+                                        break;
                                         /* not allowed with null hash */
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
