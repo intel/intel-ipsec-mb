@@ -22,6 +22,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "cipher_test.h"
+#include "kat_common_cipher.h"
 
 #define MAXBUFS     17
 #define PASS_STATUS 0
@@ -59,6 +60,67 @@ struct zuc_eea3_128_params {
         const uint8_t *bearer;
         const uint8_t *direction;
 };
+
+static void
+zuc_eea3_128_set_params(const struct cipher_test *v, struct zuc_eea3_128_params *p);
+
+struct zuc_job_ctx {
+        uint8_t *key;
+        uint8_t *iv;
+};
+
+static int
+zuc_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
+                void *ctx)
+{
+        const IMB_CIPHER_MODE cipher_mode = *(const IMB_CIPHER_MODE *) ctx;
+        const size_t key_len = vec->keySize / 8;
+        struct zuc_job_ctx *job_ctx;
+
+        (void) mb_mgr;
+        if ((vec->keySize % 8) != 0 || (vec->ivSize % 8) != 0)
+                return -1;
+
+        job_ctx = calloc(1, sizeof(*job_ctx));
+        if (job_ctx == NULL)
+                return -1;
+
+        job->user_data = job_ctx;
+        job_ctx->key = test_aligned_alloc(16, key_len);
+        job_ctx->iv = test_aligned_alloc(16, IMB_ZUC_IV_LEN_IN_BYTES);
+        if (job_ctx->key == NULL || job_ctx->iv == NULL)
+                return -1;
+
+        memcpy(job_ctx->key, vec->key, key_len);
+        if (cipher_mode == IMB_CIPHER_ZUC_EEA3 && (vec->ivSize / 8) != IMB_ZUC_IV_LEN_IN_BYTES) {
+                struct zuc_eea3_128_params params = { 0 };
+
+                zuc_eea3_128_set_params(vec, &params);
+                zuc_eea3_iv_gen(*params.count, *params.bearer, *params.direction, job_ctx->iv);
+        } else {
+                memcpy(job_ctx->iv, vec->iv, vec->ivSize / 8);
+        }
+
+        job->enc_keys = job_ctx->key;
+        job->dec_keys = job_ctx->key;
+        job->iv = job_ctx->iv;
+        job->iv_len_in_bytes = IMB_ZUC_IV_LEN_IN_BYTES;
+        return 0;
+}
+
+static void
+zuc_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct zuc_job_ctx *job_ctx = job->user_data;
+
+        (void) ctx;
+        if (job_ctx != NULL) {
+                test_aligned_free(job_ctx->key);
+                test_aligned_free(job_ctx->iv);
+                free(job_ctx);
+        }
+        job->user_data = NULL;
+}
 
 int
 validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData, uint8_t *pKeys,
@@ -276,147 +338,6 @@ exit_zuc_eea3_nea6_test:
         return errors;
 }
 
-static inline int
-submit_burst_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const ivs,
-                       uint8_t **const src, uint8_t **const dst, const uint32_t *lens, int dir,
-                       const unsigned int num_jobs, const unsigned int key_len,
-                       const unsigned int *iv_lens, IMB_CIPHER_MODE cipher_mode)
-{
-        IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
-        unsigned int i;
-        unsigned int jobs_rx = 0;
-        uint32_t completed_jobs = 0;
-        int err;
-
-        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
-                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
-
-        for (i = 0; i < num_jobs; i++) {
-                job = jobs[i];
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->cipher_mode = cipher_mode;
-                job->src = src[i];
-                job->dst = dst[i];
-                job->iv = ivs[i];
-                job->iv_len_in_bytes = iv_lens[i];
-                job->enc_keys = keys[i];
-                job->key_len_in_bytes = key_len;
-
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = lens[i];
-                job->hash_alg = IMB_AUTH_NULL;
-
-                imb_set_session(mb_mgr, job);
-        }
-
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
-        err = imb_get_errno(mb_mgr);
-
-        if (err != 0) {
-                printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                return -1;
-        }
-
-check_eea3_burst_jobs:
-        for (i = 0; i < completed_jobs; i++) {
-                job = jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i + 1);
-                        return -1;
-                }
-
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
-                if (completed_jobs == 0) {
-                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                        return -1;
-                }
-                goto check_eea3_burst_jobs;
-        }
-
-        return 0;
-}
-
-static inline int
-submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const ivs,
-                 uint8_t **const src, uint8_t **const dst, const uint32_t *lens, int dir,
-                 const unsigned int num_jobs, const unsigned int key_len,
-                 const unsigned int *iv_lens, IMB_CIPHER_MODE cipher_mode)
-{
-        IMB_JOB *job;
-        unsigned int i;
-        unsigned int jobs_rx = 0;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->cipher_mode = cipher_mode;
-                job->src = src[i];
-                job->dst = dst[i];
-                job->iv = ivs[i];
-                job->iv_len_in_bytes = iv_lens[i];
-                job->enc_keys = keys[i];
-                job->key_len_in_bytes = key_len;
-
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = lens[i];
-                job->hash_alg = IMB_AUTH_NULL;
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        jobs_rx++;
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %u", __LINE__, job->status, i);
-                                return -1;
-                        }
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d, job %u", __LINE__, job->status, i);
-                        return -1;
-                }
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                return -1;
-        }
-
-        return 0;
-}
-
-static int
-test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen, const char *err_msg)
-{
-        int ret = 0;
-        ret = memcmp(out, ref, bytelen);
-
-        if (ret) {
-                printf("%s : FAIL\n", err_msg);
-                byte_hexdump("Expected", ref, bytelen);
-                byte_hexdump("Found", out, bytelen);
-                ret = -1;
-        }
-#ifdef DEBUG
-        else {
-                if (!quiet_mode)
-                        printf("%s : PASS\n", err_msg);
-        }
-#endif
-        fflush(stdout);
-
-        return ret;
-}
-
 /**
  * Count, Bearer and Direction stored in vector IV field
  */
@@ -436,13 +357,26 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
                   const unsigned int var_bufs, const unsigned int num_buffers,
                   const uint32_t *buf_idx)
 {
-        unsigned int i;
-        uint32_t packetLen[MAXBUFS] = { 0 };
-        int ret = 0;
-        unsigned int iv_lens[MAXBUFS];
+        const struct cipher_test *vec_tab[MAXBUFS];
         const struct cipher_test *vectors = zuc_eea3_128_vectors;
+        IMB_CIPHER_MODE cipher_mode = IMB_CIPHER_ZUC_EEA3;
+        const struct kat_cipher_job_ops ops = {
+                .prepare = zuc_job_prepare,
+                .cleanup = zuc_job_cleanup,
+                .ctx = &cipher_mode,
+                .cipher_mode = IMB_CIPHER_ZUC_EEA3,
+                .cipher_direction = dir,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = IMB_ZUC_KEY_LEN_IN_BYTES,
+                .in_place = 0,
+        };
 
-        for (i = 0; i < num_buffers; i++) {
+        (void) pSrcData;
+        (void) pDstData;
+        (void) pKeys;
+        (void) pIV;
+        (void) var_bufs;
+        for (unsigned int i = 0; i < num_buffers; i++) {
                 const struct cipher_test *vector = &vectors[buf_idx[i]];
 
                 if ((vector->msgSize % 8) != 0) {
@@ -451,70 +385,20 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
                                vector->tcId, vector->msgSize);
                         return -1;
                 }
-                packetLen[i] = (uint32_t) (vector->msgSize / 8);
-                iv_lens[i] = IMB_ZUC_IV_LEN_IN_BYTES;
-
-                /* generate IV if params stored in vector */
                 if ((vector->ivSize % 8) != 0) {
                         printf("Unsupported non-byte-aligned ZUC-EEA3 IV (tcId=%zu, bits=%zu)\n",
                                vector->tcId, vector->ivSize);
                         return -1;
                 }
-                if ((vector->ivSize / 8) != iv_lens[i]) {
-                        struct zuc_eea3_128_params p = { 0 };
-
-                        zuc_eea3_128_set_params(vector, &p);
-                        zuc_eea3_iv_gen(*p.count, *p.bearer, *p.direction, pIV[i]);
-                } else
-                        /* actual iv stored in vector */
-                        memcpy(pIV[i], vector->iv, IMB_ZUC_IV_LEN_IN_BYTES);
-
-                memcpy(pKeys[i], vector->key, IMB_ZUC_KEY_LEN_IN_BYTES);
-                if (dir == IMB_DIR_ENCRYPT)
-                        memcpy(pSrcData[i], vector->msg, packetLen[i]);
-                else
-                        memcpy(pSrcData[i], vector->ct, packetLen[i]);
+                vec_tab[i] = vector;
         }
 
         if (type == TEST_SINGLE_JOB_API)
-                submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
-                                 num_buffers, IMB_ZUC_KEY_LEN_IN_BYTES, iv_lens,
-                                 IMB_CIPHER_ZUC_EEA3);
+                return kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_buffers, num_buffers,
+                                                    &ops);
         else
-                submit_burst_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
-                                       num_buffers, IMB_ZUC_KEY_LEN_IN_BYTES, iv_lens,
-                                       IMB_CIPHER_ZUC_EEA3);
-
-        for (i = 0; i < num_buffers; i++) {
-                uint8_t *pDst8 = (uint8_t *) pDstData[i];
-                int retTmp;
-                char msg_start[50];
-                char msg[100];
-                const struct cipher_test *vector = &vectors[buf_idx[i]];
-
-                if (var_bufs)
-                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC %c block multi-vector",
-                                 num_buffers == 4 ? '4' : 'N');
-                else
-                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC %c block",
-                                 num_buffers == 4 ? '4' : 'N');
-
-                if (dir == IMB_DIR_ENCRYPT) {
-                        snprintf(msg, sizeof(msg), "%s test %zu, index %u (Enc):", msg_start,
-                                 vector->tcId, i);
-                        retTmp =
-                                test_output(pDst8, (const uint8_t *) vector->ct, packetLen[i], msg);
-                } else { /* DECRYPT */
-                        snprintf(msg, sizeof(msg), "%s test %zu, index %u (Dec):", msg_start,
-                                 vector->tcId, i);
-                        retTmp = test_output(pDst8, (const uint8_t *) vector->msg, packetLen[i],
-                                             msg);
-                }
-                if (retTmp < 0)
-                        ret = retTmp;
-        }
-
-        return ret;
+                return kat_cipher_test_generic_burst(mb_mgr, vec_tab, num_buffers, num_buffers,
+                                                     &ops);
 }
 
 int
@@ -576,13 +460,26 @@ submit_and_verify_zuc_nea6(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t *
                            IMB_CIPHER_DIRECTION dir, const unsigned int var_bufs,
                            const unsigned int num_buffers, const uint32_t *buf_idx)
 {
-        unsigned int i;
-        uint32_t packetLen[MAXBUFS] = { 0 };
-        int ret = 0;
-        unsigned int iv_lens[MAXBUFS];
+        const struct cipher_test *vec_tab[MAXBUFS];
         const struct cipher_test *vectors = zuc_nea6_vectors;
+        IMB_CIPHER_MODE cipher_mode = IMB_CIPHER_ZUC_NEA6;
+        const struct kat_cipher_job_ops ops = {
+                .prepare = zuc_job_prepare,
+                .cleanup = zuc_job_cleanup,
+                .ctx = &cipher_mode,
+                .cipher_mode = IMB_CIPHER_ZUC_NEA6,
+                .cipher_direction = dir,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = IMB_ZUC_NEA6_KEY_LEN_IN_BYTES,
+                .in_place = 0,
+        };
 
-        for (i = 0; i < num_buffers; i++) {
+        (void) pSrcData;
+        (void) pDstData;
+        (void) pKeys;
+        (void) pIV;
+        (void) var_bufs;
+        for (unsigned int i = 0; i < num_buffers; i++) {
                 const struct cipher_test *vector = &vectors[buf_idx[i]];
 
                 if ((vector->msgSize % 8) != 0 || (vector->keySize % 8) != 0 ||
@@ -591,53 +488,15 @@ submit_and_verify_zuc_nea6(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t *
                                vector->tcId);
                         return -1;
                 }
-                packetLen[i] = (uint32_t) (vector->msgSize / 8);
-                memcpy(pKeys[i], vector->key, vector->keySize / 8);
-                memcpy(pIV[i], vector->iv, vector->ivSize / 8);
-                if (dir == IMB_DIR_ENCRYPT)
-                        memcpy(pSrcData[i], vector->msg, packetLen[i]);
-                else
-                        memcpy(pSrcData[i], vector->ct, packetLen[i]);
-                iv_lens[i] = (uint32_t) vector->ivSize / 8;
+                vec_tab[i] = vector;
         }
 
         if (type == TEST_SINGLE_JOB_API)
-                submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
-                                 num_buffers, IMB_ZUC_NEA6_KEY_LEN_IN_BYTES, iv_lens,
-                                 IMB_CIPHER_ZUC_NEA6);
-        else if (type == TEST_BURST_JOB_API)
-                submit_burst_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
-                                       num_buffers, IMB_ZUC_NEA6_KEY_LEN_IN_BYTES, iv_lens,
-                                       IMB_CIPHER_ZUC_NEA6);
-
-        for (i = 0; i < num_buffers; i++) {
-                uint8_t *pDst8 = (uint8_t *) pDstData[i];
-                int retTmp;
-                char msg_start[50];
-                char msg[100];
-                const struct cipher_test *vector = &vectors[buf_idx[i]];
-
-                if (var_bufs)
-                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC-NEA6 multi-vector");
-                else
-                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC-NEA6");
-
-                if (dir == IMB_DIR_ENCRYPT) {
-                        snprintf(msg, sizeof(msg), "%s test %zu, index %u (Enc):", msg_start,
-                                 vector->tcId, i);
-                        retTmp =
-                                test_output(pDst8, (const uint8_t *) vector->ct, packetLen[i], msg);
-                } else { /* DECRYPT */
-                        snprintf(msg, sizeof(msg), "%s test %zu, index %u (Dec):", msg_start,
-                                 vector->tcId, i);
-                        retTmp = test_output(pDst8, (const uint8_t *) vector->msg, packetLen[i],
-                                             msg);
-                }
-                if (retTmp < 0)
-                        ret = retTmp;
-        }
-
-        return ret;
+                return kat_cipher_test_submit_flush(mb_mgr, vec_tab, num_buffers, num_buffers,
+                                                    &ops);
+        else
+                return kat_cipher_test_generic_burst(mb_mgr, vec_tab, num_buffers, num_buffers,
+                                                     &ops);
 }
 
 int
