@@ -12,9 +12,9 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "cipher_test.h"
+#include "kat_common_cipher.h"
 
 #define BYTE_ROUND_UP(x) ((x + 7) / 8)
-#define PADDING_SIZE     16
 #define IV_SIZE          16
 
 int
@@ -29,50 +29,86 @@ free_aes_cfb_vectors(struct test_json_alloc_ctx *ctx)
         aes_cfb_vectors = NULL;
 }
 
-static int
-aes_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *target,
-           const uint8_t *padding, const unsigned text_len)
-{
-        const int num = (const int) ((uint64_t) job->user_data2);
+struct aes_cfb_prepare_ctx {
+        const void *enc_keys;
+        const void *iv;
+        size_t key_sched_len;
+};
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d error status:%d, job %d", __LINE__, job->status, num);
-                return 0;
-        }
-        if (memcmp(out_text, target + PADDING_SIZE, text_len)) {
-                printf("%d mismatched\n", num);
-                return 0;
-        }
-        if (memcmp(padding, target, PADDING_SIZE)) {
-                printf("%d overwrite head\n", num);
-                return 0;
-        }
-        if (memcmp(padding, target + PADDING_SIZE + text_len, PADDING_SIZE)) {
-                printf("%d overwrite tail\n", num);
-                return 0;
-        }
-        return 1;
+struct aes_cfb_job_ctx {
+        void *enc_keys;
+};
+
+static int
+aes_cfb_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
+                    void *ctx)
+{
+        const struct aes_cfb_prepare_ctx *prepare_ctx = ctx;
+        struct aes_cfb_job_ctx *job_ctx = calloc(1, sizeof(*job_ctx));
+
+        (void) mb_mgr;
+        (void) vec;
+        if (job_ctx == NULL)
+                return -1;
+
+        job->user_data = job_ctx;
+        job_ctx->enc_keys = test_aligned_alloc(16, prepare_ctx->key_sched_len);
+        if (job_ctx->enc_keys == NULL)
+                return -1;
+
+        memcpy(job_ctx->enc_keys, prepare_ctx->enc_keys, prepare_ctx->key_sched_len);
+        job->enc_keys = job_ctx->enc_keys;
+        job->dec_keys = job_ctx->enc_keys;
+        job->iv = prepare_ctx->iv;
+        job->iv_len_in_bytes = IV_SIZE;
+        return 0;
 }
 
 static void
-test_aes_cfb_setup_job(struct IMB_JOB *job, const void *enc_keys, unsigned key_len, const void *iv,
-                       unsigned text_byte_len, const IMB_CIPHER_DIRECTION dir)
+aes_cfb_job_cleanup(struct IMB_JOB *job, void *ctx)
 {
-        if (dir == IMB_DIR_ENCRYPT)
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-        else
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->cipher_direction = dir;
-        job->cipher_mode = IMB_CIPHER_CFB;
-        job->key_len_in_bytes = key_len;
+        struct aes_cfb_job_ctx *job_ctx = job->user_data;
 
-        job->enc_keys = enc_keys;
-        job->dec_keys = enc_keys;
-        job->iv = iv;
-        job->iv_len_in_bytes = IV_SIZE;
-        job->cipher_start_src_offset_in_bytes = 0;
-        job->msg_len_to_cipher_in_bytes = text_byte_len;
-        job->hash_alg = IMB_AUTH_NULL;
+        (void) ctx;
+        if (job_ctx != NULL) {
+                test_aligned_free(job_ctx->enc_keys);
+                free(job_ctx);
+        }
+        job->user_data = NULL;
+}
+
+static int
+test_aes_cfb_common(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned key_len, const void *iv,
+                    const uint8_t *in_text, const uint8_t *out_text, unsigned text_byte_len,
+                    const IMB_CIPHER_DIRECTION dir, const int in_place, const uint32_t num_jobs,
+                    const int burst_type)
+{
+        const struct cipher_test vec = {
+                .msg = (const char *) (dir == IMB_DIR_ENCRYPT ? in_text : out_text),
+                .ct = (const char *) (dir == IMB_DIR_ENCRYPT ? out_text : in_text),
+                .msgSize = text_byte_len * 8,
+        };
+        const struct cipher_test *vec_ptr = &vec;
+        struct aes_cfb_prepare_ctx prepare_ctx = { enc_keys, iv,
+                                                   (key_len / 4 + 7) * IMB_AES_BLOCK_SIZE };
+        const struct kat_cipher_job_ops ops = {
+                .prepare = aes_cfb_job_prepare,
+                .cleanup = aes_cfb_job_cleanup,
+                .ctx = &prepare_ctx,
+                .cipher_mode = IMB_CIPHER_CFB,
+                .cipher_direction = dir,
+                .chain_order =
+                        dir == IMB_DIR_ENCRYPT ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = key_len,
+                .in_place = in_place,
+        };
+
+        if (burst_type == 1)
+                return kat_cipher_test_generic_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
+        else if (burst_type == 2)
+                return kat_cipher_test_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
+        else
+                return kat_cipher_test_submit_flush(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
 }
 
 static int
@@ -80,96 +116,8 @@ test_aes_cfb(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned key_len, con
              const uint8_t *in_text, const uint8_t *out_text, unsigned text_byte_len,
              const IMB_CIPHER_DIRECTION dir, const int in_place, const uint32_t num_jobs)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[PADDING_SIZE];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        uint32_t err, jobs_rx = 0, ret = -1;
-
-        if (targets == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end;
-        }
-
-        memset(targets, -1, num_jobs * sizeof(void *));
-        memset(padding, -1, PADDING_SIZE);
-
-        for (uint32_t i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(text_byte_len + (PADDING_SIZE * 2));
-                if (targets[i] == NULL)
-                        goto end_alloc;
-                memset(targets[i], -1, text_byte_len + (PADDING_SIZE * 2));
-                if (in_place) {
-                        /* copy input text to the allocated buffer */
-                        memcpy(targets[i] + PADDING_SIZE, in_text, text_byte_len);
-                }
-        }
-
-        /* flush the scheduler */
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (uint32_t i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                if (!in_place) {
-                        job->src = in_text;
-                } else {
-                        job->src = targets[i] + PADDING_SIZE;
-                }
-                job->dst = targets[i] + sizeof(padding);
-                job->user_data = targets[i];
-                job->user_data2 = (void *) ((uint64_t) i);
-                test_aes_cfb_setup_job(job, enc_keys, key_len, iv, text_byte_len, dir);
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL) {
-                        /* no job returned - check for error */
-                        err = imb_get_errno(mb_mgr);
-                        if (err != 0) {
-                                printf("Error: %s!\n", imb_get_strerror(err));
-                                goto end;
-                        }
-                } else {
-                        /* got job back */
-                        jobs_rx++;
-                        if (!aes_job_ok(job, out_text, job->user_data, padding, text_byte_len))
-                                goto end;
-                }
-        }
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                err = imb_get_errno(mb_mgr);
-                if (err != 0) {
-                        printf("Error: %s!\n", imb_get_strerror(err));
-                        goto end;
-                }
-
-                jobs_rx++;
-                if (!aes_job_ok(job, out_text, job->user_data, padding, text_byte_len))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL) {
-                err = imb_get_errno(mb_mgr);
-                if (err != 0) {
-                        printf("Error: %s!\n", imb_get_strerror(err));
-                        goto end;
-                }
-        }
-
-end_alloc:
-        if (targets != NULL) {
-                for (uint32_t i = 0; i < num_jobs; i++)
-                        free(targets[i]);
-                free(targets);
-        }
-
-        return ret;
+        return test_aes_cfb_common(mb_mgr, enc_keys, key_len, iv, in_text, out_text, text_byte_len,
+                                   dir, in_place, num_jobs, 0);
 }
 
 static int
@@ -177,88 +125,8 @@ test_aes_cfb_burst(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned key_le
                    const uint8_t *in_text, const uint8_t *out_text, unsigned text_byte_len,
                    const IMB_CIPHER_DIRECTION dir, const int in_place, const uint32_t num_jobs)
 {
-        struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
-        uint8_t padding[PADDING_SIZE];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        uint32_t completed_jobs, jobs_rx = 0, ret = -1;
-
-        if (targets == NULL)
-                goto end_alloc;
-
-        memset(targets, 0, num_jobs * sizeof(void *));
-        memset(padding, -1, PADDING_SIZE);
-
-        for (uint32_t i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(text_byte_len + (PADDING_SIZE * 2));
-                if (targets[i] == NULL)
-                        goto end_alloc;
-                memset(targets[i], -1, text_byte_len + (PADDING_SIZE * 2));
-                if (in_place) {
-                        /* copy input text to the allocated buffer */
-                        memcpy(targets[i] + PADDING_SIZE, in_text, text_byte_len);
-                }
-        }
-
-        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < (uint32_t) num_jobs)
-                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
-
-        for (uint32_t i = 0; i < num_jobs; i++) {
-                job = jobs[i];
-                if (!in_place) {
-                        job->src = in_text;
-                } else {
-                        job->src = targets[i] + PADDING_SIZE;
-                }
-                job->dst = targets[i] + sizeof(padding);
-                job->user_data = targets[i];
-                job->user_data2 = (void *) ((uint64_t) i);
-                test_aes_cfb_setup_job(job, enc_keys, key_len, iv, text_byte_len, dir);
-                imb_set_session(mb_mgr, job);
-        }
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
-        if (completed_jobs == 0) {
-                int err = imb_get_errno(mb_mgr);
-
-                if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                        goto end;
-                }
-        }
-
-check_burst_jobs:
-        for (uint32_t i = 0; i < completed_jobs; i++) {
-                job = jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i + 1);
-                        goto end;
-                }
-
-                if (!aes_job_ok(job, out_text, job->user_data, padding, text_byte_len))
-                        goto end;
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
-                if (completed_jobs == 0) {
-                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                        goto end;
-                }
-                goto check_burst_jobs;
-        }
-        ret = 0;
-
-end:
-
-end_alloc:
-        if (targets != NULL) {
-                for (uint32_t i = 0; i < num_jobs; i++)
-                        free(targets[i]);
-                free(targets);
-        }
-
-        return ret;
+        return test_aes_cfb_common(mb_mgr, enc_keys, key_len, iv, in_text, out_text, text_byte_len,
+                                   dir, in_place, num_jobs, 1);
 }
 
 static int
@@ -267,85 +135,8 @@ test_aes_cfb_cipher_burst(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned
                           unsigned text_byte_len, const IMB_CIPHER_DIRECTION dir,
                           const int in_place, const uint32_t num_jobs)
 {
-        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE];
-        uint8_t padding[16];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        uint32_t i, completed_jobs, jobs_rx = 0, ret = -1;
-
-        if (targets == NULL)
-                goto end_alloc;
-
-        memset(targets, 0, num_jobs * sizeof(void *));
-        memset(padding, -1, PADDING_SIZE);
-
-        for (i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(text_byte_len + (PADDING_SIZE * 2));
-                if (targets[i] == NULL)
-                        goto end_alloc;
-                memset(targets[i], -1, text_byte_len + (PADDING_SIZE * 2));
-                if (in_place) {
-                        /* copy input text to the allocated buffer */
-                        memcpy(targets[i] + PADDING_SIZE, in_text, text_byte_len);
-                }
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-                if (!in_place) {
-                        job->src = in_text;
-                } else {
-                        job->src = targets[i] + PADDING_SIZE;
-                }
-                job->dst = targets[i] + PADDING_SIZE;
-                job->user_data = targets[i];
-                job->user_data2 = (void *) ((uint64_t) i);
-                test_aes_cfb_setup_job(job, enc_keys, key_len, iv, text_byte_len, dir);
-        }
-
-        completed_jobs =
-                IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, num_jobs, IMB_CIPHER_CFB, dir, key_len);
-        if (completed_jobs != num_jobs) {
-                int err = imb_get_errno(mb_mgr);
-
-                if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                        goto end;
-                } else {
-                        printf("submit_burst error: not enough "
-                               "jobs returned!\n");
-                        goto end;
-                }
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i + 1);
-                        goto end;
-                }
-
-                if (!aes_job_ok(job, out_text, job->user_data, padding, text_byte_len))
-                        goto end;
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-
-end_alloc:
-        if (targets != NULL) {
-                for (i = 0; i < num_jobs; i++)
-                        free(targets[i]);
-                free(targets);
-        }
-
-        return ret;
+        return test_aes_cfb_common(mb_mgr, enc_keys, key_len, iv, in_text, out_text, text_byte_len,
+                                   dir, in_place, num_jobs, 2);
 }
 
 static void
