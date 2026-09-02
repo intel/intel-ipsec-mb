@@ -184,7 +184,7 @@ SUBMIT_JOB_AES_ENC:
         vphminposuw     xmm2, xmm1
         vpextrw         DWORD(tmp), xmm2, 0       ; min value
         cmp             DWORD(len2), DWORD(tmp)
-        jle             use_min
+        jbe             use_min
         vpextrw         DWORD(idx), xmm2, 1   ; min index
         add             DWORD(idx), 8               ; but index +8
         mov             len2, tmp                    ; min len
