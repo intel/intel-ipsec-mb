@@ -919,5 +919,4 @@ SHA3_MULTI_RATE_PADDING:
 
 SHAKE_MULTI_RATE_PADDING:
         DB 0x1F
-
-mksection .note.GNU-stack noalloc noexec nowrite progbits
+mksection stack-noexec

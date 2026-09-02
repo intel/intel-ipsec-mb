@@ -426,3 +426,5 @@ SNOW5G_NCA4:
 %endif
         FUNC_RESTORE
         ret
+
+mksection stack-noexec

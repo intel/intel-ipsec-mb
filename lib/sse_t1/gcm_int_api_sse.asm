@@ -614,3 +614,5 @@ error_gmac_update:
         IMB_ERR_CHECK_END rax
         jmp     exit_gmac_update
 %endif
+
+mksection stack-noexec

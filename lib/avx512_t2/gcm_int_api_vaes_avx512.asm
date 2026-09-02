@@ -614,3 +614,5 @@ error_precomp:
 
         jmp exit_precomp
 %endif
+
+mksection stack-noexec

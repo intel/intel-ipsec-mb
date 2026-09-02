@@ -401,5 +401,4 @@ align_label
         pop             r12
         pop             rbx
         ret
-
-mksection .note.GNU-stack noalloc noexec nowrite progbits
+mksection stack-noexec

@@ -1170,3 +1170,5 @@ align_label
         IMB_ERR_CHECK_END rax
         jmp     .exit_gmac_update
 %endif
+
+mksection stack-noexec

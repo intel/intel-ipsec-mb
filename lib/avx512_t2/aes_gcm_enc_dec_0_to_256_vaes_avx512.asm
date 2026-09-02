@@ -892,3 +892,5 @@ gcm_0_to_256_dec_wrapper_asm:
 %endif
 
         ret
+
+mksection stack-noexec

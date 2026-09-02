@@ -505,3 +505,5 @@ skip_aad_check_error_init_IV:
         IMB_ERR_CHECK_END rax
         jmp     exit_init_IV
 %endif
+
+mksection stack-noexec
