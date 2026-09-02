@@ -147,11 +147,8 @@ SUBMIT_JOB_AES_ENC:
 
         ;; Update lane len
         vmovdqa64       ymm0, [state + _aes_lens]
-        mov             tmp2, rcx       ; save rcx
-        mov             rcx, lane
-        mov             tmp, 1
-        shl             tmp, cl
-        mov             rcx, tmp2       ; restore rcx
+        xor             DWORD(tmp), DWORD(tmp)
+        bts             DWORD(tmp), DWORD(lane)
         kmovq           k1, tmp
 
         vpbroadcastw    ymm1, WORD(len)
