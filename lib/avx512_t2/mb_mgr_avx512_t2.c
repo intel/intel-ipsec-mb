@@ -40,14 +40,6 @@
 #define SUBMIT_JOB_NOCHECK          submit_job_nocheck_avx512_t2
 #define GET_NEXT_JOB                get_next_job_avx512_t2
 #define GET_COMPLETED_JOB           get_completed_job_avx512_t2
-#define SUBMIT_BURST                submit_burst_avx512_t2
-#define SUBMIT_BURST_NOCHECK        submit_burst_nocheck_avx512_t2
-#define SUBMIT_CIPHER_BURST         submit_cipher_burst_avx512_t2
-#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx512_t2
-#define SUBMIT_HASH_BURST           submit_hash_burst_avx512_t2
-#define SUBMIT_HASH_BURST_NOCHECK   submit_hash_burst_nocheck_avx512_t2
-#define SUBMIT_AEAD_BURST           submit_aead_burst_avx512_t2
-#define SUBMIT_AEAD_BURST_NOCHECK   submit_aead_burst_nocheck_avx512_t2
 #define GET_NEXT_BURST              get_next_burst_avx512_t2
 #define SUBMIT_BURST                submit_burst_avx512_t2
 #define SUBMIT_BURST_NOCHECK        submit_burst_nocheck_avx512_t2
@@ -56,6 +48,8 @@
 #define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx512_t2
 #define SUBMIT_HASH_BURST           submit_hash_burst_avx512_t2
 #define SUBMIT_HASH_BURST_NOCHECK   submit_hash_burst_nocheck_avx512_t2
+#define SUBMIT_AEAD_BURST           submit_aead_burst_avx512_t2
+#define SUBMIT_AEAD_BURST_NOCHECK   submit_aead_burst_nocheck_avx512_t2
 #define SET_SUITE_ID_FN             set_suite_id_avx512_t2
 
 /* Hash */
