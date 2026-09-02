@@ -139,6 +139,8 @@ SUBMIT_JOB_AES_CFB_ENC:
         and     lane, 0xF
         shr     unused_lanes, 4
         mov     len, [job + _msg_len_to_cipher_in_bytes]
+        ;; no len masking here - unlike CBC, CFB has no DOCSIS caller that
+        ;; passes an unaligned-to-block-size length
         mov     iv, [job + _iv]
         mov     [state + _aes_unused_lanes], unused_lanes
         add     qword [state + _aes_lanes_in_use], 1
@@ -217,6 +219,7 @@ len_is_0:
         sub     qword [state + _aes_lanes_in_use], 1
 
 %ifdef SAFE_DATA
+        ;; Clear IV
         vpxorq  xmm0, xmm0
         shl     idx, 4 ; multiply by 16
         vmovdqa [state + _aes_args_IV + idx], xmm0
