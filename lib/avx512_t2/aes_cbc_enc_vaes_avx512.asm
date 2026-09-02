@@ -5,11 +5,13 @@
 ;;
 
 ;;; routines to do 128/192/256 bit CBC AES encrypt
+;;; on return, round keys (ZMM0-5), IVs (ZMM8-11) and data blocks (ZMM12-31)
+;;; are still held in ZMM registers - the caller is responsible for clearing
+;;; all ZMM registers under SAFE_DATA
 
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
-%include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 %include "include/transpose_avx512.inc"
 %include "include/align_avx512.inc"
