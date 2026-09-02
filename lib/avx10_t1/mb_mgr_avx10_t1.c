@@ -20,7 +20,6 @@
 #include "include/snow3g_submit.h"
 
 #include "include/des.h"
-#include "include/gcm.h"
 #include "include/cpu_feature.h"
 #include "include/error.h"
 
