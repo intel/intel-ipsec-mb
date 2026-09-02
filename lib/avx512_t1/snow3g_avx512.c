@@ -5,9 +5,10 @@
 *******************************************************************************/
 
 #ifdef _WIN32
-/* use AVX implementation on Windows for now */
+/* use AVX implementation for the direct functions on Windows for now */
 #define AVX
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
+#define AVX512
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_zmms
 #else
 #define AVX512
 /* SNOW3G-UEA2 direct functions use up to AVX2 implementations */

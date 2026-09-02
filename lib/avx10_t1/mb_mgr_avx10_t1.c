@@ -572,11 +572,7 @@ init_mb_mgr_avx10_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->kasumi_key_sched_size = kasumi_key_sched_size_sse;
 
         state->snow3g_f8_1_buffer = snow3g_f8_1_buffer_avx512;
-#ifndef _WIN32
         state->snow3g_f9_1_buffer = snow3g_f9_1_buffer_vaes_avx512;
-#else
-        state->snow3g_f9_1_buffer = snow3g_f9_1_buffer_avx512;
-#endif
         state->snow3g_init_key_sched = snow3g_init_key_sched_avx512;
         state->snow3g_key_sched_size = snow3g_key_sched_size_avx512;
 
