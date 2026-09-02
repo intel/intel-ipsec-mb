@@ -75,13 +75,13 @@ endstruc
         add             %%COL, %%IA0
 
         vmovdqu64       %%ZTMP, [%%KP]
-        vextracti64x2   [%%COL + ROW*0], %%ZTMP, 0
+        vmovdqu64       [%%COL + ROW*0], XWORD(%%ZTMP)
         vextracti64x2   [%%COL + ROW*1], %%ZTMP, 1
         vextracti64x2   [%%COL + ROW*2], %%ZTMP, 2
         vextracti64x2   [%%COL + ROW*3], %%ZTMP, 3
 
         vmovdqu64       %%ZTMP, [%%KP + 64]
-        vextracti64x2   [%%COL + ROW*4], %%ZTMP, 0
+        vmovdqu64       [%%COL + ROW*4], XWORD(%%ZTMP)
         vextracti64x2   [%%COL + ROW*5], %%ZTMP, 1
         vextracti64x2   [%%COL + ROW*6], %%ZTMP, 2
         vextracti64x2   [%%COL + ROW*7], %%ZTMP, 3
@@ -94,7 +94,7 @@ endstruc
         kmovq           k1, %%IA0
         vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 128]
 %endif
-        vextracti64x2   [%%COL + ROW*8], %%ZTMP, 0
+        vmovdqu64       [%%COL + ROW*8], XWORD(%%ZTMP)
         vextracti64x2   [%%COL + ROW*9], %%ZTMP, 1
         vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
 
@@ -102,14 +102,12 @@ endstruc
         mov             %%IA0, 0x3f
         kmovq           k1, %%IA0
         vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 192]
-        vextracti64x2   [%%COL + ROW*12], %%ZTMP, 0
+        vmovdqu64       [%%COL + ROW*12], XWORD(%%ZTMP)
         vextracti64x2   [%%COL + ROW*13], %%ZTMP, 1
         vextracti64x2   [%%COL + ROW*14], %%ZTMP, 2
 %elif %%NKEYS == 13   ; 192 - 1 more key
-        mov             %%IA0, 0x3
-        kmovq           k1, %%IA0
-        vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 192]
-        vextracti64x2   [%%COL + ROW*12], %%ZTMP, 0
+        vmovdqu64       XWORD(%%ZTMP), [%%KP + 192]
+        vmovdqu64       [%%COL + ROW*12], XWORD(%%ZTMP)
 %endif
 %endmacro
 
