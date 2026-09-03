@@ -53,22 +53,56 @@ memcpy_fn_sse_128:
 MKGLOBAL(safe_memcpy,function,internal)
 align_function
 safe_memcpy:
-%ifndef LINUX
-        ;; save rdi and rsi
-        mov     rax, rdi
-        mov     r9,  rsi
+        or      arg3, arg3
+        jz      .end
 
-        mov     rdi, arg1
-        mov     rsi, arg2
-%endif
-        mov     rcx, arg3
-        rep     movsb
+align_loop
+.loop16:
+        cmp     arg3, 16
+        jb      .check8
+        movdqu  xmm0, [arg2]
+        movdqu  [arg1], xmm0
+        add     arg1, 16
+        add     arg2, 16
+        sub     arg3, 16
+        jz      .end
+        jmp     .loop16
 
-%ifndef LINUX
-        ;; restore rdi and rsi
-        mov     rdi, rax
-        mov     rsi, r9
-%endif
+align_label
+.check8:
+        cmp     arg3, 8
+        jb      .check4
+        mov     rax, [arg2]
+        mov     [arg1], rax
+        add     arg1, 8
+        add     arg2, 8
+        sub     arg3, 8
+        jz      .end
+
+align_label
+.check4:
+        cmp     arg3, 4
+        jb      .loop1
+        mov     eax, [arg2]
+        mov     [arg1], eax
+        add     arg1, 4
+        add     arg2, 4
+        sub     arg3, 4
+        jz      .end
+
+align_loop
+.loop1:
+        mov     al, [arg2]
+        mov     [arg1], al
+        add     arg1, 1
+        add     arg2, 1
+        sub     arg3, 1
+        jnz     .loop1
+
+align_label
+.end:
+        pxor    xmm0, xmm0
+        xor     rax, rax
         ret
 
 mksection stack-noexec
