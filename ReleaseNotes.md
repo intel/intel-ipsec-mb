@@ -24,7 +24,7 @@ Library
 - Added AVX2 Type 1 4-lane multi-buffer implementations of SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128 and SHAKE256.
 - Removed KASUMI bit-length support and corresponding API.
 - Removed non-byte-aligned message length/offset support from wireless job APIs and direct APIs (AES-CMAC, ZUC-EIA3, SNOW3G-UIA2/UEA2, KASUMI-UEA1).
-- Added support for zero-length messages in HMAC-SHA and HMAC-MD5 algorithms.
+- Added support for zero-length messages in HMAC-SHA, HMAC-MD5 and HMAC-SM3 algorithms.
 - Added ZUC-NEA6 SSE, AVX2 and AVX512 implementations.
 - Added SNOW5G-NEA4 SSE type 1 and AVX512 type 2 implementations.
 - Added AES-NIA5 SSE type 1 and AVX512 type 2 implementations.

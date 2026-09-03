@@ -3,7 +3,7 @@
     "generatorVersion": "",
     "header": [],
     "notes": {},
-    "numberOfTests": 1,
+    "numberOfTests": 2,
     "schema": "mac_test_schema_v1.json",
     "testGroups": [
         {
@@ -18,6 +18,15 @@
                     "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
                     "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
                     "tag": "220bf579ded555393f0159f66c99877822a3ecf610d1552154b41d44b94db3ae",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 2,
+                    "comment": "Zero-length message",
+                    "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
+                    "msg": "",
+                    "tag": "e8fe4241188b23d019a0b98a61652f855f17a949ff00f2853ad9c407a1d9b68b",
                     "result": "valid",
                     "flags": []
                 }

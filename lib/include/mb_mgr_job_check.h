@@ -2140,10 +2140,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_OPAD);
                         return 1;
                 }
-                if (job->msg_len_to_hash_in_bytes == 0) {
-                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        return 1;
-                }
                 /* Fall-through */
         case IMB_AUTH_SM3:
                 if (job->auth_tag_output_len_in_bytes == 0 ||

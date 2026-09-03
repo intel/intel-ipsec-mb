@@ -1382,7 +1382,6 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                          * Cases below don't allow for zero length
                                          * hash messages
                                          */
-                                case IMB_AUTH_HMAC_SM3:
                                 case IMB_AUTH_KASUMI_UIA1:
                                 case IMB_AUTH_AES_NIA5:
                                 case IMB_AUTH_ZUC_NIA6:
