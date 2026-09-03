@@ -10,12 +10,8 @@
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "include/kasumi_internal.h"
-#include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
-
-#define SAVE_XMMS    save_xmms
-#define RESTORE_XMMS restore_xmms
 
 static void
 kasumi_f8_1_buffer_sse_no_check(const kasumi_key_sched_t *pCtx, const uint64_t IV,
@@ -50,19 +46,10 @@ kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV, const 
                 return;
         }
 #endif
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
         kasumi_f8_1_buffer_sse_no_check(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
         CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
 #endif
 }
 
@@ -70,11 +57,6 @@ void
 kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
                        const uint32_t lengthInBytes, void *pDigest)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Reset error */
         imb_set_errno(NULL, 0);
@@ -102,10 +84,6 @@ kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
         CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
 #endif
 }
 
