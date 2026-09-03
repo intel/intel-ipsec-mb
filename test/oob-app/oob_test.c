@@ -2112,7 +2112,7 @@ test_ml_dsa_keyops_oob(struct pqc_test_ctx *t, IMB_ML_DSA *ctx, const struct ml_
                 { "privkey_validate", 0, 0 },
                 { "pubkey_validate", 1, 0 },
         };
-        int fails = 0;
+        volatile int fails = 0;
 
         /* volatile: these stay live across the TEST_SETJMP() checkpoint below */
         for (volatile unsigned i = 0; i < DIM(ops); i++) {
@@ -2220,7 +2220,7 @@ test_ml_dsa_sign_verify_oob(struct pqc_test_ctx *t, IMB_ML_DSA *ctx,
         IMB_ML_DSA_SIGN_PARAMS sp;
         IMB_ML_DSA_VERIFY_PARAMS vp;
         size_t sig_len = tv->sig_len;
-        int fails = 0;
+        volatile int fails = 0;
 
         pqc_fill_pattern(msg, msg_len, 1);
         memcpy(cstr, ref_ctxstr, ctx_len);
