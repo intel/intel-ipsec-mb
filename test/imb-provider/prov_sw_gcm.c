@@ -78,13 +78,22 @@ vaesgcm_ciphers_init(void *ctx, const unsigned char *inkey, const unsigned char 
         }
         qctx->enc = enc;
 
-        /* If a key is set and a tag has already been calculated
-         * this cipher ctx is being reused, so zero the gcm ctx and tag state variables */
-        if (qctx->ckey_set && qctx->tag_calculated) {
-                memset(&(qctx->gcm_ctx), 0, sizeof(qctx->gcm_ctx));
+        /*
+         * Per-operation state, dropped on every init: the context may be reused
+         * for a second message, and carrying the previous message's GCM state or
+         * its calculated tag into this one would corrupt the result.
+         *
+         * tag_set is dropped on encrypt only. There the tag is ours to produce,
+         * and a leftover 1 makes the final step skip enc_finalize and hand back
+         * the previous message's tag. On decrypt it is the caller's expected
+         * value, and EVP_CTRL_AEAD_SET_TAG is allowed before the key and IV are
+         * known - clearing it here discarded the tag for that ordering and left
+         * the decrypt with nothing to verify against.
+         */
+        memset(&(qctx->gcm_ctx), 0, sizeof(qctx->gcm_ctx));
+        qctx->tag_calculated = 0;
+        if (enc)
                 qctx->tag_set = 0;
-                qctx->tag_calculated = 0;
-        }
 
         /* Allocate gcm auth tag */
         if (!qctx->tag) {
@@ -92,14 +101,11 @@ vaesgcm_ciphers_init(void *ctx, const unsigned char *inkey, const unsigned char 
 
                 if (qctx->tag) {
                         qctx->tag_len = EVP_GCM_TLS_TAG_LEN;
-                        qctx->tag_set = 0;
                 } else {
                         qctx->tag_len = 0;
                         return 0;
                 }
         }
-
-        qctx->tag_set = 0;
 
         /* Allocate gcm calculated_tag */
         if (!qctx->calculated_tag) {
@@ -634,12 +640,21 @@ vaesgcm_ciphers_do_cipher(void *ctx, unsigned char *out, size_t *padlen, const u
                                 memcpy(qctx->calculated_tag, out, qctx->tag_len);
                                 qctx->tag_calculated = 1;
                         }
-                        if (qctx->tag_set) {
-                                if (memcmp(qctx->calculated_tag, qctx->tag, qctx->tag_len) == 0) {
-                                        return 0;
-                                } else {
-                                        return -1;
-                                }
+                        /*
+                         * No expected tag means there is nothing to verify, and
+                         * an unverified GCM decrypt must not be reported as a
+                         * success - falling through to the *padlen assignment
+                         * below would authenticate anything. OpenSSL's own
+                         * provider fails here too.
+                         */
+                        if (!qctx->tag_set) {
+                                return -1;
+                        }
+
+                        /* Every caller of this function treats <= 0 as failure,
+                         * so a tag that verifies has to report 1. */
+                        if (memcmp(qctx->calculated_tag, qctx->tag, qctx->tag_len) != 0) {
+                                return -1;
                         }
                 }
         } else {

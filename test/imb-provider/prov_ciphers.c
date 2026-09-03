@@ -182,6 +182,11 @@ prov_gcm_set_ctx_params(void *vctx, const OSSL_PARAM params[])
                         return 0;
                 }
                 ctx->tag_len = sz;
+
+                if (vaesgcm_ciphers_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, (int) sz, ctx->buf) != 1) {
+                        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_TAG);
+                        return 0;
+                }
         }
 
         p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_IVLEN);
