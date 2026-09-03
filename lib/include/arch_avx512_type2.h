@@ -222,10 +222,6 @@ crc32_wimax_ofdma_data_avx512(const void *msg, const uint64_t len);
 uint32_t
 crc8_wimax_ofdma_hcs_avx512(const void *msg, const uint64_t len);
 
-void
-snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle, const void *pIV,
-                               const void *pBufferIn, const uint64_t lengthInBits, void *pDigest);
-
 /* SNOW5G VAES AVX512 external functions */
 extern IMB_JOB *
 submit_job_snow5g_nea4_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
