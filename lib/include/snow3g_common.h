@@ -2208,69 +2208,6 @@ SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
 
 #ifndef AVX512
 /**
- * @brief Single buffer F8 encrypt/decrypt
- *
- * Single buffer enc/dec with IV and precomputed key schedule
- *
- * @param[in]  pHandle       pointer to precomputed key schedule
- * @param[in]  pIV           pointer to IV
- * @param[in]  pBufferIn     pointer to an input buffer
- * @param[out] pBufferOut    pointer to an output buffer
- * @param[in]  lengthInBytes message length in bits
- */
-void
-SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle, const void *pIV, const void *pBufferIn,
-                   void *pBufferOut, const uint32_t lengthInBytes)
-{
-#ifdef SAFE_PARAM
-
-        /* reset error status */
-        imb_set_errno(NULL, 0);
-
-        if (pHandle == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
-                return;
-        }
-        if (pIV == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_IV);
-                return;
-        }
-
-        if (pBufferIn == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
-                return;
-        }
-        if (pBufferOut == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_DST);
-                return;
-        }
-        if ((lengthInBytes == 0) || (lengthInBytes > SNOW3G_MAX_BYTELEN)) {
-                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
-                return;
-        }
-#endif
-#ifdef SAFE_DATA
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif /* SAFE_DATA */
-
-        snow3gKeyState1_t ctx;
-
-        /* Initialize the schedule from the IV */
-        snow3gStateInitialize_1(&ctx, pHandle, pIV);
-
-        /* Clock FSM and LFSR once, ignore the key stream */
-        (void) snow3g_keystream_1_4(&ctx);
-
-        f8_snow3g(&ctx, pBufferIn, pBufferOut, lengthInBytes);
-
-#ifdef SAFE_DATA
-        CLEAR_MEM(&ctx, sizeof(ctx));
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif /* SAFE_DATA */
-}
-
-/**
  * @brief Single buffer bit-length F9 function
  *
  * Single buffer digest with IV and precomputed key schedule.

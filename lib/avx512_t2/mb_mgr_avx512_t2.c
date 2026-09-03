@@ -17,7 +17,6 @@
 #include "include/snow3g.h"
 #include "include/gcm.h"
 #include "include/chacha20_poly1305.h"
-#include "include/snow3g_submit.h"
 
 #include "include/des.h"
 #include "include/cpu_feature.h"

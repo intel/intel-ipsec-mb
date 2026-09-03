@@ -15,7 +15,6 @@
 #include "include/kasumi_interface.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
-#include "include/snow3g_submit.h"
 #include "include/gcm.h"
 #include "include/chacha20_poly1305.h"
 
@@ -411,7 +410,6 @@ init_mb_mgr_avx2_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_sse;
         state->kasumi_key_sched_size = kasumi_key_sched_size_sse;
 
-        state->snow3g_f8_1_buffer = snow3g_f8_1_buffer_avx2;
         state->snow3g_f9_1_buffer = snow3g_f9_1_buffer_avx2;
         state->snow3g_init_key_sched = snow3g_init_key_sched_avx2;
         state->snow3g_key_sched_size = snow3g_key_sched_size_avx2;

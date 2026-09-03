@@ -27,7 +27,6 @@
 #include "mb_mgr.h"
 #include "include/error.h"
 #include "include/job_api_ct.h"
-#include "include/snow3g_submit.h"
 #include "include/job_api_gcm.h"
 #include "include/job_api_kasumi.h"
 #include "include/job_api_sha3.h"
@@ -408,11 +407,7 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 
                 return SUBMIT_JOB_ZUC_NEA6(zuc_nea6_ooo, job);
         } else if (IMB_CIPHER_SNOW3G_UEA2 == cipher_mode) {
-#ifdef SUBMIT_JOB_SNOW3G_UEA2
                 return SUBMIT_JOB_SNOW3G_UEA2(state, job);
-#else
-                return def_submit_snow3g_uea2_job(state, job);
-#endif
         } else if (IMB_CIPHER_KASUMI_UEA1 == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
         } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
@@ -652,11 +647,7 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 
                 return SUBMIT_JOB_ZUC_NEA6(zuc_nea6_ooo, job);
         } else if (IMB_CIPHER_SNOW3G_UEA2 == cipher_mode) {
-#ifdef SUBMIT_JOB_SNOW3G_UEA2
                 return SUBMIT_JOB_SNOW3G_UEA2(state, job);
-#else
-                return def_submit_snow3g_uea2_job(state, job);
-#endif
         } else if (IMB_CIPHER_KASUMI_UEA1 == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
         } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {

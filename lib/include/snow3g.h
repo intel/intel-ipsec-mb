@@ -11,10 +11,6 @@
  * SSE
  ******************************************************************************/
 void
-snow3g_f8_1_buffer_sse(const snow3g_key_schedule_t *pCtx, const void *pIV, const void *pBufferIn,
-                       void *pBufferOut, const uint32_t lengthInBytes);
-
-void
 snow3g_f9_1_buffer_sse(const snow3g_key_schedule_t *pCtx, const void *pIV, const void *pBufferIn,
                        const uint64_t lengthInBits, void *pDigest);
 
@@ -34,10 +30,6 @@ snow3g_f9_1_buffer_internal_sse(const uint64_t *pBufferIn, const uint32_t KS[5],
 uint32_t
 snow3g_f9_1_buffer_internal_avx(const uint64_t *pBufferIn, const uint32_t KS[5],
                                 const uint64_t lengthInBits);
-
-void
-snow3g_f8_1_buffer_avx2(const snow3g_key_schedule_t *pCtx, const void *pIV, const void *pBufferIn,
-                        void *pBufferOut, const uint32_t lengthInBytes);
 
 void
 snow3g_f9_1_buffer_avx2(const snow3g_key_schedule_t *pCtx, const void *pIV, const void *pBufferIn,
