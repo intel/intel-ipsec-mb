@@ -51,6 +51,9 @@ Library
 - Added support for zero-length messages in AES-CBC.
 
 Test Applications
+- Added zero-length job acceptance checks to the checked submit paths of the
+  `imb-zerolen` application, so that jobs rejected by parameter validation can
+  no longer be reported as passing memory safety coverage.
 - Added new `imb-safe-check` application scanning all algorithms, message sizes,
   cipher directions and job numbers for sensitive data left in registers and memory.
 - Removed `--safe-check` and `--safe-retries` options from `imb-xvalid` application

@@ -21,6 +21,14 @@
  * hash length use a small read/write buffer for the header portion, with the
  * cipher payload length set to zero.
  *
+ * A job rejected by the parameter checker is returned straight away and never
+ * reaches the implementation, so the guard page is never exercised. Such a run
+ * would report a pass while testing nothing. To prevent that, every vector
+ * records whether the checked API is expected to accept a zero length message
+ * and the checked submit paths verify the job was accepted or rejected exactly
+ * as expected. The NOCHECK paths bypass parameter validation altogether and are
+ * therefore not subject to this check.
+ *
  * The same technique is applied to the PQC direct APIs. ML-DSA (FIPS 204)
  * accepts a zero-length message and a zero-length context string, so the
  * message and context pointers are aimed at the guard page while their lengths
@@ -148,6 +156,46 @@ init_mgr_for_arch(IMB_MGR *mgr, const IMB_ARCH arch)
         return 0;
 }
 
+/**
+ * @brief Verify the outcome of a zero-length job submitted via the checked API.
+ *
+ * A job rejected by the parameter checker is returned straight away and never
+ * reaches the implementation, so the guard page is never exercised and the
+ * test provides no memory safety coverage at all. Confirm that the job was
+ * accepted or rejected exactly as expected, so that such vacuous coverage
+ * cannot silently appear as a pass.
+ *
+ * @param [in] name         test name for display
+ * @param [in] variant      submit path description (may be empty string)
+ * @param [in] job          job returned by the checked submit/flush, may be NULL
+ * @param [in] zero_len_ok  non-zero if a zero length message is supported
+ *
+ * @return Test status
+ * @retval 0 pass
+ * @retval -1 fail
+ */
+static int
+check_zerolen_job(const char *name, const char *variant, const IMB_JOB *job, const int zero_len_ok)
+{
+        if (zero_len_ok) {
+                if (job == NULL || job->status != IMB_STATUS_COMPLETED) {
+                        printf("  FAIL: %s%s zero length job not completed by CHECKED API "
+                               "(status %d)\n",
+                               name, variant, (job == NULL) ? -1 : (int) job->status);
+                        return -1;
+                }
+        } else {
+                if (job == NULL || job->status != IMB_STATUS_INVALID_ARGS) {
+                        printf("  FAIL: %s%s zero length job unexpectedly accepted by "
+                               "CHECKED API (status %d)\n",
+                               name, variant, (job == NULL) ? -1 : (int) job->status);
+                        return -1;
+                }
+        }
+
+        return 0;
+}
+
 /* ========================================================================== */
 /* Cipher test vectors and functions                                          */
 /* ========================================================================== */
@@ -159,75 +207,76 @@ struct cipher_test_vec {
         IMB_CIPHER_DIRECTION dir; /**< encrypt or decrypt */
         unsigned key_len;         /**< key length in bytes */
         unsigned iv_len;          /**< IV length in bytes */
+        int zero_len_ok;          /**< checked API accepts a zero length message */
 };
 
 /** Table of cipher algorithms to test with zero-length messages */
 static const struct cipher_test_vec cipher_tests[] = {
         /* AES-CBC decrypt */
-        { "AES-128-CBC-DEC", IMB_CIPHER_CBC, IMB_DIR_DECRYPT, 16, 16 },
-        { "AES-192-CBC-DEC", IMB_CIPHER_CBC, IMB_DIR_DECRYPT, 24, 16 },
-        { "AES-256-CBC-DEC", IMB_CIPHER_CBC, IMB_DIR_DECRYPT, 32, 16 },
+        { "AES-128-CBC-DEC", IMB_CIPHER_CBC, IMB_DIR_DECRYPT, 16, 16, 1 },
+        { "AES-192-CBC-DEC", IMB_CIPHER_CBC, IMB_DIR_DECRYPT, 24, 16, 1 },
+        { "AES-256-CBC-DEC", IMB_CIPHER_CBC, IMB_DIR_DECRYPT, 32, 16, 1 },
         /* AES-CBC encrypt */
-        { "AES-128-CBC-ENC", IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, 16, 16 },
-        { "AES-192-CBC-ENC", IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, 24, 16 },
-        { "AES-256-CBC-ENC", IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, 32, 16 },
+        { "AES-128-CBC-ENC", IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, 16, 16, 1 },
+        { "AES-192-CBC-ENC", IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, 24, 16, 1 },
+        { "AES-256-CBC-ENC", IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, 32, 16, 1 },
         /* AES-CTR */
-        { "AES-128-CTR-ENC", IMB_CIPHER_CNTR, IMB_DIR_ENCRYPT, 16, 16 },
-        { "AES-192-CTR-ENC", IMB_CIPHER_CNTR, IMB_DIR_ENCRYPT, 24, 16 },
-        { "AES-256-CTR-ENC", IMB_CIPHER_CNTR, IMB_DIR_ENCRYPT, 32, 16 },
-        { "AES-128-CTR-DEC", IMB_CIPHER_CNTR, IMB_DIR_DECRYPT, 16, 16 },
-        { "AES-192-CTR-DEC", IMB_CIPHER_CNTR, IMB_DIR_DECRYPT, 24, 16 },
-        { "AES-256-CTR-DEC", IMB_CIPHER_CNTR, IMB_DIR_DECRYPT, 32, 16 },
+        { "AES-128-CTR-ENC", IMB_CIPHER_CNTR, IMB_DIR_ENCRYPT, 16, 16, 0 },
+        { "AES-192-CTR-ENC", IMB_CIPHER_CNTR, IMB_DIR_ENCRYPT, 24, 16, 0 },
+        { "AES-256-CTR-ENC", IMB_CIPHER_CNTR, IMB_DIR_ENCRYPT, 32, 16, 0 },
+        { "AES-128-CTR-DEC", IMB_CIPHER_CNTR, IMB_DIR_DECRYPT, 16, 16, 0 },
+        { "AES-192-CTR-DEC", IMB_CIPHER_CNTR, IMB_DIR_DECRYPT, 24, 16, 0 },
+        { "AES-256-CTR-DEC", IMB_CIPHER_CNTR, IMB_DIR_DECRYPT, 32, 16, 0 },
         /* AES-ECB */
-        { "AES-128-ECB-ENC", IMB_CIPHER_ECB, IMB_DIR_ENCRYPT, 16, 0 },
-        { "AES-128-ECB-DEC", IMB_CIPHER_ECB, IMB_DIR_DECRYPT, 16, 0 },
-        { "AES-192-ECB-ENC", IMB_CIPHER_ECB, IMB_DIR_ENCRYPT, 24, 0 },
-        { "AES-192-ECB-DEC", IMB_CIPHER_ECB, IMB_DIR_DECRYPT, 24, 0 },
-        { "AES-256-ECB-ENC", IMB_CIPHER_ECB, IMB_DIR_ENCRYPT, 32, 0 },
-        { "AES-256-ECB-DEC", IMB_CIPHER_ECB, IMB_DIR_DECRYPT, 32, 0 },
+        { "AES-128-ECB-ENC", IMB_CIPHER_ECB, IMB_DIR_ENCRYPT, 16, 0, 0 },
+        { "AES-128-ECB-DEC", IMB_CIPHER_ECB, IMB_DIR_DECRYPT, 16, 0, 0 },
+        { "AES-192-ECB-ENC", IMB_CIPHER_ECB, IMB_DIR_ENCRYPT, 24, 0, 0 },
+        { "AES-192-ECB-DEC", IMB_CIPHER_ECB, IMB_DIR_DECRYPT, 24, 0, 0 },
+        { "AES-256-ECB-ENC", IMB_CIPHER_ECB, IMB_DIR_ENCRYPT, 32, 0, 0 },
+        { "AES-256-ECB-DEC", IMB_CIPHER_ECB, IMB_DIR_DECRYPT, 32, 0, 0 },
         /* AES-CFB */
-        { "AES-128-CFB-ENC", IMB_CIPHER_CFB, IMB_DIR_ENCRYPT, 16, 16 },
-        { "AES-128-CFB-DEC", IMB_CIPHER_CFB, IMB_DIR_DECRYPT, 16, 16 },
+        { "AES-128-CFB-ENC", IMB_CIPHER_CFB, IMB_DIR_ENCRYPT, 16, 16, 1 },
+        { "AES-128-CFB-DEC", IMB_CIPHER_CFB, IMB_DIR_DECRYPT, 16, 16, 1 },
         /* DES-CBC */
-        { "DES-CBC-ENC", IMB_CIPHER_DES, IMB_DIR_ENCRYPT, 8, 8 },
-        { "DES-CBC-DEC", IMB_CIPHER_DES, IMB_DIR_DECRYPT, 8, 8 },
+        { "DES-CBC-ENC", IMB_CIPHER_DES, IMB_DIR_ENCRYPT, 8, 8, 0 },
+        { "DES-CBC-DEC", IMB_CIPHER_DES, IMB_DIR_DECRYPT, 8, 8, 0 },
         /* 3DES-CBC */
-        { "3DES-CBC-ENC", IMB_CIPHER_DES3, IMB_DIR_ENCRYPT, 24, 8 },
-        { "3DES-CBC-DEC", IMB_CIPHER_DES3, IMB_DIR_DECRYPT, 24, 8 },
+        { "3DES-CBC-ENC", IMB_CIPHER_DES3, IMB_DIR_ENCRYPT, 24, 8, 0 },
+        { "3DES-CBC-DEC", IMB_CIPHER_DES3, IMB_DIR_DECRYPT, 24, 8, 0 },
         /* DOCSIS-DES */
-        { "DOCSIS-DES-ENC", IMB_CIPHER_DOCSIS_DES, IMB_DIR_ENCRYPT, 8, 8 },
-        { "DOCSIS-DES-DEC", IMB_CIPHER_DOCSIS_DES, IMB_DIR_DECRYPT, 8, 8 },
+        { "DOCSIS-DES-ENC", IMB_CIPHER_DOCSIS_DES, IMB_DIR_ENCRYPT, 8, 8, 0 },
+        { "DOCSIS-DES-DEC", IMB_CIPHER_DOCSIS_DES, IMB_DIR_DECRYPT, 8, 8, 0 },
         /* DOCSIS-SEC-BPI (AES) */
-        { "DOCSIS-BPI-ENC", IMB_CIPHER_DOCSIS_SEC_BPI, IMB_DIR_ENCRYPT, 16, 16 },
-        { "DOCSIS-BPI-DEC", IMB_CIPHER_DOCSIS_SEC_BPI, IMB_DIR_DECRYPT, 16, 16 },
+        { "DOCSIS-BPI-ENC", IMB_CIPHER_DOCSIS_SEC_BPI, IMB_DIR_ENCRYPT, 16, 16, 1 },
+        { "DOCSIS-BPI-DEC", IMB_CIPHER_DOCSIS_SEC_BPI, IMB_DIR_DECRYPT, 16, 16, 1 },
         /* CHACHA20 */
-        { "CHACHA20-ENC", IMB_CIPHER_CHACHA20, IMB_DIR_ENCRYPT, 32, 12 },
-        { "CHACHA20-DEC", IMB_CIPHER_CHACHA20, IMB_DIR_DECRYPT, 32, 12 },
+        { "CHACHA20-ENC", IMB_CIPHER_CHACHA20, IMB_DIR_ENCRYPT, 32, 12, 0 },
+        { "CHACHA20-DEC", IMB_CIPHER_CHACHA20, IMB_DIR_DECRYPT, 32, 12, 0 },
         /* SM4-ECB */
-        { "SM4-ECB-ENC", IMB_CIPHER_SM4_ECB, IMB_DIR_ENCRYPT, 16, 0 },
-        { "SM4-ECB-DEC", IMB_CIPHER_SM4_ECB, IMB_DIR_DECRYPT, 16, 0 },
+        { "SM4-ECB-ENC", IMB_CIPHER_SM4_ECB, IMB_DIR_ENCRYPT, 16, 0, 0 },
+        { "SM4-ECB-DEC", IMB_CIPHER_SM4_ECB, IMB_DIR_DECRYPT, 16, 0, 0 },
         /* SM4-CBC */
-        { "SM4-CBC-ENC", IMB_CIPHER_SM4_CBC, IMB_DIR_ENCRYPT, 16, 16 },
-        { "SM4-CBC-DEC", IMB_CIPHER_SM4_CBC, IMB_DIR_DECRYPT, 16, 16 },
+        { "SM4-CBC-ENC", IMB_CIPHER_SM4_CBC, IMB_DIR_ENCRYPT, 16, 16, 0 },
+        { "SM4-CBC-DEC", IMB_CIPHER_SM4_CBC, IMB_DIR_DECRYPT, 16, 16, 0 },
         /* SM4-CTR */
-        { "SM4-CTR-ENC", IMB_CIPHER_SM4_CNTR, IMB_DIR_ENCRYPT, 16, 16 },
-        { "SM4-CTR-DEC", IMB_CIPHER_SM4_CNTR, IMB_DIR_DECRYPT, 16, 16 },
+        { "SM4-CTR-ENC", IMB_CIPHER_SM4_CNTR, IMB_DIR_ENCRYPT, 16, 16, 0 },
+        { "SM4-CTR-DEC", IMB_CIPHER_SM4_CNTR, IMB_DIR_DECRYPT, 16, 16, 0 },
         /* ZUC-EEA3 (3GPP cipher) */
-        { "ZUC-EEA3-ENC", IMB_CIPHER_ZUC_EEA3, IMB_DIR_ENCRYPT, 16, 16 },
-        { "ZUC-EEA3-DEC", IMB_CIPHER_ZUC_EEA3, IMB_DIR_DECRYPT, 16, 16 },
+        { "ZUC-EEA3-ENC", IMB_CIPHER_ZUC_EEA3, IMB_DIR_ENCRYPT, 16, 16, 0 },
+        { "ZUC-EEA3-DEC", IMB_CIPHER_ZUC_EEA3, IMB_DIR_DECRYPT, 16, 16, 0 },
         /* SNOW3G-UEA2 (3GPP cipher) */
-        { "SNOW3G-UEA2-ENC", IMB_CIPHER_SNOW3G_UEA2, IMB_DIR_ENCRYPT, 16, 16 },
-        { "SNOW3G-UEA2-DEC", IMB_CIPHER_SNOW3G_UEA2, IMB_DIR_DECRYPT, 16, 16 },
+        { "SNOW3G-UEA2-ENC", IMB_CIPHER_SNOW3G_UEA2, IMB_DIR_ENCRYPT, 16, 16, 0 },
+        { "SNOW3G-UEA2-DEC", IMB_CIPHER_SNOW3G_UEA2, IMB_DIR_DECRYPT, 16, 16, 0 },
         /* KASUMI-UEA1 (3GPP cipher) */
-        { "KASUMI-UEA1-ENC", IMB_CIPHER_KASUMI_UEA1, IMB_DIR_ENCRYPT, 16, 8 },
-        { "KASUMI-UEA1-DEC", IMB_CIPHER_KASUMI_UEA1, IMB_DIR_DECRYPT, 16, 8 },
+        { "KASUMI-UEA1-ENC", IMB_CIPHER_KASUMI_UEA1, IMB_DIR_ENCRYPT, 16, 8, 0 },
+        { "KASUMI-UEA1-DEC", IMB_CIPHER_KASUMI_UEA1, IMB_DIR_DECRYPT, 16, 8, 0 },
         /* 5G NEA cipher algorithms */
-        { "AES-NEA5-ENC", IMB_CIPHER_AES_NEA5, IMB_DIR_ENCRYPT, 32, 16 },
-        { "AES-NEA5-DEC", IMB_CIPHER_AES_NEA5, IMB_DIR_DECRYPT, 32, 16 },
-        { "ZUC-NEA6-ENC", IMB_CIPHER_ZUC_NEA6, IMB_DIR_ENCRYPT, 32, 16 },
-        { "ZUC-NEA6-DEC", IMB_CIPHER_ZUC_NEA6, IMB_DIR_DECRYPT, 32, 16 },
-        { "SNOW5G-NEA4-ENC", IMB_CIPHER_SNOW5G_NEA4, IMB_DIR_ENCRYPT, 32, 16 },
-        { "SNOW5G-NEA4-DEC", IMB_CIPHER_SNOW5G_NEA4, IMB_DIR_DECRYPT, 32, 16 },
+        { "AES-NEA5-ENC", IMB_CIPHER_AES_NEA5, IMB_DIR_ENCRYPT, 32, 16, 1 },
+        { "AES-NEA5-DEC", IMB_CIPHER_AES_NEA5, IMB_DIR_DECRYPT, 32, 16, 1 },
+        { "ZUC-NEA6-ENC", IMB_CIPHER_ZUC_NEA6, IMB_DIR_ENCRYPT, 32, 16, 0 },
+        { "ZUC-NEA6-DEC", IMB_CIPHER_ZUC_NEA6, IMB_DIR_DECRYPT, 32, 16, 0 },
+        { "SNOW5G-NEA4-ENC", IMB_CIPHER_SNOW5G_NEA4, IMB_DIR_ENCRYPT, 32, 16, 1 },
+        { "SNOW5G-NEA4-DEC", IMB_CIPHER_SNOW5G_NEA4, IMB_DIR_DECRYPT, 32, 16, 1 },
 };
 
 /**
@@ -312,10 +361,18 @@ test_cipher_zerolen(IMB_MGR *mgr, const struct cipher_test_vec *tv, const struct
 
         setup_cipher_job(job, tv, (const uint8_t *) gp->ptr, (uint8_t *) gp->ptr, iv);
 
-        if (use_nocheck)
+        if (use_nocheck) {
                 job = IMB_SUBMIT_JOB_NOCHECK(mgr);
-        else
+        } else {
                 job = IMB_SUBMIT_JOB(mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mgr);
+                if (check_zerolen_job(tv->name, "", job, tv->zero_len_ok) < 0) {
+                        while (IMB_FLUSH_JOB(mgr) != NULL)
+                                ;
+                        return -1;
+                }
+        }
 
         (void) job;
 
@@ -442,74 +499,75 @@ struct hash_test_vec {
         IMB_HASH_ALG hash;     /**< hash algorithm to test */
         unsigned tag_len;      /**< authentication tag length in bytes */
         enum hash_setup setup; /**< which union fields to configure */
+        int zero_len_ok;       /**< checked API accepts a zero length message */
 };
 
 /** Table of hash algorithms to test with zero-length messages */
 
 static const struct hash_test_vec hash_tests[] = {
         /* HMAC */
-        { "HMAC-SHA-1", IMB_AUTH_HMAC_SHA_1, 12, HASH_HMAC },
-        { "HMAC-SHA-224", IMB_AUTH_HMAC_SHA_224, 14, HASH_HMAC },
-        { "HMAC-SHA-256", IMB_AUTH_HMAC_SHA_256, 16, HASH_HMAC },
-        { "HMAC-SHA-384", IMB_AUTH_HMAC_SHA_384, 24, HASH_HMAC },
-        { "HMAC-SHA-512", IMB_AUTH_HMAC_SHA_512, 32, HASH_HMAC },
-        { "HMAC-MD5", IMB_AUTH_MD5, 12, HASH_HMAC },
-        { "HMAC-SM3", IMB_AUTH_HMAC_SM3, 32, HASH_HMAC },
+        { "HMAC-SHA-1", IMB_AUTH_HMAC_SHA_1, 12, HASH_HMAC, 1 },
+        { "HMAC-SHA-224", IMB_AUTH_HMAC_SHA_224, 14, HASH_HMAC, 1 },
+        { "HMAC-SHA-256", IMB_AUTH_HMAC_SHA_256, 16, HASH_HMAC, 1 },
+        { "HMAC-SHA-384", IMB_AUTH_HMAC_SHA_384, 24, HASH_HMAC, 1 },
+        { "HMAC-SHA-512", IMB_AUTH_HMAC_SHA_512, 32, HASH_HMAC, 1 },
+        { "HMAC-MD5", IMB_AUTH_MD5, 12, HASH_HMAC, 1 },
+        { "HMAC-SM3", IMB_AUTH_HMAC_SM3, 32, HASH_HMAC, 0 },
         /* SHA (plain) */
-        { "SHA-1", IMB_AUTH_SHA_1, 20, HASH_PLAIN },
-        { "SHA-224", IMB_AUTH_SHA_224, 28, HASH_PLAIN },
-        { "SHA-256", IMB_AUTH_SHA_256, 32, HASH_PLAIN },
-        { "SHA-384", IMB_AUTH_SHA_384, 48, HASH_PLAIN },
-        { "SHA-512", IMB_AUTH_SHA_512, 64, HASH_PLAIN },
+        { "SHA-1", IMB_AUTH_SHA_1, 20, HASH_PLAIN, 1 },
+        { "SHA-224", IMB_AUTH_SHA_224, 28, HASH_PLAIN, 1 },
+        { "SHA-256", IMB_AUTH_SHA_256, 32, HASH_PLAIN, 1 },
+        { "SHA-384", IMB_AUTH_SHA_384, 48, HASH_PLAIN, 1 },
+        { "SHA-512", IMB_AUTH_SHA_512, 64, HASH_PLAIN, 1 },
         /* SM3 */
-        { "SM3", IMB_AUTH_SM3, 32, HASH_PLAIN },
+        { "SM3", IMB_AUTH_SM3, 32, HASH_PLAIN, 1 },
         /* AES-XCBC */
-        { "AES-XCBC", IMB_AUTH_AES_XCBC, 12, HASH_XCBC },
+        { "AES-XCBC", IMB_AUTH_AES_XCBC, 12, HASH_XCBC, 1 },
         /* AES-CMAC */
-        { "AES-CMAC", IMB_AUTH_AES_CMAC, 16, HASH_CMAC },
-        { "AES-CMAC-256", IMB_AUTH_AES_CMAC_256, 16, HASH_CMAC },
+        { "AES-CMAC", IMB_AUTH_AES_CMAC, 16, HASH_CMAC, 1 },
+        { "AES-CMAC-256", IMB_AUTH_AES_CMAC_256, 16, HASH_CMAC, 1 },
         /* AES-GMAC (standalone, not paired with GCM cipher) */
-        { "AES-GMAC-128", IMB_AUTH_AES_GMAC_128, 16, HASH_GMAC },
-        { "AES-GMAC-192", IMB_AUTH_AES_GMAC_192, 16, HASH_GMAC },
-        { "AES-GMAC-256", IMB_AUTH_AES_GMAC_256, 16, HASH_GMAC },
+        { "AES-GMAC-128", IMB_AUTH_AES_GMAC_128, 16, HASH_GMAC, 1 },
+        { "AES-GMAC-192", IMB_AUTH_AES_GMAC_192, 16, HASH_GMAC, 1 },
+        { "AES-GMAC-256", IMB_AUTH_AES_GMAC_256, 16, HASH_GMAC, 1 },
         /* GHASH */
-        { "GHASH", IMB_AUTH_GHASH, 16, HASH_GHASH },
+        { "GHASH", IMB_AUTH_GHASH, 16, HASH_GHASH, 1 },
         /* POLY1305 */
-        { "POLY1305", IMB_AUTH_POLY1305, 16, HASH_POLY1305 },
+        { "POLY1305", IMB_AUTH_POLY1305, 16, HASH_POLY1305, 1 },
         /* CRC variants */
-        { "CRC32-ETH-FCS", IMB_AUTH_CRC32_ETHERNET_FCS, 4, HASH_PLAIN },
-        { "CRC32-SCTP", IMB_AUTH_CRC32_SCTP, 4, HASH_PLAIN },
-        { "CRC32-WIMAX", IMB_AUTH_CRC32_WIMAX_OFDMA_DATA, 4, HASH_PLAIN },
-        { "CRC24-LTE-A", IMB_AUTH_CRC24_LTE_A, 4, HASH_PLAIN },
-        { "CRC24-LTE-B", IMB_AUTH_CRC24_LTE_B, 4, HASH_PLAIN },
-        { "CRC16-X25", IMB_AUTH_CRC16_X25, 4, HASH_PLAIN },
-        { "CRC16-FP-DATA", IMB_AUTH_CRC16_FP_DATA, 4, HASH_PLAIN },
-        { "CRC11-FP-HDR", IMB_AUTH_CRC11_FP_HEADER, 4, HASH_PLAIN },
-        { "CRC10-IUUP", IMB_AUTH_CRC10_IUUP_DATA, 4, HASH_PLAIN },
-        { "CRC8-WIMAX-HCS", IMB_AUTH_CRC8_WIMAX_OFDMA_HCS, 4, HASH_PLAIN },
-        { "CRC7-FP-HDR", IMB_AUTH_CRC7_FP_HEADER, 4, HASH_PLAIN },
-        { "CRC6-IUUP-HDR", IMB_AUTH_CRC6_IUUP_HEADER, 4, HASH_PLAIN },
+        { "CRC32-ETH-FCS", IMB_AUTH_CRC32_ETHERNET_FCS, 4, HASH_PLAIN, 1 },
+        { "CRC32-SCTP", IMB_AUTH_CRC32_SCTP, 4, HASH_PLAIN, 1 },
+        { "CRC32-WIMAX", IMB_AUTH_CRC32_WIMAX_OFDMA_DATA, 4, HASH_PLAIN, 1 },
+        { "CRC24-LTE-A", IMB_AUTH_CRC24_LTE_A, 4, HASH_PLAIN, 1 },
+        { "CRC24-LTE-B", IMB_AUTH_CRC24_LTE_B, 4, HASH_PLAIN, 1 },
+        { "CRC16-X25", IMB_AUTH_CRC16_X25, 4, HASH_PLAIN, 1 },
+        { "CRC16-FP-DATA", IMB_AUTH_CRC16_FP_DATA, 4, HASH_PLAIN, 1 },
+        { "CRC11-FP-HDR", IMB_AUTH_CRC11_FP_HEADER, 4, HASH_PLAIN, 1 },
+        { "CRC10-IUUP", IMB_AUTH_CRC10_IUUP_DATA, 4, HASH_PLAIN, 1 },
+        { "CRC8-WIMAX-HCS", IMB_AUTH_CRC8_WIMAX_OFDMA_HCS, 4, HASH_PLAIN, 1 },
+        { "CRC7-FP-HDR", IMB_AUTH_CRC7_FP_HEADER, 4, HASH_PLAIN, 1 },
+        { "CRC6-IUUP-HDR", IMB_AUTH_CRC6_IUUP_HEADER, 4, HASH_PLAIN, 1 },
         /* 3GPP integrity algorithms */
-        { "ZUC-EIA3", IMB_AUTH_ZUC_EIA3, 4, HASH_ZUC },
-        { "SNOW3G-UIA2", IMB_AUTH_SNOW3G_UIA2, 4, HASH_SNOW3G },
-        { "KASUMI-UIA1", IMB_AUTH_KASUMI_UIA1, 4, HASH_KASUMI },
+        { "ZUC-EIA3", IMB_AUTH_ZUC_EIA3, 4, HASH_ZUC, 0 },
+        { "SNOW3G-UIA2", IMB_AUTH_SNOW3G_UIA2, 4, HASH_SNOW3G, 0 },
+        { "KASUMI-UIA1", IMB_AUTH_KASUMI_UIA1, 4, HASH_KASUMI, 0 },
         /* SHA3 */
-        { "SHA3-224", IMB_AUTH_SHA3_224, 28, HASH_PLAIN },
-        { "SHA3-256", IMB_AUTH_SHA3_256, 32, HASH_PLAIN },
-        { "SHA3-384", IMB_AUTH_SHA3_384, 48, HASH_PLAIN },
-        { "SHA3-512", IMB_AUTH_SHA3_512, 64, HASH_PLAIN },
+        { "SHA3-224", IMB_AUTH_SHA3_224, 28, HASH_PLAIN, 1 },
+        { "SHA3-256", IMB_AUTH_SHA3_256, 32, HASH_PLAIN, 1 },
+        { "SHA3-384", IMB_AUTH_SHA3_384, 48, HASH_PLAIN, 1 },
+        { "SHA3-512", IMB_AUTH_SHA3_512, 64, HASH_PLAIN, 1 },
         /* HMAC-SHA3 */
-        { "HMAC-SHA3-224", IMB_AUTH_HMAC_SHA3_224, 28, HASH_HMAC },
-        { "HMAC-SHA3-256", IMB_AUTH_HMAC_SHA3_256, 32, HASH_HMAC },
-        { "HMAC-SHA3-384", IMB_AUTH_HMAC_SHA3_384, 48, HASH_HMAC },
-        { "HMAC-SHA3-512", IMB_AUTH_HMAC_SHA3_512, 64, HASH_HMAC },
+        { "HMAC-SHA3-224", IMB_AUTH_HMAC_SHA3_224, 28, HASH_HMAC, 1 },
+        { "HMAC-SHA3-256", IMB_AUTH_HMAC_SHA3_256, 32, HASH_HMAC, 1 },
+        { "HMAC-SHA3-384", IMB_AUTH_HMAC_SHA3_384, 48, HASH_HMAC, 1 },
+        { "HMAC-SHA3-512", IMB_AUTH_HMAC_SHA3_512, 64, HASH_HMAC, 1 },
         /* SHAKE */
-        { "SHAKE128", IMB_AUTH_SHAKE128, 16, HASH_PLAIN },
-        { "SHAKE256", IMB_AUTH_SHAKE256, 32, HASH_PLAIN },
+        { "SHAKE128", IMB_AUTH_SHAKE128, 16, HASH_PLAIN, 1 },
+        { "SHAKE256", IMB_AUTH_SHAKE256, 32, HASH_PLAIN, 1 },
         /* 5G NIA integrity algorithms */
-        { "AES-NIA5", IMB_AUTH_AES_NIA5, 16, HASH_NIA },
-        { "ZUC-NIA6", IMB_AUTH_ZUC_NIA6, 16, HASH_NIA },
-        { "SNOW5G-NIA4", IMB_AUTH_SNOW5G_NIA4, 16, HASH_NIA },
+        { "AES-NIA5", IMB_AUTH_AES_NIA5, 16, HASH_NIA, 0 },
+        { "ZUC-NIA6", IMB_AUTH_ZUC_NIA6, 16, HASH_NIA, 0 },
+        { "SNOW5G-NIA4", IMB_AUTH_SNOW5G_NIA4, 16, HASH_NIA, 0 },
 };
 
 /**
@@ -619,10 +677,18 @@ test_hash_zerolen(IMB_MGR *mgr, const struct hash_test_vec *tv, const struct gua
 
         setup_hash_fields(job, tv->setup);
 
-        if (use_nocheck)
+        if (use_nocheck) {
                 job = IMB_SUBMIT_JOB_NOCHECK(mgr);
-        else
+        } else {
                 job = IMB_SUBMIT_JOB(mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mgr);
+                if (check_zerolen_job(tv->name, "", job, tv->zero_len_ok) < 0) {
+                        while (IMB_FLUSH_JOB(mgr) != NULL)
+                                ;
+                        return -1;
+                }
+        }
 
         (void) job;
 
@@ -895,10 +961,18 @@ test_aead_zerolen(IMB_MGR *mgr, const struct aead_test_vec *tv, const struct gua
 
         setup_aead_job(job, tv, (const uint8_t *) gp->ptr, (uint8_t *) gp->ptr, iv, tag);
 
-        if (use_nocheck)
+        if (use_nocheck) {
                 job = IMB_SUBMIT_JOB_NOCHECK(mgr);
-        else
+        } else {
                 job = IMB_SUBMIT_JOB(mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mgr);
+                if (check_zerolen_job(tv->name, "", job, 1) < 0) {
+                        while (IMB_FLUSH_JOB(mgr) != NULL)
+                                ;
+                        return -1;
+                }
+        }
 
         (void) job;
 
@@ -1085,10 +1159,18 @@ test_pon_zerolen(IMB_MGR *mgr, IMB_CIPHER_DIRECTION dir, const char *name,
         job->auth_tag_output = tag;
         job->auth_tag_output_len_in_bytes = 8;
 
-        if (use_nocheck)
+        if (use_nocheck) {
                 job = IMB_SUBMIT_JOB_NOCHECK(mgr);
-        else
+        } else {
                 job = IMB_SUBMIT_JOB(mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mgr);
+                if (check_zerolen_job(name, "", job, 1) < 0) {
+                        while (IMB_FLUSH_JOB(mgr) != NULL)
+                                ;
+                        return -1;
+                }
+        }
 
         (void) job;
 
@@ -1167,10 +1249,18 @@ test_docsis_crc32_zerolen(IMB_MGR *mgr, IMB_CIPHER_DIRECTION dir, const char *na
         job->auth_tag_output = tag;
         job->auth_tag_output_len_in_bytes = 4;
 
-        if (use_nocheck)
+        if (use_nocheck) {
                 job = IMB_SUBMIT_JOB_NOCHECK(mgr);
-        else
+        } else {
                 job = IMB_SUBMIT_JOB(mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mgr);
+                if (check_zerolen_job(name, "", job, 1) < 0) {
+                        while (IMB_FLUSH_JOB(mgr) != NULL)
+                                ;
+                        return -1;
+                }
+        }
 
         (void) job;
 
