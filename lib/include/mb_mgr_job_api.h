@@ -2611,9 +2611,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #ifdef SUBMIT_JOB_SHA3
         MB_MGR_SHA3_OOO *sha3_ooo = state->sha3_ooo;
 #endif
-#if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
-#endif
 #ifdef SUBMIT_JOB_SNOW5G_NIA4_X2
         MB_MGR_SNOW5G_OOO *snow5g_nia4_ooo = state->snow5g_nia4_ooo;
 #endif
@@ -2660,16 +2658,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_ZUC_NIA6:
                 return SUBMIT_JOB_ZUC_NIA6(zuc_nia6_ooo, job);
         case IMB_AUTH_SNOW3G_UIA2:
-#if (defined(SAFE_LOOKUP) || defined(AVX512))
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
-#else
-                CALL_SNOW3G_F9_1_BUFFER(
-                        state, (const snow3g_key_schedule_t *) job->u.SNOW3G_UIA2._key,
-                        job->u.SNOW3G_UIA2._iv, job->src + job->hash_start_src_offset_in_bytes,
-                        job->msg_len_to_hash_in_bytes * 8, job->auth_tag_output);
-                job->status |= IMB_STATUS_COMPLETED_AUTH;
-                return job;
-#endif
         case IMB_AUTH_KASUMI_UIA1:
                 CALL_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *) job->u.KASUMI_UIA1._key,
                                         job->src + job->hash_start_src_offset_in_bytes,
@@ -2822,9 +2811,7 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #ifdef FLUSH_JOB_SHA3
         MB_MGR_SHA3_OOO *sha3_ooo = state->sha3_ooo;
 #endif
-#if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
-#endif
 #ifdef FLUSH_JOB_SNOW5G_NIA4_X2
         MB_MGR_SNOW5G_OOO *snow5g_nia4_ooo = state->snow5g_nia4_ooo;
 #endif
@@ -2880,10 +2867,8 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         case IMB_AUTH_ZUC_NIA6:
                 return FLUSH_JOB_ZUC_NIA6(zuc_nia6_ooo);
-#if (defined(SAFE_LOOKUP) || defined(AVX512))
         case IMB_AUTH_SNOW3G_UIA2:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
-#endif
 #ifdef FLUSH_JOB_SNOW5G_NIA4_X2
         case IMB_AUTH_SNOW5G_NIA4:
                 return FLUSH_JOB_SNOW5G_NIA4_X2(snow5g_nia4_ooo);

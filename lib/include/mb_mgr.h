@@ -75,9 +75,6 @@ typedef int (*kasumi_init_f8_key_sched_t)(const void *, kasumi_key_sched_t *);
 typedef int (*kasumi_init_f9_key_sched_t)(const void *, kasumi_key_sched_t *);
 typedef size_t (*kasumi_key_sched_size_t)(void);
 
-typedef void (*snow3g_f9_1_buffer_t)(const snow3g_key_schedule_t *, const void *, const void *,
-                                     const uint64_t, void *);
-
 typedef int (*snow3g_init_key_sched_t)(const void *, snow3g_key_schedule_t *);
 
 typedef size_t (*snow3g_key_sched_size_t)(void);
@@ -172,7 +169,6 @@ struct IMB_MGR {
         kasumi_init_f9_key_sched_t kasumi_init_f9_key_sched;
         kasumi_key_sched_size_t kasumi_key_sched_size;
 
-        snow3g_f9_1_buffer_t snow3g_f9_1_buffer;
         snow3g_init_key_sched_t snow3g_init_key_sched;
         snow3g_key_sched_size_t snow3g_key_sched_size;
 
@@ -469,8 +465,6 @@ struct IMB_MGR {
 #define CALL_KASUMI_INIT_F9_KEY_SCHED(_mgr, _key, _exp_key)                                        \
         ((_mgr)->kasumi_init_f9_key_sched((_key), (_exp_key)))
 #define CALL_KASUMI_KEY_SCHED_SIZE(_mgr) ((_mgr)->kasumi_key_sched_size())
-#define CALL_SNOW3G_F9_1_BUFFER(_mgr, _exp_key, _iv, _src, _len, _tag)                             \
-        ((_mgr)->snow3g_f9_1_buffer((_exp_key), (_iv), (_src), (_len), (_tag)))
 #define CALL_SNOW3G_INIT_KEY_SCHED(_mgr, _key, _exp_key)                                           \
         ((_mgr)->snow3g_init_key_sched((_key), (_exp_key)))
 #define CALL_SNOW3G_KEY_SCHED_SIZE(_mgr)              ((_mgr)->snow3g_key_sched_size())
