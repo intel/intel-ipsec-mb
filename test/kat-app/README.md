@@ -3,6 +3,7 @@
 ## Contents
 
 - Overview
+- Common KAT modules
 - Usage
 
 
@@ -15,6 +16,27 @@ architectures e.g. SSE, AVX, AVX2, AVX512 and prints overall test result "PASS" 
 
 Test vectors are loaded at runtime from the JSON files in the `vectors` directory.
 Use `--vector-dir <DIR>` to point the application at a different directory.
+
+### Common KAT modules
+
+The common KAT modules `kat_common_cipher` and `kat_common_hash` provide reusable
+job setup, submission, completion, cleanup, and result-validation paths for cipher
+and hash algorithms. Algorithm-specific tests supply preparation and cleanup callbacks
+for fields and resources owned by that algorithm. The helpers allocate independent
+output buffers, retain each job's vector index for out-of-order completion, and validate
+results against the corresponding vector. They support the standard job API and the
+applicable generic, cipher-only, or hash-only burst APIs.
+
+The cipher and hash helpers are intentionally separate. Cipher jobs validate plaintext
+or ciphertext and may need in-place handling, while hash jobs validate authentication tags
+and may configure hash-specific fields. The callbacks keep those algorithm-specific details
+out of the common submission and completion logic.
+
+There are a few limitations. A helper does not infer algorithm-specific job fields, key
+schedule formats, IV construction, or special vector framing; those remain in the caller's
+callbacks. Not every test can use the helpers, particularly direct APIs, AEAD tests with
+additional tag/AAD behavior, and tests that mix algorithms in one operation. The helpers
+also cover job and burst APIs, not direct API validation.
 
 The [Project Wycheproof](https://github.com/google/wycheproof) vectors are held in
 the `wycheproof_*.json` files and are run as part of the test type of the algorithm
