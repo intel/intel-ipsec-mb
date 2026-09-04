@@ -44,12 +44,11 @@ chacha_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cip
                 return -1;
 
         job->user_data = job_ctx;
-        job_ctx->key = test_aligned_alloc(16, vec->keySize / 8);
-        job_ctx->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        job_ctx->key = test_aligned_alloc_copy(16, vec->key, vec->keySize / 8);
+        job_ctx->iv = malloc(vec->ivSize / 8 == 0 ? 1 : vec->ivSize / 8);
         if (job_ctx->key == NULL || job_ctx->iv == NULL)
                 return -1;
 
-        memcpy(job_ctx->key, vec->key, vec->keySize / 8);
         memcpy(job_ctx->iv, vec->iv, vec->ivSize / 8);
         job->enc_keys = job_ctx->key;
         job->dec_keys = job_ctx->key;
@@ -66,7 +65,7 @@ chacha_job_cleanup(struct IMB_JOB *job, void *ctx)
         (void) ctx;
         if (job_ctx != NULL) {
                 test_aligned_free(job_ctx->key);
-                test_aligned_free(job_ctx->iv);
+                free(job_ctx->iv);
                 free(job_ctx);
         }
         job->user_data = NULL;

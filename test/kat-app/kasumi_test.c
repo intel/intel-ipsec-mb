@@ -66,13 +66,12 @@ kasumi_f8_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct 
                 return -1;
 
         job->user_data = job_ctx;
-        job_ctx->key = test_aligned_alloc(16, vec->keySize / 8);
-        job_ctx->iv = test_aligned_alloc(16, vec->ivSize / 8);
+        job_ctx->key = test_aligned_alloc_copy(16, vec->key, vec->keySize / 8);
+        job_ctx->iv = malloc(vec->ivSize / 8 == 0 ? 1 : vec->ivSize / 8);
         job_ctx->key_sched = test_aligned_alloc(16, IMB_KASUMI_KEY_SCHED_SIZE(mb_mgr));
         if (job_ctx->key == NULL || job_ctx->iv == NULL || job_ctx->key_sched == NULL)
                 return -1;
 
-        memcpy(job_ctx->key, vec->key, vec->keySize / 8);
         memcpy(job_ctx->iv, vec->iv, vec->ivSize / 8);
         if (IMB_KASUMI_INIT_F8_KEY_SCHED(mb_mgr, job_ctx->key, job_ctx->key_sched) != 0)
                 return -1;
@@ -93,7 +92,7 @@ kasumi_f8_job_cleanup(struct IMB_JOB *job, void *ctx)
         if (job_ctx != NULL) {
                 test_aligned_free(job_ctx->key_sched);
                 test_aligned_free(job_ctx->key);
-                test_aligned_free(job_ctx->iv);
+                free(job_ctx->iv);
                 free(job_ctx);
         }
         job->user_data = NULL;

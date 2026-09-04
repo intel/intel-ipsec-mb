@@ -93,6 +93,9 @@ memory_set(void *dst, const int val, size_t length);
 void *
 test_aligned_alloc(const size_t alignment, const size_t size);
 
+void *
+test_aligned_alloc_copy(const size_t alignment, const void *src, const size_t size);
+
 void
 test_aligned_free(void *ptr);
 

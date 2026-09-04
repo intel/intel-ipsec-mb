@@ -86,19 +86,18 @@ zuc_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher
                 return -1;
 
         job->user_data = job_ctx;
-        job_ctx->key = test_aligned_alloc(16, key_len);
-        job_ctx->iv = test_aligned_alloc(16, IMB_ZUC_IV_LEN_IN_BYTES);
+        job_ctx->key = test_aligned_alloc_copy(16, vec->key, key_len);
+        job_ctx->iv = malloc(IMB_ZUC_IV_LEN_IN_BYTES);
         if (job_ctx->key == NULL || job_ctx->iv == NULL)
                 return -1;
 
-        memcpy(job_ctx->key, vec->key, key_len);
         if (cipher_mode == IMB_CIPHER_ZUC_EEA3 && (vec->ivSize / 8) != IMB_ZUC_IV_LEN_IN_BYTES) {
                 struct zuc_eea3_128_params params = { 0 };
 
                 zuc_eea3_128_set_params(vec, &params);
                 zuc_eea3_iv_gen(*params.count, *params.bearer, *params.direction, job_ctx->iv);
         } else {
-                memcpy(job_ctx->iv, vec->iv, vec->ivSize / 8);
+                memory_copy(job_ctx->iv, vec->iv, vec->ivSize / 8);
         }
 
         job->enc_keys = job_ctx->key;
@@ -116,7 +115,7 @@ zuc_job_cleanup(struct IMB_JOB *job, void *ctx)
         (void) ctx;
         if (job_ctx != NULL) {
                 test_aligned_free(job_ctx->key);
-                test_aligned_free(job_ctx->iv);
+                free(job_ctx->iv);
                 free(job_ctx);
         }
         job->user_data = NULL;

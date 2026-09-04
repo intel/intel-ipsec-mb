@@ -70,6 +70,18 @@ test_aligned_alloc(const size_t alignment, const size_t size)
 #endif
 }
 
+void *
+test_aligned_alloc_copy(const size_t alignment, const void *src, const size_t size)
+{
+        void *ptr = test_aligned_alloc(alignment, size == 0 ? 1 : size);
+
+        if (ptr == NULL)
+                return NULL;
+
+        memory_copy(ptr, src, size);
+        return ptr;
+}
+
 void
 test_aligned_free(void *ptr)
 {
