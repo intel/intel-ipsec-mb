@@ -47,6 +47,8 @@ kat_cipher_get_vec(const struct cipher_test *const *vec_tab, const uint32_t vec_
 static const void *
 kat_cipher_get_src(const struct cipher_test *vec, const struct kat_cipher_job_ops *ops)
 {
+        /* The KAT vector stores plaintext and ciphertext separately; direction selects the job
+         * input without requiring each caller to build a second vector. */
         if (ops->cipher_direction == IMB_DIR_ENCRYPT)
                 return vec->msg;
 
@@ -56,6 +58,8 @@ kat_cipher_get_src(const struct cipher_test *vec, const struct kat_cipher_job_op
 static const void *
 kat_cipher_get_expected(const struct cipher_test *vec, const struct kat_cipher_job_ops *ops)
 {
+        /* The destination is always compared with the result expected for the selected direction.
+         */
         if (ops->cipher_direction == IMB_DIR_ENCRYPT)
                 return vec->ct;
 
@@ -68,6 +72,8 @@ kat_cipher_job_init(struct IMB_JOB *job, const struct cipher_test *vec,
 {
         const size_t msg_len = vec->msgSize / 8;
 
+        /* Keep all fields shared by the job APIs in one place. Algorithm-specific preparation is
+         * deliberately deferred until after this baseline has been established. */
         job->enc_keys = NULL;
         job->dec_keys = NULL;
         job->cipher_direction = ops->cipher_direction;
@@ -96,6 +102,8 @@ kat_cipher_job_check(const struct IMB_JOB *job, const struct cipher_test *vec,
 {
         const size_t msg_len = vec->msgSize / 8;
 
+        /* Burst APIs can return jobs in a different order from submission, so validation uses the
+         * target associated with the job's submission index. */
         if (job->status != IMB_STATUS_COMPLETED)
                 return -1;
 
@@ -287,6 +295,9 @@ kat_cipher_test_generic_burst(struct IMB_MGR *mb_mgr, const struct cipher_test *
         if (targets == NULL)
                 return -1;
 
+        /* Generic bursts may return only part of the batch; flush until every prepared job is
+         * completed so each job can be validated and its private resources released exactly once.
+         */
         while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
                 IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
 
@@ -308,6 +319,9 @@ kat_cipher_test_generic_burst(struct IMB_MGR *mb_mgr, const struct cipher_test *
         }
 
         while (jobs_rx < num_jobs) {
+                /* IMB_SUBMIT_BURST and IMB_FLUSH_BURST may return a partial batch. The returned
+                 * job array is reused for each flush, so process each batch before requesting the
+                 * next one. */
                 for (uint32_t i = 0; i < completed_jobs; i++) {
                         const uint32_t job_idx = (uint32_t) (uintptr_t) jobs[i]->user_data2;
 
@@ -378,6 +392,8 @@ kat_cipher_test_burst(struct IMB_MGR *mb_mgr, const struct cipher_test *const *v
                 prepared_jobs++;
         }
 
+        /* Unlike the generic burst path, the cipher-only API is expected to return the complete
+         * submitted batch. Each returned job is therefore validated directly by index. */
         const uint32_t completed =
                 IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, num_jobs, ops->cipher_mode,
                                         ops->cipher_direction, ops->key_len_in_bytes);
@@ -419,7 +435,7 @@ static size_t
 kat_cipher_aes_key_sched_len(const unsigned key_len_bytes)
 {
         const unsigned key_len_words = key_len_bytes / sizeof(uint32_t); /* Nk */
-        const unsigned num_rounds = key_len_words + 6;                    /* Nr */
+        const unsigned num_rounds = key_len_words + 6;                   /* Nr */
         const unsigned num_round_keys = num_rounds + 1;
 
         return num_round_keys * IMB_AES_BLOCK_SIZE;
@@ -437,6 +453,8 @@ kat_cipher_aes_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job,
         if (job_ctx == NULL)
                 return -1;
 
+        /* Key schedules are copied per job because the common burst helpers may have several jobs
+         * in flight while callers reuse the input schedule for subsequent tests. */
         job->user_data = job_ctx;
         job_ctx->enc_keys = test_aligned_alloc(16, prepare_ctx->key_sched_len);
         if (job_ctx->enc_keys == NULL)
@@ -451,9 +469,12 @@ kat_cipher_aes_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job,
                 memcpy(job_ctx->dec_keys, prepare_ctx->dec_keys, prepare_ctx->key_sched_len);
                 job->dec_keys = job_ctx->dec_keys;
         } else {
+                /* Some AES modes use the encryption schedule for both directions. Avoid a second
+                 * allocation while still giving cleanup one unambiguous owner. */
                 job->dec_keys = job_ctx->enc_keys;
         }
 
+        /* The vector owns the IV storage; the job only borrows it for the duration of the test. */
         job->iv = prepare_ctx->iv;
         job->iv_len_in_bytes = prepare_ctx->iv_len;
         return 0;
@@ -482,9 +503,9 @@ kat_cipher_test_aes_common(struct IMB_MGR *mb_mgr, const void *enc_keys, const v
                            const enum kat_cipher_burst_type burst_type)
 {
         const struct cipher_test *vec_ptr = vec;
-        struct kat_cipher_aes_prepare_ctx prepare_ctx = {
-                                        enc_keys, dec_keys, iv, kat_cipher_aes_key_sched_len(key_len), iv_len
-        };
+        struct kat_cipher_aes_prepare_ctx prepare_ctx = { enc_keys, dec_keys, iv,
+                                                          kat_cipher_aes_key_sched_len(key_len),
+                                                          iv_len };
         const struct kat_cipher_job_ops ops = {
                 .prepare = kat_cipher_aes_job_prepare,
                 .cleanup = kat_cipher_aes_job_cleanup,
@@ -496,6 +517,7 @@ kat_cipher_test_aes_common(struct IMB_MGR *mb_mgr, const void *enc_keys, const v
                 .in_place = in_place,
         };
 
+        /* Keep the AES callers independent of the individual job API implementations. */
         switch (burst_type) {
         case KAT_CIPHER_BURST_GENERIC:
                 return kat_cipher_test_generic_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);

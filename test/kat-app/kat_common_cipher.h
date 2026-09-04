@@ -52,7 +52,7 @@ kat_cipher_test_submit_flush(struct IMB_MGR *mb_mgr, const struct cipher_test *c
                              const struct kat_cipher_job_ops *ops);
 
 /**
- * @brief Exercise generic burst APIs with caller-supplied preparation.
+ * @brief Exercise generic burst APIs with caller-supplied preparation for cipher algorithms.
  *
  * @return 0 if all num_jobs completed and matched expected output, -1 otherwise.
  */
@@ -98,6 +98,16 @@ struct kat_cipher_aes_prepare_ctx {
         unsigned iv_len;
 };
 
+/**
+ * @brief Test an AES cipher vector through a selected job or burst API.
+ *
+ * Initializes the common AES job fields, copies the supplied encryption and decryption schedules
+ * into job-local aligned storage, and dispatches to submit/flush, generic-burst, or cipher-only
+ * burst testing according to @p burst_type. The expected plaintext or ciphertext is taken from
+ * @p vec based on @p dir, and in-place operation is controlled by @p in_place.
+ *
+ * @return 0 if all num_jobs completed and matched expected output, -1 otherwise.
+ */
 int
 kat_cipher_test_aes_common(struct IMB_MGR *mb_mgr, const void *enc_keys, const void *dec_keys,
                            const void *iv, const unsigned iv_len, const struct cipher_test *vec,
