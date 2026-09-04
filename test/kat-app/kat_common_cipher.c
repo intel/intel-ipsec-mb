@@ -408,3 +408,101 @@ end:
         kat_cipher_free_targets(targets, num_jobs);
         return ret;
 }
+
+struct kat_cipher_aes_job_ctx {
+        void *enc_keys;
+        void *dec_keys;
+};
+
+/* AES key schedule size, per FIPS-197: Nr = Nk + 6 rounds, with Nr + 1 round keys. */
+static size_t
+kat_cipher_aes_key_sched_len(const unsigned key_len_bytes)
+{
+        const unsigned key_len_words = key_len_bytes / sizeof(uint32_t); /* Nk */
+        const unsigned num_rounds = key_len_words + 6;                    /* Nr */
+        const unsigned num_round_keys = num_rounds + 1;
+
+        return num_round_keys * IMB_AES_BLOCK_SIZE;
+}
+
+static int
+kat_cipher_aes_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job,
+                           const struct cipher_test *vec, void *ctx)
+{
+        const struct kat_cipher_aes_prepare_ctx *prepare_ctx = ctx;
+        struct kat_cipher_aes_job_ctx *job_ctx = calloc(1, sizeof(*job_ctx));
+
+        (void) mb_mgr;
+        (void) vec;
+        if (job_ctx == NULL)
+                return -1;
+
+        job->user_data = job_ctx;
+        job_ctx->enc_keys = test_aligned_alloc(16, prepare_ctx->key_sched_len);
+        if (job_ctx->enc_keys == NULL)
+                return -1;
+        memcpy(job_ctx->enc_keys, prepare_ctx->enc_keys, prepare_ctx->key_sched_len);
+        job->enc_keys = job_ctx->enc_keys;
+
+        if (prepare_ctx->dec_keys != NULL) {
+                job_ctx->dec_keys = test_aligned_alloc(16, prepare_ctx->key_sched_len);
+                if (job_ctx->dec_keys == NULL)
+                        return -1;
+                memcpy(job_ctx->dec_keys, prepare_ctx->dec_keys, prepare_ctx->key_sched_len);
+                job->dec_keys = job_ctx->dec_keys;
+        } else {
+                job->dec_keys = job_ctx->enc_keys;
+        }
+
+        job->iv = prepare_ctx->iv;
+        job->iv_len_in_bytes = prepare_ctx->iv_len;
+        return 0;
+}
+
+static void
+kat_cipher_aes_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        struct kat_cipher_aes_job_ctx *job_ctx = job->user_data;
+
+        (void) ctx;
+        if (job_ctx != NULL) {
+                test_aligned_free(job_ctx->enc_keys);
+                if (job_ctx->dec_keys != NULL && job_ctx->dec_keys != job_ctx->enc_keys)
+                        test_aligned_free(job_ctx->dec_keys);
+                free(job_ctx);
+        }
+        job->user_data = NULL;
+}
+
+int
+kat_cipher_test_aes_common(struct IMB_MGR *mb_mgr, const void *enc_keys, const void *dec_keys,
+                           const void *iv, const unsigned iv_len, const struct cipher_test *vec,
+                           const int dir, const int order, const IMB_CIPHER_MODE cipher,
+                           const int in_place, const unsigned key_len, const uint32_t num_jobs,
+                           const enum kat_cipher_burst_type burst_type)
+{
+        const struct cipher_test *vec_ptr = vec;
+        struct kat_cipher_aes_prepare_ctx prepare_ctx = {
+                                        enc_keys, dec_keys, iv, kat_cipher_aes_key_sched_len(key_len), iv_len
+        };
+        const struct kat_cipher_job_ops ops = {
+                .prepare = kat_cipher_aes_job_prepare,
+                .cleanup = kat_cipher_aes_job_cleanup,
+                .ctx = &prepare_ctx,
+                .cipher_mode = cipher,
+                .cipher_direction = dir,
+                .chain_order = order,
+                .key_len_in_bytes = key_len,
+                .in_place = in_place,
+        };
+
+        switch (burst_type) {
+        case KAT_CIPHER_BURST_GENERIC:
+                return kat_cipher_test_generic_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
+        case KAT_CIPHER_BURST_CIPHER:
+                return kat_cipher_test_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
+        case KAT_CIPHER_BURST_NONE:
+        default:
+                return kat_cipher_test_submit_flush(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
+        }
+}

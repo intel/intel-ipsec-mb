@@ -29,116 +29,6 @@ free_aes_cfb_vectors(struct test_json_alloc_ctx *ctx)
         aes_cfb_vectors = NULL;
 }
 
-struct aes_cfb_prepare_ctx {
-        const void *enc_keys;
-        const void *iv;
-        size_t key_sched_len;
-};
-
-struct aes_cfb_job_ctx {
-        void *enc_keys;
-};
-
-static int
-aes_cfb_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct cipher_test *vec,
-                    void *ctx)
-{
-        const struct aes_cfb_prepare_ctx *prepare_ctx = ctx;
-        struct aes_cfb_job_ctx *job_ctx = calloc(1, sizeof(*job_ctx));
-
-        (void) mb_mgr;
-        (void) vec;
-        if (job_ctx == NULL)
-                return -1;
-
-        job->user_data = job_ctx;
-        job_ctx->enc_keys = test_aligned_alloc(16, prepare_ctx->key_sched_len);
-        if (job_ctx->enc_keys == NULL)
-                return -1;
-
-        memcpy(job_ctx->enc_keys, prepare_ctx->enc_keys, prepare_ctx->key_sched_len);
-        job->enc_keys = job_ctx->enc_keys;
-        job->dec_keys = job_ctx->enc_keys;
-        job->iv = prepare_ctx->iv;
-        job->iv_len_in_bytes = IV_SIZE;
-        return 0;
-}
-
-static void
-aes_cfb_job_cleanup(struct IMB_JOB *job, void *ctx)
-{
-        struct aes_cfb_job_ctx *job_ctx = job->user_data;
-
-        (void) ctx;
-        if (job_ctx != NULL) {
-                test_aligned_free(job_ctx->enc_keys);
-                free(job_ctx);
-        }
-        job->user_data = NULL;
-}
-
-static int
-test_aes_cfb_common(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned key_len, const void *iv,
-                    const uint8_t *in_text, const uint8_t *out_text, unsigned text_byte_len,
-                    const IMB_CIPHER_DIRECTION dir, const int in_place, const uint32_t num_jobs,
-                    const int burst_type)
-{
-        const struct cipher_test vec = {
-                .msg = (const char *) (dir == IMB_DIR_ENCRYPT ? in_text : out_text),
-                .ct = (const char *) (dir == IMB_DIR_ENCRYPT ? out_text : in_text),
-                .msgSize = text_byte_len * 8,
-        };
-        const struct cipher_test *vec_ptr = &vec;
-        struct aes_cfb_prepare_ctx prepare_ctx = { enc_keys, iv,
-                                                   (key_len / 4 + 7) * IMB_AES_BLOCK_SIZE };
-        const struct kat_cipher_job_ops ops = {
-                .prepare = aes_cfb_job_prepare,
-                .cleanup = aes_cfb_job_cleanup,
-                .ctx = &prepare_ctx,
-                .cipher_mode = IMB_CIPHER_CFB,
-                .cipher_direction = dir,
-                .chain_order =
-                        dir == IMB_DIR_ENCRYPT ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER,
-                .key_len_in_bytes = key_len,
-                .in_place = in_place,
-        };
-
-        if (burst_type == 1)
-                return kat_cipher_test_generic_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
-        else if (burst_type == 2)
-                return kat_cipher_test_burst(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
-        else
-                return kat_cipher_test_submit_flush(mb_mgr, &vec_ptr, 1, num_jobs, &ops);
-}
-
-static int
-test_aes_cfb(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned key_len, const void *iv,
-             const uint8_t *in_text, const uint8_t *out_text, unsigned text_byte_len,
-             const IMB_CIPHER_DIRECTION dir, const int in_place, const uint32_t num_jobs)
-{
-        return test_aes_cfb_common(mb_mgr, enc_keys, key_len, iv, in_text, out_text, text_byte_len,
-                                   dir, in_place, num_jobs, 0);
-}
-
-static int
-test_aes_cfb_burst(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned key_len, const void *iv,
-                   const uint8_t *in_text, const uint8_t *out_text, unsigned text_byte_len,
-                   const IMB_CIPHER_DIRECTION dir, const int in_place, const uint32_t num_jobs)
-{
-        return test_aes_cfb_common(mb_mgr, enc_keys, key_len, iv, in_text, out_text, text_byte_len,
-                                   dir, in_place, num_jobs, 1);
-}
-
-static int
-test_aes_cfb_cipher_burst(struct IMB_MGR *mb_mgr, const void *enc_keys, unsigned key_len,
-                          const void *iv, const uint8_t *in_text, const uint8_t *out_text,
-                          unsigned text_byte_len, const IMB_CIPHER_DIRECTION dir,
-                          const int in_place, const uint32_t num_jobs)
-{
-        return test_aes_cfb_common(mb_mgr, enc_keys, key_len, iv, in_text, out_text, text_byte_len,
-                                   dir, in_place, num_jobs, 2);
-}
-
 static void
 test_aes_cfb_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                      struct test_suite_context *ctx192, struct test_suite_context *ctx256,
@@ -151,6 +41,11 @@ test_aes_cfb_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
         DECLARE_ALIGNED(uint32_t enc_keys[4 * 15], 16);
         DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         uint32_t directions[2] = { IMB_DIR_ENCRYPT, IMB_DIR_DECRYPT };
+        static const enum kat_cipher_burst_type bursts[] = {
+                KAT_CIPHER_BURST_NONE,
+                KAT_CIPHER_BURST_GENERIC,
+                KAT_CIPHER_BURST_CIPHER,
+        };
 
         printf("aes_cfb standard test vectors:\n");
         for (; v->msg != NULL; v++) {
@@ -195,33 +90,38 @@ test_aes_cfb_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                                         dir_text = decrypt;
                                 }
 
-                                if (test_aes_cfb(mb_mgr, enc_keys, (unsigned) v->keySize / 8, v->iv,
-                                                 input, output, text_byte_len, directions[dir],
-                                                 in_place, num_jobs)) {
-                                        printf("error #%zu %s, jobs: %i\n", v->tcId, dir_text,
-                                               num_jobs);
-                                        test_suite_update(ctx, 0, 1);
-                                } else {
-                                        test_suite_update(ctx, 1, 0);
-                                }
+                                const struct cipher_test vec = {
+                                        .msg = (const char *) (directions[dir] == IMB_DIR_ENCRYPT
+                                                                       ? input
+                                                                       : output),
+                                        .ct = (const char *) (directions[dir] == IMB_DIR_ENCRYPT
+                                                                      ? output
+                                                                      : input),
+                                        .msgSize = text_byte_len * 8,
+                                };
 
-                                if (test_aes_cfb_burst(mb_mgr, enc_keys, (unsigned) v->keySize / 8,
-                                                       v->iv, input, output, text_byte_len,
-                                                       directions[dir], in_place, num_jobs)) {
-                                        printf("error #%zu %s burst\n", v->tcId, dir_text);
-                                        test_suite_update(ctx, 0, 1);
-                                } else {
-                                        test_suite_update(ctx, 1, 0);
-                                }
-                                if (test_aes_cfb_cipher_burst(
-                                            mb_mgr, enc_keys, (unsigned) v->keySize / 8, v->iv,
-                                            input, output, text_byte_len, directions[dir], in_place,
-                                            num_jobs)) {
-                                        printf("error #%zu %s cipher-only burst\n", v->tcId,
-                                               dir_text);
-                                        test_suite_update(ctx, 0, 1);
-                                } else {
-                                        test_suite_update(ctx, 1, 0);
+                                for (size_t burst = 0; burst < sizeof(bursts) / sizeof(bursts[0]);
+                                     burst++) {
+                                        const int order = directions[dir] == IMB_DIR_ENCRYPT
+                                                                  ? IMB_ORDER_CIPHER_HASH
+                                                                  : IMB_ORDER_HASH_CIPHER;
+                                        const char *burst_text =
+                                                bursts[burst] == KAT_CIPHER_BURST_NONE ? ""
+                                                : bursts[burst] == KAT_CIPHER_BURST_GENERIC
+                                                        ? " burst"
+                                                        : " cipher-only burst";
+
+                                        if (kat_cipher_test_aes_common(
+                                                    mb_mgr, enc_keys, enc_keys, v->iv, IV_SIZE,
+                                                    &vec, directions[dir], order, IMB_CIPHER_CFB,
+                                                    in_place, (unsigned) v->keySize / 8, num_jobs,
+                                                    bursts[burst])) {
+                                                printf("error #%zu %s%s, jobs: %i\n", v->tcId,
+                                                       dir_text, burst_text, num_jobs);
+                                                test_suite_update(ctx, 0, 1);
+                                        } else {
+                                                test_suite_update(ctx, 1, 0);
+                                        }
                                 }
                         }
                 }

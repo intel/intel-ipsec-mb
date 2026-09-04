@@ -71,4 +71,38 @@ kat_cipher_test_burst(struct IMB_MGR *mb_mgr, const struct cipher_test *const *v
                       const uint32_t vec_tab_num, const uint32_t num_jobs,
                       const struct kat_cipher_job_ops *ops);
 
+enum kat_cipher_burst_type {
+        KAT_CIPHER_BURST_NONE = 0,
+        KAT_CIPHER_BURST_GENERIC = 1,
+        KAT_CIPHER_BURST_CIPHER = 2,
+};
+
+struct kat_cipher_test_case {
+        int dir;
+        int in_place;
+        enum kat_cipher_burst_type burst;
+        const char *label;
+};
+
+struct kat_cipher_dir_burst_case {
+        int dir;
+        enum kat_cipher_burst_type burst;
+        const char *label;
+};
+
+struct kat_cipher_aes_prepare_ctx {
+        const void *enc_keys;
+        const void *dec_keys;
+        const void *iv;
+        size_t key_sched_len;
+        unsigned iv_len;
+};
+
+int
+kat_cipher_test_aes_common(struct IMB_MGR *mb_mgr, const void *enc_keys, const void *dec_keys,
+                           const void *iv, const unsigned iv_len, const struct cipher_test *vec,
+                           const int dir, const int order, const IMB_CIPHER_MODE cipher,
+                           const int in_place, const unsigned key_len, const uint32_t num_jobs,
+                           const enum kat_cipher_burst_type burst_type);
+
 #endif /* KAT_COMMON_CIPHER_H */
