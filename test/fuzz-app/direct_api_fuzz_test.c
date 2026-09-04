@@ -13,54 +13,29 @@
 #include <malloc.h>
 #include <intel-ipsec-mb.h>
 #include "utils.h"
+#include "fuzz_common.h"
 
 int
 LLVMFuzzerTestOneInput(const uint8_t *, size_t);
 int
 LLVMFuzzerInitialize(int *, char ***);
 
-IMB_ARCH arch = IMB_ARCH_NONE;
-uint64_t flags = 0;
+static struct fuzz_args fargs = { 0 };
 
-static void
-parse_matched(int argc, char **argv)
-{
-        for (int i = 0; i < argc; i++) {
-                if (strcasecmp(argv[i], "SSE") == 0)
-                        arch = IMB_ARCH_SSE;
-                else if (strcasecmp(argv[i], "AVX2") == 0)
-                        arch = IMB_ARCH_AVX2;
-                else if (strcasecmp(argv[i], "AVX512") == 0)
-                        arch = IMB_ARCH_AVX512;
-                else if (strcasecmp(argv[i], "AVX10") == 0)
-                        arch = IMB_ARCH_AVX10;
-                else if (strcasecmp(argv[i], "SHANI-OFF") == 0)
-                        flags |= IMB_FLAG_SHANI_OFF;
-                else if (strcasecmp(argv[i], "GFNI-OFF") == 0)
-                        flags |= IMB_FLAG_GFNI_OFF;
-        }
-}
-
+/**
+ * @brief libFuzzer initialization hook. Extracts the application specific
+ *        arguments introduced by "--" and hides them from libFuzzer.
+ *
+ * @param [in,out] argc  Argument count, truncated at the "--" argument
+ * @param [in,out] argv  Argument vector
+ *
+ * @return 0 always
+ */
 int
 LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-        for (int i = 0; i < *argc; i++) {
-                /*
-                 * Check if the current argument matches the
-                 * argument we are looking for.
-                 */
-                if (strcasecmp((*argv)[i], "--") == 0) {
-                        parse_matched(*argc - (i + 1), &((*argv)[i + 1]));
-                        /*
-                         *  Remove the matching argument and all arguments
-                         * after it from the command line.
-                         */
-                        *argc = i;
-
-                        break;
-                }
-        }
-        return 0;
+        fuzz_args_init(&fargs);
+        return parse_args(argc, argv, &fargs);
 }
 
 /* ========================================================================== */
@@ -1619,26 +1594,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         memcpy(buff, &data[sizeof(int)], newDataSize);
 
         /* allocate multi-buffer manager */
-        if (p_mgr == NULL) {
-                p_mgr = alloc_mb_mgr(flags);
-                if (p_mgr == NULL) {
-                        printf("Error allocating MB_MGR structure!\n");
-                        free(buff);
-                        return -1;
-                }
-
-                IMB_ARCH arch_to_run = IMB_ARCH_NUM;
-
-                if (arch == IMB_ARCH_SSE)
-                        init_mb_mgr_sse(p_mgr);
-                else if (arch == IMB_ARCH_AVX2)
-                        init_mb_mgr_avx2(p_mgr);
-                else if (arch == IMB_ARCH_AVX512)
-                        init_mb_mgr_avx512(p_mgr);
-                else if (arch == IMB_ARCH_AVX10)
-                        init_mb_mgr_avx10(p_mgr);
-                else
-                        init_mb_mgr_auto(p_mgr, &arch_to_run);
+        if (allocate_init_mb_mgr(&p_mgr, &fargs) != 0) {
+                free(buff);
+                return -1;
         }
 
         const int idx = ((const int *) data)[0] % DIM(direct_apis);

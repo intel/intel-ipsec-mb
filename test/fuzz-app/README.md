@@ -5,12 +5,13 @@
 - Overview
 - Dependencies
 - Usage
+- Application arguments
 
 
 ## Overview
 
 The fuzz test applications aim to discover defects in the library by passing randomly
-generated data to the library API's. Currently there are three fuzzing applications, the
+generated data to the library APIs. Currently there are three fuzzing applications, the
 `imb-fuzz-api` application targets job and burst API, `imb-fuzz-direct-api` targets
 the direct API and `imb-fuzz-pqc-api` targets the post-quantum cryptography (PQC)
 direct API, i.e. ML-DSA (FIPS 204) and ML-KEM (FIPS 203).
@@ -48,21 +49,35 @@ To fuzz the library PQC (ML-DSA and ML-KEM) direct API:
 To display an extensive help page for libfuzzer options:  
 `./imb-fuzz-api -help=1`   
 
-### Architecture selection
+### Application arguments
 
-By default the applications initialize the multi-buffer manager for the best
-architecture available on the running CPU.
+To pass application arguments, place them after a `--` separator.
+Everything following `--` is consumed by the application and hidden from
+libfuzzer, so `--` and its arguments must come last:  
+`./imb-fuzz-api -runs=100000 -- AVX2 API=BURST NJOBS=32`   
 
-`imb-fuzz-direct-api` and `imb-fuzz-pqc-api` accept an optional `--` argument,
-after which `SSE`, `AVX2`, `AVX512` or `AVX10` selects the architecture and
-`SHANI-OFF` / `GFNI-OFF` disable the respective CPU features. All arguments
-following `--` are consumed by the application and hidden from libfuzzer, so
-`--` must come last:  
+The following arguments are recognized by all three applications:
+
+| Argument | Description |
+| --- | --- |
+| `SSE`, `AVX2`, `AVX512`, `AVX10` | Architecture to initialize the multi-buffer manager for. May also be given as `ARCH=<name>`. By default the best architecture available on the running CPU is used. |
+| `SHANI-OFF`, `GFNI-OFF` | Disable the respective CPU feature. May also be given as `FLAGS=<name>`. |
+
+The following arguments are recognized only by the `imb-fuzz-api` application:
+
+| Argument | Description |
+| --- | --- |
+| `API=JOB`, `API=BURST`, `API=CIPHER-BURST`, `API=HASH-BURST` | API to exercise, job API by default. `SINGLE`, `BURST`, `CIPHER_BURST` and `HASH_BURST` are accepted as well. |
+| `NJOBS=<n>` | Number of jobs per burst, 10 by default. Must not exceed `IMB_MAX_BURST_SIZE`. |
+| `KEYLEN=<n>` | Cipher key length in bytes, 16 by default. |
+| `DIR=ENCRYPT`, `DIR=DECRYPT` | Cipher direction, encrypt by default. `ENCRYPT` and `DECRYPT` are accepted as well. |
+| `IMB_CIPHER_<mode>` | Fuzz one specific cipher mode, for example `IMB_CIPHER_CBC`. By default the cipher mode is taken from the fuzz input. |
+| `IMB_AUTH_<alg>` | Fuzz one specific hash algorithm, for example `IMB_AUTH_HMAC_SHA_256`. By default the hash algorithm is taken from the fuzz input. |
+
+Examples:  
 `./imb-fuzz-pqc-api -runs=100000 -- AVX10`  
-
-`imb-fuzz-api` selects the architecture through the `ARCH` environment variable
-(`SSE`, `AVX2`, `AVX512` or `AVX10`):  
-`ARCH=AVX10 ./imb-fuzz-api`  
+`./imb-fuzz-direct-api -runs=100000 -- AVX2 SHANI-OFF`  
+`./imb-fuzz-api -- ARCH=SSE API=CIPHER-BURST IMB_CIPHER_CBC DIR=DECRYPT KEYLEN=32`  
 
 **Note:** the selected architecture must be supported by the CPU the application
 is running on.
