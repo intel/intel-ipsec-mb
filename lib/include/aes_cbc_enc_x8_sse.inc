@@ -8,6 +8,11 @@
 ;; - multi-buffer implementation
 ;; - 8 buffers at a time
 
+;; clobbers all registers except for ARG1 and rbp
+;; - ARG1 and rbp are preserved because the caller (submit/flush routine) keeps
+;;   the state pointer and the lane index in them across the call
+;; - all other GPRs are caller-saved: every submit/flush routine saves and
+;;   restores the full callee-saved GPR set around this code
 %use smartalign
 
 %include "include/os.inc"
@@ -27,25 +32,9 @@
 ;; arg 1: ARG : addr of AES_ARGS structure
 ;; arg 2: LEN : len (in units of bytes)
 
-struc STACK_CBC
+struc STACK
 _len:           resq 1
 _gpr_rbp:       resq 1
-endstruc
-
-struc STACK_MAC
-;; first fields need to match smaller CBC frame
-_len_mac:       resq 1
-_gpr_rbp_mac:   resq 1
-;; MAC specific fields follow from here
-_gpr_rbx:       resq 1
-_gpr_r12:       resq 1
-_gpr_r13:       resq 1
-_gpr_r14:       resq 1
-_gpr_r15:       resq 1
-%ifndef LINUX
-_gpr_rsi:       resq 1
-_gpr_rdi:       resq 1
-%endif
 endstruc
 
 %define LEN_AREA        rsp + _len
@@ -109,23 +98,8 @@ endstruc
 %define %%ARG_IN        %6      ;; [in] pointer to array with input pointers (plain text)
 %define %%ARG_OUT       %7      ;; [in] pointer to array with destination pointers (cipher text)
 
-%ifidn %%MODE, CBC_XCBC_MAC
-        sub             rsp, STACK_MAC_size
-%else
-        sub             rsp, STACK_CBC_size
-%endif
+        sub             rsp, STACK_size
         mov             [rsp + _gpr_rbp], rbp
-%ifidn %%MODE, CBC_XCBC_MAC
-        mov             [rsp + _gpr_rbx], rbx
-        mov             [rsp + _gpr_r12], r12
-        mov             [rsp + _gpr_r13], r13
-        mov             [rsp + _gpr_r14], r14
-        mov             [rsp + _gpr_r15], r15
-%ifndef LINUX
-        mov             [rsp + _gpr_rsi], rsi
-        mov             [rsp + _gpr_rdi], rdi
-%endif
-%endif
 
         xor             IDX, IDX
         mov             [LEN_AREA], LEN
@@ -323,23 +297,8 @@ align_label
 
         ;; XMMs are saved at a higher level
         mov             rbp, [rsp + _gpr_rbp]
-%ifidn %%MODE, CBC_XCBC_MAC
-        mov             rbx, [rsp + _gpr_rbx]
-        mov             r12, [rsp + _gpr_r12]
-        mov             r13, [rsp + _gpr_r13]
-        mov             r14, [rsp + _gpr_r14]
-        mov             r15, [rsp + _gpr_r15]
-%ifndef LINUX
-        mov             rsi, [rsp + _gpr_rsi]
-        mov             rdi, [rsp + _gpr_rdi]
-%endif
-%endif
 
-%ifidn %%MODE, CBC_XCBC_MAC
-        add             rsp, STACK_MAC_size
-%else
-        add             rsp, STACK_CBC_size
-%endif
+        add             rsp, STACK_size
 
 %ifdef SAFE_DATA
 %ifidn %%MODE, CBC_XCBC_MAC

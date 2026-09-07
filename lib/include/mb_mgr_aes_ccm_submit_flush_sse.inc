@@ -351,8 +351,6 @@ align_loop
         pextrw  len2, min_len_idx, 0    ; min value
         pextrw  min_idx, min_len_idx, 1         ; min index (0...3)
 
-        mov     min_job, [state + _aes_ccm_job_in_lane + min_idx*8]
-
         or      len2, len2
         je      %%_len_is_0
         ;; subtract min length from all lengths
@@ -367,6 +365,10 @@ align_loop
 
 align_label
 %%_len_is_0:
+
+        ;; load the job pointer after the call - min_job is a callee-saved
+        ;; register and only ARG1 (state) and min_idx (rbp) survive AES_CBC_MAC
+        mov     min_job, [state + _aes_ccm_job_in_lane + min_idx*8]
 
         movzx   tmp, WORD [state + _aes_ccm_init_done + min_idx*2]
         cmp     WORD(tmp), 0

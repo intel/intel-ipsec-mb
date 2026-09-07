@@ -9,6 +9,10 @@
 ;; - 8 buffers at a time
 
 ;; clobbers all registers except for ARG1 and rbp
+;; - ARG1 and rbp are preserved because the caller (submit/flush routine) keeps
+;;   the state pointer and the lane index in them across the call
+;; - all other GPRs are caller-saved: every submit/flush routine saves and
+;;   restores the full callee-saved GPR set around this code
 %use smartalign
 
 %include "include/os.inc"
@@ -29,11 +33,10 @@
 ;; arg 2: LEN : len (in units of bytes)
 
 struc STACK
-_gpr_save:      resq    8
 _len:           resq    1
+_gpr_rbp:       resq    1
 endstruc
 
-%define GPR_SAVE_AREA   rsp + _gpr_save
 %define LEN_AREA        rsp + _len
 
 %ifdef LINUX
@@ -96,18 +99,7 @@ endstruc
 %define %%ARG_OUT       %7      ;; [in] pointer to array with destination pointers (cipher text)
 
         sub     rsp, STACK_size
-        mov     [GPR_SAVE_AREA + 8*0], rbp
-%ifidn %%MODE, CBC_XCBC_MAC
-        mov     [GPR_SAVE_AREA + 8*1], rbx
-        mov     [GPR_SAVE_AREA + 8*2], r12
-        mov     [GPR_SAVE_AREA + 8*3], r13
-        mov     [GPR_SAVE_AREA + 8*4], r14
-        mov     [GPR_SAVE_AREA + 8*5], r15
-%ifndef LINUX
-        mov     [GPR_SAVE_AREA + 8*6], rsi
-        mov     [GPR_SAVE_AREA + 8*7], rdi
-%endif
-%endif
+        mov     [rsp + _gpr_rbp], rbp
 
         xor     IDX, IDX
         mov     [LEN_AREA], LEN
@@ -298,18 +290,7 @@ align_label
 %endif
 
         ;; XMMs are saved at a higher level
-        mov     rbp, [GPR_SAVE_AREA + 8*0]
-%ifidn %%MODE, CBC_XCBC_MAC
-        mov     rbx, [GPR_SAVE_AREA + 8*1]
-        mov     r12, [GPR_SAVE_AREA + 8*2]
-        mov     r13, [GPR_SAVE_AREA + 8*3]
-        mov     r14, [GPR_SAVE_AREA + 8*4]
-        mov     r15, [GPR_SAVE_AREA + 8*5]
-%ifndef LINUX
-        mov     rsi, [GPR_SAVE_AREA + 8*6]
-        mov     rdi, [GPR_SAVE_AREA + 8*7]
-%endif
-%endif
+        mov     rbp, [rsp + _gpr_rbp]
 
         add     rsp, STACK_size
 
