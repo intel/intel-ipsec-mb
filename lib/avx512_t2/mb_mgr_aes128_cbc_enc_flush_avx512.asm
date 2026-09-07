@@ -84,6 +84,7 @@ mksection .text
 %endif
         ;; copy key for each lane
         vmovdqa64       [%%KEY_TAB + j + (k*16)], %%XTMP2
+align_label
 %%_skip_copy %+ j %+ _ %+ k:
 %assign k (k + 1)
 %endrep
@@ -115,6 +116,7 @@ mksection .text
 %assign j (j + 256)
 
 %endrep
+align_label
 %%_skip_clear %+ k:
 %assign k (k + 1)
 %endrep
