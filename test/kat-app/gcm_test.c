@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "aead_test.h"
+#include "kat_common_aead.h"
 #include "wycheproof_test.h"
 
 /* 0 - no extra messages, 1 - additional messages */
@@ -477,26 +478,6 @@ aes_gcm_job(IMB_MGR *mb_mgr, IMB_CIPHER_DIRECTION cipher_dir, const struct gcm_k
 }
 
 static int
-job_aes_gcm_enc(IMB_MGR *p_mgr, const struct gcm_key_data *key, struct gcm_context_data *ctx,
-                uint8_t *out, const uint8_t *in, const uint64_t len, const uint8_t *iv,
-                const uint64_t iv_len, const uint8_t *aad, const uint64_t aad_len,
-                uint8_t *auth_tag, const uint64_t auth_tag_len, const IMB_KEY_SIZE_BYTES key_len)
-{
-        return aes_gcm_job(p_mgr, IMB_DIR_ENCRYPT, key, key_len, out, in, len, iv, iv_len, aad,
-                           aad_len, auth_tag, auth_tag_len, ctx, IMB_CIPHER_GCM, 0);
-}
-
-static int
-job_aes_gcm_dec(IMB_MGR *p_mgr, const struct gcm_key_data *key, struct gcm_context_data *ctx,
-                uint8_t *out, const uint8_t *in, const uint64_t len, const uint8_t *iv,
-                const uint64_t iv_len, const uint8_t *aad, const uint64_t aad_len,
-                uint8_t *auth_tag, const uint64_t auth_tag_len, const IMB_KEY_SIZE_BYTES key_len)
-{
-        return aes_gcm_job(p_mgr, IMB_DIR_DECRYPT, key, key_len, out, in, len, iv, iv_len, aad,
-                           aad_len, auth_tag, auth_tag_len, ctx, IMB_CIPHER_GCM, 0);
-}
-
-static int
 job_sgl_aes_gcm(IMB_MGR *p_mgr, const IMB_CIPHER_DIRECTION cipher_dir,
                 const struct gcm_key_data *key, struct gcm_context_data *ctx, uint8_t *out,
                 const uint8_t *in, const uint64_t len, const uint8_t *iv, const uint64_t iv_len,
@@ -581,6 +562,108 @@ job_sgl_aes_gcm_dec(IMB_MGR *p_mgr, const struct gcm_key_data *key, struct gcm_c
 }
 
 /*****************************************************************************/
+
+static int
+aes_gcm_job_prepare(IMB_MGR *mb_mgr, IMB_JOB *job, const struct aead_test *vec, const void *ctx)
+{
+        (void) mb_mgr;
+        job->enc_keys = ctx;
+        job->dec_keys = ctx;
+        job->u.GCM.aad = (const uint8_t *) vec->aad;
+        job->u.GCM.aad_len_in_bytes = vec->aadSize / 8;
+        return 0;
+}
+
+static int
+aes_gcm_test_op(IMB_MGR *mb_mgr, const struct aead_test *vec, const struct gcm_key_data *key,
+                const IMB_CIPHER_DIRECTION dir, const int in_place, const uint32_t key_len)
+{
+        const struct kat_aead_job_ops ops = {
+                .prepare = aes_gcm_job_prepare,
+                .ctx = key,
+                .cipher_mode = IMB_CIPHER_GCM,
+                .hash_alg = IMB_AUTH_AES_GMAC,
+                .cipher_direction = dir,
+                .chain_order =
+                        dir == IMB_DIR_ENCRYPT ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = key_len,
+                .in_place = in_place,
+        };
+
+        return kat_aead_test_submit_flush(mb_mgr, &vec, 1, 1, &ops);
+}
+
+static void
+test_gcm_job_vectors(struct aead_test const *vector, struct test_suite_context *ts)
+{
+        struct gcm_key_data gdata_key;
+        uint32_t key_len;
+
+        switch (vector->keySize / 8) {
+        case IMB_KEY_128_BYTES:
+                key_len = IMB_KEY_128_BYTES;
+                IMB_AES128_GCM_PRE(p_gcm_mgr, vector->key, &gdata_key);
+                break;
+        case IMB_KEY_192_BYTES:
+                key_len = IMB_KEY_192_BYTES;
+                IMB_AES192_GCM_PRE(p_gcm_mgr, vector->key, &gdata_key);
+                break;
+        case IMB_KEY_256_BYTES:
+        default:
+                key_len = IMB_KEY_256_BYTES;
+                IMB_AES256_GCM_PRE(p_gcm_mgr, vector->key, &gdata_key);
+                break;
+        }
+
+        if (aes_gcm_test_op(p_gcm_mgr, vector, &gdata_key, IMB_DIR_ENCRYPT, 0, key_len)) {
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+        test_suite_update(ts, 1, 0);
+
+        if (aes_gcm_test_op(p_gcm_mgr, vector, &gdata_key, IMB_DIR_ENCRYPT, 1, key_len)) {
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+        test_suite_update(ts, 1, 0);
+
+        if (aes_gcm_test_op(p_gcm_mgr, vector, &gdata_key, IMB_DIR_DECRYPT, 0, key_len)) {
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+        test_suite_update(ts, 1, 0);
+
+        if (aes_gcm_test_op(p_gcm_mgr, vector, &gdata_key, IMB_DIR_DECRYPT, 1, key_len)) {
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+        test_suite_update(ts, 1, 0);
+
+        const struct kat_aead_job_ops encrypt_ops = {
+                .prepare = aes_gcm_job_prepare,
+                .ctx = &gdata_key,
+                .cipher_mode = IMB_CIPHER_GCM,
+                .hash_alg = IMB_AUTH_AES_GMAC,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = key_len,
+        };
+        const struct kat_aead_job_ops decrypt_ops = {
+                .prepare = aes_gcm_job_prepare,
+                .ctx = &gdata_key,
+                .cipher_mode = IMB_CIPHER_GCM,
+                .hash_alg = IMB_AUTH_AES_GMAC,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = key_len,
+        };
+
+        if (kat_aead_test_round_trip(p_gcm_mgr, vector, &encrypt_ops, &decrypt_ops)) {
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+        test_suite_update(ts, 1, 0);
+}
 
 static void
 test_gcm_vectors(struct aead_test const *vector, gcm_enc_dec_fn_t encfn, gcm_enc_dec_fn_t decfn,
@@ -914,7 +997,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128, struct test_suite_context
                                                        burst_sgl_aes_gcm_dec, ts128);
                         } else {
                                 test_gcm_vectors(v, aes_gcm_enc, aes_gcm_dec, ts128);
-                                test_gcm_vectors(v, job_aes_gcm_enc, job_aes_gcm_dec, ts128);
+                                test_gcm_job_vectors(v, ts128);
                                 test_gcm_vectors_burst(v, burst_aes_gcm_enc, burst_aes_gcm_dec,
                                                        ts128);
                         }
@@ -928,7 +1011,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128, struct test_suite_context
                                                        burst_sgl_aes_gcm_dec, ts192);
                         } else {
                                 test_gcm_vectors(v, aes_gcm_enc, aes_gcm_dec, ts192);
-                                test_gcm_vectors(v, job_aes_gcm_enc, job_aes_gcm_dec, ts192);
+                                test_gcm_job_vectors(v, ts192);
                                 test_gcm_vectors_burst(v, burst_aes_gcm_enc, burst_aes_gcm_dec,
                                                        ts192);
                         }
@@ -943,7 +1026,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128, struct test_suite_context
 
                         } else {
                                 test_gcm_vectors(v, aes_gcm_enc, aes_gcm_dec, ts256);
-                                test_gcm_vectors(v, job_aes_gcm_enc, job_aes_gcm_dec, ts256);
+                                test_gcm_job_vectors(v, ts256);
                                 test_gcm_vectors_burst(v, burst_aes_gcm_enc, burst_aes_gcm_dec,
                                                        ts256);
                         }
