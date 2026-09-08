@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "aead_test.h"
+#include "kat_common_aead.h"
 
 int
 snow5g_nca4_test(IMB_MGR *p_mgr);
@@ -55,6 +56,19 @@ check_data(const uint8_t *test, const uint8_t *expected, uint64_t len, const cha
         return is_error;
 }
 
+static int
+snow5g_nca4_job_prepare(IMB_MGR *mb_mgr, IMB_JOB *job, const struct aead_test *vec, const void *ctx)
+{
+        (void) mb_mgr;
+        (void) ctx;
+        job->enc_keys = (const void *) vec->key;
+        job->dec_keys = (const void *) vec->key;
+        job->u.NCA.aad = (const uint8_t *) vec->aad;
+        job->u.NCA.aad_len_in_bytes = vec->aadSize / 8;
+        return 0;
+}
+
+/* Specialized setup retained for the mixed and sequential coverage below. */
 static void
 fill_nca4_job(IMB_JOB *job, const struct aead_test *v, IMB_CIPHER_DIRECTION dir, const uint8_t *src,
               uint8_t *dst, uint8_t *tag)
@@ -62,14 +76,14 @@ fill_nca4_job(IMB_JOB *job, const struct aead_test *v, IMB_CIPHER_DIRECTION dir,
         job->cipher_mode = IMB_CIPHER_SNOW5G_NCA4;
         job->hash_alg = IMB_AUTH_SNOW5G_NCA4;
         job->cipher_direction = dir;
-        job->chain_order = (dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
+        job->chain_order = dir == IMB_DIR_ENCRYPT ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
         job->enc_keys = (const void *) v->key;
         job->dec_keys = (const void *) v->key;
         job->key_len_in_bytes = 32;
         job->src = src;
         job->dst = dst;
         job->msg_len_to_cipher_in_bytes = v->msgSize / 8;
-        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+        job->cipher_start_src_offset_in_bytes = 0;
         job->iv = (const uint8_t *) v->iv;
         job->iv_len_in_bytes = 16;
         job->u.NCA.aad = (const uint8_t *) v->aad;
@@ -78,137 +92,53 @@ fill_nca4_job(IMB_JOB *job, const struct aead_test *v, IMB_CIPHER_DIRECTION dir,
         job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 }
 
-static int
-snow5g_nca4_job(IMB_MGR *mb_mgr, const struct aead_test *v, IMB_CIPHER_DIRECTION dir,
-                const uint8_t *src, uint8_t *dst, uint8_t *tag)
-{
-        IMB_JOB *job;
-
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        if (!job) {
-                fprintf(stderr, "failed to get job\n");
-                return -1;
-        }
-
-        fill_nca4_job(job, v, dir, src, dst, tag);
-        job = IMB_SUBMIT_JOB(mb_mgr);
-
-        while (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "failed job, status:%d\n", job->status);
-                return -1;
-        }
-
-        return 0;
-}
-
 static void
 test_snow5g_nca4_vectors(IMB_MGR *p_mgr, struct aead_test const *vector,
                          struct test_suite_context *ts)
 {
-        int is_error = 0;
-        /* Temporary array for the calculated vectors */
-        uint8_t *ct_test = NULL;
-        uint8_t *pt_test = NULL;
-        uint8_t *T_test = NULL;
-
-        if (vector->msgSize / 8 != 0) {
-                /* Allocate space for the calculated ciphertext */
-                ct_test = malloc(vector->msgSize / 8);
-                if (ct_test == NULL) {
-                        fprintf(stderr, "Can't allocate ciphertext memory\n");
-                        goto test_snow5g_nca4_vectors_exit;
+        static const struct kat_aead_job_ops encrypt_ops = {
+                .prepare = snow5g_nca4_job_prepare,
+                .cipher_mode = IMB_CIPHER_SNOW5G_NCA4,
+                .hash_alg = IMB_AUTH_SNOW5G_NCA4,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = 32,
+        };
+        static const struct kat_aead_job_ops decrypt_ops = {
+                .prepare = snow5g_nca4_job_prepare,
+                .cipher_mode = IMB_CIPHER_SNOW5G_NCA4,
+                .hash_alg = IMB_AUTH_SNOW5G_NCA4,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = 32,
+        };
+        static const struct kat_aead_job_ops encrypt_in_place_ops = {
+                .prepare = snow5g_nca4_job_prepare,
+                .cipher_mode = IMB_CIPHER_SNOW5G_NCA4,
+                .hash_alg = IMB_AUTH_SNOW5G_NCA4,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = 32,
+                .in_place = 1,
+        };
+        static const struct kat_aead_job_ops decrypt_in_place_ops = {
+                .prepare = snow5g_nca4_job_prepare,
+                .cipher_mode = IMB_CIPHER_SNOW5G_NCA4,
+                .hash_alg = IMB_AUTH_SNOW5G_NCA4,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = 32,
+                .in_place = 1,
+        };
+        const struct kat_aead_job_ops *ops[] = { &encrypt_ops, &encrypt_in_place_ops, &decrypt_ops,
+                                                 &decrypt_in_place_ops };
+        for (size_t i = 0; i < DIM(ops); i++) {
+                if (kat_aead_test_submit_flush(p_mgr, &vector, 1, 1, ops[i])) {
+                        test_suite_update(ts, 0, 1);
+                        return;
                 }
-                memset(ct_test, 0, vector->msgSize / 8);
-                /* Allocate space for the calculated plaintext */
-                pt_test = malloc(vector->msgSize / 8);
-                if (pt_test == NULL) {
-                        fprintf(stderr, "Can't allocate plaintext memory\n");
-                        goto test_snow5g_nca4_vectors_exit;
-                }
-                memset(pt_test, 0, vector->msgSize / 8);
-        }
-
-        T_test = malloc(vector->tagSize / 8);
-        if (T_test == NULL) {
-                fprintf(stderr, "Can't allocate tag memory\n");
-                goto test_snow5g_nca4_vectors_exit;
-        }
-        memset(T_test, 0, vector->tagSize / 8);
-
-        /*
-         * Encrypt
-         */
-        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_ENCRYPT, (const uint8_t *) vector->msg, ct_test,
-                            T_test)) {
-                test_suite_update(ts, 0, 1);
-                goto test_snow5g_nca4_vectors_exit;
-        }
-        is_error |= check_data(ct_test, (const void *) vector->ct, vector->msgSize / 8,
-                               "encrypted cipher text (C)");
-        is_error |= check_data(T_test, (const void *) vector->tag, vector->tagSize / 8, "tag (T)");
-        if (is_error)
-                test_suite_update(ts, 0, 1);
-        else
                 test_suite_update(ts, 1, 0);
-
-        /* test of in-place encrypt */
-        memory_copy(pt_test, (const void *) vector->msg, vector->msgSize / 8);
-        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_ENCRYPT, pt_test, pt_test, T_test)) {
-                test_suite_update(ts, 0, 1);
-                goto test_snow5g_nca4_vectors_exit;
         }
-        is_error |= check_data(pt_test, (const void *) vector->ct, vector->msgSize / 8,
-                               "encrypted cipher text(in-place)");
-        if (is_error)
-                test_suite_update(ts, 0, 1);
-        else
-                test_suite_update(ts, 1, 0);
-
-        memory_set(ct_test, 0, vector->msgSize / 8);
-        memory_set(T_test, 0, vector->tagSize / 8);
-
-        /*
-         * Decrypt
-         */
-        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_DECRYPT, (const uint8_t *) vector->ct, pt_test,
-                            T_test)) {
-                test_suite_update(ts, 0, 1);
-                goto test_snow5g_nca4_vectors_exit;
-        }
-        is_error |= check_data(pt_test, (const void *) vector->msg, vector->msgSize / 8,
-                               "decrypted plain text (P)");
-        is_error |= check_data(T_test, (const void *) vector->tag, vector->tagSize / 8,
-                               "decrypted tag (T)");
-        if (is_error)
-                test_suite_update(ts, 0, 1);
-        else
-                test_suite_update(ts, 1, 0);
-
-        /* test in in-place decrypt */
-        memory_copy(ct_test, (const void *) vector->ct, vector->msgSize / 8);
-        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_DECRYPT, ct_test, ct_test, T_test)) {
-                test_suite_update(ts, 0, 1);
-                goto test_snow5g_nca4_vectors_exit;
-        }
-        is_error |= check_data(ct_test, (const void *) vector->msg, vector->msgSize / 8,
-                               "plain text (P) - in-place");
-        is_error |= check_data(T_test, (const void *) vector->tag, vector->tagSize / 8,
-                               "decrypted tag (T) - in-place");
-        if (is_error)
-                test_suite_update(ts, 0, 1);
-        else
-                test_suite_update(ts, 1, 0);
-
-test_snow5g_nca4_vectors_exit:
-        if (NULL != ct_test)
-                free(ct_test);
-        if (NULL != pt_test)
-                free(pt_test);
-        if (NULL != T_test)
-                free(T_test);
 }
 
 static void
@@ -311,77 +241,27 @@ static void
 test_snow5g_nca4_mixed_submit_flush(IMB_MGR *mb_mgr, struct test_suite_context *ts,
                                     const struct aead_test *v)
 {
-        const IMB_CIPHER_DIRECTION dirs[] = { IMB_DIR_ENCRYPT, IMB_DIR_DECRYPT };
-        uint8_t *out[2] = { NULL, NULL };
-        uint8_t *tag[2] = { NULL, NULL };
-        const uint64_t msg_len = v->msgSize / 8;
-        const uint64_t tag_len = v->tagSize / 8;
-        IMB_JOB *job;
-        int i, completed = 0, err;
+        const struct aead_test *vec_tab[2] = { v, v };
+        static const struct kat_aead_job_ops encrypt_ops = {
+                .prepare = snow5g_nca4_job_prepare,
+                .cipher_mode = IMB_CIPHER_SNOW5G_NCA4,
+                .hash_alg = IMB_AUTH_SNOW5G_NCA4,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = 32,
+        };
+        static const struct kat_aead_job_ops decrypt_ops = {
+                .prepare = snow5g_nca4_job_prepare,
+                .cipher_mode = IMB_CIPHER_SNOW5G_NCA4,
+                .hash_alg = IMB_AUTH_SNOW5G_NCA4,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = 32,
+        };
+        const struct kat_aead_job_ops *ops_tab[] = { &encrypt_ops, &decrypt_ops };
+        const int failed = kat_aead_test_submit_flush_mixed(mb_mgr, vec_tab, 2, 2, ops_tab);
 
-        for (i = 0; i < 2; i++) {
-                out[i] = malloc(NCA4_MAX_BUF);
-                tag[i] = malloc(16);
-                if (!out[i] || !tag[i]) {
-                        fprintf(stderr, "failed to allocate memory\n");
-                        test_suite_update(ts, 0, 1);
-                        goto done;
-                }
-        }
-
-        for (i = 0; i < 2; i++) {
-                const uint8_t *src =
-                        (const uint8_t *) ((dirs[i] == IMB_DIR_ENCRYPT) ? v->msg : v->ct);
-
-                memset(out[i], 0, NCA4_MAX_BUF);
-                memset(tag[i], 0, 16);
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                if (!job) {
-                        fprintf(stderr, "failed to get job\n");
-                        test_suite_update(ts, 0, 1);
-                        goto done;
-                }
-                fill_nca4_job(job, v, dirs[i], src, out[i], tag[i]);
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                test_suite_update(ts, 0, 1);
-                                goto done;
-                        }
-                        completed++;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        test_suite_update(ts, 0, 1);
-                        goto done;
-                }
-                completed++;
-        }
-
-        if (completed != 2) {
-                fprintf(stderr, "mixed: expected 2 completions, got %d\n", completed);
-                test_suite_update(ts, 0, 1);
-                goto done;
-        }
-
-        for (i = 0; i < 2; i++) {
-                err = 0;
-                if (msg_len > 0) {
-                        const uint8_t *exp =
-                                (const uint8_t *) ((dirs[i] == IMB_DIR_ENCRYPT) ? v->ct : v->msg);
-
-                        err |= check_data(out[i], exp, msg_len, "mixed out");
-                }
-                err |= check_data(tag[i], (const uint8_t *) v->tag, tag_len, "mixed tag");
-                test_suite_update(ts, err == 0, err != 0);
-        }
-done:
-        for (i = 0; i < 2; i++) {
-                free(out[i]);
-                free(tag[i]);
-        }
+        test_suite_update(ts, failed == 0, failed != 0);
 }
 
 /* Per-vector context used to verify completed jobs */

@@ -116,6 +116,26 @@ kat_aead_prepare_job(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, const struct a
         return 0;
 }
 
+static int
+kat_aead_job_check(const struct IMB_JOB *job, const struct aead_test *vec,
+                   const struct kat_aead_job_ops *ops)
+{
+        const size_t msg_len = vec->msgSize / 8;
+        const void *expected = ops->cipher_direction == IMB_DIR_ENCRYPT ? vec->ct : vec->msg;
+
+        /* Job completion status and output/tag validation are checked before the helper consumes
+         * the completed work item.
+         */
+        if (job->status != IMB_STATUS_COMPLETED)
+                return -1;
+        if (memcmp(expected, job->dst, msg_len) != 0)
+                return -1;
+        if (memcmp(vec->tag, job->auth_tag_output, vec->tagSize / 8) != 0)
+                return -1;
+
+        return 0;
+}
+
 /* Perform one encrypt or decrypt operation with caller-owned staging buffers. The helper only
  * releases any job-local callback resources; the buffers passed in are owned by the caller.
  */
@@ -138,33 +158,13 @@ kat_aead_round_trip_job(struct IMB_MGR *mb_mgr, const struct aead_test *vec,
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job == NULL)
                 job = IMB_FLUSH_JOB(mb_mgr);
-        if (job == NULL || job->status != IMB_STATUS_COMPLETED) {
+        if (job == NULL || kat_aead_job_check(job, vec, ops) < 0) {
                 if (job != NULL)
                         kat_aead_cleanup_resources(job, ops);
                 return -1;
         }
 
         kat_aead_cleanup_resources(job, ops);
-        return 0;
-}
-
-static int
-kat_aead_job_check(const struct IMB_JOB *job, const struct aead_test *vec,
-                   const struct kat_aead_job_ops *ops)
-{
-        const size_t msg_len = vec->msgSize / 8;
-        const void *expected = ops->cipher_direction == IMB_DIR_ENCRYPT ? vec->ct : vec->msg;
-
-        /* Job completion status and output/tag validation are checked before the helper consumes
-         * the completed work item.
-         */
-        if (job->status != IMB_STATUS_COMPLETED)
-                return -1;
-        if (memcmp(expected, job->dst, msg_len) != 0)
-                return -1;
-        if (memcmp(vec->tag, job->auth_tag_output, vec->tagSize / 8) != 0)
-                return -1;
-
         return 0;
 }
 
