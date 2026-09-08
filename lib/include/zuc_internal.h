@@ -31,11 +31,9 @@
 #define ZUC_WORD_BITS   (32)
 #define ZUC_WORD_BYTES  (ZUC_WORD_BITS / 8)
 
-/* Range of input data for ZUC is from 1 to 65504 bits */
-#define ZUC_MIN_BITLEN  1
-#define ZUC_MAX_BITLEN  65504
+/* Range of input data for ZUC is from 1 to 8188 bytes (65504 bits) */
 #define ZUC_MIN_BYTELEN 1
-#define ZUC_MAX_BYTELEN (ZUC_MAX_BITLEN / 8)
+#define ZUC_MAX_BYTELEN 8188
 
 /* Range of input data for ZUC is from 1 to 2^16 - 1 bytes (due to phminposuw instruction) */
 #define ZUC_NEA6_MIN_BYTELEN 1
@@ -901,7 +899,7 @@ asm_Eia3Round32B_avx(void *T, const void *ks, const void *data);
  * @param[in] T                     Pointer to authentication tag
  * @param[in] ks                    Pointer to key stream
  * @param[in] data                  Pointer to the data
- * @param[in] n_bits                Number of data bits to be processed
+ * @param[in] n_bytes               Number of data bytes to be processed
  * @pre
  *      None
  *

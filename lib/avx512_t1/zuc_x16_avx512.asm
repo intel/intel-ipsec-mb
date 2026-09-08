@@ -3349,7 +3349,6 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         or      %%LEN_BUF, %%LEN_BUF
         jz      APPEND3(%%Eia3RoundsAVX_end,I,J)
 
-        ; N_BYTES = LEN_BUF (already bytes)
         mov     %%N_BYTES, %%LEN_BUF
 
         lea     %%TMP1, [rel byte64_len_to_mask_table]
@@ -3530,15 +3529,15 @@ ZUC128_REMAINDER_16:
 %define DATA    arg3
 %define LEN     arg4
 
-%define N_BITS r10
+%define N_BYTES r10
 
         endbranch64
 
-        mov     N_BITS, arg5
+        mov     N_BYTES, arg5
 
         FUNC_SAVE
 
-        REMAINDER_16 T, KS, DATA, LEN, N_BITS, rax, rbx, r11, r12, r13, r14, r15
+        REMAINDER_16 T, KS, DATA, LEN, N_BYTES, rax, rbx, r11, r12, r13, r14, r15
 
         FUNC_RESTORE
 
