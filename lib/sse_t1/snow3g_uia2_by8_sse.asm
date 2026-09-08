@@ -25,12 +25,11 @@
 %endif
 
 %define E               rax
-%define rem_bits        r12
-%define tmp2            arg4
+%define rem_bytes       r12
 %define tmp4            r13
 %define in_ptr          arg1
 %define KS              arg2
-%define bit_len         arg3
+%define byte_len        arg3
 
 %define EV              xmm2
 %define SNOW3G_CONST    xmm7
@@ -183,7 +182,7 @@ mksection .text
 
 align_function
 calc_hkey_powers:
-        cmp             rem_bits, bit_len              ;; lenInBits == remainingBits
+        cmp             rem_bytes, byte_len            ;; lenInBytes == remainingBytes
         jne             .return
 
         ;; Setup powers for 8-block parallel processing and
@@ -217,7 +216,7 @@ align_label
 ;; uint32_t
 ;; snow3g_f9_1_buffer_internal_sse(const uint64_t *pBufferIn,
 ;;                                 const uint32_t KS[5],
-;;                                 const uint64_t lengthInBits);
+;;                                 const uint64_t lengthInBytes);
 MKGLOBAL(SNOW3G_F9_1_BUFFER_INTERNAL,function,internal)
 align_function
 SNOW3G_F9_1_BUFFER_INTERNAL:
@@ -235,13 +234,13 @@ SNOW3G_F9_1_BUFFER_INTERNAL:
         movq    P1, [KS]
         pshufd  P1, P1, 1110_0001b
 
-        mov     rem_bits, bit_len              ;; Initialize bits counter
+        mov     rem_bytes, byte_len            ;; Initialize bytes counter
 
-        cmp     rem_bits, 8*8                  ;; less than 64-bits?
+        cmp     rem_bytes, 8                   ;; less than one block?
         jb      .partial_blk
         je      .single_blk_chk
 
-        cmp     rem_bits, 8*8*8                ;; check at least 8 qwords in bits
+        cmp     rem_bytes, 8*8                 ;; check at least 8 qwords
         jb      .check_4_blocks
 
         mov     eax, 8
@@ -296,13 +295,13 @@ align_loop
         movq            EV, EV                           ;; clear high 64 bits
 
         add             in_ptr, 8*8                     ;; move to next 8 8-byte blocks
-        sub             rem_bits, 8*8*8
-        cmp             rem_bits, 8*8*8
+        sub             rem_bytes, 8*8
+        cmp             rem_bytes, 8*8
         jae             .start_8_blk_loop                ;; process next 8 blocks
 
 align_label
 .check_4_blocks:
-        cmp             rem_bits, 4*8*8                 ;; check if any 4-block groups left
+        cmp             rem_bytes, 4*8                  ;; check if any 4-block groups left
         jb              .single_blk_chk
 
         mov             eax, 4
@@ -338,11 +337,11 @@ align_label
         movq            EV, EV                           ;; clear high 64 bits
 
         add             in_ptr, 4*8             ;; move to the next 4 blocks
-        sub             rem_bits, 4*8*8
+        sub             rem_bytes, 4*8
 
 align_loop
 .single_blk_chk:
-        cmp             rem_bits, 8*8
+        cmp             rem_bytes, 8
         jb              .partial_blk
 
         ;; full block still available
@@ -353,35 +352,33 @@ align_loop
         MUL_AND_REDUCE_TO_64 EV, P1, xmm1
 
         add             in_ptr, 8
-        sub             rem_bits, 8*8
+        sub             rem_bytes, 8
         jmp             .single_blk_chk
 
         ;; partial block
 align_label
 .partial_blk:
-        or              rem_bits, rem_bits
-        jz              .skip_rem_bits
+        or              rem_bytes, rem_bytes
+        jz              .skip_rem_bytes
 
-        ;; load last 8 to 1 bytes
-        mov             tmp2, rem_bits
-        shr             tmp2, 3
-
+        ;; load last 7 to 1 bytes
         ;; loaded bytes land in the top of the register and the rest is zeroed,
         ;; which is what the digest expects for a partial block
-        simd_load_bswap_sse_8_1 xmm3, in_ptr, tmp2
+        simd_load_bswap_sse_8_1 xmm3, in_ptr, rem_bytes
 
         pxor            EV, xmm3
         MUL_AND_REDUCE_TO_64 EV, P1, xmm1
 
 align_label
-.skip_rem_bits:
+.skip_rem_bytes:
         ;; /* Multiply by Q */
         ;; E = multiply_and_reduce64(E ^ lengthInBits,
         ;;                           (((uint64_t)z[2] << 32) | ((uint64_t)z[3])));
         ;; /* Final MAC */
         ;; *(uint32_t *)pDigest =
         ;;        (uint32_t)BSWAP64(E ^ ((uint64_t)z[4] << 32));
-        movq    xmm3, bit_len
+        movq    xmm3, byte_len
+        psllq   xmm3, 3                         ;; the digest is taken over the bit length
         pxor    EV, xmm3
 
         movq    xmm1, [KS + 8]                  ;; load z[2:3]

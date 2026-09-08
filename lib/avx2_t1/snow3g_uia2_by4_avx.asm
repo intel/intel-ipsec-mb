@@ -30,10 +30,9 @@
 %define tmp2            arg4
 %define tmp3            r11
 %define tmp4            r13
-%define tmp5            r14
 %define in_ptr          arg1
 %define KS              arg2
-%define bit_len         arg3
+%define byte_len        arg3
 %define end_offset      tmp3
 
 %define EV              xmm2
@@ -142,7 +141,7 @@ mksection .text
 ;; uint32_t
 ;; snow3g_f9_1_buffer_internal_avx(const uint64_t *pBufferIn,
 ;;                                 const uint32_t KS[5],
-;;                                 const uint64_t lengthInBits);
+;;                                 const uint64_t lengthInBytes);
 align_function
 MKGLOBAL(snow3g_f9_1_buffer_internal_avx,function,internal)
 snow3g_f9_1_buffer_internal_avx:
@@ -159,8 +158,8 @@ snow3g_f9_1_buffer_internal_avx:
 
         xor     offset, offset
 
-        mov     qword_len, bit_len ;; lenInBits -> lenInQwords
-        shr     qword_len, 6
+        mov     qword_len, byte_len ;; lenInBytes -> lenInQwords
+        shr     qword_len, 3
         je      partial_blk
 
         mov     end_offset, qword_len
@@ -228,17 +227,14 @@ single_blk_chk:
 
 align_label
 partial_blk:
-        mov     tmp5, 0x3f      ;; len_in_bits % 64
-        and     tmp5, bit_len
-        jz      skip_rem_bits
-
-        ;; load last N bytes
-        mov     tmp2, tmp5
-        shr     tmp2, 3
+        mov     tmp2, 0x7       ;; len_in_bytes % 8
+        and     tmp2, byte_len
+        jz      skip_rem_bytes
 
         shl     offset, 3       ;; qwords -> bytes
         add     in_ptr, offset  ;; in + offset to last block
 
+        ;; load last 7 to 1 bytes
         simd_load_avx_15_1 xmm3, in_ptr, tmp2
         vmovq   tmp3, xmm3
         bswap   tmp3            ;; loaded bytes move to the top, rest stays zero
@@ -248,14 +244,15 @@ partial_blk:
         MUL_AND_REDUCE_TO_64 EV, P1, xmm3
 
 align_label
-skip_rem_bits:
+skip_rem_bytes:
         ;; /* Multiply by Q */
         ;; E = multiply_and_reduce64(E ^ lengthInBits,
         ;;                           (((uint64_t)z[2] << 32) | ((uint64_t)z[3])));
         ;; /* Final MAC */
         ;; *(uint32_t *)pDigest =
         ;;        (uint32_t)BSWAP64(E ^ ((uint64_t)z[4] << 32));
-        vmovq   xmm3, bit_len
+        vmovq   xmm3, byte_len
+        vpsllq  xmm3, xmm3, 3                   ;; the digest is taken over the bit length
         vpxor   EV, xmm3
 
         vmovq   xmm1, [KS + 8]                  ;; load z[2:3]

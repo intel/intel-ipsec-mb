@@ -127,7 +127,6 @@ mksection .text
         mov     [state + _snow3g_args_IV + %%LANE*8], %%TGP0
 
         mov     %%TGP0, [job + _msg_len_to_hash_in_bytes]
-        shl     %%TGP0, 3
         mov     [state + _snow3g_lens + %%LANE*4], DWORD(%%TGP0)
 
         cmp     qword [state + _snow3g_lanes_in_use], 4

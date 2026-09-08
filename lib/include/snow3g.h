@@ -18,14 +18,14 @@ snow3g_init_key_sched_sse(const void *pKey, snow3g_key_schedule_t *pCtx);
 
 uint32_t
 snow3g_f9_1_buffer_internal_sse(const uint64_t *pBufferIn, const uint32_t KS[5],
-                                const uint64_t lengthInBits);
+                                const uint64_t lengthInBytes);
 
 /*******************************************************************************
  * AVX2
  ******************************************************************************/
 uint32_t
 snow3g_f9_1_buffer_internal_avx(const uint64_t *pBufferIn, const uint32_t KS[5],
-                                const uint64_t lengthInBits);
+                                const uint64_t lengthInBytes);
 
 size_t
 snow3g_key_sched_size_avx2(void);
@@ -45,6 +45,6 @@ snow3g_init_key_sched_avx512(const void *pKey, snow3g_key_schedule_t *pCtx);
 
 uint32_t
 snow3g_f9_1_buffer_internal_vaes_avx512(const uint64_t *pBufferIn, const uint32_t KS[5],
-                                        const uint64_t lengthInBits);
+                                        const uint64_t lengthInBytes);
 
 #endif /* _SNOW3G_H_ */
