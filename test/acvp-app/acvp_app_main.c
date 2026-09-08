@@ -44,6 +44,75 @@ IMB_MGR *mb_mgr = NULL;
 int verbose = 0;
 int direct_api = 0; /* job API by default */
 
+/**
+ * @brief Gets the next free job slot and clears it
+ *
+ * Job slots are recycled by the manager, so a slot handed out here may still
+ * hold fields set by an earlier test case running a different algorithm.
+ * Clearing the slot makes every handler start from a known state instead of
+ * relying on whatever the previous user of the slot left behind.
+ *
+ * \a cipher_direction and \a chain_order get valid defaults because zero is
+ * not a valid value for either enum. Handlers that care set them explicitly.
+ *
+ * @param [in] mgr pointer to multi-buffer manager
+ *
+ * @return Pointer to a cleared job structure
+ * @retval NULL no job slot available
+ */
+static IMB_JOB *
+get_next_clean_job(IMB_MGR *mgr)
+{
+        IMB_JOB *job = IMB_GET_NEXT_JOB(mgr);
+
+        if (job == NULL) {
+                fprintf(stderr, "No job slot available: %s\n",
+                        imb_get_strerror(imb_get_errno(mgr)));
+                return NULL;
+        }
+
+        memset(job, 0, sizeof(*job));
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+
+        return job;
+}
+
+/**
+ * @brief Submits the job prepared with get_next_clean_job() and completes it
+ *
+ * The job is submitted and, if it is still in flight, flushed out of the
+ * manager. The library error string is printed on all failure paths.
+ *
+ * @param [in] mgr pointer to multi-buffer manager
+ * @param [in] alg_str algorithm name, used in error messages
+ *
+ * @return Pointer to the completed job structure
+ * @retval NULL no job returned by submit and flush, or job did not complete
+ */
+static IMB_JOB *
+submit_and_complete_job(IMB_MGR *mgr, const char *alg_str)
+{
+        IMB_JOB *job = IMB_SUBMIT_JOB(mgr);
+
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mgr);
+
+        if (job == NULL) {
+                fprintf(stderr, "No %s job returned by submit and flush: %s\n", alg_str,
+                        imb_get_strerror(imb_get_errno(mgr)));
+                return NULL;
+        }
+
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid %s job (status %d): %s\n", alg_str, (int) job->status,
+                        imb_get_strerror(imb_get_errno(mgr)));
+                return NULL;
+        }
+
+        return job;
+}
+
 static int
 aes_cbc_handler(ACVP_TEST_CASE *test_case)
 {
@@ -79,7 +148,9 @@ aes_cbc_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len >> 3;
         job->cipher_mode = IMB_CIPHER_CBC;
         job->hash_alg = IMB_AUTH_NULL;
@@ -112,13 +183,8 @@ aes_cbc_handler(ACVP_TEST_CASE *test_case)
                 job->msg_len_to_cipher_in_bytes = tc->ct_len;
                 tc->pt_len = tc->ct_len;
         }
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "AES-CBC") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         /*
          * If Monte-carlo test, copy the ciphertext for
          * the IV of the next iteration
@@ -164,7 +230,9 @@ aes_cfb_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len >> 3;
         job->cipher_mode = IMB_CIPHER_CFB;
         job->hash_alg = IMB_AUTH_NULL;
@@ -197,13 +265,8 @@ aes_cfb_handler(ACVP_TEST_CASE *test_case)
                 job->msg_len_to_cipher_in_bytes = tc->ct_len;
                 tc->pt_len = tc->ct_len;
         }
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "AES-CFB") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         /*
          * If Monte-carlo test, copy the ciphertext for
          * the IV of the next iteration
@@ -248,7 +311,9 @@ aes_ecb_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len >> 3;
         job->cipher_mode = IMB_CIPHER_ECB;
         job->hash_alg = IMB_AUTH_NULL;
@@ -264,16 +329,8 @@ aes_ecb_handler(ACVP_TEST_CASE *test_case)
                 job->msg_len_to_cipher_in_bytes = tc->pt_len;
                 tc->ct_len = tc->pt_len;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        const int err = imb_get_errno(mb_mgr);
-                        const char *err_str = imb_get_strerror(err);
-
-                        fprintf(stderr, "Invalid encrypt job: %s\n", err_str);
+                if (submit_and_complete_job(mb_mgr, "AES-ECB encrypt") == NULL)
                         return ACVP_CRYPTO_MODULE_FAIL;
-                }
         } else /* DECRYPT */ {
                 job->cipher_direction = IMB_DIR_DECRYPT;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
@@ -282,16 +339,8 @@ aes_ecb_handler(ACVP_TEST_CASE *test_case)
                 job->msg_len_to_cipher_in_bytes = tc->ct_len;
                 tc->pt_len = tc->ct_len;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        const int err = imb_get_errno(mb_mgr);
-                        const char *err_str = imb_get_strerror(err);
-
-                        fprintf(stderr, "Invalid decrypt job: %s\n", err_str);
+                if (submit_and_complete_job(mb_mgr, "AES-ECB decrypt") == NULL)
                         return ACVP_CRYPTO_MODULE_FAIL;
-                }
         }
 
         return ACVP_SUCCESS;
@@ -331,7 +380,9 @@ aes_gcm_handler(ACVP_TEST_CASE *test_case)
         }
 
         if (direct_api != 1) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job = get_next_clean_job(mb_mgr);
+                if (job == NULL)
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 job->key_len_in_bytes = tc->key_len >> 3;
                 job->cipher_mode = IMB_CIPHER_GCM;
                 job->hash_alg = IMB_AUTH_AES_GMAC;
@@ -386,13 +437,8 @@ aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         job->chain_order = IMB_ORDER_CIPHER_HASH;
                         job->auth_tag_output = tc->tag;
 
-                        job = IMB_SUBMIT_JOB(mb_mgr);
-                        if (job == NULL)
-                                job = IMB_FLUSH_JOB(mb_mgr);
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                fprintf(stderr, "Invalid job\n");
+                        if (submit_and_complete_job(mb_mgr, "AES-GCM encrypt") == NULL)
                                 return ACVP_CRYPTO_MODULE_FAIL;
-                        }
                 }
         } else /* DECRYPT */ {
                 uint8_t res_tag[MAX_TAG_LENGTH] = { 0 };
@@ -436,13 +482,8 @@ aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         job->chain_order = IMB_ORDER_HASH_CIPHER;
                         job->auth_tag_output = res_tag;
 
-                        job = IMB_SUBMIT_JOB(mb_mgr);
-                        if (job == NULL)
-                                job = IMB_FLUSH_JOB(mb_mgr);
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                fprintf(stderr, "Invalid job\n");
+                        if (submit_and_complete_job(mb_mgr, "AES-GCM decrypt") == NULL)
                                 return ACVP_CRYPTO_MODULE_FAIL;
-                        }
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
                         if (verbose) {
@@ -494,7 +535,9 @@ aes_gmac_handler(ACVP_TEST_CASE *test_case)
         }
 
         if (direct_api != 1) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job = get_next_clean_job(mb_mgr);
+                if (job == NULL)
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 job->key_len_in_bytes = tc->key_len >> 3;
                 job->cipher_mode = IMB_CIPHER_NULL;
                 job->hash_alg = hash_mode;
@@ -535,13 +578,8 @@ aes_gmac_handler(ACVP_TEST_CASE *test_case)
                         job->chain_order = IMB_ORDER_CIPHER_HASH;
                         job->auth_tag_output = tc->tag;
 
-                        job = IMB_SUBMIT_JOB(mb_mgr);
-                        if (job == NULL)
-                                job = IMB_FLUSH_JOB(mb_mgr);
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                fprintf(stderr, "Invalid job\n");
+                        if (submit_and_complete_job(mb_mgr, "AES-GMAC encrypt") == NULL)
                                 return ACVP_CRYPTO_MODULE_FAIL;
-                        }
                 }
         } else /* DECRYPT */ {
                 uint8_t res_tag[MAX_TAG_LENGTH] = { 0 };
@@ -574,13 +612,8 @@ aes_gmac_handler(ACVP_TEST_CASE *test_case)
                         job->chain_order = IMB_ORDER_HASH_CIPHER;
                         job->auth_tag_output = res_tag;
 
-                        job = IMB_SUBMIT_JOB(mb_mgr);
-                        if (job == NULL)
-                                job = IMB_FLUSH_JOB(mb_mgr);
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                fprintf(stderr, "Invalid job\n");
+                        if (submit_and_complete_job(mb_mgr, "AES-GMAC decrypt") == NULL)
                                 return ACVP_CRYPTO_MODULE_FAIL;
-                        }
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
                         if (verbose) {
@@ -628,7 +661,9 @@ aes_ctr_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len >> 3;
         job->cipher_mode = IMB_CIPHER_CNTR;
         job->hash_alg = IMB_AUTH_NULL;
@@ -647,13 +682,8 @@ aes_ctr_handler(ACVP_TEST_CASE *test_case)
                 job->msg_len_to_cipher_in_bytes = tc->pt_len;
                 tc->ct_len = tc->pt_len;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
+                if (submit_and_complete_job(mb_mgr, "AES-CTR encrypt") == NULL)
                         return ACVP_CRYPTO_MODULE_FAIL;
-                }
         } else /* DECRYPT */ {
                 job->cipher_direction = IMB_DIR_DECRYPT;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
@@ -662,13 +692,8 @@ aes_ctr_handler(ACVP_TEST_CASE *test_case)
                 job->msg_len_to_cipher_in_bytes = tc->ct_len;
                 tc->pt_len = tc->ct_len;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
+                if (submit_and_complete_job(mb_mgr, "AES-CTR decrypt") == NULL)
                         return ACVP_CRYPTO_MODULE_FAIL;
-                }
         }
         return ACVP_SUCCESS;
 }
@@ -739,7 +764,9 @@ tdes_cbc_handler(ACVP_TEST_CASE *test_case)
                 ks_ptr[2] = keys3;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = 192 / 8;
         job->cipher_mode = IMB_CIPHER_DES3;
         job->hash_alg = IMB_AUTH_NULL;
@@ -771,13 +798,8 @@ tdes_cbc_handler(ACVP_TEST_CASE *test_case)
                 tc->pt_len = tc->ct_len;
         }
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "TDES-CBC") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
 
         /*
          * If Monte Carlo test:
@@ -830,7 +852,9 @@ aes_ccm_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len >> 3;
         job->cipher_mode = IMB_CIPHER_CCM;
         job->hash_alg = IMB_AUTH_AES_CCM;
@@ -866,13 +890,8 @@ aes_ccm_handler(ACVP_TEST_CASE *test_case)
                 tc->pt_len = tc->ct_len;
         }
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "AES-CCM") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
 
         if (tc->direction == ACVP_SYM_CIPH_DIR_DECRYPT) {
                 /* Tag is placed at the end of the ciphertext. */
@@ -919,7 +938,9 @@ aes_cmac_handler(ACVP_TEST_CASE *test_case)
                 return ACVP_CRYPTO_MODULE_FAIL;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
 
@@ -942,13 +963,8 @@ aes_cmac_handler(ACVP_TEST_CASE *test_case)
         else /* verify == 0 */
                 job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "AES-CMAC") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
 
         if (tc->verify == 1) {
                 if (memcmp(res_tag, tc->mac, tc->mac_len) != 0) {
@@ -979,7 +995,9 @@ hmac_sha1_handler(ACVP_TEST_CASE *test_case)
 
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1, tc->key, tc->key_len, ipad_hash, opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA_1;
@@ -997,13 +1015,8 @@ hmac_sha1_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = tc->mac_len;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA1") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1023,7 +1036,9 @@ hmac_sha256_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_256, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA_256;
@@ -1041,13 +1056,8 @@ hmac_sha256_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA256") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1067,7 +1077,9 @@ hmac_sha224_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_224, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA_224;
@@ -1085,13 +1097,8 @@ hmac_sha224_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA224") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1111,7 +1118,9 @@ hmac_sha384_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_384, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA_384;
@@ -1129,13 +1138,8 @@ hmac_sha384_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA384") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1155,7 +1159,9 @@ hmac_sha512_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_512, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA_512;
@@ -1173,13 +1179,8 @@ hmac_sha512_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA512") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1199,7 +1200,9 @@ hmac_sha3_224_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_224, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA3_224;
@@ -1213,13 +1216,8 @@ hmac_sha3_224_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = tc->mac_len;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA3-224") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1239,7 +1237,9 @@ hmac_sha3_256_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_256, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA3_256;
@@ -1253,13 +1253,8 @@ hmac_sha3_256_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = tc->mac_len;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA3-256") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1279,7 +1274,9 @@ hmac_sha3_384_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_384, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA3_384;
@@ -1293,13 +1290,8 @@ hmac_sha3_384_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = tc->mac_len;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA3-384") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1319,7 +1311,9 @@ hmac_sha3_512_handler(ACVP_TEST_CASE *test_case)
         imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA3_512, tc->key, tc->key_len, ipad_hash,
                            opad_hash);
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->key_len_in_bytes = tc->key_len;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->hash_alg = IMB_AUTH_HMAC_SHA3_512;
@@ -1333,13 +1327,8 @@ hmac_sha3_512_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = tc->mac_len;
         job->auth_tag_output = tc->mac;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "HMAC-SHA3-512") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         return ACVP_SUCCESS;
 }
 
@@ -1375,23 +1364,24 @@ sha1_handler(ACVP_TEST_CASE *test_case)
         if (direct_api == 1) {
                 IMB_SHA1(mb_mgr, m, len, tc->md);
         } else {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_SHA_1;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->src = m;
-                job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
-                job->auth_tag_output = tc->md;
+                job = get_next_clean_job(mb_mgr);
+                if (job != NULL) {
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
+                        job->cipher_mode = IMB_CIPHER_NULL;
+                        job->hash_alg = IMB_AUTH_SHA_1;
+                        job->cipher_start_src_offset_in_bytes = 0;
+                        job->hash_start_src_offset_in_bytes = 0;
+                        job->src = m;
+                        job->msg_len_to_hash_in_bytes = len;
+                        job->auth_tag_output_len_in_bytes = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
+                        job->auth_tag_output = tc->md;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
+                        job = submit_and_complete_job(mb_mgr, "SHA1");
+                }
+                if (job == NULL) {
+                        if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
+                                free(m);
                         return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
@@ -1433,23 +1423,24 @@ sha2_224_handler(ACVP_TEST_CASE *test_case)
         if (direct_api == 1) {
                 IMB_SHA224(mb_mgr, m, len, tc->md);
         } else {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_SHA_224;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->src = m;
-                job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
-                job->auth_tag_output = tc->md;
+                job = get_next_clean_job(mb_mgr);
+                if (job != NULL) {
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
+                        job->cipher_mode = IMB_CIPHER_NULL;
+                        job->hash_alg = IMB_AUTH_SHA_224;
+                        job->cipher_start_src_offset_in_bytes = 0;
+                        job->hash_start_src_offset_in_bytes = 0;
+                        job->src = m;
+                        job->msg_len_to_hash_in_bytes = len;
+                        job->auth_tag_output_len_in_bytes = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
+                        job->auth_tag_output = tc->md;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
+                        job = submit_and_complete_job(mb_mgr, "SHA224");
+                }
+                if (job == NULL) {
+                        if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
+                                free(m);
                         return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
@@ -1491,23 +1482,24 @@ sha2_256_handler(ACVP_TEST_CASE *test_case)
         if (direct_api == 1) {
                 IMB_SHA256(mb_mgr, m, len, tc->md);
         } else {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_SHA_256;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->src = m;
-                job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
-                job->auth_tag_output = tc->md;
+                job = get_next_clean_job(mb_mgr);
+                if (job != NULL) {
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
+                        job->cipher_mode = IMB_CIPHER_NULL;
+                        job->hash_alg = IMB_AUTH_SHA_256;
+                        job->cipher_start_src_offset_in_bytes = 0;
+                        job->hash_start_src_offset_in_bytes = 0;
+                        job->src = m;
+                        job->msg_len_to_hash_in_bytes = len;
+                        job->auth_tag_output_len_in_bytes = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
+                        job->auth_tag_output = tc->md;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
+                        job = submit_and_complete_job(mb_mgr, "SHA256");
+                }
+                if (job == NULL) {
+                        if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
+                                free(m);
                         return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
@@ -1549,23 +1541,24 @@ sha2_384_handler(ACVP_TEST_CASE *test_case)
         if (direct_api == 1) {
                 IMB_SHA384(mb_mgr, m, len, tc->md);
         } else {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_SHA_384;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->src = m;
-                job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
-                job->auth_tag_output = tc->md;
+                job = get_next_clean_job(mb_mgr);
+                if (job != NULL) {
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
+                        job->cipher_mode = IMB_CIPHER_NULL;
+                        job->hash_alg = IMB_AUTH_SHA_384;
+                        job->cipher_start_src_offset_in_bytes = 0;
+                        job->hash_start_src_offset_in_bytes = 0;
+                        job->src = m;
+                        job->msg_len_to_hash_in_bytes = len;
+                        job->auth_tag_output_len_in_bytes = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
+                        job->auth_tag_output = tc->md;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
+                        job = submit_and_complete_job(mb_mgr, "SHA384");
+                }
+                if (job == NULL) {
+                        if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
+                                free(m);
                         return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
@@ -1607,23 +1600,24 @@ sha2_512_handler(ACVP_TEST_CASE *test_case)
         if (direct_api == 1) {
                 IMB_SHA512(mb_mgr, m, len, tc->md);
         } else {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = IMB_AUTH_SHA_512;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->src = m;
-                job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
-                job->auth_tag_output = tc->md;
+                job = get_next_clean_job(mb_mgr);
+                if (job != NULL) {
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
+                        job->cipher_mode = IMB_CIPHER_NULL;
+                        job->hash_alg = IMB_AUTH_SHA_512;
+                        job->cipher_start_src_offset_in_bytes = 0;
+                        job->hash_start_src_offset_in_bytes = 0;
+                        job->src = m;
+                        job->msg_len_to_hash_in_bytes = len;
+                        job->auth_tag_output_len_in_bytes = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
+                        job->auth_tag_output = tc->md;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
+                        job = submit_and_complete_job(mb_mgr, "SHA512");
+                }
+                if (job == NULL) {
+                        if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
+                                free(m);
                         return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
@@ -1672,29 +1666,27 @@ sha3_224_handler(ACVP_TEST_CASE *test_case)
                 len = tc->msg_len;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = IMB_DIR_ENCRYPT;
-        job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->cipher_mode = IMB_CIPHER_NULL;
-        job->hash_alg = IMB_AUTH_SHA3_224;
-        job->cipher_start_src_offset_in_bytes = 0;
-        job->hash_start_src_offset_in_bytes = 0;
-        job->src = m;
-        job->msg_len_to_hash_in_bytes = len;
-        job->auth_tag_output_len_in_bytes = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
-        job->auth_tag_output = tc->md;
+        job = get_next_clean_job(mb_mgr);
+        if (job != NULL) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = IMB_AUTH_SHA3_224;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->src = m;
+                job->msg_len_to_hash_in_bytes = len;
+                job->auth_tag_output_len_in_bytes = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output = tc->md;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
+                job = submit_and_complete_job(mb_mgr, "SHA3-224");
+        }
 
         if (large_data != NULL)
                 free(large_data);
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (job == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         tc->md_len = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
         return ACVP_SUCCESS;
 }
@@ -1738,29 +1730,27 @@ sha3_256_handler(ACVP_TEST_CASE *test_case)
                 len = tc->msg_len;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = IMB_DIR_ENCRYPT;
-        job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->cipher_mode = IMB_CIPHER_NULL;
-        job->hash_alg = IMB_AUTH_SHA3_256;
-        job->cipher_start_src_offset_in_bytes = 0;
-        job->hash_start_src_offset_in_bytes = 0;
-        job->src = m;
-        job->msg_len_to_hash_in_bytes = len;
-        job->auth_tag_output_len_in_bytes = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
-        job->auth_tag_output = tc->md;
+        job = get_next_clean_job(mb_mgr);
+        if (job != NULL) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = IMB_AUTH_SHA3_256;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->src = m;
+                job->msg_len_to_hash_in_bytes = len;
+                job->auth_tag_output_len_in_bytes = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output = tc->md;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
+                job = submit_and_complete_job(mb_mgr, "SHA3-256");
+        }
 
         if (large_data != NULL)
                 free(large_data);
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (job == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         tc->md_len = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
         return ACVP_SUCCESS;
 }
@@ -1804,29 +1794,27 @@ sha3_384_handler(ACVP_TEST_CASE *test_case)
                 len = tc->msg_len;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = IMB_DIR_ENCRYPT;
-        job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->cipher_mode = IMB_CIPHER_NULL;
-        job->hash_alg = IMB_AUTH_SHA3_384;
-        job->cipher_start_src_offset_in_bytes = 0;
-        job->hash_start_src_offset_in_bytes = 0;
-        job->src = m;
-        job->msg_len_to_hash_in_bytes = len;
-        job->auth_tag_output_len_in_bytes = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
-        job->auth_tag_output = tc->md;
+        job = get_next_clean_job(mb_mgr);
+        if (job != NULL) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = IMB_AUTH_SHA3_384;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->src = m;
+                job->msg_len_to_hash_in_bytes = len;
+                job->auth_tag_output_len_in_bytes = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output = tc->md;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
+                job = submit_and_complete_job(mb_mgr, "SHA3-384");
+        }
 
         if (large_data != NULL)
                 free(large_data);
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (job == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         tc->md_len = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
         return ACVP_SUCCESS;
 }
@@ -1870,29 +1858,27 @@ sha3_512_handler(ACVP_TEST_CASE *test_case)
                 len = tc->msg_len;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = IMB_DIR_ENCRYPT;
-        job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->cipher_mode = IMB_CIPHER_NULL;
-        job->hash_alg = IMB_AUTH_SHA3_512;
-        job->cipher_start_src_offset_in_bytes = 0;
-        job->hash_start_src_offset_in_bytes = 0;
-        job->src = m;
-        job->msg_len_to_hash_in_bytes = len;
-        job->auth_tag_output_len_in_bytes = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
-        job->auth_tag_output = tc->md;
+        job = get_next_clean_job(mb_mgr);
+        if (job != NULL) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = IMB_AUTH_SHA3_512;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->src = m;
+                job->msg_len_to_hash_in_bytes = len;
+                job->auth_tag_output_len_in_bytes = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output = tc->md;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
+                job = submit_and_complete_job(mb_mgr, "SHA3-512");
+        }
 
         if (large_data != NULL)
                 free(large_data);
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (job == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         tc->md_len = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
         return ACVP_SUCCESS;
 }
@@ -1914,7 +1900,9 @@ shake128_handler(ACVP_TEST_CASE *test_case)
          */
         uint32_t output_len = (tc->xof_len > 0) ? tc->xof_len : 32;
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
         job->cipher_mode = IMB_CIPHER_NULL;
@@ -1926,13 +1914,8 @@ shake128_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = output_len;
         job->auth_tag_output = tc->md;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "SHAKE128") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         tc->md_len = output_len;
         return ACVP_SUCCESS;
 }
@@ -1954,7 +1937,9 @@ shake256_handler(ACVP_TEST_CASE *test_case)
          */
         uint32_t output_len = (tc->xof_len > 0) ? tc->xof_len : 64;
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job = get_next_clean_job(mb_mgr);
+        if (job == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
         job->cipher_mode = IMB_CIPHER_NULL;
@@ -1966,13 +1951,8 @@ shake256_handler(ACVP_TEST_CASE *test_case)
         job->auth_tag_output_len_in_bytes = output_len;
         job->auth_tag_output = tc->md;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job == NULL)
-                job = IMB_FLUSH_JOB(mb_mgr);
-        if (job->status != IMB_STATUS_COMPLETED) {
-                fprintf(stderr, "Invalid job\n");
+        if (submit_and_complete_job(mb_mgr, "SHAKE256") == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
-        }
         tc->md_len = output_len;
         return ACVP_SUCCESS;
 }
