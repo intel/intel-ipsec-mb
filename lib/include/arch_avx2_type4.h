@@ -29,6 +29,18 @@ void
 sm4_set_key_ni_avx2(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
 
 /* SM3 */
+
+/* digest layout is shared with the SM3 base implementation (see sm3_base_init()) */
+void
+sm3_update_ni_x1(void *digest, const void *input, const uint64_t num_blocks);
+
+/* one block SM3 computation for IPAD / OPAD usage only */
+void
+sm3_one_block_ni_avx2(const void *data, void *digest);
+/* SM3 API for use in HMAC-SM3 when key is longer than the block size */
+void
+sm3_ni_avx2(const void *data, const uint64_t length, void *digest);
+
 void
 sm3_msg_ni_avx2(void *tag, const uint64_t tag_length, const void *msg, const uint64_t msg_length);
 IMB_JOB *

@@ -410,6 +410,9 @@ init_mb_mgr_avx2_t4_internal(IMB_MGR *state, const int reset_mgrs)
         state->shake256 = shake256;
         state->md5_one_block = md5_one_block_avx2;
 
+        state->sm3_one_block = sm3_one_block_ni_avx2;
+        state->sm3 = sm3_ni_avx2;
+
         state->aes128_cfb_one = aes_cfb_128_one_avx;
         state->aes256_cfb_one = aes_cfb_256_one_avx;
 

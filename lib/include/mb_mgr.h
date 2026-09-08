@@ -228,6 +228,9 @@ struct IMB_MGR {
         submit_cipher_burst_t submit_aead_burst;
         submit_cipher_burst_t submit_aead_burst_nocheck;
 
+        hash_one_block_t sm3_one_block;
+        hash_fn_t sm3;
+
         /* in-order scheduler fields */
         int earliest_job; /**< byte offset, -1 if none */
         int next_job;     /**< byte offset */
@@ -359,6 +362,8 @@ struct IMB_MGR {
         ((_mgr)->shake128((_src), (_length), (_tag), (_outlen)))
 #define CALL_SHAKE256(_mgr, _src, _length, _tag, _outlen)                                          \
         ((_mgr)->shake256((_src), (_length), (_tag), (_outlen)))
+#define CALL_SM3_ONE_BLOCK(_mgr, _src, _tag) ((_mgr)->sm3_one_block((_src), (_tag)))
+#define CALL_SM3(_mgr, _src, _length, _tag)  ((_mgr)->sm3((_src), (_length), (_tag)))
 #define CALL_MD5_ONE_BLOCK(_mgr, _src, _tag) ((_mgr)->md5_one_block((_src), (_tag)))
 #define CALL_AES128_CFB_ONE(_mgr, _dst, _src, _iv, _exp_key, _len)                                 \
         ((_mgr)->aes128_cfb_one((_dst), (_src), (_iv), (_exp_key), (_len)))

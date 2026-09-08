@@ -12,8 +12,8 @@
 #include <intel-ipsec-mb.h>
 #include "include/error.h"
 #include "include/memcpy.h"
-#include "include/arch_sse_type1.h" /* sm3_one_block_sse(), sm3_msg_sse() */
-#include "include/sha3.h"           /* sha3_224/256/384/512 */
+#include "include/mb_mgr.h" /* CALL_SM3(), CALL_SM3_ONE_BLOCK() */
+#include "include/sha3.h"   /* sha3_224/256/384/512 */
 
 IMB_DLL_EXPORT
 void
@@ -119,7 +119,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         IMB_SHA384(mb_mgr, pkey, key_len, key);
                         break;
                 case IMB_AUTH_HMAC_SM3:
-                        sm3_msg_sse(key, IMB_SM3_DIGEST_SIZE, pkey, key_len);
+                        CALL_SM3(mb_mgr, pkey, key_len, key);
                         break;
                 case IMB_AUTH_HMAC_SHA3_224:
                         sha3_224(pkey, key_len, key);
@@ -159,7 +159,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad_hash);
                         break;
                 case IMB_AUTH_HMAC_SM3:
-                        sm3_one_block_sse(ipad_hash, buf);
+                        CALL_SM3_ONE_BLOCK(mb_mgr, buf, ipad_hash);
                         break;
                 case IMB_AUTH_HMAC_SHA3_224:
                         memcpy(ipad_hash, buf, IMB_SHA3_224_BLOCK_SIZE);
@@ -200,7 +200,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad_hash);
                         break;
                 case IMB_AUTH_HMAC_SM3:
-                        sm3_one_block_sse(opad_hash, buf);
+                        CALL_SM3_ONE_BLOCK(mb_mgr, buf, opad_hash);
                         break;
                 case IMB_AUTH_HMAC_SHA3_224:
                         memcpy(opad_hash, buf, IMB_SHA3_224_BLOCK_SIZE);

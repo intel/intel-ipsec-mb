@@ -640,6 +640,11 @@ init_mb_mgr_avx10_t1_internal(IMB_MGR *state, const int reset_mgrs)
 
 #ifdef SMX_NI
         state->sm4_keyexp = sm4_set_key_ni_avx2;
+        state->sm3_one_block = sm3_one_block_ni_avx2;
+        state->sm3 = sm3_ni_avx2;
+#else
+        state->sm3_one_block = sm3_one_block_sse;
+        state->sm3 = sm3_sse;
 #endif
 }
 
