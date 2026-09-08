@@ -8,7 +8,6 @@
 %include "include/reg_sizes.inc"
 %include "include/cet.inc"
 %include "include/memcpy.inc"
-%include "include/const.inc"
 %include "include/align_sse.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
@@ -27,16 +26,11 @@
 
 %define E               rax
 %define rem_bits        r12
-%define tmp             r10
 %define tmp2            arg4
-%define tmp3            r11
 %define tmp4            r13
-%define tmp5            r14
-%define tmp6            r15
 %define in_ptr          arg1
 %define KS              arg2
 %define bit_len         arg3
-%define end_offset      tmp3
 
 %define EV              xmm2
 %define SNOW3G_CONST    xmm7
@@ -369,22 +363,14 @@ align_label
         jz              .skip_rem_bits
 
         ;; load last 8 to 1 bytes
-        lea             tmp2, [rem_bits + 7]        ;; (rem_bits + 7) / 8
+        mov             tmp2, rem_bits
         shr             tmp2, 3
 
+        ;; loaded bytes land in the top of the register and the rest is zeroed,
+        ;; which is what the digest expects for a partial block
         simd_load_bswap_sse_8_1 xmm3, in_ptr, tmp2
-        movq            tmp3, xmm3
 
-        mov             tmp, 0xffffffffffffffff
-        mov             tmp6, 64
-        sub             tmp6, rem_bits
-
-        SHIFT_GP tmp, tmp6, tmp, tmp5, left
-
-        and             tmp3, tmp       ;;  V &= (((uint64_t)-1) << (64 - rem_bits)); /* mask extra bits */
-        movq            xmm0, tmp3
-
-        pxor            EV, xmm0
+        pxor            EV, xmm3
         MUL_AND_REDUCE_TO_64 EV, P1, xmm1
 
 align_label

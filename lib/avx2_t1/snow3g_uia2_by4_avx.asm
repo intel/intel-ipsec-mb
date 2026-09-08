@@ -8,7 +8,6 @@
 %include "include/reg_sizes.inc"
 %include "include/cet.inc"
 %include "include/memcpy.inc"
-%include "include/const.inc"
 %include "include/align_avx.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
@@ -28,12 +27,10 @@
 %define E               rax
 %define qword_len       r12
 %define offset          r10
-%define tmp             r10
 %define tmp2            arg4
 %define tmp3            r11
 %define tmp4            r13
 %define tmp5            r14
-%define tmp6            r15
 %define in_ptr          arg1
 %define KS              arg2
 %define bit_len         arg3
@@ -236,8 +233,7 @@ partial_blk:
         jz      skip_rem_bits
 
         ;; load last N bytes
-        mov     tmp2, tmp5      ;; (rem_bits + 7) / 8
-        add     tmp2, 7
+        mov     tmp2, tmp5
         shr     tmp2, 3
 
         shl     offset, 3       ;; qwords -> bytes
@@ -245,15 +241,7 @@ partial_blk:
 
         simd_load_avx_15_1 xmm3, in_ptr, tmp2
         vmovq   tmp3, xmm3
-        bswap   tmp3
-
-        mov     tmp, 0xffffffffffffffff
-        mov     tmp6, 64
-        sub     tmp6, tmp5
-
-        SHIFT_GP tmp, tmp6, tmp, tmp5, left
-
-        and     tmp3, tmp       ;; V &= (((uint64_t)-1) << (64 - rem_bits)); /* mask extra bits */
+        bswap   tmp3            ;; loaded bytes move to the top, rest stays zero
         vmovq   xmm0, tmp3
         vpxor   EV, xmm0
 
