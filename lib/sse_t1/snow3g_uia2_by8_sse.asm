@@ -54,10 +54,10 @@ mksection .text
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*6
-        %define GP_STORAGE      8*7
+        %define GP_STORAGE      8*5
 %else
         %define XMM_STORAGE     0
-        %define GP_STORAGE      5*8
+        %define GP_STORAGE      3*8
 %endif
 
 %define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
@@ -76,14 +76,12 @@ mksection .text
         movdqa [rsp + 3*16], xmm13
         movdqa [rsp + 4*16], xmm14
         movdqa [rsp + 5*16], xmm15
-        mov     [rsp + GP_OFFSET + 40], rdi
-        mov     [rsp + GP_OFFSET + 48], rsi
+        mov     [rsp + GP_OFFSET + 24], rdi
+        mov     [rsp + GP_OFFSET + 32], rsi
 %endif
         mov     [rsp + GP_OFFSET],      r12
         mov     [rsp + GP_OFFSET + 8],  r13
-        mov     [rsp + GP_OFFSET + 16], r14
-        mov     [rsp + GP_OFFSET + 24], r15
-        mov     [rsp + GP_OFFSET + 32], r11 ;; rsp pointer
+        mov     [rsp + GP_OFFSET + 16], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
@@ -95,14 +93,12 @@ mksection .text
         movdqa xmm13, [rsp + 3*16]
         movdqa xmm14, [rsp + 4*16]
         movdqa xmm15, [rsp + 5*16]
-        mov     rdi, [rsp + GP_OFFSET + 40]
-        mov     rsi, [rsp + GP_OFFSET + 48]
+        mov     rdi, [rsp + GP_OFFSET + 24]
+        mov     rsi, [rsp + GP_OFFSET + 32]
 %endif
         mov     r12, [rsp + GP_OFFSET]
         mov     r13, [rsp + GP_OFFSET + 8]
-        mov     r14, [rsp + GP_OFFSET + 16]
-        mov     r15, [rsp + GP_OFFSET + 24]
-        mov     rsp, [rsp + GP_OFFSET + 32]
+        mov     rsp, [rsp + GP_OFFSET + 16]
 %endmacro
 
 ;; Reduce from 128 bits to 64 bits

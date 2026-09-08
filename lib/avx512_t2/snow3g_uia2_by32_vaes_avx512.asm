@@ -83,17 +83,17 @@ mksection .text
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*7
-        %define GP_STORAGE      8*8
+        %define GP_STORAGE      8*5
 %else
         %define XMM_STORAGE     0
-        %define GP_STORAGE      6*8
+        %define GP_STORAGE      3*8
 %endif
 
 %define CONSTANTS_STORAGE       8*32 ;; 32 8 byte blocks
 
-%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE + CONSTANTS_STORAGE
-%define GP_OFFSET XMM_STORAGE
-%define CONSTANTS_OFFSET XMM_STORAGE + GP_STORAGE
+%define VARIABLE_OFFSET XMM_STORAGE + CONSTANTS_STORAGE + GP_STORAGE
+%define CONSTANTS_OFFSET XMM_STORAGE
+%define GP_OFFSET XMM_STORAGE + CONSTANTS_STORAGE
 
 %macro FUNC_SAVE 0
         mov     r11, rsp
@@ -109,15 +109,12 @@ mksection .text
         vmovdqa [rsp + 4*16], xmm10
         vmovdqa [rsp + 5*16], xmm11
         vmovdqa [rsp + 6*16], xmm12
-        mov     [rsp + GP_OFFSET + 48], rdi
-        mov     [rsp + GP_OFFSET + 56], rsi
+        mov     [rsp + GP_OFFSET + 24], rdi
+        mov     [rsp + GP_OFFSET + 32], rsi
 %endif
         mov     [rsp + GP_OFFSET],      r12
         mov     [rsp + GP_OFFSET + 8],  r13
-        mov     [rsp + GP_OFFSET + 16], r14
-        mov     [rsp + GP_OFFSET + 24], r15
-        mov     [rsp + GP_OFFSET + 32], rbx
-        mov     [rsp + GP_OFFSET + 40], r11 ;; rsp pointer
+        mov     [rsp + GP_OFFSET + 16], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
@@ -130,15 +127,12 @@ mksection .text
         vmovdqa xmm10,  [rsp + 4*16]
         vmovdqa xmm11,  [rsp + 5*16]
         vmovdqa xmm12,  [rsp + 6*16]
-        mov     rdi, [rsp + GP_OFFSET + 48]
-        mov     rsi, [rsp + GP_OFFSET + 56]
+        mov     rdi, [rsp + GP_OFFSET + 24]
+        mov     rsi, [rsp + GP_OFFSET + 32]
 %endif
         mov     r12, [rsp + GP_OFFSET]
         mov     r13, [rsp + GP_OFFSET + 8]
-        mov     r14, [rsp + GP_OFFSET + 16]
-        mov     r15, [rsp + GP_OFFSET + 24]
-        mov     rbx, [rsp + GP_OFFSET + 32]
-        mov     rsp, [rsp + GP_OFFSET + 40]
+        mov     rsp, [rsp + GP_OFFSET + 16]
 %endmacro
 
 ;; Horizontal XOR - 4 x 128bits xored together
