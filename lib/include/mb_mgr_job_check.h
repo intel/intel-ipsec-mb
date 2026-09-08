@@ -10,9 +10,9 @@
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
 #include "include/kasumi_interface.h"
+#include "include/snow3g.h"
 #include "include/zuc_internal.h"
 
-#define SNOW3G_MAX_BYTELEN  (UINT32_MAX / BYTESIZE)
 #define NIA_MAX_BYTELEN     ((UINT32_MAX - 1) / BYTESIZE)
 #define NCA_MAX_BYTELEN     NIA_MAX_BYTELEN
 #define MB_MAX_LEN16        ((1 << 16) - 2)

@@ -44,9 +44,6 @@
 
 #define SNOW3GCONSTANT (0x1b)
 
-/* Range of input data for SNOW3G is from 1 to 2^32 bits */
-#define SNOW3G_MAX_BYTELEN (UINT32_MAX / 8)
-
 typedef union SafeBuffer {
         uint64_t b64;
         uint32_t b32[2];
