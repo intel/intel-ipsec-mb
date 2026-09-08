@@ -56,7 +56,7 @@ aes_gcm_enc_finalize_vaes_avx512:
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r13, r11, r12, r10
 %ifdef SAFE_DATA
         ;; **xmm5, xmm6, xmm11, xmm13, xmm14 and xmm16 may contain sensitive data
-        clear_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
+        clear_scratch_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
 %endif
         FUNC_RESTORE
 align_label
@@ -129,7 +129,7 @@ aes_gcm_dec_finalize_vaes_avx512:
 
 %ifdef SAFE_DATA
         ;; **xmm5, xmm6, xmm11, xmm13, xmm14 and xmm16 may contain sensitive data
-        clear_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
+        clear_scratch_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
 %endif
 
         FUNC_RESTORE
@@ -209,7 +209,7 @@ aes_gcm_enc_update_vaes_avx512:
 %endif
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC, multi_call, '', r10
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm6
+        clear_scratch_zmms_avx512 xmm6
 %endif
 
 align_label
@@ -297,7 +297,7 @@ aes_gcm_dec_update_vaes_avx512:
 
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC, multi_call, '', r10
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm6
+        clear_scratch_zmms_avx512 xmm6
 %endif
 align_label
 exit_update_dec:

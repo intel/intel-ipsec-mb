@@ -66,7 +66,7 @@ imb_aes_gmac_update_256_vaes_avx512:
         PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm0, r10, r12, rax, \
                         zmm8, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, k1
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm8
+        clear_scratch_zmms_avx512 xmm8
 %endif
         ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
         sub     arg4, r11
@@ -90,7 +90,7 @@ imb_aes_gmac_update_256_vaes_avx512:
         vmovdqu64       [arg2 + AadHash], xmm0  ; ctx_data.aad hash = aad_hash
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm3, xmm4, xmm5, xmm6, xmm19, xmm9
+        clear_scratch_zmms_avx512 xmm3, xmm4, xmm5, xmm6, xmm19, xmm9
 %endif
 
 align_label
@@ -109,7 +109,7 @@ align_label
         vmovdqu64 [arg2 + AadHash], xmm0
 %ifdef SAFE_DATA
         ;; **xmm1 and xmm0 may contain some clear text
-        clear_zmms_avx512 xmm1, xmm0
+        clear_scratch_zmms_avx512 xmm1, xmm0
 %endif
 align_label
 .exit_gmac_update:

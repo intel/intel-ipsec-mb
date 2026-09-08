@@ -273,7 +273,7 @@ align_label
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call, '>256', r10
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r13, r11, r12, r10
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm6
+        clear_scratch_zmms_avx512 xmm6
 %endif
         jmp     .exit_dec
 
@@ -388,7 +388,7 @@ aes_gcm_enc_var_iv_vaes_avx512:
                         single_call, k1, r13, r11, r12, r10
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
+        clear_scratch_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
                         xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
         jmp     .exit_enc
@@ -418,7 +418,7 @@ align_label
         call    gcm_0_to_256_enc_wrapper_asm
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm13, \
+        clear_scratch_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm13, \
                         xmm14, xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
 %endif
 
@@ -471,7 +471,7 @@ aes_gcm_dec_var_iv_vaes_avx512:
                         single_call, k1, r13, r11, r12, r10
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
+        clear_scratch_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
                         xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
         jmp     .exit_dec
@@ -501,7 +501,7 @@ align_label
         call    gcm_0_to_256_dec_wrapper_asm
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm11, xmm14, xmm15, \
+        clear_scratch_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm11, xmm14, xmm15, \
                         xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm27
 %endif
 align_label
@@ -591,7 +591,7 @@ enc_precomp_done:
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+        clear_scratch_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 %endif
 
         FUNC_RESTORE

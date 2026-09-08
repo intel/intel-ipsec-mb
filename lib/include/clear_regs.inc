@@ -76,6 +76,65 @@
 %endmacro
 
 ;
+; This macro clears the ZMM registers passed as arguments but
+; skips the ones that the function epilogue restores anyway.
+;
+; On Windows, XMM6-XMM15 are non-volatile so any function clobbering them
+; has to restore the caller's values on exit (see FUNC_SAVE/FUNC_RESTORE).
+; Clearing them beforehand is redundant work as the restore immediately
+; overwrites the cleared value with data belonging to the caller.
+;
+%macro clear_scratch_zmms_avx512 1-32
+
+%assign %%NUM_CLEARS 0
+
+%rep %0
+
+%ifdef LINUX
+        ;; on Linux all registers are scratch registers
+%assign %%SKIP_REG 0
+%else
+        ;; Retrieve the register index and skip XMM6-XMM15
+        ;; - this fragment could look better (with newer NASM) but it is
+        ;;   compatible with NASM 2.14.02
+        ;;   - map register name to string
+        ;;   - get sub-string with the register number
+        ;;   - make new token out of the sub-string - it results in a
+        ;;     number that can be compared
+%defstr %%REG_STR %1
+%substr %%IDX_STR %%REG_STR 4,-1
+%deftok %%REG_IDX %%IDX_STR
+%assign %%SKIP_REG 0
+%if (%%REG_IDX >= 6) && (%%REG_IDX <= 15)
+%assign %%SKIP_REG 1
+%endif
+%endif ; LINUX
+
+%if %%SKIP_REG == 0
+%if %%NUM_CLEARS == 0
+        ;; save 1st cleared register for later
+%xdefine %%SAVE_XMM XWORD(%1)
+%endif
+        ;; clear up to 3 registers with vpxorq and
+        ;; the rest with move from the 1st cleared register
+%if %%NUM_CLEARS < 3
+        vpxorq          XWORD(%1), XWORD(%1), XWORD(%1)
+%else
+        vmovdqa64       XWORD(%1), %%SAVE_XMM
+%endif
+%assign %%NUM_CLEARS (%%NUM_CLEARS + 1)
+%endif ; %%SKIP_REG == 0
+
+%rotate 1
+%endrep
+
+%if %%NUM_CLEARS > 0
+%undef %%SAVE_XMM
+%endif
+
+%endmacro
+
+;
 ; This macro clears scratch GP registers
 ; for Windows or Linux
 ;

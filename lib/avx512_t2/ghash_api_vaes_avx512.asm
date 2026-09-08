@@ -58,7 +58,7 @@ ghash_pre_vaes_avx512:
 
         PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+        clear_scratch_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 %endif
         FUNC_RESTORE
 align_label
@@ -155,7 +155,7 @@ ghash_vaes_avx512:
         vpshufb xmm0, xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
         simd_store_avx arg4, xmm0, arg5, r12, rax
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm6, xmm15, xmm16, xmm9, xmm19
+        clear_scratch_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm6, xmm15, xmm16, xmm9, xmm19
 %endif
 align_label
 exit_ghash:
