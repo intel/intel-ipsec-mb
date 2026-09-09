@@ -124,16 +124,16 @@ endstruc
 %ifndef LINUX
         mov             rsi, [rsp + _gpr_save + 8*6]
         mov             rdi, [rsp + _gpr_save + 8*7]
-        vmovdqa         [rsp + _xmm_save + 0*16], xmm6
-        vmovdqa         [rsp + _xmm_save + 1*16], xmm7
-        vmovdqa         [rsp + _xmm_save + 2*16], xmm8
-        vmovdqa         [rsp + _xmm_save + 3*16], xmm9
-        vmovdqa         [rsp + _xmm_save + 4*16], xmm10
-        vmovdqa         [rsp + _xmm_save + 5*16], xmm11
-        vmovdqa         [rsp + _xmm_save + 6*16], xmm12
-        vmovdqa         [rsp + _xmm_save + 7*16], xmm13
-        vmovdqa         [rsp + _xmm_save + 8*16], xmm14
-        vmovdqa         [rsp + _xmm_save + 9*16], xmm15
+        vmovdqa         xmm6, [rsp + _xmm_save + 0*16]
+        vmovdqa         xmm7, [rsp + _xmm_save + 1*16]
+        vmovdqa         xmm8, [rsp + _xmm_save + 2*16]
+        vmovdqa         xmm9, [rsp + _xmm_save + 3*16]
+        vmovdqa         xmm10, [rsp + _xmm_save + 4*16]
+        vmovdqa         xmm11, [rsp + _xmm_save + 5*16]
+        vmovdqa         xmm12, [rsp + _xmm_save + 6*16]
+        vmovdqa         xmm13, [rsp + _xmm_save + 7*16]
+        vmovdqa         xmm14, [rsp + _xmm_save + 8*16]
+        vmovdqa         xmm15, [rsp + _xmm_save + 9*16]
 %endif
         mov             rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
