@@ -190,11 +190,13 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %ifidn __OUTPUT_FORMAT__, win64
         %define GP_STORAGE      (6*8)  ; space for 6 GP registers
+        %define XMM_STORAGE     (10*16) ; space for xmm6-xmm15
 %else
         %define GP_STORAGE      (4*8)  ; space for 4 GP registers
+        %define XMM_STORAGE     0
 %endif
 
-%define STACK_FRAME_SIZE        GP_STORAGE
+%define STACK_FRAME_SIZE        (GP_STORAGE + XMM_STORAGE)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Utility Macros
@@ -961,6 +963,17 @@ align_label
 %ifidn __OUTPUT_FORMAT__, win64
         mov     [rsp + 4*8], rdi
         mov     [rsp + 5*8], rsi
+
+        vmovdqu64 [rsp + GP_STORAGE + 16*0], xmm6
+        vmovdqu64 [rsp + GP_STORAGE + 16*1], xmm7
+        vmovdqu64 [rsp + GP_STORAGE + 16*2], xmm8
+        vmovdqu64 [rsp + GP_STORAGE + 16*3], xmm9
+        vmovdqu64 [rsp + GP_STORAGE + 16*4], xmm10
+        vmovdqu64 [rsp + GP_STORAGE + 16*5], xmm11
+        vmovdqu64 [rsp + GP_STORAGE + 16*6], xmm12
+        vmovdqu64 [rsp + GP_STORAGE + 16*7], xmm13
+        vmovdqu64 [rsp + GP_STORAGE + 16*8], xmm14
+        vmovdqu64 [rsp + GP_STORAGE + 16*9], xmm15
 %endif
 
 %endmacro
@@ -980,6 +993,17 @@ align_label
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
+        vmovdqu64 xmm6,  [rsp + GP_STORAGE + 16*0]
+        vmovdqu64 xmm7,  [rsp + GP_STORAGE + 16*1]
+        vmovdqu64 xmm8,  [rsp + GP_STORAGE + 16*2]
+        vmovdqu64 xmm9,  [rsp + GP_STORAGE + 16*3]
+        vmovdqu64 xmm10, [rsp + GP_STORAGE + 16*4]
+        vmovdqu64 xmm11, [rsp + GP_STORAGE + 16*5]
+        vmovdqu64 xmm12, [rsp + GP_STORAGE + 16*6]
+        vmovdqu64 xmm13, [rsp + GP_STORAGE + 16*7]
+        vmovdqu64 xmm14, [rsp + GP_STORAGE + 16*8]
+        vmovdqu64 xmm15, [rsp + GP_STORAGE + 16*9]
+
         mov     rdi, [rsp + 4*8]
         mov     rsi, [rsp + 5*8]
 %endif
