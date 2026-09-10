@@ -328,6 +328,7 @@ align_label
         vpxorq  xmm0, xmm0, xmm0
         vmovdqa64 [rsp + _hqp_nca4], zmm0
         vmovdqa32 [rsp + _hqp_nca4 + 64], ymm0
+        vmovdqa32 [rsp + _keystream_nca4], ymm0
 %ifidn %%DIR, DECRYPT
         ;; _states_nca4 only written on decrypt path
         vmovdqu64 [rsp + _states_nca4 + 64 * 0], zmm0
