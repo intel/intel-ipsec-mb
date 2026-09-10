@@ -43,6 +43,26 @@
 %endmacro
 
 ;
+; This macro clears selected XMM registers on AVX but skips
+; XMM6-XMM15 on Windows, as those are restored by epilogue.
+;
+%macro clear_scratch_xmms_avx_regs 1-16
+%rep %0
+%ifdef LINUX
+        vpxor   %1, %1
+%else
+%defstr %%REG_STR %1
+%substr %%IDX_STR %%REG_STR 4,-1
+%deftok %%REG_IDX %%IDX_STR
+%if (%%REG_IDX < 6) || (%%REG_IDX > 15)
+        vpxor   %1, %1
+%endif
+%endif ; LINUX
+%rotate 1
+%endrep
+%endmacro
+
+;
 ; This macro clears any ZMM registers passed on
 ;
 %macro clear_zmms_avx512 1-32

@@ -228,6 +228,10 @@ block_loop:
         vmovdqu         [arg_hash], xmm6
         vmovdqu         [arg_hash + 16], xmm7
 
+%ifdef SAFE_DATA
+        clear_scratch_xmms_avx_regs xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12
+%endif
+
 %ifidn __OUTPUT_FORMAT__, win64
         ;; xmm6:xmm12 need to be maintained for Windows
         vmovdqu         xmm6, [rsp + 0*16]
