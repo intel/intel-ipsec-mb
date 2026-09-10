@@ -285,6 +285,7 @@ struc STACK
 _keystream:     resb    (16 * 64)
 _offset_mask:   resq    16      ; per lane: all ones if lane processes data, zero otherwise
 _gpr_save:      resq    8
+_xmm_save:      resq    20
 _rsp_save:      resq    1
 endstruc
 
@@ -305,6 +306,17 @@ endstruc
 %ifndef LINUX
         mov     [rsp + _gpr_save + 8 * 6], rsi
         mov     [rsp + _gpr_save + 8 * 7], rdi
+
+        vmovdqa64 [rsp + _xmm_save + 16*0], xmm6
+        vmovdqa64 [rsp + _xmm_save + 16*1], xmm7
+        vmovdqa64 [rsp + _xmm_save + 16*2], xmm8
+        vmovdqa64 [rsp + _xmm_save + 16*3], xmm9
+        vmovdqa64 [rsp + _xmm_save + 16*4], xmm10
+        vmovdqa64 [rsp + _xmm_save + 16*5], xmm11
+        vmovdqa64 [rsp + _xmm_save + 16*6], xmm12
+        vmovdqa64 [rsp + _xmm_save + 16*7], xmm13
+        vmovdqa64 [rsp + _xmm_save + 16*8], xmm14
+        vmovdqa64 [rsp + _xmm_save + 16*9], xmm15
 %endif
         mov     [rsp + _rsp_save], rax          ;; original SP
 %endmacro
@@ -327,6 +339,17 @@ endstruc
 %ifndef LINUX
         mov     rsi, [rsp + _gpr_save + 8 * 6]
         mov     rdi, [rsp + _gpr_save + 8 * 7]
+
+        vmovdqa64 xmm6,  [rsp + _xmm_save + 16*0]
+        vmovdqa64 xmm7,  [rsp + _xmm_save + 16*1]
+        vmovdqa64 xmm8,  [rsp + _xmm_save + 16*2]
+        vmovdqa64 xmm9,  [rsp + _xmm_save + 16*3]
+        vmovdqa64 xmm10, [rsp + _xmm_save + 16*4]
+        vmovdqa64 xmm11, [rsp + _xmm_save + 16*5]
+        vmovdqa64 xmm12, [rsp + _xmm_save + 16*6]
+        vmovdqa64 xmm13, [rsp + _xmm_save + 16*7]
+        vmovdqa64 xmm14, [rsp + _xmm_save + 16*8]
+        vmovdqa64 xmm15, [rsp + _xmm_save + 16*9]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
