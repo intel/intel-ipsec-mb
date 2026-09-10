@@ -1106,6 +1106,20 @@ align_function
 MKGLOBAL(submit_job_chacha20_enc_dec_avx512,function,internal)
 submit_job_chacha20_enc_dec_avx512:
         endbranch64
+%ifndef LINUX
+        ;; preserve xmm6-xmm15 (Windows x64 ABI callee-save)
+        sub     rsp, 8 + 16*10
+        vmovdqa64 [rsp + 16*0], xmm6
+        vmovdqa64 [rsp + 16*1], xmm7
+        vmovdqa64 [rsp + 16*2], xmm8
+        vmovdqa64 [rsp + 16*3], xmm9
+        vmovdqa64 [rsp + 16*4], xmm10
+        vmovdqa64 [rsp + 16*5], xmm11
+        vmovdqa64 [rsp + 16*6], xmm12
+        vmovdqa64 [rsp + 16*7], xmm13
+        vmovdqa64 [rsp + 16*8], xmm14
+        vmovdqa64 [rsp + 16*9], xmm15
+%endif
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -1307,6 +1321,19 @@ no_partial_block:
         clear_all_zmms_asm
 %else
         vzeroupper
+%endif
+%ifndef LINUX
+        vmovdqa64 xmm6,  [rsp + 16*0]
+        vmovdqa64 xmm7,  [rsp + 16*1]
+        vmovdqa64 xmm8,  [rsp + 16*2]
+        vmovdqa64 xmm9,  [rsp + 16*3]
+        vmovdqa64 xmm10, [rsp + 16*4]
+        vmovdqa64 xmm11, [rsp + 16*5]
+        vmovdqa64 xmm12, [rsp + 16*6]
+        vmovdqa64 xmm13, [rsp + 16*7]
+        vmovdqa64 xmm14, [rsp + 16*8]
+        vmovdqa64 xmm15, [rsp + 16*9]
+        add     rsp, 8 + 16*10
 %endif
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
