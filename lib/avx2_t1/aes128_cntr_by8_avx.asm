@@ -112,7 +112,7 @@ mksection .text
 %define p_out     r9
 %define num_bytes r10
 %define num_bits  r10
-%define p_ivlen   qword [rsp + 8*6]
+%define p_ivlen   qword [rsp + 8*6 + XMM_SAVE_SIZE]
 %endif ;; LINUX
 %endif ;; CNTR_CCM_AVX
 
@@ -122,6 +122,12 @@ mksection .text
 %define r_bits   r12
 %define tmp2    r13
 %define mask    r14
+
+%ifndef LINUX
+%define XMM_SAVE_SIZE (10*16)
+%else
+%define XMM_SAVE_SIZE 0
+%endif
 
 %macro do_aes_load 2
         do_aes %1, %2, 1
@@ -270,6 +276,21 @@ mksection .text
 %macro DO_CNTR 1
 %define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CCM)
 
+%ifndef LINUX
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved
+        sub     rsp, XMM_SAVE_SIZE
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
+        vmovdqu [rsp + 3*16], xmm9
+        vmovdqu [rsp + 4*16], xmm10
+        vmovdqu [rsp + 5*16], xmm11
+        vmovdqu [rsp + 6*16], xmm12
+        vmovdqu [rsp + 7*16], xmm13
+        vmovdqu [rsp + 8*16], xmm14
+        vmovdqu [rsp + 9*16], xmm15
+%endif
+
 %ifidn %%CNTR_TYPE, CCM
         mov     p_in, [job + _src]
         add     p_in, [job + _cipher_start_src_offset_in_bytes]
@@ -330,7 +351,7 @@ _finish_nonce_move:
         vpor    xcounter, [rel set_byte15]
 %else ;; CNTR
 %ifndef LINUX
-        mov     num_bytes, [rsp + 8*5] ; arg5
+        mov     num_bytes, [rsp + 8*5 + XMM_SAVE_SIZE] ; arg5
 %endif
         ;; check for zero length message
         or      num_bytes, num_bytes
@@ -449,6 +470,20 @@ align_label
 %ifdef SAFE_DATA
         clear_all_xmms_avx_asm
 %endif ;; SAFE_DATA
+
+%ifndef LINUX
+        vmovdqu xmm6,  [rsp + 0*16]
+        vmovdqu xmm7,  [rsp + 1*16]
+        vmovdqu xmm8,  [rsp + 2*16]
+        vmovdqu xmm9,  [rsp + 3*16]
+        vmovdqu xmm10, [rsp + 4*16]
+        vmovdqu xmm11, [rsp + 5*16]
+        vmovdqu xmm12, [rsp + 6*16]
+        vmovdqu xmm13, [rsp + 7*16]
+        vmovdqu xmm14, [rsp + 8*16]
+        vmovdqu xmm15, [rsp + 9*16]
+        add     rsp, XMM_SAVE_SIZE
+%endif
 
         ret
 

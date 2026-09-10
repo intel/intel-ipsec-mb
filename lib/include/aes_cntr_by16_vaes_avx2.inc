@@ -17,8 +17,8 @@
 %include "include/clear_regs.inc"
 %include "include/align_avx.inc"
 
-;; YMM registers are clobbered and then scratch ones get cleared.
-;; Windows YMM saving/restoring must be done at a higher level.
+;; Lower 128 bits (XMM6-XMM15) of the vector registers used here are
+;; saved/restored inside DO_CNTR on Windows to preserve the ABI.
 
 ;; =============================================================================
 ;; DATA PART
@@ -239,6 +239,12 @@ mksection .text
 
 %define tmp     r11
 
+%ifndef LINUX
+%define XMM_SAVE_SIZE (10*16)
+%else
+%define XMM_SAVE_SIZE 0
+%endif
+
 ;; =============================================================================
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -452,6 +458,21 @@ align_label
 %define %%KEY_SIZE_BITS %1      ;; [in] Numeric value: 128, 192 or 256
 %define %%CNTR_TYPE     %2      ;; [in] Type of CNTR operation to do (CNTR/CCM)
 
+%ifndef LINUX
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved
+        sub     rsp, XMM_SAVE_SIZE
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
+        vmovdqu [rsp + 3*16], xmm9
+        vmovdqu [rsp + 4*16], xmm10
+        vmovdqu [rsp + 5*16], xmm11
+        vmovdqu [rsp + 6*16], xmm12
+        vmovdqu [rsp + 7*16], xmm13
+        vmovdqu [rsp + 8*16], xmm14
+        vmovdqu [rsp + 9*16], xmm15
+%endif
+
 %if %%KEY_SIZE_BITS == 128
 %define %%NROUNDS 9
 %elif %%KEY_SIZE_BITS == 256
@@ -523,8 +544,8 @@ align_label
 %else ;; CNTR/CCM
 
 %ifndef LINUX
-        mov             num_bytes, [rsp + 8*5] ; arg5
-        mov             arg_ivlen, [rsp + 8*6] ; arg6
+        mov             num_bytes, [rsp + 8*5 + XMM_SAVE_SIZE] ; arg5
+        mov             arg_ivlen, [rsp + 8*6 + XMM_SAVE_SIZE] ; arg6
 %endif
 
         ;; Read 16 byte IV: Nonce + 8-byte block counter (BE)
@@ -658,6 +679,20 @@ align_label
 %else
         vzeroupper
 %endif ;; SAFE_DATA
+
+%ifndef LINUX
+        vmovdqu xmm6,  [rsp + 0*16]
+        vmovdqu xmm7,  [rsp + 1*16]
+        vmovdqu xmm8,  [rsp + 2*16]
+        vmovdqu xmm9,  [rsp + 3*16]
+        vmovdqu xmm10, [rsp + 4*16]
+        vmovdqu xmm11, [rsp + 5*16]
+        vmovdqu xmm12, [rsp + 6*16]
+        vmovdqu xmm13, [rsp + 7*16]
+        vmovdqu xmm14, [rsp + 8*16]
+        vmovdqu xmm15, [rsp + 9*16]
+        add     rsp, XMM_SAVE_SIZE
+%endif
 
 %endmacro
 

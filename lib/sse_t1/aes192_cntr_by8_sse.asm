@@ -60,7 +60,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define p_out     r9
 %define num_bytes r10
 %define num_bits  r10
-%define p_ivlen   qword [rsp + 8*6]
+%define p_ivlen   qword [rsp + 8*6 + XMM_SAVE_SIZE]
 %endif
 
 %define tmp     r11
@@ -68,6 +68,12 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define r_bits   r12
 %define tmp2    r13
 %define mask    r14
+
+%ifndef LINUX
+%define XMM_SAVE_SIZE (10*16)
+%else
+%define XMM_SAVE_SIZE 0
+%endif
 
 %macro do_aes_load 2
         do_aes %1, %2, 1
@@ -234,7 +240,19 @@ mksection .text
 %define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CCM)
 
 %ifndef LINUX
-        mov     num_bytes, [rsp + 8*5]
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved
+        sub     rsp, XMM_SAVE_SIZE
+        movdqu  [rsp + 0*16], xmm6
+        movdqu  [rsp + 1*16], xmm7
+        movdqu  [rsp + 2*16], xmm8
+        movdqu  [rsp + 3*16], xmm9
+        movdqu  [rsp + 4*16], xmm10
+        movdqu  [rsp + 5*16], xmm11
+        movdqu  [rsp + 6*16], xmm12
+        movdqu  [rsp + 7*16], xmm13
+        movdqu  [rsp + 8*16], xmm14
+        movdqu  [rsp + 9*16], xmm15
+        mov     num_bytes, [rsp + 8*5 + XMM_SAVE_SIZE]
 %endif
 
         ;; check for zero length message
@@ -352,6 +370,20 @@ align_label
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
 %endif ;; SAFE_DATA
+
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + 0*16]
+        movdqu  xmm7,  [rsp + 1*16]
+        movdqu  xmm8,  [rsp + 2*16]
+        movdqu  xmm9,  [rsp + 3*16]
+        movdqu  xmm10, [rsp + 4*16]
+        movdqu  xmm11, [rsp + 5*16]
+        movdqu  xmm12, [rsp + 6*16]
+        movdqu  xmm13, [rsp + 7*16]
+        movdqu  xmm14, [rsp + 8*16]
+        movdqu  xmm15, [rsp + 9*16]
+        add     rsp, XMM_SAVE_SIZE
+%endif
 
         ret
 
