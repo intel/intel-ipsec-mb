@@ -79,6 +79,39 @@ extern des3_x16_cbc_dec_avx512
 ;;; ===========================================================================
 ;;; ===========================================================================
 
+;;; save/restore xmm6-xmm15 (Windows callee-saved, clobbered by DES kernels)
+%macro DES_XMM_SAVE 0
+%ifndef LINUX
+        sub     rsp, 16*10
+        vmovdqu64 [rsp + 16*0], xmm6
+        vmovdqu64 [rsp + 16*1], xmm7
+        vmovdqu64 [rsp + 16*2], xmm8
+        vmovdqu64 [rsp + 16*3], xmm9
+        vmovdqu64 [rsp + 16*4], xmm10
+        vmovdqu64 [rsp + 16*5], xmm11
+        vmovdqu64 [rsp + 16*6], xmm12
+        vmovdqu64 [rsp + 16*7], xmm13
+        vmovdqu64 [rsp + 16*8], xmm14
+        vmovdqu64 [rsp + 16*9], xmm15
+%endif
+%endmacro
+
+%macro DES_XMM_RESTORE 0
+%ifndef LINUX
+        vmovdqu64 xmm6,  [rsp + 16*0]
+        vmovdqu64 xmm7,  [rsp + 16*1]
+        vmovdqu64 xmm8,  [rsp + 16*2]
+        vmovdqu64 xmm9,  [rsp + 16*3]
+        vmovdqu64 xmm10, [rsp + 16*4]
+        vmovdqu64 xmm11, [rsp + 16*5]
+        vmovdqu64 xmm12, [rsp + 16*6]
+        vmovdqu64 xmm13, [rsp + 16*7]
+        vmovdqu64 xmm14, [rsp + 16*8]
+        vmovdqu64 xmm15, [rsp + 16*9]
+        add     rsp, 16*10
+%endif
+%endmacro
+
 ;;; ===========================================================================
 ;;; DES/DOCSIS DES job submit
 ;;; ===========================================================================
@@ -87,6 +120,8 @@ extern des3_x16_cbc_dec_avx512
 %macro GENERIC_DES_SUBMIT 2
 %define %%DES_DOCSIS %1
 %define %%ENC_DEC %2
+
+        DES_XMM_SAVE
 
         ;; get unused lane and increment number of lanes in use
         mov     IA0, [STATE + _des_unused_lanes]
@@ -197,7 +232,7 @@ align_label
 align_label
 %%_des_submit_null_end:
         xor     rax, rax
-        jmp     %%_des_submit_return
+        jmp     %%_des_submit_restore
 
 align_label
 %%_len_is_0:
@@ -237,6 +272,9 @@ align_label
 %endif
         vzeroupper
 align_label
+%%_des_submit_restore:
+        DES_XMM_RESTORE
+align_label
 %%_des_submit_return:
 %endmacro
 
@@ -250,6 +288,8 @@ align_label
 %macro GENERIC_DES_FLUSH 2
 %define %%DES_DOCSIS %1
 %define %%ENC_DEC %2
+
+        DES_XMM_SAVE
 
         cmp     qword [STATE + _des_lanes_in_use], 0
         je      %%_des_flush_null_end
@@ -377,7 +417,7 @@ align_label
 align_label
 %%_des_flush_null_end:
         xor     rax, rax
-        jmp     %%_des_flush_return
+        jmp     %%_des_flush_restore
 align_label
 %%_des_flush_end:
         ;; return a job
@@ -408,6 +448,9 @@ align_label
 align_label
 %%_des_flush_return:
         vzeroupper
+align_label
+%%_des_flush_restore:
+        DES_XMM_RESTORE
 %endmacro
 
 ;;; ========================================================
