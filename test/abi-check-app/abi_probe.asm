@@ -22,7 +22,7 @@
 section .data
 default rel
 
-;; Unique 128-bit sentinel pattern per register, index 0 => XMM6, index 9 => XMM15
+;; Unique 128-bit sentinel pattern per XMM register, index 0 => XMM6, index 9 => XMM15
 align 16
 sentinel_tab:
 %assign i 6
@@ -31,14 +31,33 @@ sentinel_tab:
 %assign i (i+1)
 %endrep
 
+;; Unique 64-bit sentinel pattern per checked GP register, in the order
+;; rbx, rbp, rsi, rdi, r12, r13, r14, r15 (matches ABI_PROBE_GP_BIT() order)
+align 8
+gp_sentinel_tab:
+%assign i 0
+%rep 8
+        dq 0xc3c3c3c300000000 | i
+%assign i (i+1)
+%endrep
+
 section .text
 
 ;; uint32_t xmm_abi_probe(void *func_ptr, void *arg1, void **ret_out)
 ;;
-;; Fills XMM6-XMM15 with the sentinel patterns from sentinel_tab, calls
+;; Fills XMM6-XMM15 and the callee-saved general purpose registers
+;; (rbx, rbp, rsi, rdi, r12-r15) with sentinel patterns, calls
 ;; func_ptr(arg1), stores the return value at *ret_out (if not NULL) and
-;; returns a bitmask of the XMM6-XMM15 registers that did not keep their
-;; sentinel value across the call (bit 0 => XMM6, ... bit 9 => XMM15).
+;; returns a bitmask of the registers that did not keep their sentinel
+;; value across the call: bit 0 => XMM6, ... bit 9 => XMM15, bit 10 => rbx,
+;; bit 11 => rbp, bit 12 => rsi, bit 13 => rdi, bit 14 => r12, bit 15 => r13,
+;; bit 16 => r14, bit 17 => r15 (see ABI_PROBE_XMM_BIT()/ABI_PROBE_GP_BIT()).
+;;
+;; rbx, rbp, rsi, rdi, r12-r15 are filled with sentinels for the whole
+;; duration of the call, so func_ptr and its argument are kept in stack
+;; slots and func_ptr is invoked with an indirect memory-operand call,
+;; leaving every sentinel-holding register untouched by the call setup
+;; itself.
 ;;
 ;; arg1 (rcx) [in] func_ptr
 ;; arg2 (rdx) [in] arg1 for func_ptr
@@ -46,14 +65,21 @@ section .text
 MKGLOBAL(xmm_abi_probe,function,)
 align 16
 xmm_abi_probe:
+        push    rbp
         push    rbx
         push    rsi
-        ;; 32 bytes shadow space for the call below, stack stays 16-byte
-        ;; aligned right before the "call rbx" instruction
-        sub     rsp, 40
+        push    rdi
+        push    r12
+        push    r13
+        push    r14
+        push    r15
+        ;; 32 bytes shadow space + 24 bytes of locals (func_ptr, func_arg,
+        ;; ret_out), stack stays 16-byte aligned right before the call
+        sub     rsp, 56
 
-        mov     rbx, rcx        ;; rbx = func_ptr
-        mov     rsi, r8         ;; rsi = ret_out
+        mov     [rsp + 32], rcx  ;; func_ptr
+        mov     [rsp + 40], rdx  ;; arg1 for func_ptr
+        mov     [rsp + 48], r8   ;; ret_out
 
         lea     rax, [rel sentinel_tab]
         movdqu  xmm6, [rax + 0*16]
@@ -67,13 +93,24 @@ xmm_abi_probe:
         movdqu  xmm14, [rax + 8*16]
         movdqu  xmm15, [rax + 9*16]
 
-        mov     rcx, rdx        ;; arg1 for func_ptr
+        lea     rax, [rel gp_sentinel_tab]
+        mov     rbx, [rax + 0*8]
+        mov     rbp, [rax + 1*8]
+        mov     rsi, [rax + 2*8]
+        mov     rdi, [rax + 3*8]
+        mov     r12, [rax + 4*8]
+        mov     r13, [rax + 5*8]
+        mov     r14, [rax + 6*8]
+        mov     r15, [rax + 7*8]
 
-        call    rbx
+        mov     rcx, [rsp + 40]  ;; arg1 for func_ptr
 
-        test    rsi, rsi
+        call    qword [rsp + 32]
+
+        mov     r10, [rsp + 48]  ;; ret_out (volatile, safe to use post-call)
+        test    r10, r10
         jz      .no_ret_out
-        mov     [rsi], rax
+        mov     [r10], rax
 .no_ret_out:
 
         xor     r9d, r9d        ;; corruption bitmask accumulator
@@ -93,9 +130,57 @@ xmm_abi_probe:
 %assign bit (bit+1)
 %endrep
 
+        lea     rax, [rel gp_sentinel_tab]
+%assign bit 10
+        cmp     rbx, [rax + 0*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+%assign bit (bit+1)
+        cmp     rbp, [rax + 1*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+%assign bit (bit+1)
+        cmp     rsi, [rax + 2*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+%assign bit (bit+1)
+        cmp     rdi, [rax + 3*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+%assign bit (bit+1)
+        cmp     r12, [rax + 4*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+%assign bit (bit+1)
+        cmp     r13, [rax + 5*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+%assign bit (bit+1)
+        cmp     r14, [rax + 6*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+%assign bit (bit+1)
+        cmp     r15, [rax + 7*8]
+        je      .gpok %+ bit
+        or      r9d, (1 << bit)
+.gpok %+ bit:
+
         mov     eax, r9d
 
-        add     rsp, 40
+        add     rsp, 56
+        pop     r15
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rdi
         pop     rsi
         pop     rbx
+        pop     rbp
         ret

@@ -8,15 +8,17 @@
  * @brief Windows x64 ABI check application
  *
  * Scans all algorithms accessible through the job API (cipher-only,
- * hash-only and combined AEAD algorithms) and checks that XMM6-XMM15,
- * which the Windows x64 calling convention declares callee-saved, keep
- * their value across IMB_SUBMIT_JOB() and IMB_FLUSH_JOB() calls.
+ * hash-only and combined AEAD algorithms) and checks that XMM6-XMM15 and
+ * the callee-saved general purpose registers (RBX, RBP, RSI, RDI,
+ * R12-R15), which the Windows x64 calling convention declares
+ * callee-saved, keep their value across IMB_SUBMIT_JOB() and
+ * IMB_FLUSH_JOB() calls.
  *
  * The application does not verify any cryptographic results.
  * Use the imb-xvalid application for cross architecture result validation.
  *
  * This is a diagnostic application (see issue #973); it does not fix or
- * work around any XMM preservation problem it finds.
+ * work around any register preservation problem it finds.
  */
 
 #include <stdio.h>
@@ -74,19 +76,29 @@ static struct failure failures[MAX_FAILURES];
 static unsigned num_failures = 0;
 static unsigned num_skipped_failures = 0;
 
-/* formats a corrupted register bitmask as e.g. "xmm6,xmm9" */
+/* formats a corrupted register bitmask as e.g. "xmm6,xmm9,rbx" */
 static void
 mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
 {
+        static const char *gp_names[ABI_PROBE_NUM_GP] = ABI_PROBE_GP_NAMES;
         unsigned i;
 
         buf[0] = '\0';
         for (i = 0; i < ABI_PROBE_NUM_XMM; i++) {
-                if (mask & (1u << i)) {
+                if (mask & (1u << ABI_PROBE_XMM_BIT(i))) {
                         char tmp[16];
 
                         snprintf(tmp, sizeof(tmp), "%sxmm%u", (buf[0] != '\0') ? "," : "",
                                  ABI_PROBE_FIRST_XMM + i);
+                        strncat(buf, tmp, buf_size - strlen(buf) - 1);
+                }
+        }
+        for (i = 0; i < ABI_PROBE_NUM_GP; i++) {
+                if (mask & (1u << ABI_PROBE_GP_BIT(i))) {
+                        char tmp[16];
+
+                        snprintf(tmp, sizeof(tmp), "%s%s", (buf[0] != '\0') ? "," : "",
+                                 gp_names[i]);
                         strncat(buf, tmp, buf_size - strlen(buf) - 1);
                 }
         }
@@ -370,13 +382,13 @@ print_report(void)
 
         printf("\n");
         if (num_failures == 0) {
-                printf("PASS: no XMM6-XMM15 corruption detected across "
-                       "IMB_SUBMIT_JOB()/IMB_FLUSH_JOB()\n");
+                printf("PASS: no XMM6-XMM15 or callee-saved GP register corruption detected "
+                       "across IMB_SUBMIT_JOB()/IMB_FLUSH_JOB()\n");
                 return;
         }
 
         printf("FAIL: %u distinct algorithm/architecture/stage combination(s) corrupted "
-               "callee-saved XMM registers\n\n",
+               "callee-saved registers\n\n",
                num_failures);
         printf("%-30s %-8s %-12s %-8s %s\n", "ALGORITHM", "ARCH", "STAGE", "COUNT", "REGISTERS");
         for (i = 0; i < num_failures; i++) {
