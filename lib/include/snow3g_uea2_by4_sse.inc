@@ -154,6 +154,7 @@ mksection .text
 struc STACK
 _keystream:     resb    (4 * 16)
 _gpr_save:      resq    10
+_xmm_save:      resq    20
 _rsp_save:      resq    1
 endstruc
 
@@ -179,6 +180,18 @@ endstruc
 %else
         mov     [rsp + _gpr_save + 8 * 8], rcx
         mov     [rsp + _gpr_save + 8 * 9], rdx
+
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved
+        movdqa  [rsp + _xmm_save + 16 * 0], xmm6
+        movdqa  [rsp + _xmm_save + 16 * 1], xmm7
+        movdqa  [rsp + _xmm_save + 16 * 2], xmm8
+        movdqa  [rsp + _xmm_save + 16 * 3], xmm9
+        movdqa  [rsp + _xmm_save + 16 * 4], xmm10
+        movdqa  [rsp + _xmm_save + 16 * 5], xmm11
+        movdqa  [rsp + _xmm_save + 16 * 6], xmm12
+        movdqa  [rsp + _xmm_save + 16 * 7], xmm13
+        movdqa  [rsp + _xmm_save + 16 * 8], xmm14
+        movdqa  [rsp + _xmm_save + 16 * 9], xmm15
 %endif
         mov     [rsp + _rsp_save], rax  ;; original SP
 %endmacro
@@ -200,6 +213,17 @@ endstruc
 %else
         mov     rcx, [rsp + _gpr_save + 8 * 8]
         mov     rdx, [rsp + _gpr_save + 8 * 9]
+
+        movdqa  xmm6,  [rsp + _xmm_save + 16 * 0]
+        movdqa  xmm7,  [rsp + _xmm_save + 16 * 1]
+        movdqa  xmm8,  [rsp + _xmm_save + 16 * 2]
+        movdqa  xmm9,  [rsp + _xmm_save + 16 * 3]
+        movdqa  xmm10, [rsp + _xmm_save + 16 * 4]
+        movdqa  xmm11, [rsp + _xmm_save + 16 * 5]
+        movdqa  xmm12, [rsp + _xmm_save + 16 * 6]
+        movdqa  xmm13, [rsp + _xmm_save + 16 * 7]
+        movdqa  xmm14, [rsp + _xmm_save + 16 * 8]
+        movdqa  xmm15, [rsp + _xmm_save + 16 * 9]
 %endif
         mov     rsp, [rsp + _rsp_save]  ;; original SP
 %endmacro
