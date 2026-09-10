@@ -93,7 +93,8 @@ mksection .text
 %define tmp6            r10
 
 struc STACK
-_gpr_save:      resq    7 ; rbx, rbp, r12-r15, rdi (windows)
+_gpr_save:      resq    8 ; rbx, rbp, r12-r15, rdi (windows), pad
+_xmm_save:      resq    20
 _rsp_save:      resq    1
 endstruc
 
@@ -124,6 +125,17 @@ flush_job_hmac_sha_384_avx512:
         mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
         mov     [rsp + _gpr_save + 8*6], rdi
+
+        vmovdqa64 [rsp + _xmm_save + 16*0], xmm6
+        vmovdqa64 [rsp + _xmm_save + 16*1], xmm7
+        vmovdqa64 [rsp + _xmm_save + 16*2], xmm8
+        vmovdqa64 [rsp + _xmm_save + 16*3], xmm9
+        vmovdqa64 [rsp + _xmm_save + 16*4], xmm10
+        vmovdqa64 [rsp + _xmm_save + 16*5], xmm11
+        vmovdqa64 [rsp + _xmm_save + 16*6], xmm12
+        vmovdqa64 [rsp + _xmm_save + 16*7], xmm13
+        vmovdqa64 [rsp + _xmm_save + 16*8], xmm14
+        vmovdqa64 [rsp + _xmm_save + 16*9], xmm15
 %endif
         mov     [rsp + _rsp_save], rax  ; original SP
 
@@ -351,6 +363,17 @@ return:
         mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
         mov     rdi, [rsp + _gpr_save + 8*6]
+
+        vmovdqa64 xmm6,  [rsp + _xmm_save + 16*0]
+        vmovdqa64 xmm7,  [rsp + _xmm_save + 16*1]
+        vmovdqa64 xmm8,  [rsp + _xmm_save + 16*2]
+        vmovdqa64 xmm9,  [rsp + _xmm_save + 16*3]
+        vmovdqa64 xmm10, [rsp + _xmm_save + 16*4]
+        vmovdqa64 xmm11, [rsp + _xmm_save + 16*5]
+        vmovdqa64 xmm12, [rsp + _xmm_save + 16*6]
+        vmovdqa64 xmm13, [rsp + _xmm_save + 16*7]
+        vmovdqa64 xmm14, [rsp + _xmm_save + 16*8]
+        vmovdqa64 xmm15, [rsp + _xmm_save + 16*9]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
