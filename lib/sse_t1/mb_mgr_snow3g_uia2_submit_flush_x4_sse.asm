@@ -273,6 +273,9 @@ align_label
 
 align_label
 %%return_uia2:
+%ifdef SAFE_DATA
+        clear_scratch_xmms_sse_asm
+%endif
         SNOW3G_FUNC_END
 
 %endmacro
