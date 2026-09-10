@@ -6,7 +6,8 @@
 
 ; routine to do AES ECB encrypt/decrypt on 16n bytes doing AES by 16
 
-; YMM registers are clobbered. Saving/restoring must be done at a higher level
+; ymm6-ymm9 (low 128 bits) are callee-saved on the Windows x64 ABI;
+; saved/restored locally around the AES_ECB macro body.
 
 ; void aes_ecb_x_y_vaes_avx512(void    *in,
 ;                      UINT128  keys[],
@@ -65,6 +66,15 @@ mksection .text
 %define AES      YMM_AESENC_ROUND_BLOCKS_0_16
 %else ; DIR = DEC
 %define AES      YMM_AESDEC_ROUND_BLOCKS_0_16
+%endif
+
+%ifndef LINUX
+        ;; Windows x64 ABI: ymm6-ymm9 low 128 bits are callee-saved
+        sub     rsp, 4*32
+        vmovdqu [rsp + 0*32], ymm6
+        vmovdqu [rsp + 1*32], ymm7
+        vmovdqu [rsp + 2*32], ymm8
+        vmovdqu [rsp + 3*32], ymm9
 %endif
 
         or      LEN, LEN
@@ -179,6 +189,13 @@ align_label
         clear_all_zmms_asm
 %else
         vzeroupper
+%endif
+%ifndef LINUX
+        vmovdqu ymm6, [rsp + 0*32]
+        vmovdqu ymm7, [rsp + 1*32]
+        vmovdqu ymm8, [rsp + 2*32]
+        vmovdqu ymm9, [rsp + 3*32]
+        add     rsp, 4*32
 %endif
 %endmacro
 

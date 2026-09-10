@@ -56,6 +56,11 @@
 %else ; DIR = DEC
 %define AES      XMM_AESDEC_ROUND_BLOCKS_SSE_0_8
 %endif
+%ifndef LINUX
+        ;; Windows x64 ABI: xmm8 is callee-saved
+        sub     rsp, 16
+        movdqu  [rsp], xmm8
+%endif
         or      LEN, LEN
         jz      %%done
         xor     IDX, IDX
@@ -130,6 +135,10 @@ align_label
 %%done:
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
+%endif
+%ifndef LINUX
+        movdqu  xmm8, [rsp]
+        add     rsp, 16
 %endif
 %endmacro
 
