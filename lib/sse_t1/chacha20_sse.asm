@@ -75,6 +75,7 @@ struc STACK
 _STATE:         reso    16      ; Space to store first 4 states
 _XMM_SAVE:      reso    2       ; Space to store up to 2 temporary XMM registers
 _XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
+_XMM6_15_SAVE:  reso    10      ; Space to store xmm6-xmm15, Windows only
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
@@ -693,6 +694,21 @@ submit_job_chacha20_enc_dec_sse:
         and     rsp, -16
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
+%ifndef LINUX
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved but this function
+        ;; uses all of xmm0-xmm15 as scratch, so save/restore them locally
+        movdqa  [rsp + _XMM6_15_SAVE + 16*0], xmm6
+        movdqa  [rsp + _XMM6_15_SAVE + 16*1], xmm7
+        movdqa  [rsp + _XMM6_15_SAVE + 16*2], xmm8
+        movdqa  [rsp + _XMM6_15_SAVE + 16*3], xmm9
+        movdqa  [rsp + _XMM6_15_SAVE + 16*4], xmm10
+        movdqa  [rsp + _XMM6_15_SAVE + 16*5], xmm11
+        movdqa  [rsp + _XMM6_15_SAVE + 16*6], xmm12
+        movdqa  [rsp + _XMM6_15_SAVE + 16*7], xmm13
+        movdqa  [rsp + _XMM6_15_SAVE + 16*8], xmm14
+        movdqa  [rsp + _XMM6_15_SAVE + 16*9], xmm15
+%endif
+
         xor     off, off
 
         ; If less than or equal to 64*2 bytes, prepare directly states for
@@ -1055,6 +1071,19 @@ no_partial_block:
 %endrep
         movdqa  [rsp + _XMM_SAVE], xmm0
         movdqa  [rsp + _XMM_SAVE + 16], xmm0
+%endif
+
+%ifndef LINUX
+        movdqa  xmm6,  [rsp + _XMM6_15_SAVE + 16*0]
+        movdqa  xmm7,  [rsp + _XMM6_15_SAVE + 16*1]
+        movdqa  xmm8,  [rsp + _XMM6_15_SAVE + 16*2]
+        movdqa  xmm9,  [rsp + _XMM6_15_SAVE + 16*3]
+        movdqa  xmm10, [rsp + _XMM6_15_SAVE + 16*4]
+        movdqa  xmm11, [rsp + _XMM6_15_SAVE + 16*5]
+        movdqa  xmm12, [rsp + _XMM6_15_SAVE + 16*6]
+        movdqa  xmm13, [rsp + _XMM6_15_SAVE + 16*7]
+        movdqa  xmm14, [rsp + _XMM6_15_SAVE + 16*8]
+        movdqa  xmm15, [rsp + _XMM6_15_SAVE + 16*9]
 %endif
 
         mov     rsp, [rsp + _RSP_SAVE]
