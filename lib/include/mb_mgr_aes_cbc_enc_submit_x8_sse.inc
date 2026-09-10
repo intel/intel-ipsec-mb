@@ -45,6 +45,7 @@ extern AES_CBC_ENC_X8
 ; This routine and its callee clobbers all GPRs
 struc STACK
 _gpr_save:      resq    8
+_xmm_save:      resq    20      ; xmm6-xmm15, Windows only
 _rsp_save:      resq    1
 endstruc
 
@@ -76,6 +77,18 @@ SUBMIT_JOB_AES_ENC:
 %ifndef LINUX
         mov     [rsp + _gpr_save + 8*6], rsi
         mov     [rsp + _gpr_save + 8*7], rdi
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved; AES_CBC_ENC_X8
+        ;; clobbers them, so save/restore locally around this function
+        movdqa  [rsp + _xmm_save + 16*0], xmm6
+        movdqa  [rsp + _xmm_save + 16*1], xmm7
+        movdqa  [rsp + _xmm_save + 16*2], xmm8
+        movdqa  [rsp + _xmm_save + 16*3], xmm9
+        movdqa  [rsp + _xmm_save + 16*4], xmm10
+        movdqa  [rsp + _xmm_save + 16*5], xmm11
+        movdqa  [rsp + _xmm_save + 16*6], xmm12
+        movdqa  [rsp + _xmm_save + 16*7], xmm13
+        movdqa  [rsp + _xmm_save + 16*8], xmm14
+        movdqa  [rsp + _xmm_save + 16*9], xmm15
 %endif
         mov     [rsp + _rsp_save], rax  ; original SP
 
@@ -154,6 +167,16 @@ return:
 %ifndef LINUX
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
+        movdqa  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqa  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqa  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqa  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqa  xmm10, [rsp + _xmm_save + 16*4]
+        movdqa  xmm11, [rsp + _xmm_save + 16*5]
+        movdqa  xmm12, [rsp + _xmm_save + 16*6]
+        movdqa  xmm13, [rsp + _xmm_save + 16*7]
+        movdqa  xmm14, [rsp + _xmm_save + 16*8]
+        movdqa  xmm15, [rsp + _xmm_save + 16*9]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
