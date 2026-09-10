@@ -120,7 +120,7 @@ mksection .text
 
 ;; Stack frame for kasumi_1_block_avx512
 %ifndef LINUX
-%define BLK_STACK_SIZE  (7 * 16)        ; 7 non-volatile XMM registers x 16 bytes
+%define BLK_STACK_SIZE  (10 * 16)       ; 10 non-volatile XMM registers x 16 bytes
 %endif
 
 ;; KASUMI_SBOX_AVX512a
@@ -362,6 +362,9 @@ kasumi_1_block_avx512:
         vmovdqu [rsp + 4*16], xmm10
         vmovdqu [rsp + 5*16], xmm11
         vmovdqu [rsp + 6*16], xmm12
+        vmovdqu [rsp + 7*16], xmm13
+        vmovdqu [rsp + 8*16], xmm14
+        vmovdqu [rsp + 9*16], xmm15
 %endif
 
         ;; KS = arg1 = key schedule pointer (advances each round)
@@ -502,6 +505,9 @@ kasumi_1_block_avx512:
         vmovdqu xmm10, [rsp + 4*16]
         vmovdqu xmm11, [rsp + 5*16]
         vmovdqu xmm12, [rsp + 6*16]
+        vmovdqu xmm13, [rsp + 7*16]
+        vmovdqu xmm14, [rsp + 8*16]
+        vmovdqu xmm15, [rsp + 9*16]
 
         add     rsp, BLK_STACK_SIZE
 %endif
