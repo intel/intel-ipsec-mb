@@ -80,6 +80,8 @@ mksection .text
 ; This routine clobbers rbx, rbp; called routine also clobbers r12
 struc STACK
 _gpr_save:      resq    3
+_pad:           resq    1       ; padding for xmm_save alignment
+_xmm_save:      resq    20      ; xmm6-xmm15, Windows only
 _rsp_save:      resq    1
 endstruc
 
@@ -98,6 +100,18 @@ FUNC:
         mov     [rsp + _gpr_save + 8*0], rbx
         mov     [rsp + _gpr_save + 8*1], rbp
         mov     [rsp + _gpr_save + 8*2], r12
+%ifndef LINUX
+        movdqa  [rsp + _xmm_save + 16*0], xmm6
+        movdqa  [rsp + _xmm_save + 16*1], xmm7
+        movdqa  [rsp + _xmm_save + 16*2], xmm8
+        movdqa  [rsp + _xmm_save + 16*3], xmm9
+        movdqa  [rsp + _xmm_save + 16*4], xmm10
+        movdqa  [rsp + _xmm_save + 16*5], xmm11
+        movdqa  [rsp + _xmm_save + 16*6], xmm12
+        movdqa  [rsp + _xmm_save + 16*7], xmm13
+        movdqa  [rsp + _xmm_save + 16*8], xmm14
+        movdqa  [rsp + _xmm_save + 16*9], xmm15
+%endif
         mov     [rsp + _rsp_save], rax  ; original SP
 
         mov     unused_lanes, [state + _unused_lanes_sha256]
@@ -321,6 +335,18 @@ return:
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
+%ifndef LINUX
+        movdqa  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqa  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqa  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqa  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqa  xmm10, [rsp + _xmm_save + 16*4]
+        movdqa  xmm11, [rsp + _xmm_save + 16*5]
+        movdqa  xmm12, [rsp + _xmm_save + 16*6]
+        movdqa  xmm13, [rsp + _xmm_save + 16*7]
+        movdqa  xmm14, [rsp + _xmm_save + 16*8]
+        movdqa  xmm15, [rsp + _xmm_save + 16*9]
+%endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
         ret
 
