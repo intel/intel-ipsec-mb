@@ -27,6 +27,12 @@ add_subdirectory(oob-app)
 # build imb-safe-check application
 add_subdirectory(safe-check-app)
 
+if(WINDOWS)
+  # build imb-abi-check application (Windows x64 ABI XMM6-XMM15 preservation
+  # check across IMB_SUBMIT_JOB()/IMB_FLUSH_JOB())
+  add_subdirectory(abi-check-app)
+endif()
+
 if(NOT WINDOWS)
   # build imb-acvp if libacvp available
   if(NOT ACVP_LOC)

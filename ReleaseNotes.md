@@ -78,6 +78,7 @@ Test Applications
   supported architectures.
 - Updated the Project Wycheproof test vectors to the upstream v1 vector set,
   adding 154 new test cases.
+- Added ABI check application to verify callee-saved registers are correctly preserved.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
