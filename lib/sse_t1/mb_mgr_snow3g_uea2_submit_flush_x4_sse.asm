@@ -379,6 +379,8 @@ align_label
         ;; clear temporarily stored swapped IV (done inside of submit)
         pxor            %%TMP_XMM_0, %%TMP_XMM_0
         movdqa          [rsp + _keystream], %%TMP_XMM_0
+        ;; clear register contents
+        clear_scratch_xmms_sse_asm
 %endif
 
         SNOW3G_FUNC_END
