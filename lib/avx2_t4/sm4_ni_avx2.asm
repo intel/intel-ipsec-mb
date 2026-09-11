@@ -93,6 +93,42 @@ db 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00
 %define APPEND(x, y) x %+ y
 mksection .text
 
+%macro FUNC_SAVE 0
+%ifndef LINUX
+        ;; xmm6:xmm15 need to be maintained for Windows
+        mov     r11, rsp
+        sub     rsp, 10*16 + 8
+        and     rsp, -16
+        vmovdqa [rsp + 0*16], xmm6
+        vmovdqa [rsp + 1*16], xmm7
+        vmovdqa [rsp + 2*16], xmm8
+        vmovdqa [rsp + 3*16], xmm9
+        vmovdqa [rsp + 4*16], xmm10
+        vmovdqa [rsp + 5*16], xmm11
+        vmovdqa [rsp + 6*16], xmm12
+        vmovdqa [rsp + 7*16], xmm13
+        vmovdqa [rsp + 8*16], xmm14
+        vmovdqa [rsp + 9*16], xmm15
+        mov     [rsp + 10*16], r11 ;; rsp pointer
+%endif
+%endmacro
+
+%macro FUNC_RESTORE 0
+%ifndef LINUX
+        vmovdqa xmm6,  [rsp + 0*16]
+        vmovdqa xmm7,  [rsp + 1*16]
+        vmovdqa xmm8,  [rsp + 2*16]
+        vmovdqa xmm9,  [rsp + 3*16]
+        vmovdqa xmm10, [rsp + 4*16]
+        vmovdqa xmm11, [rsp + 5*16]
+        vmovdqa xmm12, [rsp + 6*16]
+        vmovdqa xmm13, [rsp + 7*16]
+        vmovdqa xmm14, [rsp + 8*16]
+        vmovdqa xmm15, [rsp + 9*16]
+        mov     rsp, [rsp + 10*16]
+%endif
+%endmacro
+
 ;
 ; Shuffle up to 8 YMMs
 ;
@@ -176,6 +212,8 @@ sm4_ecb_ni_avx2:
 %define YSHUFB_OUT ymm14
 
 %define NBLOCKS_MAIN 8*2
+
+        FUNC_SAVE
 
         or      SIZE, SIZE
         jz      done
@@ -288,6 +326,7 @@ done:
 %else
         vzeroupper
 %endif
+        FUNC_RESTORE
         ret
 
 align_function
@@ -316,10 +355,12 @@ sm4_cbc_enc_ni_avx2:
 %define XSHUFB_IN  xmm10
 %define XSHUFB_OUT xmm11
 
+        mov     IV, arg5
+
+        FUNC_SAVE
+
         or      SIZE, SIZE
         jz      cbc_enc_done
-
-        mov     IV, arg5
 
         vmovdqa XSHUFB_IN,  [rel in_shufb]
         vmovdqa XSHUFB_OUT, [rel out_shufb]
@@ -366,6 +407,7 @@ cbc_enc_done:
 %else
         vzeroupper
 %endif
+        FUNC_RESTORE
         ret
 
 align_function
@@ -408,6 +450,8 @@ sm4_cbc_dec_ni_avx2:
 %define NBLOCKS_MAIN 8*2
 
         mov     IV, arg5
+
+        FUNC_SAVE
 
         sub     rsp, 16
 
@@ -575,7 +619,9 @@ cbc_dec_done:
         vzeroupper
 %endif
 
-        add rsp, 16
+        add     rsp, 16
+
+        FUNC_RESTORE
 
         ret
 
@@ -660,7 +706,7 @@ sm4_ctr_ni_avx2:
         mov     IV_LEN, arg6
 
         or      SIZE, SIZE
-        jz      ctr_done
+        jz      ctr_early_exit
 
         test    IV_LEN, 16
         jnz     iv_len_is_16_bytes
@@ -683,6 +729,8 @@ iv_len_is_16_bytes:
 align_label
 iv_read:
         ; TMP2 contains block counter in Little Endian
+
+        FUNC_SAVE
 
         ; Broadcast IV
         vperm2i128 YIV_0, YIV_0, YIV_0, 0
@@ -828,6 +876,12 @@ ctr_done:
 %else
         vzeroupper
 %endif
+        FUNC_RESTORE
+        ret
+
+align_label
+ctr_early_exit:
+        vzeroupper
         ret
 
 ;;
