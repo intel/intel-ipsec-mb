@@ -6,7 +6,7 @@
 
 ; routine to do AES ECB encrypt/decrypt on 16n bytes doing AES by 16
 
-; ymm6-ymm9 (low 128 bits) are callee-saved on the Windows x64 ABI;
+; xmm6-xmm15 are callee-saved on the Windows x64 ABI;
 ; saved/restored locally around the AES_ECB macro body.
 
 ; void aes_ecb_x_y_vaes_avx512(void    *in,
@@ -69,12 +69,18 @@ mksection .text
 %endif
 
 %ifndef LINUX
-        ;; Windows x64 ABI: ymm6-ymm9 low 128 bits are callee-saved
-        sub     rsp, 4*32
-        vmovdqu [rsp + 0*32], ymm6
-        vmovdqu [rsp + 1*32], ymm7
-        vmovdqu [rsp + 2*32], ymm8
-        vmovdqu [rsp + 3*32], ymm9
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved
+        sub     rsp, 16*10
+        vmovdqu [rsp + 16*0], xmm6
+        vmovdqu [rsp + 16*1], xmm7
+        vmovdqu [rsp + 16*2], xmm8
+        vmovdqu [rsp + 16*3], xmm9
+        vmovdqu [rsp + 16*4], xmm10
+        vmovdqu [rsp + 16*5], xmm11
+        vmovdqu [rsp + 16*6], xmm12
+        vmovdqu [rsp + 16*7], xmm13
+        vmovdqu [rsp + 16*8], xmm14
+        vmovdqu [rsp + 16*9], xmm15
 %endif
 
         or      LEN, LEN
@@ -191,11 +197,17 @@ align_label
         vzeroupper
 %endif
 %ifndef LINUX
-        vmovdqu ymm6, [rsp + 0*32]
-        vmovdqu ymm7, [rsp + 1*32]
-        vmovdqu ymm8, [rsp + 2*32]
-        vmovdqu ymm9, [rsp + 3*32]
-        add     rsp, 4*32
+        vmovdqu xmm6,  [rsp + 16*0]
+        vmovdqu xmm7,  [rsp + 16*1]
+        vmovdqu xmm8,  [rsp + 16*2]
+        vmovdqu xmm9,  [rsp + 16*3]
+        vmovdqu xmm10, [rsp + 16*4]
+        vmovdqu xmm11, [rsp + 16*5]
+        vmovdqu xmm12, [rsp + 16*6]
+        vmovdqu xmm13, [rsp + 16*7]
+        vmovdqu xmm14, [rsp + 16*8]
+        vmovdqu xmm15, [rsp + 16*9]
+        add     rsp, 16*10
 %endif
 %endmacro
 

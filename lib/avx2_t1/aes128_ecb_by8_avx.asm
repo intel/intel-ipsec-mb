@@ -57,9 +57,18 @@
 %define AES      XMM_AESDEC_ROUND_BLOCKS_AVX_0_8
 %endif
 %ifndef LINUX
-        ;; Windows x64 ABI: xmm8 is callee-saved
-        sub     rsp, 16
-        vmovdqu [rsp], xmm8
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved
+        sub     rsp, 16*10
+        vmovdqu [rsp + 16*0], xmm6
+        vmovdqu [rsp + 16*1], xmm7
+        vmovdqu [rsp + 16*2], xmm8
+        vmovdqu [rsp + 16*3], xmm9
+        vmovdqu [rsp + 16*4], xmm10
+        vmovdqu [rsp + 16*5], xmm11
+        vmovdqu [rsp + 16*6], xmm12
+        vmovdqu [rsp + 16*7], xmm13
+        vmovdqu [rsp + 16*8], xmm14
+        vmovdqu [rsp + 16*9], xmm15
 %endif
         or      LEN, LEN
         jz      %%done
@@ -137,8 +146,17 @@ align_label
         clear_all_xmms_avx_asm
 %endif
 %ifndef LINUX
-        vmovdqu xmm8, [rsp]
-        add     rsp, 16
+        vmovdqu xmm6,  [rsp + 16*0]
+        vmovdqu xmm7,  [rsp + 16*1]
+        vmovdqu xmm8,  [rsp + 16*2]
+        vmovdqu xmm9,  [rsp + 16*3]
+        vmovdqu xmm10, [rsp + 16*4]
+        vmovdqu xmm11, [rsp + 16*5]
+        vmovdqu xmm12, [rsp + 16*6]
+        vmovdqu xmm13, [rsp + 16*7]
+        vmovdqu xmm14, [rsp + 16*8]
+        vmovdqu xmm15, [rsp + 16*9]
+        add     rsp, 16*10
 %endif
 %endmacro
 

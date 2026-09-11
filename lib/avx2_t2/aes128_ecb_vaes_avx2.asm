@@ -6,7 +6,7 @@
 
 ; routine to do AES ECB encrypt/decrypt on 16n bytes doing AES by 16
 
-; YMM registers are clobbered. Saving/restoring must be done at a higher level
+; xmm6-xmm15 are callee-saved on the Windows x64 ABI; saved/restored locally
 
 ; void aes_ecb_x_y_vaes_avx2(void    *in,
 ;                      UINT128  keys[],
@@ -71,6 +71,21 @@
 %define AES      YMM_AESENC_ROUND_BLOCKS_AVX2_0_16
 %else ; DIR = DEC
 %define AES      YMM_AESDEC_ROUND_BLOCKS_AVX2_0_16
+%endif
+
+%ifndef LINUX
+        ;; Windows x64 ABI: xmm6-xmm15 are callee-saved
+        sub     rsp, 16*10
+        vmovdqu [rsp + 16*0], xmm6
+        vmovdqu [rsp + 16*1], xmm7
+        vmovdqu [rsp + 16*2], xmm8
+        vmovdqu [rsp + 16*3], xmm9
+        vmovdqu [rsp + 16*4], xmm10
+        vmovdqu [rsp + 16*5], xmm11
+        vmovdqu [rsp + 16*6], xmm12
+        vmovdqu [rsp + 16*7], xmm13
+        vmovdqu [rsp + 16*8], xmm14
+        vmovdqu [rsp + 16*9], xmm15
 %endif
 
         or      LEN, LEN
@@ -185,6 +200,19 @@ align_label
         clear_all_ymms_asm
 %else
         vzeroupper
+%endif
+%ifndef LINUX
+        vmovdqu xmm6,  [rsp + 16*0]
+        vmovdqu xmm7,  [rsp + 16*1]
+        vmovdqu xmm8,  [rsp + 16*2]
+        vmovdqu xmm9,  [rsp + 16*3]
+        vmovdqu xmm10, [rsp + 16*4]
+        vmovdqu xmm11, [rsp + 16*5]
+        vmovdqu xmm12, [rsp + 16*6]
+        vmovdqu xmm13, [rsp + 16*7]
+        vmovdqu xmm14, [rsp + 16*8]
+        vmovdqu xmm15, [rsp + 16*9]
+        add     rsp, 16*10
 %endif
 %endmacro
 
