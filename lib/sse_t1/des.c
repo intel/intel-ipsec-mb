@@ -336,7 +336,7 @@ docsis_des_dec_sse(const void *input, void *output, const int size, const uint64
                 if (!nblocks) {
                         /* first block is the partial one */
                         cfb_one_sse(input, output, partial, ks, ks_sse, p_iv);
-                        return;
+                        goto clear_and_exit;
                 }
                 /* last block is partial */
                 cfb_one_sse(&in[nblocks], &out[nblocks], partial, ks, ks_sse, &in[nblocks - 1]);
@@ -351,6 +351,7 @@ docsis_des_dec_sse(const void *input, void *output, const int size, const uint64
                 iv = in_block;
         }
 
+clear_and_exit:;
 #ifdef SAFE_DATA
         clear_mem(ks_sse, sizeof(ks_sse));
 #endif
