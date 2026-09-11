@@ -31,6 +31,7 @@ struc frame
 .CDGH_SAVE      resy    1
 .ABEF_SAVEb     resy    1
 .CDGH_SAVEb     resy    1
+.XMM_SAVE       resb    16*10
 endstruc
 
 %ifdef LINUX
@@ -225,6 +226,19 @@ sha512_ni_x2_avx2:
         mov             r11, rsp
         sub             rsp, frame_size
         and             rsp, -32
+
+%ifndef LINUX
+        vmovdqa         [rsp + frame.XMM_SAVE + 0*16], xmm6
+        vmovdqa         [rsp + frame.XMM_SAVE + 1*16], xmm7
+        vmovdqa         [rsp + frame.XMM_SAVE + 2*16], xmm8
+        vmovdqa         [rsp + frame.XMM_SAVE + 3*16], xmm9
+        vmovdqa         [rsp + frame.XMM_SAVE + 4*16], xmm10
+        vmovdqa         [rsp + frame.XMM_SAVE + 5*16], xmm11
+        vmovdqa         [rsp + frame.XMM_SAVE + 6*16], xmm12
+        vmovdqa         [rsp + frame.XMM_SAVE + 7*16], xmm13
+        vmovdqa         [rsp + frame.XMM_SAVE + 8*16], xmm14
+        vmovdqa         [rsp + frame.XMM_SAVE + 9*16], xmm15
+%endif
 
         or              NUM_BLKS, NUM_BLKS
         je              .done_hash
@@ -423,6 +437,19 @@ align_loop
 
 align_label
 .done_hash:
+
+%ifndef LINUX
+        vmovdqa         xmm6,  [rsp + frame.XMM_SAVE + 0*16]
+        vmovdqa         xmm7,  [rsp + frame.XMM_SAVE + 1*16]
+        vmovdqa         xmm8,  [rsp + frame.XMM_SAVE + 2*16]
+        vmovdqa         xmm9,  [rsp + frame.XMM_SAVE + 3*16]
+        vmovdqa         xmm10, [rsp + frame.XMM_SAVE + 4*16]
+        vmovdqa         xmm11, [rsp + frame.XMM_SAVE + 5*16]
+        vmovdqa         xmm12, [rsp + frame.XMM_SAVE + 6*16]
+        vmovdqa         xmm13, [rsp + frame.XMM_SAVE + 7*16]
+        vmovdqa         xmm14, [rsp + frame.XMM_SAVE + 8*16]
+        vmovdqa         xmm15, [rsp + frame.XMM_SAVE + 9*16]
+%endif
 
         mov     rsp, r11
 
