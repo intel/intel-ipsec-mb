@@ -651,8 +651,11 @@ typedef struct IMB_JOB {
                 } CHACHA20_POLY1305; /**< Chacha20-Poly1305 specific fields */
                 struct _NIA_specific_fields {
                         const void *_key;
-                        /**< Authentication pointer key (16 bytes for NIA4 and NIA6
-                         * pointer to expanded key for NIA5) */
+                        /**< Authentication key pointer:
+                         * - NIA4 / NIA6: 32-byte (256-bit) raw key
+                         * - NIA5: AES-256 expanded encryption key schedule,
+                         *         16-byte aligned
+                         */
                         const void *_iv;
                         /**< Authentication IV pointer (16 bytes) */
                 } NIA; /**< NIA4/5/6 specific fields */
