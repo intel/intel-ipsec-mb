@@ -1,6 +1,12 @@
 # imb-provider
 
-imb-provider is a test crypto provider for IPSecMB library. 
+imb-provider is a test crypto provider for IPSecMB library.
+
+imb-provider is intended for **evaluation, development, and benchmarking only**.
+It is **not intended for production deployment**.
+
+For production environments, use qat-provider from QAT Engine https://github.com/intel/qat_engine.
+
 
 ## Requirements
 
