@@ -1467,12 +1467,19 @@ MKGLOBAL(poly1305_key_gen_avx,function,internal)
 poly1305_key_gen_avx:
 %ifndef LINUX
         mov     rax, rsp
-        sub     rsp, 3*16 + 8
+        sub     rsp, 10*16 + 8
         and     rsp, -16
         vmovdqa [rsp], xmm6
         vmovdqa [rsp + 16], xmm7
         vmovdqa [rsp + 16*2], xmm8
-        mov     [rsp + 16*3], rax
+        vmovdqa [rsp + 16*3], xmm9
+        vmovdqa [rsp + 16*4], xmm10
+        vmovdqa [rsp + 16*5], xmm11
+        vmovdqa [rsp + 16*6], xmm12
+        vmovdqa [rsp + 16*7], xmm13
+        vmovdqa [rsp + 16*8], xmm14
+        vmovdqa [rsp + 16*9], xmm15
+        mov     [rsp + 16*10], rax
 %endif
         ;; prepare chacha state from IV, key
         vmovdqa xmm0, [rel constants]
@@ -1499,7 +1506,14 @@ poly1305_key_gen_avx:
         vmovdqa xmm6, [rsp]
         vmovdqa xmm7, [rsp + 16]
         vmovdqa xmm8, [rsp + 16*2]
-        mov     rsp, [rsp + 16*3]
+        vmovdqa xmm9, [rsp + 16*3]
+        vmovdqa xmm10, [rsp + 16*4]
+        vmovdqa xmm11, [rsp + 16*5]
+        vmovdqa xmm12, [rsp + 16*6]
+        vmovdqa xmm13, [rsp + 16*7]
+        vmovdqa xmm14, [rsp + 16*8]
+        vmovdqa xmm15, [rsp + 16*9]
+        mov     rsp, [rsp + 16*10]
 %endif
         ret
 
