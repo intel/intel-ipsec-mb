@@ -76,6 +76,7 @@ struc STACK
 _B:             resb    64      ; two SM3 blocks (aligned to 16)
 _D:             resd    8       ; digest
 _gpr_save:      resq    8       ; space for GPR's
+_xmm_save:      resb    16*2    ; space for xmm10/xmm11
 _rsp_save:      resq    1       ; space for rsp pointer
 endstruc
 
@@ -124,6 +125,9 @@ mksection .text
 %ifidn __OUTPUT_FORMAT__, win64
         mov     [rsp + _gpr_save + 6*8], rdi
         mov     [rsp + _gpr_save + 7*8], rsi
+        ;; xmm10/xmm11 need to be maintained for Windows
+        vmovdqu [rsp + _xmm_save + 0*16], xmm10
+        vmovdqu [rsp + _xmm_save + 1*16], xmm11
 %endif
 %endmacro
 
@@ -141,6 +145,8 @@ mksection .text
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rdi, [rsp + _gpr_save + 6*8]
         mov     rsi, [rsp + _gpr_save + 7*8]
+        vmovdqu xmm10, [rsp + _xmm_save + 0*16]
+        vmovdqu xmm11, [rsp + _xmm_save + 1*16]
 %endif
         mov     rsp, [rsp + _rsp_save]
 %endmacro
