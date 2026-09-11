@@ -568,6 +568,9 @@ aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch, const unsigned ifma)
         /* Finalize AEAD Poly1305 (final reduction and +S) */
         poly1305_aead_complete(hash, ks, job->auth_tag_output, arch, ifma);
 
+#ifdef SAFE_DATA
+        clear_mem(ks, sizeof(ks));
+#endif
         job->status = IMB_STATUS_COMPLETED;
 
         return job;
