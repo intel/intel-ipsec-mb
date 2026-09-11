@@ -54,7 +54,7 @@ MKGLOBAL(CRC32_REFL_FN,function,internal)
 align_function
 CRC32_REFL_FN:
 %ifndef LINUX
-        sub             rsp, 16*8
+        sub             rsp, 16*10
         movdqu          [rsp + 16*0], xmm6
         movdqu          [rsp + 16*1], xmm7
         movdqu          [rsp + 16*2], xmm8
@@ -63,6 +63,8 @@ CRC32_REFL_FN:
         movdqu          [rsp + 16*5], xmm11
         movdqu          [rsp + 16*6], xmm12
         movdqu          [rsp + 16*7], xmm13
+        movdqu          [rsp + 16*8], xmm14
+        movdqu          [rsp + 16*9], xmm15
 %endif
         not             DWORD(arg1)
 
@@ -320,7 +322,9 @@ align_label
         movdqu          xmm11, [rsp + 16*5]
         movdqu          xmm12, [rsp + 16*6]
         movdqu          xmm13, [rsp + 16*7]
-        add             rsp, 16*8
+        movdqu          xmm14, [rsp + 16*8]
+        movdqu          xmm15, [rsp + 16*9]
+        add             rsp, 16*10
 %endif
         not             eax
         ret

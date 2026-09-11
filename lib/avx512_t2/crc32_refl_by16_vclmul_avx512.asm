@@ -55,7 +55,7 @@ MKGLOBAL(crc32_refl_by16_vclmul_avx512,function,internal)
 crc32_refl_by16_vclmul_avx512:
         endbranch64
 %ifndef LINUX
-        sub             rsp, 16*9
+        sub             rsp, 16*10
         vmovdqu         [rsp + 16*0], xmm6
         vmovdqu         [rsp + 16*1], xmm7
         vmovdqu         [rsp + 16*2], xmm8
@@ -65,6 +65,7 @@ crc32_refl_by16_vclmul_avx512:
         vmovdqu         [rsp + 16*6], xmm12
         vmovdqu         [rsp + 16*7], xmm13
         vmovdqu         [rsp + 16*8], xmm14
+        vmovdqu         [rsp + 16*9], xmm15
 %endif
         not             DWORD(arg1)
 
@@ -295,7 +296,8 @@ align_label
         vmovdqu         xmm12, [rsp + 16*6]
         vmovdqu         xmm13, [rsp + 16*7]
         vmovdqu         xmm14, [rsp + 16*8]
-        add             rsp, 16*9
+        vmovdqu         xmm15, [rsp + 16*9]
+        add             rsp, 16*10
 %endif
         ret
 
