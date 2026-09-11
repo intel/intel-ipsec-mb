@@ -434,11 +434,14 @@ prov_ml_dsa_gen_init(void *provctx, int selection, const OSSL_PARAM params[], IM
         /*
          * Pre-allocate one IMB context for the lifetime of this gen context.
          * prov_ml_dsa_gen() steals it into the key and replenishes genctx
-         * afterwards, keeping allocation off the keygen hot path. A NULL
-         * result here is non-fatal: prov_ml_dsa_key_generate() will fall back
-         * to lazy allocation when genctx->imb_ctx is NULL.
+         * afterwards, keeping allocation off the keygen hot path. Treat a
+         * failed pre-allocation as fatal so the provider does not silently fall
+         * back to the slower lazy per-call path.
          */
-        (void) imb_ml_dsa_new(ipsec_mgr, v->alg, &genctx->imb_ctx);
+        if (imb_ml_dsa_new(ipsec_mgr, v->alg, &genctx->imb_ctx) != 0) {
+                OPENSSL_free(genctx);
+                return NULL;
+        }
 
         return genctx;
 }

@@ -90,8 +90,7 @@ prov_ml_dsa_key_free(PROV_ML_DSA_KEY *key)
 
         if (key->imb_ctx != NULL)
                 imb_ml_dsa_free(key->imb_ctx);
-        OPENSSL_free(key->pub);
-        OPENSSL_clear_free(key->priv, key->v->privkey_len);
+        OPENSSL_clear_free(key->buf_storage, key->v->pubkey_len + key->v->privkey_len);
         OPENSSL_cleanse(key->seed, sizeof(key->seed));
         OPENSSL_free(key);
 }
@@ -100,16 +99,19 @@ prov_ml_dsa_key_free(PROV_ML_DSA_KEY *key)
 static int
 prov_ml_dsa_key_alloc(PROV_ML_DSA_KEY *key, int want_pub, int want_priv)
 {
-        if (want_pub && key->pub == NULL) {
-                key->pub = OPENSSL_malloc(key->v->pubkey_len);
-                if (key->pub == NULL)
+        if (!want_pub && !want_priv)
+                return 1;
+        if (key->buf_storage == NULL) {
+                key->buf_storage = OPENSSL_zalloc(key->v->pubkey_len + key->v->privkey_len);
+                if (key->buf_storage == NULL)
                         return 0;
+                key->pub = key->buf_storage;
+                key->priv = key->buf_storage + key->v->pubkey_len;
         }
-        if (want_priv && key->priv == NULL) {
-                key->priv = OPENSSL_malloc(key->v->privkey_len);
-                if (key->priv == NULL)
-                        return 0;
-        }
+        if (want_pub && key->pub == NULL)
+                key->pub = key->buf_storage;
+        if (want_priv && key->priv == NULL)
+                key->priv = key->buf_storage + key->v->pubkey_len;
         return 1;
 }
 
@@ -288,6 +290,8 @@ prov_ml_kem_key_new(OSSL_LIB_CTX *libctx, const PROV_ML_KEM_VARIANT *v)
 
         key->libctx = libctx;
         key->v = v;
+        key->pub = key->buf_storage;
+        key->priv = key->buf_storage + key->v->pubkey_len;
         /* imb_ctx is allocated on first bind/generate */
         return key;
 }
@@ -300,25 +304,23 @@ prov_ml_kem_key_free(PROV_ML_KEM_KEY *key)
 
         if (key->imb_ctx != NULL)
                 imb_ml_kem_free(key->imb_ctx);
-        OPENSSL_free(key->pub);
-        OPENSSL_clear_free(key->priv, key->v->privkey_len);
+        OPENSSL_cleanse(key->buf_storage, key->v->pubkey_len + key->v->privkey_len);
         OPENSSL_cleanse(key->seed, sizeof(key->seed));
         OPENSSL_free(key);
 }
 
-static int
+int
 prov_ml_kem_key_alloc(PROV_ML_KEM_KEY *key, int want_pub, int want_priv)
 {
-        if (want_pub && key->pub == NULL) {
-                key->pub = OPENSSL_malloc(key->v->pubkey_len);
-                if (key->pub == NULL)
-                        return 0;
-        }
-        if (want_priv && key->priv == NULL) {
-                key->priv = OPENSSL_malloc(key->v->privkey_len);
-                if (key->priv == NULL)
-                        return 0;
-        }
+        if (key == NULL)
+                return 0;
+        if (!want_pub && !want_priv)
+                return 1;
+        /* Storage is inline in the key object; just (re)point field aliases. */
+        if (want_pub && key->pub == NULL)
+                key->pub = key->buf_storage;
+        if (want_priv && key->priv == NULL)
+                key->priv = key->buf_storage + key->v->pubkey_len;
         return 1;
 }
 

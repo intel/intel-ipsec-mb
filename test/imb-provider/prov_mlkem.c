@@ -30,19 +30,78 @@
 /* KEYMGMT                                                                   */
 /* ========================================================================= */
 
-/** Key generation context: one parameter set plus an optional keygen seed */
+#define PROV_ML_KEM_KEY_POOL 4
+
+/* Key generation context: one parameter set plus an optional keygen seed */
 typedef struct prov_ml_kem_gen_ctx_st {
         OSSL_LIB_CTX *libctx;
         const PROV_ML_KEM_VARIANT *v;
         unsigned char seed[PROV_ML_KEM_SEED_BYTES];
         unsigned int seed_set : 1;
         IMB_ML_KEM *imb_ctx;
+        PROV_ML_KEM_KEY *key_pool[PROV_ML_KEM_KEY_POOL];
+        int key_pool_count;
 } PROV_ML_KEM_GEN_CTX;
+
+static void
+prov_ml_kem_recycle_key(PROV_ML_KEM_GEN_CTX *genctx, PROV_ML_KEM_KEY *key)
+{
+        if (genctx == NULL || key == NULL)
+                return;
+
+        key->owner_gen = genctx;
+        key->in_pool = 1;
+        key->bound = 0;
+        key->imb_ctx = NULL;
+
+        /*
+         * Keep the pooled backing store live for the next generation and avoid
+         * zeroizing that storage on every recycle. The next generation call
+         * overwrites the same public/private key material, while prov_ml_kem_key_free()
+         * still scrubs once when the object is actually discarded.
+         */
+        if (genctx->key_pool_count < PROV_ML_KEM_KEY_POOL) {
+                genctx->key_pool[genctx->key_pool_count++] = key;
+                return;
+        }
+
+        key->owner_gen = NULL;
+        key->in_pool = 0;
+        prov_ml_kem_key_free(key);
+}
+
+static PROV_ML_KEM_KEY *
+prov_ml_kem_get_reusable_key(PROV_ML_KEM_GEN_CTX *genctx)
+{
+        PROV_ML_KEM_KEY *key;
+
+        if (genctx == NULL || genctx->key_pool_count == 0)
+                return NULL;
+
+        key = genctx->key_pool[--genctx->key_pool_count];
+        key->in_pool = 0;
+        key->owner_gen = genctx;
+        key->bound = 0;
+        key->imb_ctx = NULL;
+        key->pub = key->buf_storage;
+        key->priv = key->buf_storage + key->v->pubkey_len;
+        return key;
+}
 
 static void
 prov_ml_kem_freekey(void *keydata)
 {
-        prov_ml_kem_key_free((PROV_ML_KEM_KEY *) keydata);
+        PROV_ML_KEM_KEY *key = (PROV_ML_KEM_KEY *) keydata;
+
+        if (key == NULL)
+                return;
+
+        if (key->owner_gen != NULL) {
+                prov_ml_kem_recycle_key((PROV_ML_KEM_GEN_CTX *) key->owner_gen, key);
+                return;
+        }
+
+        prov_ml_kem_key_free(key);
 }
 
 static void *
@@ -157,11 +216,6 @@ prov_ml_kem_import(void *keydata, int selection, const OSSL_PARAM params[])
         }
 
         if (p_priv != NULL) {
-                if (key->priv == NULL) {
-                        key->priv = OPENSSL_malloc(key->v->privkey_len);
-                        if (key->priv == NULL)
-                                return 0;
-                }
                 if (!prov_get_fixed_octets(p_priv, key->priv, key->v->privkey_len))
                         return 0;
                 key->has_priv = 1;
@@ -171,11 +225,6 @@ prov_ml_kem_import(void *keydata, int selection, const OSSL_PARAM params[])
                  * so that it can be compared against any separately supplied
                  * public key bytes rather than silently overwritten.
                  */
-                if (key->pub == NULL) {
-                        key->pub = OPENSSL_malloc(key->v->pubkey_len);
-                        if (key->pub == NULL)
-                                return 0;
-                }
                 memcpy(key->pub,
                        key->priv + (key->v->privkey_len - key->v->pubkey_len -
                                     2 * IMB_ML_KEM_SHARED_SECRET_BYTES),
@@ -205,11 +254,6 @@ prov_ml_kem_import(void *keydata, int selection, const OSSL_PARAM params[])
                         }
                         OPENSSL_free(supplied);
                 } else {
-                        if (key->pub == NULL) {
-                                key->pub = OPENSSL_malloc(key->v->pubkey_len);
-                                if (key->pub == NULL)
-                                        return 0;
-                        }
                         if (!prov_get_fixed_octets(p_pub, key->pub, key->v->pubkey_len))
                                 return 0;
                         key->has_pub = 1;
@@ -369,11 +413,6 @@ prov_ml_kem_set_params(void *keydata, const OSSL_PARAM params[])
 
         p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY);
         if (p != NULL) {
-                if (key->pub == NULL) {
-                        key->pub = OPENSSL_malloc(key->v->pubkey_len);
-                        if (key->pub == NULL)
-                                return 0;
-                }
                 if (!prov_get_fixed_octets(p, key->pub, key->v->pubkey_len))
                         return 0;
 
@@ -382,8 +421,8 @@ prov_ml_kem_set_params(void *keydata, const OSSL_PARAM params[])
                  * IMB context is re-populated here (once) rather than per
                  * operation. Any previously held private key is dropped.
                  */
-                OPENSSL_clear_free(key->priv, key->v->privkey_len);
-                key->priv = NULL;
+                OPENSSL_cleanse(key->priv, key->v->privkey_len);
+                key->priv = key->buf_storage + key->v->pubkey_len;
                 key->has_priv = 0;
                 key->has_seed = 0;
                 key->has_pub = 1;
@@ -450,13 +489,35 @@ prov_ml_kem_gen_init(void *provctx, int selection, const OSSL_PARAM params[], IM
         /*
          * Pre-allocate one IMB context for the lifetime of this gen context.
          * prov_ml_kem_gen() borrows it for each keypair call and returns it
-         * afterwards, keeping allocation off the keygen hot path. A NULL
-         * result here is non-fatal: prov_ml_kem_key_generate() will fall back
-         * to lazy allocation when genctx->imb_ctx is NULL.
+         * afterwards so the hot path does not fall back to lazy allocation on
+         * every generation. Treat an allocation failure as fatal here: a silent
+         * fallback would turn the provider back into the slower per-call path.
          */
-        (void) imb_ml_kem_new(ipsec_mgr, v->alg, &genctx->imb_ctx);
+        if (imb_ml_kem_new(ipsec_mgr, v->alg, &genctx->imb_ctx) != 0) {
+                OPENSSL_free(genctx);
+                return NULL;
+        }
 
         return genctx;
+}
+
+static void
+prov_ml_kem_gen_reclaim_pool(PROV_ML_KEM_GEN_CTX *genctx)
+{
+        int i;
+
+        if (genctx == NULL)
+                return;
+
+        for (i = 0; i < genctx->key_pool_count; i++) {
+                PROV_ML_KEM_KEY *key = genctx->key_pool[i];
+                if (key == NULL)
+                        continue;
+                key->owner_gen = NULL;
+                key->in_pool = 0;
+                prov_ml_kem_key_free(key);
+        }
+        genctx->key_pool_count = 0;
 }
 
 /**
@@ -476,9 +537,17 @@ prov_ml_kem_gen(void *vgenctx, OSSL_CALLBACK *cb, void *cbarg)
         if (genctx == NULL || !prov_is_running())
                 return NULL;
 
-        key = prov_ml_kem_key_new(genctx->libctx, genctx->v);
+        key = prov_ml_kem_get_reusable_key(genctx);
+        if (key == NULL)
+                key = prov_ml_kem_key_new(genctx->libctx, genctx->v);
         if (key == NULL)
                 return NULL;
+
+        key->owner_gen = genctx;
+        if (!prov_ml_kem_key_alloc(key, 1, 1)) {
+                prov_ml_kem_freekey(key);
+                return NULL;
+        }
 
         /*
          * Borrow the pre-allocated IMB context for the keypair call. The key
@@ -497,8 +566,16 @@ prov_ml_kem_gen(void *vgenctx, OSSL_CALLBACK *cb, void *cbarg)
                 return NULL;
         }
 
+        /*
+         * Return the borrowed IMB context to the generation context so the next
+         * call stays on the cached fast path. If the context was unexpectedly
+         * dropped by an earlier failure path, create a replacement before the
+         * next generation request lands.
+         */
         genctx->imb_ctx = key->imb_ctx;
         key->imb_ctx = NULL;
+        if (genctx->imb_ctx == NULL && ipsec_mgr != NULL)
+                (void) imb_ml_kem_new(ipsec_mgr, genctx->v->alg, &genctx->imb_ctx);
         return key;
 }
 
@@ -509,6 +586,7 @@ prov_ml_kem_gen_cleanup(void *vgenctx)
 
         if (genctx == NULL)
                 return;
+        prov_ml_kem_gen_reclaim_pool(genctx);
         imb_ml_kem_free(genctx->imb_ctx);
         OPENSSL_clear_free(vgenctx, sizeof(PROV_ML_KEM_GEN_CTX));
 }

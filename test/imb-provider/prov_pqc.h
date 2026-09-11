@@ -79,9 +79,10 @@ typedef struct prov_ml_dsa_variant_st {
 typedef struct prov_ml_dsa_key_st {
         OSSL_LIB_CTX *libctx;
         const PROV_ML_DSA_VARIANT *v;
-        IMB_ML_DSA *imb_ctx; // holds the decoded key
-        unsigned char *pub;  // encoded public key
-        unsigned char *priv; // encoded private key
+        IMB_ML_DSA *imb_ctx;        // holds the decoded key
+        unsigned char *pub;         // encoded public key
+        unsigned char *priv;        // encoded private key
+        unsigned char *buf_storage; // contiguous backing store for pub/priv
         unsigned char seed[PROV_ML_DSA_SEED_BYTES];
         unsigned int has_pub : 1;
         unsigned int has_priv : 1;
@@ -144,11 +145,18 @@ typedef struct prov_ml_kem_key_st {
         IMB_ML_KEM *imb_ctx;
         unsigned char *pub;
         unsigned char *priv;
+        /*
+         * Inline backing store sized for the largest ML-KEM variant to avoid
+         * per-key malloc/free churn in the provider keygen path.
+         */
+        unsigned char buf_storage[IMB_ML_KEM_1024_PUBKEY_BYTES + IMB_ML_KEM_1024_PRIVKEY_BYTES];
         unsigned char seed[PROV_ML_KEM_SEED_BYTES];
+        void *owner_gen;
         unsigned int has_pub : 1;
         unsigned int has_priv : 1;
         unsigned int has_seed : 1;
         unsigned int bound : 1;
+        unsigned int in_pool : 1;
 } PROV_ML_KEM_KEY;
 
 /**
@@ -160,6 +168,9 @@ prov_ml_kem_variant(IMB_ML_KEM_ALG alg);
 
 PROV_ML_KEM_KEY *
 prov_ml_kem_key_new(OSSL_LIB_CTX *libctx, const PROV_ML_KEM_VARIANT *v);
+
+int
+prov_ml_kem_key_alloc(PROV_ML_KEM_KEY *key, int want_pub, int want_priv);
 
 void
 prov_ml_kem_key_free(PROV_ML_KEM_KEY *key);
