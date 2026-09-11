@@ -117,6 +117,7 @@ extern ZUC_NCA6_4_BUFFER
 struc STACK
 _state_save    resq     2*(16+2) ; Space for ZUC LFSR + R1-2
 _gpr_save:      resq    10
+_xmm_save:      resq    20      ; xmm6-xmm15, Windows only
 _null_len_save: resq    1
 _rsp_save:      resq    1
 endstruc
@@ -229,6 +230,19 @@ mksection .text
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _gpr_save + 8*9], job
         mov     [rsp + _rsp_save], rax  ; original SP
+
+%ifndef LINUX
+        movdqu  [rsp + _xmm_save + 16*0], xmm6
+        movdqu  [rsp + _xmm_save + 16*1], xmm7
+        movdqu  [rsp + _xmm_save + 16*2], xmm8
+        movdqu  [rsp + _xmm_save + 16*3], xmm9
+        movdqu  [rsp + _xmm_save + 16*4], xmm10
+        movdqu  [rsp + _xmm_save + 16*5], xmm11
+        movdqu  [rsp + _xmm_save + 16*6], xmm12
+        movdqu  [rsp + _xmm_save + 16*7], xmm13
+        movdqu  [rsp + _xmm_save + 16*8], xmm14
+        movdqu  [rsp + _xmm_save + 16*9], xmm15
+%endif
 
         mov     unused_lanes, [state + _zuc_unused_lanes]
         movzx   lane, BYTE(unused_lanes)
@@ -387,6 +401,19 @@ align_label
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqu  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqu  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqu  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqu  xmm10, [rsp + _xmm_save + 16*4]
+        movdqu  xmm11, [rsp + _xmm_save + 16*5]
+        movdqu  xmm12, [rsp + _xmm_save + 16*6]
+        movdqu  xmm13, [rsp + _xmm_save + 16*7]
+        movdqu  xmm14, [rsp + _xmm_save + 16*8]
+        movdqu  xmm15, [rsp + _xmm_save + 16*9]
+%endif
+
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
         ret
@@ -430,6 +457,19 @@ align_label
 %endif
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _rsp_save], rax  ; original SP
+
+%ifndef LINUX
+        movdqu  [rsp + _xmm_save + 16*0], xmm6
+        movdqu  [rsp + _xmm_save + 16*1], xmm7
+        movdqu  [rsp + _xmm_save + 16*2], xmm8
+        movdqu  [rsp + _xmm_save + 16*3], xmm9
+        movdqu  [rsp + _xmm_save + 16*4], xmm10
+        movdqu  [rsp + _xmm_save + 16*5], xmm11
+        movdqu  [rsp + _xmm_save + 16*6], xmm12
+        movdqu  [rsp + _xmm_save + 16*7], xmm13
+        movdqu  [rsp + _xmm_save + 16*8], xmm14
+        movdqu  [rsp + _xmm_save + 16*9], xmm15
+%endif
 
         ; check for empty
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -622,6 +662,19 @@ align_label
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqu  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqu  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqu  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqu  xmm10, [rsp + _xmm_save + 16*4]
+        movdqu  xmm11, [rsp + _xmm_save + 16*5]
+        movdqu  xmm12, [rsp + _xmm_save + 16*6]
+        movdqu  xmm13, [rsp + _xmm_save + 16*7]
+        movdqu  xmm14, [rsp + _xmm_save + 16*8]
+        movdqu  xmm15, [rsp + _xmm_save + 16*9]
+%endif
+
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
         ret
@@ -690,6 +743,19 @@ FLUSH_JOB_ZUC_NEA6:
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _gpr_save + 8*9], job
         mov     [rsp + _rsp_save], rax  ; original SP
+
+%ifndef LINUX
+        movdqu  [rsp + _xmm_save + 16*0], xmm6
+        movdqu  [rsp + _xmm_save + 16*1], xmm7
+        movdqu  [rsp + _xmm_save + 16*2], xmm8
+        movdqu  [rsp + _xmm_save + 16*3], xmm9
+        movdqu  [rsp + _xmm_save + 16*4], xmm10
+        movdqu  [rsp + _xmm_save + 16*5], xmm11
+        movdqu  [rsp + _xmm_save + 16*6], xmm12
+        movdqu  [rsp + _xmm_save + 16*7], xmm13
+        movdqu  [rsp + _xmm_save + 16*8], xmm14
+        movdqu  [rsp + _xmm_save + 16*9], xmm15
+%endif
 
         mov     unused_lanes, [state + _zuc_unused_lanes]
         movzx   lane, BYTE(unused_lanes)
@@ -791,6 +857,19 @@ align_label
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqu  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqu  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqu  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqu  xmm10, [rsp + _xmm_save + 16*4]
+        movdqu  xmm11, [rsp + _xmm_save + 16*5]
+        movdqu  xmm12, [rsp + _xmm_save + 16*6]
+        movdqu  xmm13, [rsp + _xmm_save + 16*7]
+        movdqu  xmm14, [rsp + _xmm_save + 16*8]
+        movdqu  xmm15, [rsp + _xmm_save + 16*9]
+%endif
+
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
         jmp     %%exit_submit
@@ -836,6 +915,19 @@ align_label
 %endif
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _rsp_save], rax  ; original SP
+
+%ifndef LINUX
+        movdqu  [rsp + _xmm_save + 16*0], xmm6
+        movdqu  [rsp + _xmm_save + 16*1], xmm7
+        movdqu  [rsp + _xmm_save + 16*2], xmm8
+        movdqu  [rsp + _xmm_save + 16*3], xmm9
+        movdqu  [rsp + _xmm_save + 16*4], xmm10
+        movdqu  [rsp + _xmm_save + 16*5], xmm11
+        movdqu  [rsp + _xmm_save + 16*6], xmm12
+        movdqu  [rsp + _xmm_save + 16*7], xmm13
+        movdqu  [rsp + _xmm_save + 16*8], xmm14
+        movdqu  [rsp + _xmm_save + 16*9], xmm15
+%endif
 
         ; check for empty
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -950,6 +1042,19 @@ align_label
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqu  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqu  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqu  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqu  xmm10, [rsp + _xmm_save + 16*4]
+        movdqu  xmm11, [rsp + _xmm_save + 16*5]
+        movdqu  xmm12, [rsp + _xmm_save + 16*6]
+        movdqu  xmm13, [rsp + _xmm_save + 16*7]
+        movdqu  xmm14, [rsp + _xmm_save + 16*8]
+        movdqu  xmm15, [rsp + _xmm_save + 16*9]
+%endif
+
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
         jmp     %%exit_flush
@@ -1033,6 +1138,19 @@ SUBMIT_JOB_ZUC_NCA6:
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _gpr_save + 8*9], job
         mov     [rsp + _rsp_save], rax  ; original SP
+
+%ifndef LINUX
+        movdqu  [rsp + _xmm_save + 16*0], xmm6
+        movdqu  [rsp + _xmm_save + 16*1], xmm7
+        movdqu  [rsp + _xmm_save + 16*2], xmm8
+        movdqu  [rsp + _xmm_save + 16*3], xmm9
+        movdqu  [rsp + _xmm_save + 16*4], xmm10
+        movdqu  [rsp + _xmm_save + 16*5], xmm11
+        movdqu  [rsp + _xmm_save + 16*6], xmm12
+        movdqu  [rsp + _xmm_save + 16*7], xmm13
+        movdqu  [rsp + _xmm_save + 16*8], xmm14
+        movdqu  [rsp + _xmm_save + 16*9], xmm15
+%endif
 
         mov     r13, cipher_dir ; Store cipher direction
 
@@ -1135,6 +1253,19 @@ return_submit_nca6:
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqu  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqu  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqu  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqu  xmm10, [rsp + _xmm_save + 16*4]
+        movdqu  xmm11, [rsp + _xmm_save + 16*5]
+        movdqu  xmm12, [rsp + _xmm_save + 16*6]
+        movdqu  xmm13, [rsp + _xmm_save + 16*7]
+        movdqu  xmm14, [rsp + _xmm_save + 16*8]
+        movdqu  xmm15, [rsp + _xmm_save + 16*9]
+%endif
+
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
         ret
@@ -1185,6 +1316,19 @@ FLUSH_JOB_ZUC_NCA6:
 %endif
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _rsp_save], rax  ; original SP
+
+%ifndef LINUX
+        movdqu  [rsp + _xmm_save + 16*0], xmm6
+        movdqu  [rsp + _xmm_save + 16*1], xmm7
+        movdqu  [rsp + _xmm_save + 16*2], xmm8
+        movdqu  [rsp + _xmm_save + 16*3], xmm9
+        movdqu  [rsp + _xmm_save + 16*4], xmm10
+        movdqu  [rsp + _xmm_save + 16*5], xmm11
+        movdqu  [rsp + _xmm_save + 16*6], xmm12
+        movdqu  [rsp + _xmm_save + 16*7], xmm13
+        movdqu  [rsp + _xmm_save + 16*8], xmm14
+        movdqu  [rsp + _xmm_save + 16*9], xmm15
+%endif
 
         mov     r13, cipher_dir ; Store cipher direction
 
@@ -1285,6 +1429,19 @@ return_flush_nca6:
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + _xmm_save + 16*0]
+        movdqu  xmm7,  [rsp + _xmm_save + 16*1]
+        movdqu  xmm8,  [rsp + _xmm_save + 16*2]
+        movdqu  xmm9,  [rsp + _xmm_save + 16*3]
+        movdqu  xmm10, [rsp + _xmm_save + 16*4]
+        movdqu  xmm11, [rsp + _xmm_save + 16*5]
+        movdqu  xmm12, [rsp + _xmm_save + 16*6]
+        movdqu  xmm13, [rsp + _xmm_save + 16*7]
+        movdqu  xmm14, [rsp + _xmm_save + 16*8]
+        movdqu  xmm15, [rsp + _xmm_save + 16*9]
+%endif
+
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
         ret
