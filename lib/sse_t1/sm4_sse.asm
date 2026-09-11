@@ -109,7 +109,7 @@ mksection .text
 
 %macro FUNC_SAVE 0
         mov     r11, rsp
-        sub     rsp, 6*16 + 8
+        sub     rsp, 10*16 + 8
         and     rsp, ~15
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -120,8 +120,12 @@ mksection .text
         movdqa  [rsp + 3*16], xmm9
         movdqa  [rsp + 4*16], xmm10
         movdqa  [rsp + 5*16], xmm11
+        movdqa  [rsp + 6*16], xmm12
+        movdqa  [rsp + 7*16], xmm13
+        movdqa  [rsp + 8*16], xmm14
+        movdqa  [rsp + 9*16], xmm15
 %endif
-        mov     [rsp + 6*16], r11 ;; rsp pointer
+        mov     [rsp + 10*16], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
@@ -133,8 +137,12 @@ mksection .text
         movdqa  xmm9,  [rsp + 3*16]
         movdqa  xmm10, [rsp + 4*16]
         movdqa  xmm11, [rsp + 5*16]
+        movdqa  xmm12, [rsp + 6*16]
+        movdqa  xmm13, [rsp + 7*16]
+        movdqa  xmm14, [rsp + 8*16]
+        movdqa  xmm15, [rsp + 9*16]
 %endif
-        mov     rsp, [rsp + 6*16]
+        mov     rsp, [rsp + 10*16]
 %endmacro
 
 %macro AFFINE 4
