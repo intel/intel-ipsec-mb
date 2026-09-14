@@ -65,8 +65,10 @@ if(NOT STR_FILTER)
     COMMAND ${CMAKE_COMMAND} -E copy "lib${LIB}.def" ${SRC_DEF_FILE}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 else()
+  # OUTPUT_FILE (rather than a shell redirect) keeps paths with spaces intact
   execute_process(
-    COMMAND cmd /C "findstr /v ${STR_FILTER} lib${LIB}.def > ${SRC_DEF_FILE}"
+    COMMAND cmd /C "findstr /v ${STR_FILTER} lib${LIB}.def"
+    OUTPUT_FILE ${SRC_DEF_FILE}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
