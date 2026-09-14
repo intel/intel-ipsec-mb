@@ -105,6 +105,8 @@ Fixes
 - Fixed MD5-HMAC in performance application (wrong test-algo mapping).
 - Fixed AES-GCM key structure alignment
 - Fixed DES/3DES-CBC plaintext/ciphertext output (issue #169).
+- Fixed AES-GCM, AES-GCM-SGL and SM4-GCM decrypt direction to use `dec_keys`
+  key pointer consistently across all implementations.
 
 v2.0 October 2024
 ======================================================================

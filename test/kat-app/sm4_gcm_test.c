@@ -83,8 +83,7 @@ sm4_gcm_job(IMB_MGR *mb_mgr, IMB_CIPHER_DIRECTION cipher_dir, const struct gcm_k
         job->cipher_mode = IMB_CIPHER_SM4_GCM;
         job->chain_order =
                 (cipher_dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
-        job->enc_keys = key;
-        job->dec_keys = key;
+        set_gcm_job_keys(job, key, cipher_dir);
         job->key_len_in_bytes = 16;
         job->src = in;
         job->dst = out;

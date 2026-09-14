@@ -518,6 +518,10 @@ struct IMB_SGL_IOV {
  * - DOCSIS (AES-CBC + AES-CFB), both pointers are used
  *   enc_keys has to be set always for the partial block
  *
+ * For AES-GCM, AES-GCM-SGL and SM4-GCM, enc_keys and dec_keys are
+ * expected to point to the same key structure.
+ * - enc_keys is used for encrypt direction and dec_keys for decrypt direction
+ *
  * For DES, enc_keys and dec_keys are
  * expected to point to DES key schedule.
  * - same key schedule used for enc and dec operations

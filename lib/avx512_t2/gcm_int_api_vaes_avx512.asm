@@ -479,7 +479,7 @@ aes_gcm_dec_var_iv_vaes_avx512:
 align_label
 .small_packet_path:
         ;; Load arguments for wrapper function call
-        mov     arg1, [arg2 + _enc_keys]
+        mov     arg1, [arg2 + _dec_keys]
         mov     arg3, [arg2 + _dst]
         mov     arg4, [arg2 + _src]
         add     arg4, [arg2 + _cipher_start_src_offset]

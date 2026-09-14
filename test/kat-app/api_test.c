@@ -1855,8 +1855,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT, hash, order,
                                     &chacha_ctx, &gcm_ctx);
                         switch (cipher) {
-                        case IMB_CIPHER_GCM:
-                        case IMB_CIPHER_SM4_GCM:
                         case IMB_CIPHER_SM4_CBC:
                         case IMB_CIPHER_CBC:
                         case IMB_CIPHER_DES:
@@ -1928,6 +1926,46 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         }
                         print_progress();
                 }
+
+        /* ======== (GCM family key test)
+         * AEAD modes are skipped by the loops above (check_aead()), so the
+         * GCM family is covered here. Encrypt direction requires enc_keys
+         * and decrypt direction requires dec_keys to be set.
+         */
+        static const IMB_CIPHER_MODE gcm_cipher_tab[] = { IMB_CIPHER_GCM, IMB_CIPHER_GCM_SGL,
+                                                          IMB_CIPHER_SM4_GCM };
+        static const IMB_HASH_ALG gcm_hash_tab[] = { IMB_AUTH_AES_GMAC, IMB_AUTH_GCM_SGL,
+                                                     IMB_AUTH_SM4_GCM };
+
+        for (unsigned i = 0; i < DIM(gcm_cipher_tab); i++) {
+                /* encrypt direction uses enc_keys only */
+                fill_in_job(&template_job, gcm_cipher_tab[i], IMB_DIR_ENCRYPT, gcm_hash_tab[i],
+                            IMB_ORDER_CIPHER_HASH, &chacha_ctx, &gcm_ctx);
+                template_job.enc_keys = NULL;
+                if (!is_submit_invalid(mb_mgr, &template_job, TEST_CIPH_ENC_KEY_NULL,
+                                       IMB_ERR_JOB_NULL_KEY))
+                        return 1;
+
+                imb_set_session(mb_mgr, &template_job);
+                if (!is_submit_burst_invalid(mb_mgr, &template_job, TEST_CIPH_ENC_KEY_NULL,
+                                             IMB_ERR_JOB_NULL_KEY))
+                        return 1;
+
+                /* decrypt direction uses dec_keys only */
+                fill_in_job(&template_job, gcm_cipher_tab[i], IMB_DIR_DECRYPT, gcm_hash_tab[i],
+                            IMB_ORDER_HASH_CIPHER, &chacha_ctx, &gcm_ctx);
+                template_job.dec_keys = NULL;
+                if (!is_submit_invalid(mb_mgr, &template_job, TEST_CIPH_DEC_KEY_NULL,
+                                       IMB_ERR_JOB_NULL_KEY))
+                        return 1;
+
+                imb_set_session(mb_mgr, &template_job);
+                if (!is_submit_burst_invalid(mb_mgr, &template_job, TEST_CIPH_DEC_KEY_NULL,
+                                             IMB_ERR_JOB_NULL_KEY))
+                        return 1;
+
+                print_progress();
+        }
 
         /*
          * CIPHER_MSG_LEN = 0

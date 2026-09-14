@@ -163,7 +163,7 @@ SUBMIT_JOB_AES_GCM_ENC(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 __forceinline IMB_JOB *
 SUBMIT_JOB_SM4_GCM_DEC(IMB_MGR *state, IMB_JOB *job)
 {
-        sm4_gcm(state, (const struct gcm_key_data *) job->enc_keys, job->dst,
+        sm4_gcm(state, (const struct gcm_key_data *) job->dec_keys, job->dst,
                 job->src + job->cipher_start_src_offset_in_bytes, job->msg_len_to_cipher_in_bytes,
                 job->iv, job->u.GCM.aad, job->u.GCM.aad_len_in_bytes, job->auth_tag_output,
                 job->auth_tag_output_len_in_bytes, IMB_DIR_DECRYPT);

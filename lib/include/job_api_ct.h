@@ -162,8 +162,11 @@ imb_ct_job_mark_keys(const IMB_JOB *job, const int secret)
                  * AES-GCM and SM4-GCM both expand into struct gcm_key_data,
                  * which holds the round keys and the pre-computed GHASH
                  * sub-key powers.  Fixed size, so no per-architecture logic.
+                 * Encrypt jobs use enc_keys and decrypt jobs use dec_keys,
+                 * so mark whichever of the two is provided.
                  */
                 imb_ct_secret(job->enc_keys, sizeof(struct gcm_key_data), secret);
+                imb_ct_secret(job->dec_keys, sizeof(struct gcm_key_data), secret);
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:

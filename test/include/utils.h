@@ -90,6 +90,25 @@ memory_copy(void *dst, const void *src, size_t length);
 void
 memory_set(void *dst, const int val, size_t length);
 
+/**
+ * @brief Sets GCM family (AES-GCM, AES-GCM-SGL and SM4-GCM) job key pointers
+ *
+ * The library uses enc_keys for encrypt direction and dec_keys for decrypt
+ * direction, so only the direction specific pointer is set here.
+ * The pattern of setting both pointers to the same key structure is covered
+ * by other test applications.
+ *
+ * @param job        pointer to job structure
+ * @param key        pointer to GCM key structure
+ * @param cipher_dir cipher direction of \a job
+ */
+static inline void
+set_gcm_job_keys(struct IMB_JOB *job, const void *key, const IMB_CIPHER_DIRECTION cipher_dir)
+{
+        job->enc_keys = (cipher_dir == IMB_DIR_ENCRYPT) ? key : NULL;
+        job->dec_keys = (cipher_dir == IMB_DIR_ENCRYPT) ? NULL : key;
+}
+
 void *
 test_aligned_alloc(const size_t alignment, const size_t size);
 

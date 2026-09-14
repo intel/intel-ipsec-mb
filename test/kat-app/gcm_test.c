@@ -309,8 +309,7 @@ aes_gcm_burst(IMB_MGR *mb_mgr, const IMB_CIPHER_DIRECTION cipher_dir,
                 job->cipher_mode = cipher_mode;
                 job->chain_order = (cipher_dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH
                                                                    : IMB_ORDER_HASH_CIPHER;
-                job->enc_keys = key;
-                job->dec_keys = key;
+                set_gcm_job_keys(job, key, cipher_dir);
                 job->key_len_in_bytes = key_len;
                 job->src = in;
                 job->dst = out[i];
@@ -448,8 +447,7 @@ aes_gcm_job(IMB_MGR *mb_mgr, IMB_CIPHER_DIRECTION cipher_dir, const struct gcm_k
         job->cipher_mode = cipher_mode;
         job->chain_order =
                 (cipher_dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
-        job->enc_keys = key;
-        job->dec_keys = key;
+        set_gcm_job_keys(job, key, cipher_dir);
         job->key_len_in_bytes = key_len;
         job->src = in;
         job->dst = out;
@@ -537,8 +535,7 @@ aes_gcm_single_job_sgl(IMB_MGR *mb_mgr, IMB_CIPHER_DIRECTION cipher_dir,
         job->hash_alg = IMB_AUTH_GCM_SGL;
         job->chain_order =
                 (cipher_dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
-        job->enc_keys = key;
-        job->dec_keys = key;
+        set_gcm_job_keys(job, key, cipher_dir);
         job->key_len_in_bytes = key_len;
         job->num_sgl_io_segs = num_sgl_segs;
         job->sgl_io_segs = sgl_segs;

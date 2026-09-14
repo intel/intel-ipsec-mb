@@ -111,56 +111,56 @@ submit_gcm_sgl_dec(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
         switch (key_sz) {
         case IMB_KEY_128_BYTES:
                 if (job->sgl_state == IMB_SGL_INIT)
-                        IMB_AES128_GCM_INIT_VAR_IV(state, job->enc_keys, job->u.GCM.ctx, job->iv,
+                        IMB_AES128_GCM_INIT_VAR_IV(state, job->dec_keys, job->u.GCM.ctx, job->iv,
                                                    job->iv_len_in_bytes, job->u.GCM.aad,
                                                    job->u.GCM.aad_len_in_bytes);
                 else if (job->sgl_state == IMB_SGL_UPDATE)
-                        IMB_AES128_GCM_DEC_UPDATE(state, job->enc_keys, job->u.GCM.ctx, job->dst,
+                        IMB_AES128_GCM_DEC_UPDATE(state, job->dec_keys, job->u.GCM.ctx, job->dst,
                                                   job->src, job->msg_len_to_cipher_in_bytes);
                 else if (job->sgl_state == IMB_SGL_COMPLETE)
-                        IMB_AES128_GCM_DEC_FINALIZE(state, job->enc_keys, job->u.GCM.ctx,
+                        IMB_AES128_GCM_DEC_FINALIZE(state, job->dec_keys, job->u.GCM.ctx,
                                                     job->auth_tag_output,
                                                     job->auth_tag_output_len_in_bytes);
                 else { /* IMB_SGL_ALL */
                         unsigned int i;
 
-                        IMB_AES128_GCM_INIT_VAR_IV(state, job->enc_keys, job->u.GCM.ctx, job->iv,
+                        IMB_AES128_GCM_INIT_VAR_IV(state, job->dec_keys, job->u.GCM.ctx, job->iv,
                                                    job->iv_len_in_bytes, job->u.GCM.aad,
                                                    job->u.GCM.aad_len_in_bytes);
                         for (i = 0; i < job->num_sgl_io_segs; i++)
-                                IMB_AES128_GCM_DEC_UPDATE(state, job->enc_keys, job->u.GCM.ctx,
+                                IMB_AES128_GCM_DEC_UPDATE(state, job->dec_keys, job->u.GCM.ctx,
                                                           job->sgl_io_segs[i].out,
                                                           job->sgl_io_segs[i].in,
                                                           job->sgl_io_segs[i].len);
-                        IMB_AES128_GCM_ENC_FINALIZE(state, job->enc_keys, job->u.GCM.ctx,
+                        IMB_AES128_GCM_ENC_FINALIZE(state, job->dec_keys, job->u.GCM.ctx,
                                                     job->auth_tag_output,
                                                     job->auth_tag_output_len_in_bytes);
                 }
                 break;
         case IMB_KEY_192_BYTES:
                 if (job->sgl_state == IMB_SGL_INIT)
-                        IMB_AES192_GCM_INIT_VAR_IV(state, job->enc_keys, job->u.GCM.ctx, job->iv,
+                        IMB_AES192_GCM_INIT_VAR_IV(state, job->dec_keys, job->u.GCM.ctx, job->iv,
                                                    job->iv_len_in_bytes, job->u.GCM.aad,
                                                    job->u.GCM.aad_len_in_bytes);
                 else if (job->sgl_state == IMB_SGL_UPDATE)
-                        IMB_AES192_GCM_DEC_UPDATE(state, job->enc_keys, job->u.GCM.ctx, job->dst,
+                        IMB_AES192_GCM_DEC_UPDATE(state, job->dec_keys, job->u.GCM.ctx, job->dst,
                                                   job->src, job->msg_len_to_cipher_in_bytes);
                 else if (job->sgl_state == IMB_SGL_COMPLETE)
-                        IMB_AES192_GCM_DEC_FINALIZE(state, job->enc_keys, job->u.GCM.ctx,
+                        IMB_AES192_GCM_DEC_FINALIZE(state, job->dec_keys, job->u.GCM.ctx,
                                                     job->auth_tag_output,
                                                     job->auth_tag_output_len_in_bytes);
                 else { /* IMB_SGL_ALL */
                         unsigned int i;
 
-                        IMB_AES192_GCM_INIT_VAR_IV(state, job->enc_keys, job->u.GCM.ctx, job->iv,
+                        IMB_AES192_GCM_INIT_VAR_IV(state, job->dec_keys, job->u.GCM.ctx, job->iv,
                                                    job->iv_len_in_bytes, job->u.GCM.aad,
                                                    job->u.GCM.aad_len_in_bytes);
                         for (i = 0; i < job->num_sgl_io_segs; i++)
-                                IMB_AES192_GCM_DEC_UPDATE(state, job->enc_keys, job->u.GCM.ctx,
+                                IMB_AES192_GCM_DEC_UPDATE(state, job->dec_keys, job->u.GCM.ctx,
                                                           job->sgl_io_segs[i].out,
                                                           job->sgl_io_segs[i].in,
                                                           job->sgl_io_segs[i].len);
-                        IMB_AES192_GCM_ENC_FINALIZE(state, job->enc_keys, job->u.GCM.ctx,
+                        IMB_AES192_GCM_ENC_FINALIZE(state, job->dec_keys, job->u.GCM.ctx,
                                                     job->auth_tag_output,
                                                     job->auth_tag_output_len_in_bytes);
                 }
@@ -168,28 +168,28 @@ submit_gcm_sgl_dec(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
         case IMB_KEY_256_BYTES:
         default:
                 if (job->sgl_state == IMB_SGL_INIT)
-                        IMB_AES256_GCM_INIT_VAR_IV(state, job->enc_keys, job->u.GCM.ctx, job->iv,
+                        IMB_AES256_GCM_INIT_VAR_IV(state, job->dec_keys, job->u.GCM.ctx, job->iv,
                                                    job->iv_len_in_bytes, job->u.GCM.aad,
                                                    job->u.GCM.aad_len_in_bytes);
                 else if (job->sgl_state == IMB_SGL_UPDATE)
-                        IMB_AES256_GCM_DEC_UPDATE(state, job->enc_keys, job->u.GCM.ctx, job->dst,
+                        IMB_AES256_GCM_DEC_UPDATE(state, job->dec_keys, job->u.GCM.ctx, job->dst,
                                                   job->src, job->msg_len_to_cipher_in_bytes);
                 else if (job->sgl_state == IMB_SGL_COMPLETE)
-                        IMB_AES256_GCM_DEC_FINALIZE(state, job->enc_keys, job->u.GCM.ctx,
+                        IMB_AES256_GCM_DEC_FINALIZE(state, job->dec_keys, job->u.GCM.ctx,
                                                     job->auth_tag_output,
                                                     job->auth_tag_output_len_in_bytes);
                 else { /* IMB_SGL_ALL */
                         unsigned int i;
 
-                        IMB_AES256_GCM_INIT_VAR_IV(state, job->enc_keys, job->u.GCM.ctx, job->iv,
+                        IMB_AES256_GCM_INIT_VAR_IV(state, job->dec_keys, job->u.GCM.ctx, job->iv,
                                                    job->iv_len_in_bytes, job->u.GCM.aad,
                                                    job->u.GCM.aad_len_in_bytes);
                         for (i = 0; i < job->num_sgl_io_segs; i++)
-                                IMB_AES256_GCM_DEC_UPDATE(state, job->enc_keys, job->u.GCM.ctx,
+                                IMB_AES256_GCM_DEC_UPDATE(state, job->dec_keys, job->u.GCM.ctx,
                                                           job->sgl_io_segs[i].out,
                                                           job->sgl_io_segs[i].in,
                                                           job->sgl_io_segs[i].len);
-                        IMB_AES256_GCM_ENC_FINALIZE(state, job->enc_keys, job->u.GCM.ctx,
+                        IMB_AES256_GCM_ENC_FINALIZE(state, job->dec_keys, job->u.GCM.ctx,
                                                     job->auth_tag_output,
                                                     job->auth_tag_output_len_in_bytes);
                 }
