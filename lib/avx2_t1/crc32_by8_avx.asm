@@ -50,7 +50,7 @@ align_function
 MKGLOBAL(crc32_by8_avx,function,internal)
 crc32_by8_avx:
 %ifndef LINUX
-        sub             rsp, 16*8
+        sub             rsp, 16*10
         vmovdqu         [rsp + 16*0], xmm6
         vmovdqu         [rsp + 16*1], xmm7
         vmovdqu         [rsp + 16*2], xmm8
@@ -59,6 +59,8 @@ crc32_by8_avx:
         vmovdqu         [rsp + 16*5], xmm11
         vmovdqu         [rsp + 16*6], xmm12
         vmovdqu         [rsp + 16*7], xmm13
+        vmovdqu         [rsp + 16*8], xmm14
+        vmovdqu         [rsp + 16*9], xmm15
 %endif
         ;; check if smaller than 256B
         cmp             arg3, 256
@@ -313,7 +315,9 @@ align_label
         vmovdqu         xmm11, [rsp + 16*5]
         vmovdqu         xmm12, [rsp + 16*6]
         vmovdqu         xmm13, [rsp + 16*7]
-        add             rsp, 16*8
+        vmovdqu         xmm14, [rsp + 16*8]
+        vmovdqu         xmm15, [rsp + 16*9]
+        add             rsp, 16*10
 %endif
         ret
 
