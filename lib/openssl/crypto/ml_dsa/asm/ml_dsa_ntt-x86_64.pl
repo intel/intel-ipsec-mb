@@ -270,7 +270,7 @@ ___
 #     n_even = w_even + t   ∈ (−2Q, 2Q)
 #     n_odd  = w_even − t   ∈ (−2Q, 2Q)
 #
-#   After 7 levels the worst-case coefficient range is (−7Q, 9Q) ≈ ±75 M,
+#   After 8 levels the worst-case coefficient range is (-8Q, 9Q) ~ +/-75 M,
 #   which fits comfortably in signed int32 (max ~2.1 B).
 #   The caller (ml_dsa_poly_ntt_avx2) adds a one-time +8Q correction pass
 #   after all levels so outputs are non-negative for downstream vpmuludq.
@@ -1550,7 +1550,7 @@ ml_dsa_zetas_forward:
 ___
 # Each of the 256 entries is the Montgomery-form twiddle factor:
 #   zetas_forward[i] = zeta^{brv_8(i)} mod Q  (FIPS 204, Table 1: zeta = 1753)
-# Used by the forward NTT (FIPS 204, Algorithm 35) scalar path and AVX2 levels 3, 4, 7.
+# Used by the forward NTT (FIPS 204, Algorithm 41) scalar path and AVX2 levels 3, 4, 7.
 for (my $i = 0; $i < 256; $i += 8) {
     $code .= "    .long " . join(", ", @zetas_fwd[$i..$i+7]) . "\n";
 }
@@ -1708,7 +1708,7 @@ for (my $i = 63; $i >= 32; $i -= 2) {
 }
 
 $code .= <<___;
-# zetas_inverse: 256-entry inverse NTT twiddle-factor table (FIPS 204, Algorithm 36).
+# zetas_inverse: 256-entry inverse NTT twiddle-factor table (FIPS 204, Algorithm 42).
 # Entry i = Q - @zetas_fwd[255-i] - the negated forward zeta in reversed traversal
 # order, so the INTT can apply forward-table entries in reverse without a
 # per-butterfly negation step.
@@ -1776,7 +1776,7 @@ ml_dsa_inverse_degree_montgomery:
 ###############################################################################
 # ml_dsa_poly_ntt_mult_avx2
 #
-# AVX2 implementation of FIPS 204, §8.3 Algorithm 37 (MultiplyNTTs).
+# AVX2 implementation of FIPS 204, Algorithm 45 (MultiplyNTT).
 #
 # C Prototype:
 #   void ml_dsa_poly_ntt_mult_avx2(
@@ -1884,7 +1884,7 @@ $code .= <<___;
 ###############################################################################
 # ml_dsa_poly_ntt_avx2
 #
-# AVX2 implementation of FIPS 204, §8.3 Algorithm 35 (NTT).
+# AVX2 implementation of FIPS 204, Algorithm 41 (NTT).
 #
 # C Prototype:
 #   void ml_dsa_poly_ntt_avx2(
@@ -1980,8 +1980,9 @@ $code .= <<___;
 
     # Bias all 256 NTT coefficients by +8Q to guarantee non-negative values
     # for downstream unsigned vpmuludq in poly_ntt_mult_avx2.
-    # Without per-butterfly +Q, outputs are in (-(N-1)Q, (N+1)Q) where N=7 levels,
-    # i.e. (-7Q, 8Q). Adding 8Q maps the worst case (-7Q) to +Q > 0.
+    # Without per-butterfly +Q, outputs are in (-NQ, (N+1)Q) where N=8 levels,
+    # i.e. (-8Q, 9Q). Adding 8Q maps the outputs into (0, 17Q), within the
+    # [0, ~384Q) input range of multiply_mod_Q in poly_ntt_mult_avx2.
     vpslld  \$3, %ymm15, %ymm0       # ymm0 = 8Q  (ymm15 still holds Q from above)
     lea     (%rdi), %rsi             # %rsi is free here; ntt5 pointer no longer needed
     mov     \$32, %ecx               # 256 coefficients / 8 per YMM = 32 iterations
@@ -2018,7 +2019,7 @@ $code .= <<___;
 ###############################################################################
 # ml_dsa_poly_ntt_inverse_avx2
 #
-# AVX2 implementation of FIPS 204, §8.3 Algorithm 36 (NTT^{-1}).
+# AVX2 implementation of FIPS 204, Algorithm 42 (NTT^{-1}).
 #
 # C Prototype:
 #     void ml_dsa_poly_ntt_inverse_avx2(
