@@ -30,6 +30,7 @@
 #define ML_DSA_K_BYTES               32  /* K = Private random seed for signing */
 #define ML_DSA_TR_BYTES              64  /* Size of the Hash of the public key used for signing */
 #define ML_DSA_RHO_PRIME_BYTES       64  /* private random seed size */
+#define ML_DSA_KAPPA_MAX             (1u << 16) /* kappa + r is a 2-byte integer in ExpandMask */
 
 /*
  * There is special case code related to encoding/decoding that tests the

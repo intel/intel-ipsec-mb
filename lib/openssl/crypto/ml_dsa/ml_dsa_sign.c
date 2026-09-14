@@ -255,10 +255,14 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
         vector_ntt(self, &t0_ntt);
 
         /*
-         * kappa must not exceed 2^16. But the probability of it
-         * exceeding even 1000 iterations is vanishingly small.
+         * ExpandMask (FIPS 204, Algorithm 34) encodes kappa + r as a 2-byte
+         * integer, so kappa + l must not exceed 2^16. The probability of
+         * kappa exceeding even 1000 iterations is vanishingly small, so the
+         * bound only guards against an unbounded loop on a defective SHAKE,
+         * a corrupted key or a fault-injection condition; ret stays 0 and
+         * signing fails if it is reached.
          */
-        for (kappa = 0;; kappa += l) {
+        for (kappa = 0; kappa + l <= ML_DSA_KAPPA_MAX; kappa += l) {
                 VECTOR *y_ntt = &cs1;
                 VECTOR *r0 = &w1;
                 VECTOR *ct0 = &w1;
