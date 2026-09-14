@@ -141,7 +141,12 @@ typedef enum {
 #define IMB_KASUMI_BLOCK_SIZE  8
 #define IMB_KASUMI_DIGEST_SIZE 4
 
-#define IMB_ZUC_KEY_LEN_IN_BYTES      16
+#define IMB_ZUC_KEY_LEN_IN_BYTES 16
+/*
+ * ZUC-NEA6/NIA6/NCA6 APIs expect 256-bit keys.
+ * If an application uses a 128-bit key as allowed by newer 3GPP specs,
+ * it needs to zero-extend it to 256 bits before passing it to the library.
+ */
 #define IMB_ZUC_NEA6_KEY_LEN_IN_BYTES 32
 #define IMB_ZUC_IV_LEN_IN_BYTES       16
 #define IMB_ZUC_DIGEST_LEN_IN_BYTES   4
@@ -653,6 +658,8 @@ typedef struct IMB_JOB {
                         const void *_key;
                         /**< Authentication key pointer:
                          * - NIA4 / NIA6: 32-byte (256-bit) raw key
+                         *   (zero-extend 128-bit keys to 256 bits on the
+                         *   application side before calling the library)
                          * - NIA5: AES-256 expanded encryption key schedule,
                          *         16-byte aligned
                          */
