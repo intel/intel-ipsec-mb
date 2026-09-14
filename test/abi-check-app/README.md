@@ -8,10 +8,21 @@
 
 ## Overview
 
-The ABI check application verifies that XMM6-XMM15 and the general
-purpose registers RBX, RBP, RSI, RDI, R12-R15 - all registers the
-Windows x64 calling convention declares callee-saved (besides RSP) - keep
-their value across `IMB_SUBMIT_JOB()` and `IMB_FLUSH_JOB()` calls.
+The ABI check application verifies that the registers the host x86-64
+calling convention declares callee-saved keep their value across
+`IMB_SUBMIT_JOB()` and `IMB_FLUSH_JOB()` calls.
+
+The checked register set depends on the ABI:
+
+| ABI | Checked registers |
+|---|---|
+| Windows x64 | XMM6-XMM15, RBX, RBP, RSI, RDI, R12-R15 |
+| System V AMD64 (Linux, FreeBSD) | RBX, RBP, R12-R15 |
+
+System V AMD64 has no callee-saved XMM registers at all and passes
+arguments in RSI and RDI, so only the six callee-saved GP registers are
+checked there. RSP is callee-saved on both ABIs but is not checked, since
+a stack imbalance would corrupt the probe itself.
 
 Before submitting or flushing a job, these registers are filled with
 unique per-register sentinel patterns. After the call returns, the
@@ -46,10 +57,6 @@ attempt to fix any register preservation problem it finds - use the
 [cross validation application](../xvalid-app/README.md) for result
 validation.
 
-This application is Windows-only: on Linux (System V x64 ABI), XMM6-XMM15
-are not callee-saved and the callee-saved GP register set differs, so the
-check does not apply.
-
 
 ## Usage
 
@@ -57,10 +64,12 @@ Before running the application, ensure the library is installed by following the
 in the [README](https://github.com/intel/intel-ipsec-mb/tree/main/test#library-installation).
 
 To scan all algorithms on all architectures:  
-`imb-abi-check.exe`
+`imb-abi-check`
 
 To scan all algorithms on AVX512 only:  
-`imb-abi-check.exe --arch AVX512`
+`imb-abi-check --arch AVX512`
 
 To display an extensive help page:  
-`imb-abi-check.exe --help`
+`imb-abi-check --help`
+
+On Windows the application is named `imb-abi-check.exe`.

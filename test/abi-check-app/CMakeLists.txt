@@ -9,11 +9,9 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-# imb-abi-check only makes sense on the Windows x64 ABI (XMM6-XMM15 are
-# callee-saved there, unlike on Linux/SysV where they are all scratch).
-if(NOT WINDOWS)
-  message(FATAL_ERROR "imb-abi-check is a Windows-only test application")
-endif()
+# imb-abi-check checks the callee-saved register set of the host x86-64 ABI:
+# XMM6-XMM15 plus RBX, RBP, RSI, RDI, R12-R15 on Windows x64, and RBX, RBP,
+# R12-R15 on System V AMD64 (which has no callee-saved XMM registers).
 
 # ##############################################################################
 # set app and library names
@@ -21,6 +19,7 @@ endif()
 set(ABI_CHECK_APP imb-abi-check)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+set(LIB_INCLUDE_DIR ${LIB_DIR}/include)
 
 # ##############################################################################
 # set imb-abi-check source files
@@ -45,11 +44,18 @@ set(CAN_USE_ASSEMBLER TRUE)
 # ##############################################################################
 # set C compiler and NASM options
 # ##############################################################################
-if(CMAKE_GENERATOR MATCHES "MinGW Makefiles")
-  include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows-mingw.cmake)
+if(WINDOWS)
+  if(CMAKE_GENERATOR MATCHES "MinGW Makefiles")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows-mingw.cmake)
+  else()
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows.cmake)
+  endif()
 else()
-  include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
 endif()
+
+# abi_probe.asm pulls in cet.inc from the library include directory
+string(APPEND CMAKE_ASM_NASM_FLAGS " -I${LIB_INCLUDE_DIR}/")
 
 # ##############################################################################
 # add targets

@@ -5,14 +5,18 @@
 **********************************************************************/
 
 /**
- * @brief Windows x64 ABI check application
+ * @brief x86-64 ABI check application
  *
  * Scans all algorithms accessible through the job API (cipher-only,
- * hash-only and combined AEAD algorithms) and checks that XMM6-XMM15 and
- * the callee-saved general purpose registers (RBX, RBP, RSI, RDI,
- * R12-R15), which the Windows x64 calling convention declares
- * callee-saved, keep their value across IMB_SUBMIT_JOB() and
- * IMB_FLUSH_JOB() calls.
+ * hash-only and combined AEAD algorithms) and checks that the registers
+ * the host calling convention declares callee-saved keep their value
+ * across IMB_SUBMIT_JOB() and IMB_FLUSH_JOB() calls.
+ *
+ * On Windows x64 that is XMM6-XMM15 plus the callee-saved general purpose
+ * registers (RBX, RBP, RSI, RDI, R12-R15). On System V AMD64 (Linux,
+ * FreeBSD) no XMM register is callee-saved, so only RBX, RBP and R12-R15
+ * are checked there. The optional --check-vzeroupper pass is available on
+ * both platforms.
  *
  * The application does not verify any cryptographic results.
  * Use the imb-xvalid application for cross architecture result validation.
@@ -116,6 +120,7 @@ mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
         static const char *gp_names[ABI_PROBE_NUM_GP] = ABI_PROBE_GP_NAMES;
 
         buf[0] = '\0';
+#if ABI_PROBE_NUM_XMM > 0
         for (unsigned i = 0; i < ABI_PROBE_NUM_XMM; i++) {
                 if (mask & (1u << ABI_PROBE_XMM_BIT(i))) {
                         char tmp[16];
@@ -125,6 +130,7 @@ mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
                         strncat(buf, tmp, buf_size - strlen(buf) - 1);
                 }
         }
+#endif
         for (unsigned i = 0; i < ABI_PROBE_NUM_GP; i++) {
                 if (mask & (1u << ABI_PROBE_GP_BIT(i))) {
                         char tmp[16];
@@ -186,8 +192,9 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
 /**
  * @brief Probe one algorithm for callee-saved register corruption.
  *
- * Submits jobs for the given algorithm one at a time, checking XMM6-XMM15
- * preservation after every IMB_SUBMIT_JOB() call, until a job completes.
+ * Submits jobs for the given algorithm one at a time, checking callee-saved
+ * register preservation after every IMB_SUBMIT_JOB() call, until a job
+ * completes.
  *
  * - If the very first submit completes the job, the algorithm is processed
  *   synchronously (single-buffer / non-OOO code path) and no flush is
@@ -209,6 +216,8 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
  * @param [in] params         cipher and hash parameters of the algorithm
  * @param [in] algo_name      algorithm name used in the failure report
  * @param [in,out] pd         scratch job and buffer data used for probing
+ * @param [in] check_vzu      non-zero to also run the missing VZEROUPPER
+ *                            check (see xmm_abi_probe())
  *
  * @return Probe status
  * @retval 0  algorithm probed (or skipped as unsupported)
@@ -218,7 +227,7 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
  */
 static int
 probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
-           const char *algo_name, struct probe_data *pd)
+           const char *algo_name, struct probe_data *pd, const int check_vzu)
 {
         uint8_t aad[MAX_AAD_SIZE];
         uint8_t cipher_iv[MAX_IV_SIZE];
@@ -234,12 +243,6 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         unsigned num_tags;
         uint8_t tag_size;
         unsigned n_jobs, n_completed, flush_tries;
-        /* only architectures that execute AVX+ code paths can leave a
-         * missing VZEROUPPER trace in the upper YMM6-YMM15 halves; SSE
-         * never touches them, so checking there would just report the
-         * probe's own untouched seed pattern as "dirty"
-         */
-        const int check_vzu = check_vzeroupper_opt && (arch != IMB_ARCH_SSE);
 
         if (!is_valid_combination(params->cipher_mode, params->hash_alg))
                 return 0;
@@ -430,13 +433,26 @@ run_arch(const IMB_ARCH arch)
         printf("Testing ");
         print_tested_arch(features, arch);
 
+        /*
+         * The VZEROUPPER check executes AVX instructions in the probe itself
+         * and only makes sense for architectures that run AVX+ code paths:
+         * SSE never dirties the upper YMM6-YMM15 halves, so checking there
+         * would just report the probe's own untouched seed pattern as
+         * "dirty". Requiring AVX to be reported by the manager as well keeps
+         * the probe from executing an unsupported instruction, independently
+         * of the architecture filtering done in main().
+         */
+        const int check_vzu = check_vzeroupper_opt && (arch != IMB_ARCH_SSE) &&
+                              ((features & IMB_FEATURE_AVX) != 0);
+
         /* cipher algorithms, paired with NULL-HASH */
         for (size_t i = 0; i < num_cipher_algo_str_map; i++) {
                 memset(&params, 0, sizeof(params));
                 params.cipher_mode = cipher_algo_str_map[i].values.job_params.cipher_mode;
                 params.key_size = cipher_algo_str_map[i].values.job_params.key_size;
                 params.hash_alg = IMB_AUTH_NULL;
-                if (probe_algo(mb_mgr, arch, &params, cipher_algo_str_map[i].name, pd) < 0) {
+                if (probe_algo(mb_mgr, arch, &params, cipher_algo_str_map[i].name, pd, check_vzu) <
+                    0) {
                         num_drain_errors++;
                         init_arch_mgr(mb_mgr, arch);
                 }
@@ -447,7 +463,8 @@ run_arch(const IMB_ARCH arch)
                 memset(&params, 0, sizeof(params));
                 params.cipher_mode = IMB_CIPHER_NULL;
                 params.hash_alg = hash_algo_str_map[i].values.job_params.hash_alg;
-                if (probe_algo(mb_mgr, arch, &params, hash_algo_str_map[i].name, pd) < 0) {
+                if (probe_algo(mb_mgr, arch, &params, hash_algo_str_map[i].name, pd, check_vzu) <
+                    0) {
                         num_drain_errors++;
                         init_arch_mgr(mb_mgr, arch);
                 }
@@ -459,7 +476,8 @@ run_arch(const IMB_ARCH arch)
                 params.cipher_mode = aead_algo_str_map[i].values.job_params.cipher_mode;
                 params.hash_alg = aead_algo_str_map[i].values.job_params.hash_alg;
                 params.key_size = aead_algo_str_map[i].values.job_params.key_size;
-                if (probe_algo(mb_mgr, arch, &params, aead_algo_str_map[i].name, pd) < 0) {
+                if (probe_algo(mb_mgr, arch, &params, aead_algo_str_map[i].name, pd, check_vzu) <
+                    0) {
                         num_drain_errors++;
                         init_arch_mgr(mb_mgr, arch);
                 }
@@ -470,6 +488,25 @@ run_arch(const IMB_ARCH arch)
 }
 
 /**
+ * @brief Print the set of callee-saved registers checked on the host ABI.
+ */
+static void
+print_checked_regs(void)
+{
+        const uint32_t all_regs = (1u << (ABI_PROBE_NUM_XMM + ABI_PROBE_NUM_GP)) - 1;
+        char reg_str[256];
+
+        mask_to_str(all_regs, reg_str, sizeof(reg_str));
+        printf("Checking %s ABI callee-saved registers: %s\n",
+#ifdef _WIN32
+               "Windows x64",
+#else
+               "System V AMD64",
+#endif
+               reg_str);
+}
+
+/**
  * @brief Print the summary of all detected register corruptions.
  */
 static void
@@ -477,7 +514,7 @@ print_report(void)
 {
         printf("\n");
         if (num_failures == 0 && num_drain_errors == 0) {
-                printf("PASS: no XMM6-XMM15 or callee-saved GP register corruption detected "
+                printf("PASS: no callee-saved register corruption detected "
                        "across IMB_SUBMIT_JOB()/IMB_FLUSH_JOB()\n");
                 return;
         }
@@ -581,6 +618,8 @@ main(int argc, char *argv[])
 
         if (detect_arch(arch_support, flags) < 0)
                 return EXIT_FAILURE;
+
+        print_checked_regs();
 
         for (unsigned int arch_id = IMB_ARCH_SSE; arch_id < IMB_ARCH_NUM; arch_id++) {
                 if (arch_support[arch_id] == 0) {
