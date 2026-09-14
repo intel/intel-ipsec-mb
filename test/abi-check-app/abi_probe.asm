@@ -43,7 +43,8 @@ gp_sentinel_tab:
 
 section .text
 
-;; uint32_t xmm_abi_probe(void *func_ptr, void *arg1, void **ret_out)
+;; uint32_t xmm_abi_probe(void *func_ptr, void *arg1, void **ret_out,
+;;                        int check_vzeroupper)
 ;;
 ;; Fills XMM6-XMM15 and the callee-saved general purpose registers
 ;; (rbx, rbp, rsi, rdi, r12-r15) with sentinel patterns, calls
@@ -65,9 +66,22 @@ section .text
 ;; leaving every sentinel-holding register untouched by the call setup
 ;; itself.
 ;;
+;; When check_vzeroupper is non-zero, the upper 128 bits of YMM6-YMM15 are
+;; also seeded with a non-zero pattern before the call. If any of them are
+;; still non-zero afterwards, bit ABI_PROBE_VZEROUPPER_BIT is set: this is
+;; a best-effort signal that func_ptr() executed AVX code without a
+;; trailing VZEROUPPER (a performance-cliff bug for callers running legacy
+;; SSE code afterwards), NOT a violation of the callee-saved register ABI
+;; the other bits check (the upper YMM/ZMM halves are not defined as
+;; callee-saved). Callers should only pass a non-zero check_vzeroupper for
+;; architectures that are expected to execute AVX+ code paths (e.g. not
+;; for the SSE architecture), since on an SSE-only path the seeded upper
+;; halves are never touched and would otherwise be reported as "dirty".
+;;
 ;; arg1 (rcx) [in] func_ptr
 ;; arg2 (rdx) [in] arg1 for func_ptr
 ;; arg3 (r8)  [in] ret_out
+;; arg4 (r9)  [in] check_vzeroupper
 MKGLOBAL(xmm_abi_probe,function,)
 align 16
 xmm_abi_probe:
@@ -79,27 +93,29 @@ xmm_abi_probe:
         push    r13
         push    r14
         push    r15
-        ;; 32 bytes shadow space + 24 bytes of locals (func_ptr, func_arg,
-        ;; ret_out) + 160 bytes to save the caller's original xmm6-xmm15,
-        ;; stack stays 16-byte aligned right before the call below
-        sub     rsp, 216
+        ;; 32 bytes shadow space + 32 bytes of locals (func_ptr, func_arg,
+        ;; ret_out, check_vzeroupper) + 160 bytes to save the caller's
+        ;; original xmm6-xmm15 + 8 bytes padding to keep the stack 16-byte
+        ;; aligned right before the call below
+        sub     rsp, 232
 
         mov     [rsp + 32], rcx  ;; func_ptr
         mov     [rsp + 40], rdx  ;; arg1 for func_ptr
         mov     [rsp + 48], r8   ;; ret_out
+        mov     [rsp + 56], r9   ;; check_vzeroupper
 
         ;; save the caller's original xmm6-xmm15 before they are clobbered
         ;; with sentinel values, so they can be restored before returning
-        movdqu  [rsp + 56 + 0*16], xmm6
-        movdqu  [rsp + 56 + 1*16], xmm7
-        movdqu  [rsp + 56 + 2*16], xmm8
-        movdqu  [rsp + 56 + 3*16], xmm9
-        movdqu  [rsp + 56 + 4*16], xmm10
-        movdqu  [rsp + 56 + 5*16], xmm11
-        movdqu  [rsp + 56 + 6*16], xmm12
-        movdqu  [rsp + 56 + 7*16], xmm13
-        movdqu  [rsp + 56 + 8*16], xmm14
-        movdqu  [rsp + 56 + 9*16], xmm15
+        movdqu  [rsp + 64 + 0*16], xmm6
+        movdqu  [rsp + 64 + 1*16], xmm7
+        movdqu  [rsp + 64 + 2*16], xmm8
+        movdqu  [rsp + 64 + 3*16], xmm9
+        movdqu  [rsp + 64 + 4*16], xmm10
+        movdqu  [rsp + 64 + 5*16], xmm11
+        movdqu  [rsp + 64 + 6*16], xmm12
+        movdqu  [rsp + 64 + 7*16], xmm13
+        movdqu  [rsp + 64 + 8*16], xmm14
+        movdqu  [rsp + 64 + 9*16], xmm15
 
         lea     rax, [rel sentinel_tab]
         movdqu  xmm6, [rax + 0*16]
@@ -112,6 +128,18 @@ xmm_abi_probe:
         movdqu  xmm13, [rax + 7*16]
         movdqu  xmm14, [rax + 8*16]
         movdqu  xmm15, [rax + 9*16]
+
+        test    r9, r9
+        jz      .no_vzu_seed
+        ;; duplicate the low 128-bit sentinel into the upper 128 bits of
+        ;; each ymm6-ymm15, giving a known non-zero pattern to test for
+        ;; being left dirty (i.e. no VZEROUPPER) by func_ptr()
+%assign i 6
+%rep 10
+        vinsertf128 ymm %+ i, ymm %+ i, xmm %+ i, 1
+%assign i (i+1)
+%endrep
+.no_vzu_seed:
 
         lea     rax, [rel gp_sentinel_tab]
         mov     rbx, [rax + 0*8]
@@ -192,21 +220,42 @@ xmm_abi_probe:
         or      r9d, (1 << bit)
 .gpok %+ bit:
 
+        ;; check whether func_ptr() left any of the seeded upper 128-bit
+        ;; halves of ymm6-ymm15 dirty (non-zero); only meaningful if the
+        ;; caller requested it (check_vzeroupper != 0, saved at [rsp+56])
+        mov     r10, [rsp + 56]
+        test    r10, r10
+        jz      .no_vzu_check
+        pxor    xmm1, xmm1
+%assign i 6
+%rep 10
+        vextractf128 xmm0, ymm %+ i, 1
+        por     xmm1, xmm0
+%assign i (i+1)
+%endrep
+        ptest   xmm1, xmm1
+        jz      .vzu_clean
+        or      r9d, (1 << 18)  ;; ABI_PROBE_VZEROUPPER_BIT
+.vzu_clean:
+        ;; leave our own AVX state clean before returning to the caller
+        vzeroupper
+.no_vzu_check:
+
         mov     eax, r9d        ;; save the corruption mask before restoring xmm6-15
 
         ;; restore the caller's original xmm6-xmm15
-        movdqu  xmm6,  [rsp + 56 + 0*16]
-        movdqu  xmm7,  [rsp + 56 + 1*16]
-        movdqu  xmm8,  [rsp + 56 + 2*16]
-        movdqu  xmm9,  [rsp + 56 + 3*16]
-        movdqu  xmm10, [rsp + 56 + 4*16]
-        movdqu  xmm11, [rsp + 56 + 5*16]
-        movdqu  xmm12, [rsp + 56 + 6*16]
-        movdqu  xmm13, [rsp + 56 + 7*16]
-        movdqu  xmm14, [rsp + 56 + 8*16]
-        movdqu  xmm15, [rsp + 56 + 9*16]
+        movdqu  xmm6,  [rsp + 64 + 0*16]
+        movdqu  xmm7,  [rsp + 64 + 1*16]
+        movdqu  xmm8,  [rsp + 64 + 2*16]
+        movdqu  xmm9,  [rsp + 64 + 3*16]
+        movdqu  xmm10, [rsp + 64 + 4*16]
+        movdqu  xmm11, [rsp + 64 + 5*16]
+        movdqu  xmm12, [rsp + 64 + 6*16]
+        movdqu  xmm13, [rsp + 64 + 7*16]
+        movdqu  xmm14, [rsp + 64 + 8*16]
+        movdqu  xmm15, [rsp + 64 + 9*16]
 
-        add     rsp, 216
+        add     rsp, 232
         pop     r15
         pop     r14
         pop     r13

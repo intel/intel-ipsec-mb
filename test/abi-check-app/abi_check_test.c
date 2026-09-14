@@ -66,6 +66,17 @@ struct probe_data {
 static uint8_t archs[IMB_ARCH_NUM] = { 0, 1, 1, 1, 1 };
 static uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 static int verbose = 0;
+/*
+ * Best-effort check for a missing VZEROUPPER on the AVX2/AVX512/AVX10 code
+ * paths (see xmm_abi_probe()'s check_vzeroupper parameter). Off by default:
+ * it cannot distinguish "never touched AVX/YMM state" from "used it and
+ * forgot to clean up", so it produces false positives for any algorithm
+ * that doesn't happen to execute an AVX-encoded instruction on the probed
+ * call, which is common (e.g. NULL-CIPHER, or a submit call that just
+ * buffers the job without doing any vector work yet). Enable with
+ * --check-vzeroupper and manually review the reported hits.
+ */
+static int check_vzeroupper_opt = 0;
 
 struct failure {
         char algo[40];
@@ -109,6 +120,12 @@ mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
                                  gp_names[i]);
                         strncat(buf, tmp, buf_size - strlen(buf) - 1);
                 }
+        }
+        if (mask & (1u << ABI_PROBE_VZEROUPPER_BIT)) {
+                char tmp[16];
+
+                snprintf(tmp, sizeof(tmp), "%svzeroupper", (buf[0] != '\0') ? "," : "");
+                strncat(buf, tmp, buf_size - strlen(buf) - 1);
         }
 }
 
@@ -189,6 +206,12 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         unsigned num_tags;
         uint8_t tag_size;
         unsigned n_jobs, n_completed, flush_tries;
+        /* only architectures that execute AVX+ code paths can leave a
+         * missing VZEROUPPER trace in the upper YMM6-YMM15 halves; SSE
+         * never touches them, so checking there would just report the
+         * probe's own untouched seed pattern as "dirty"
+         */
+        const int check_vzu = check_vzeroupper_opt && (arch != IMB_ARCH_SSE);
 
         if (!is_valid_combination(params->cipher_mode, params->hash_alg))
                 return 0;
@@ -279,7 +302,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
          * checked and reported separately from later drain flushes
          */
         ret_ptr = NULL;
-        mask = xmm_abi_probe((void *) (uintptr_t) imb_flush_job, mb_mgr, &ret_ptr);
+        mask = xmm_abi_probe((void *) (uintptr_t) imb_flush_job, mb_mgr, &ret_ptr, check_vzu);
         if (mask != 0)
                 record_failure(algo_name, arch, "FLUSH", mask);
         if (ret_ptr != NULL)
@@ -452,6 +475,9 @@ usage(const char *app_name)
                 "Usage: %s [args], where args are zero or more\n"
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n"
+                "--check-vzeroupper: also do a best-effort check for a missing "
+                "VZEROUPPER on AVX2/AVX512/AVX10 (may report false positives "
+                "for algorithms/stages that don't touch AVX state), default: off\n"
                 "--arch: architecture to test (SSE/AVX2/AVX512/AVX10), "
                 "default: test all architectures\n"
                 "--no-avx10: don't do AVX10\n"
@@ -478,6 +504,8 @@ main(int argc, char *argv[])
                         return EXIT_SUCCESS;
                 } else if (strcmp(argv[i], "-v") == 0) {
                         verbose = 1;
+                } else if (strcmp(argv[i], "--check-vzeroupper") == 0) {
+                        check_vzeroupper_opt = 1;
                 } else if (update_flags_and_archs(argv[i], archs, &flags)) {
                         /* architecture and feature flags updated */
                 } else if (strcmp(argv[i], "--arch") == 0) {
