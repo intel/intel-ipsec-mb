@@ -10,13 +10,9 @@
  * Scans all algorithms accessible through the job API (cipher-only,
  * hash-only and combined AEAD algorithms) and checks that the registers
  * the host calling convention declares callee-saved keep their value
- * across IMB_SUBMIT_JOB() and IMB_FLUSH_JOB() calls.
- *
- * On Windows x64 that is XMM6-XMM15 plus the callee-saved general purpose
- * registers (RBX, RBP, RSI, RDI, R12-R15). On System V AMD64 (Linux,
- * FreeBSD) no XMM register is callee-saved, so only RBX, RBP and R12-R15
- * are checked there. The optional --check-vzeroupper pass is available on
- * both platforms.
+ * across IMB_SUBMIT_JOB() and IMB_FLUSH_JOB() calls: XMM6-XMM15 plus RBX,
+ * RBP, RSI, RDI, R12-R15 on Windows x64, and RBX, RBP, R12-R15 on
+ * System V AMD64.
  *
  * The application does not verify any cryptographic results.
  * Use the imb-xvalid application for cross architecture result validation.
@@ -41,8 +37,8 @@
 #define JOB_BUF_SIZE 256 /**< size of the message buffer used for every probed job */
 
 /**
- * IV buffer must be large enough for the widest iv_len_in_bytes fill_job()
- * sets (e.g. 25 bytes for ZUC-EEA3-256), not just the common 16-byte case
+ * IV buffer sized for the widest iv_len_in_bytes fill_job() sets
+ * (e.g. 25 bytes for ZUC-EEA3-256), not just the common 16-byte case
  */
 #define MAX_IV_SIZE 32
 
@@ -55,10 +51,9 @@
 /**
  * Per-algorithm scratch data for up to TEST_MAX_NUM_JOBS jobs.
  *
- * TEST_MAX_NUM_JOBS (see utils.h) is one more than the widest multi-buffer
- * OOO manager lane count in the library, so submitting that many jobs is
- * guaranteed to fill and complete at least one lane through IMB_SUBMIT_JOB()
- * alone, without ever needing IMB_FLUSH_JOB() to force a job through.
+ * TEST_MAX_NUM_JOBS (see utils.h) is one more than the widest OOO manager
+ * lane count, so submitting that many jobs completes at least one lane
+ * through IMB_SUBMIT_JOB() alone, without needing IMB_FLUSH_JOB().
  */
 struct probe_data {
         DECLARE_ALIGNED(uint8_t test_buf[TEST_MAX_NUM_JOBS][JOB_BUF_SIZE], 16);
@@ -75,14 +70,11 @@ static uint64_t flags = 0; /**< flags passed to alloc_mb_mgr() */
 static int verbose = 0;    /**< non-zero to print extra information */
 
 /**
- * Best-effort check for a missing VZEROUPPER on the AVX2/AVX512/AVX10 code
- * paths (see xmm_abi_probe()'s check_vzeroupper parameter). Off by default:
- * it cannot distinguish "never touched AVX/YMM state" from "used it and
- * forgot to clean up", so it produces false positives for any algorithm
- * that doesn't happen to execute an AVX-encoded instruction on the probed
- * call, which is common (e.g. NULL-CIPHER, or a submit call that just
- * buffers the job without doing any vector work yet). Enable with
- * --check-vzeroupper and manually review the reported hits.
+ * Best-effort check for a missing VZEROUPPER (see xmm_abi_probe()). Off by
+ * default: it cannot tell "never touched AVX/YMM state" from "used it and
+ * forgot to clean up", so it reports false positives for any probed call
+ * that runs no AVX-encoded instruction (e.g. NULL-CIPHER, or a submit that
+ * only buffers the job). Hits need manual review.
  */
 static int check_vzeroupper_opt = 0;
 
@@ -100,9 +92,8 @@ static unsigned num_failures = 0;
 static unsigned num_skipped_failures = 0;
 
 /**
- * number of times an algorithm failed to fully drain its outstanding jobs;
- * treated as a hard error since it can misattribute later corruption
- * reports to the wrong algorithm
+ * number of algorithms that failed to fully drain their outstanding jobs;
+ * a hard error, as it can misattribute later corruption to another algorithm
  */
 static unsigned num_drain_errors = 0;
 
@@ -151,11 +142,9 @@ mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
 /**
  * @brief Record a corrupted-register detection.
  *
- * The detection is merged into an existing entry for the same
- * algorithm/architecture/stage (OR-ing the register mask and incrementing
- * the occurrence count) instead of adding a duplicate row, so that e.g.
- * many identical SUBMIT detections while an OOO manager's lanes fill up
- * are reported as a single line.
+ * Merged into an existing entry for the same algorithm/architecture/stage
+ * (OR-ing the mask, incrementing the count) rather than duplicating rows,
+ * so repeated SUBMIT detections report as a single line.
  *
  * @param [in] algo   algorithm name
  * @param [in] arch   architecture the algorithm was probed on
@@ -192,24 +181,18 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
 /**
  * @brief Probe one algorithm for callee-saved register corruption.
  *
- * Submits jobs for the given algorithm one at a time, checking callee-saved
- * register preservation after every IMB_SUBMIT_JOB() call, until a job
- * completes.
+ * Submits jobs one at a time, checking register preservation after every
+ * IMB_SUBMIT_JOB(), until a job completes:
  *
- * - If the very first submit completes the job, the algorithm is processed
- *   synchronously (single-buffer / non-OOO code path) and no flush is
- *   needed at all.
- * - If it takes more than one submit to complete a job, the algorithm
- *   batches jobs in an out-of-order manager. In that case a single,
- *   separately-checked IMB_FLUSH_JOB() call is made to force the first
- *   completion (this isolates the OOO manager's "flush" entry point from
- *   its "submit" entry point). Any further jobs still outstanding after
- *   that are drained with plain, unchecked IMB_FLUSH_JOB() calls, since
- *   they exercise the same flush code path that has already been checked.
+ * - completing on the first submit means a synchronous (non-OOO) code path
+ *   and no flush is needed.
+ * - otherwise the algorithm batches jobs in an OOO manager, and one
+ *   separately-checked IMB_FLUSH_JOB() forces the first completion. Jobs
+ *   still outstanding after that are drained unchecked, as they run the
+ *   same flush code path.
  *
- * This lets a failure be attributed to one of two places: the submit path
- * (buffering and/or in-line processing) or the flush entry point that
- * forces a partially filled batch through.
+ * A failure is therefore attributed either to the submit path or to the
+ * flush entry point.
  *
  * @param [in,out] mb_mgr     multi-buffer manager to submit the jobs to
  * @param [in] arch           architecture \a mb_mgr is initialized for
@@ -270,9 +253,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         num_tags = get_tag_sizes(params, tag_sizes);
         tag_size = (num_tags != 0) ? tag_sizes[0] : 0;
 
-        /* build TEST_MAX_NUM_JOBS distinct jobs up-front, enough to fill and
-         * complete the widest OOO manager lane through submit alone
-         */
+        /* build the jobs up-front, enough to fill the widest OOO manager lane */
         for (n_jobs = 0; n_jobs < TEST_MAX_NUM_JOBS; n_jobs++) {
                 struct job_ctx *ctx = &pd->ctx[n_jobs];
 
@@ -295,9 +276,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                 printf("\n");
         }
 
-        /* submit jobs one at a time, checking registers after every submit,
-         * until a job completes or TEST_MAX_NUM_JOBS is reached
-         */
+        /* submit one at a time, checking registers after every submit */
         n_jobs = 0;
         while (n_jobs < TEST_MAX_NUM_JOBS) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -317,9 +296,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         n_completed = (ret_ptr != NULL) ? 1 : 0;
 
         if (n_jobs == 1 && n_completed == 1) {
-                /* single-buffer algorithm: processed synchronously inside
-                 * IMB_SUBMIT_JOB(), no flush required
-                 */
+                /* processed synchronously inside IMB_SUBMIT_JOB(), no flush needed */
                 return 0;
         }
 
@@ -329,9 +306,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                 return -1;
         }
 
-        /* transition flush: forces the OOO manager's flush entry point,
-         * checked and reported separately from later drain flushes
-         */
+        /* forces the OOO manager's flush entry point, reported separately */
         ret_ptr = NULL;
         mask = xmm_abi_probe((void *) (uintptr_t) imb_flush_job, mb_mgr, &ret_ptr, check_vzu);
         if (mask != 0)
@@ -339,10 +314,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         if (ret_ptr != NULL)
                 n_completed++;
 
-        /* drain any remaining outstanding jobs without further register
-         * checks: the flush entry point has already been exercised and
-         * checked above, further drain calls run the same code path
-         */
+        /* drain the rest unchecked: same flush code path as above */
         flush_tries = 0;
         while (n_completed < n_jobs && flush_tries < MAX_FLUSH_TRIES) {
                 IMB_JOB *drained = IMB_FLUSH_JOB(mb_mgr);
@@ -434,13 +406,10 @@ run_arch(const IMB_ARCH arch)
         print_tested_arch(features, arch);
 
         /*
-         * The VZEROUPPER check executes AVX instructions in the probe itself
-         * and only makes sense for architectures that run AVX+ code paths:
-         * SSE never dirties the upper YMM6-YMM15 halves, so checking there
-         * would just report the probe's own untouched seed pattern as
-         * "dirty". Requiring AVX to be reported by the manager as well keeps
-         * the probe from executing an unsupported instruction, independently
-         * of the architecture filtering done in main().
+         * SSE never dirties the upper YMM halves, so it would only report the
+         * probe's own seed. Requiring AVX from the manager also keeps the
+         * probe from running an unsupported instruction, independently of the
+         * architecture filtering done in main().
          */
         const int check_vzu = check_vzeroupper_opt && (arch != IMB_ARCH_SSE) &&
                               ((features & IMB_FEATURE_AVX) != 0);

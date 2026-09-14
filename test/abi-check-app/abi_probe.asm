@@ -10,12 +10,11 @@
 %include "cet.inc"
 
 %ifdef WIN_ABI
-;; Windows x64 declares XMM6-XMM15 and RBX, RBP, RSI, RDI, R12-R15
-;; callee-saved
+;; callee-saved: XMM6-XMM15 and RBX, RBP, RSI, RDI, R12-R15
 %define ABI_NUM_XMM     10
 %define ABI_NUM_GP      8
 
-;; Windows x64 requires 32 bytes of shadow space below the outgoing arguments
+;; 32 bytes of shadow space required below the outgoing arguments
 %define SHADOW_SPACE    32
 
 ;;; ABI function arguments
@@ -24,13 +23,9 @@
 %define arg3            r8
 %define arg4            r9
 %else
-;; System V AMD64 has no callee-saved XMM registers at all and declares
-;; only RBX, RBP and R12-R15 callee-saved (RSI and RDI are argument
-;; registers there, unlike on Windows x64)
+;; callee-saved: RBX, RBP, R12-R15 only; no XMM register and no shadow space
 %define ABI_NUM_XMM     0
 %define ABI_NUM_GP      6
-
-;; System V AMD64 has no shadow space
 %define SHADOW_SPACE    0
 
 ;;; ABI function arguments
@@ -40,7 +35,7 @@
 %define arg4            rcx
 %endif
 
-;; bit reporting a dirty upper YMM state, past the XMM and GP register bits
+;; dirty upper YMM state bit, past the XMM and GP register bits
 %define ABI_VZU_BIT     (ABI_NUM_XMM + ABI_NUM_GP)
 
 ;; stack frame layout, relative to RSP after the frame has been allocated
@@ -50,17 +45,15 @@
 %define LOC_VZU         (SHADOW_SPACE + 24)
 %define LOC_XMM         (SHADOW_SPACE + 32)
 
-;; shadow space (if any) + 32 bytes of locals (func_ptr, func_arg, ret_out,
-;; check_vzeroupper) + room to save the caller's callee-saved XMM registers
-;; (if any) + 8 bytes of padding to keep the stack 16-byte aligned right
-;; before the call below (an even number of pushes precedes it)
+;; shadow space + locals + saved caller XMM + 8 bytes of padding to keep
+;; the stack 16-byte aligned at the call (an even number of pushes precedes it)
 %define FRAME_SIZE      (LOC_XMM + (ABI_NUM_XMM * 16) + 8)
 
 mksection .rodata
 default rel
 
 %if ABI_NUM_XMM > 0
-;; Unique 128-bit sentinel pattern per XMM register, index 0 => XMM6, index 9 => XMM15
+;; unique sentinel per XMM register, index 0 => XMM6
 align 16
 sentinel_tab:
 %assign i 6
@@ -70,8 +63,7 @@ sentinel_tab:
 %endrep
 %endif
 
-;; Unique 64-bit sentinel pattern per checked GP register, in the order the
-;; registers are loaded below (matches ABI_PROBE_GP_BIT()/ABI_PROBE_GP_NAMES)
+;; unique sentinel per checked GP register, in ABI_PROBE_GP_NAMES order
 align 8
 gp_sentinel_tab:
 %assign i 0
@@ -80,9 +72,8 @@ gp_sentinel_tab:
 %assign i (i+1)
 %endrep
 
-;; Non-zero pattern written into the upper 128 bits of YMM6-YMM15 to detect
-;; a missing VZEROUPPER; inserted with VINSERTF128 so that the lower halves
-;; (which hold the XMM sentinels on Windows x64) are left untouched
+;; non-zero pattern for the upper 128 bits of YMM6-YMM15; inserted with
+;; VINSERTF128 so the lower halves (XMM sentinels on Windows) are untouched
 align 16
 vzu_seed_pattern:
         dq 0x3c3c3c3cf00dcafe, 0xc3c3c3c3cafef00d
@@ -115,38 +106,25 @@ mksection .text
 ;; not NULL) and returns a bitmask of the registers that did not keep their
 ;; sentinel value across the call.
 ;;
-;; On Windows x64 the checked set is XMM6-XMM15 (bit 0 => XMM6, ... bit 9 =>
-;; XMM15) followed by rbx, rbp, rsi, rdi, r12-r15 (bits 10-17). On System V
-;; AMD64 no XMM register is callee-saved, so the checked set is only rbx,
-;; rbp, r12-r15 (bits 0-5). See ABI_PROBE_XMM_BIT()/ABI_PROBE_GP_BIT().
+;; Checked set: XMM6-XMM15 (bits 0-9) then rbx, rbp, rsi, rdi, r12-r15
+;; (bits 10-17) on Windows x64; rbx, rbp, r12-r15 (bits 0-5) on System V
+;; AMD64. See ABI_PROBE_XMM_BIT()/ABI_PROBE_GP_BIT().
 ;;
-;; On Windows x64 the original caller-side values of XMM6-XMM15 are saved
-;; before the sentinels are loaded and restored before returning, so this
-;; probe itself behaves as a proper callee and does not corrupt the caller's
-;; (compiler-managed) XMM state - it only observes what func_ptr() does to
-;; the sentinel values in between. On System V AMD64 those registers are
-;; call-clobbered, so no save/restore is needed.
+;; On Windows x64 the caller's XMM6-XMM15 are saved and restored around the
+;; sentinels, so the probe behaves as a proper callee. On System V AMD64
+;; they are call-clobbered, so no save/restore is needed.
 ;;
-;; The callee-saved GP registers are filled with sentinels for the whole
-;; duration of the call, so func_ptr and its argument are kept in stack
-;; slots and func_ptr is invoked with an indirect memory-operand call,
-;; leaving every sentinel-holding register untouched by the call setup
-;; itself.
+;; The GP sentinels are live across the call, so func_ptr and its argument
+;; are kept in stack slots and called through an indirect memory operand.
 ;;
 ;; When check_vzeroupper is non-zero, the upper 128 bits of YMM6-YMM15 are
-;; also seeded with a non-zero pattern before the call. If any of them are
-;; still non-zero afterwards, bit ABI_VZU_BIT is set: this is a best-effort
-;; signal that func_ptr() executed AVX code without a trailing VZEROUPPER
-;; (a performance-cliff bug for callers running legacy SSE code
-;; afterwards), NOT a violation of the callee-saved register ABI the other
-;; bits check (the upper YMM/ZMM halves are not defined as callee-saved on
-;; either ABI). Callers should only pass a non-zero check_vzeroupper for
-;; architectures that are expected to execute AVX+ code paths (e.g. not for
-;; the SSE architecture), since on an SSE-only path the seeded upper halves
-;; are never touched and would otherwise be reported as "dirty". This is
-;; also what keeps the AVX and SSE4.1 instructions below - the only ones in
-;; this file that are not baseline x86-64 - from ever executing on a CPU
-;; that does not support them.
+;; seeded before the call and bit ABI_VZU_BIT is set if any are still dirty
+;; afterwards. That signals AVX code without a trailing VZEROUPPER (a
+;; performance cliff for legacy SSE callers), not an ABI violation, as the
+;; upper YMM/ZMM halves are not callee-saved on either ABI. Only pass a
+;; non-zero value for architectures running AVX+ code: an SSE-only path
+;; never touches the seed and would be reported as dirty. It also gates the
+;; only non-baseline (AVX and SSE4.1) instructions in this file.
 ;;
 ;; arg1 [in] func_ptr
 ;; arg2 [in] arg1 for func_ptr
@@ -175,8 +153,7 @@ xmm_abi_probe:
         mov     [rsp + LOC_VZU], arg4
 
 %if ABI_NUM_XMM > 0
-        ;; save the caller's original xmm6-xmm15 before they are clobbered
-        ;; with sentinel values, so they can be restored before returning
+        ;; save the caller's xmm6-xmm15 before loading the sentinels
 %assign i 6
 %assign slot 0
 %rep ABI_NUM_XMM
@@ -198,9 +175,7 @@ xmm_abi_probe:
         mov     rax, [rsp + LOC_VZU]
         test    rax, rax
         jz      .no_vzu_seed
-        ;; write a known non-zero pattern into the upper 128 bits of each
-        ;; ymm6-ymm15 to test for being left dirty (i.e. no VZEROUPPER) by
-        ;; func_ptr(); the lower halves keep whatever they hold already
+        ;; seed the upper halves of ymm6-ymm15, low halves left as they are
         lea     rax, [rel vzu_seed_pattern]
 %assign i 6
 %rep 10
@@ -226,11 +201,11 @@ xmm_abi_probe:
         mov     r15, [rax + 5*8]
 %endif
 
-        mov     arg1, [rsp + LOC_ARG]  ;; arg1 for func_ptr
+        mov     arg1, [rsp + LOC_ARG]
 
         call    qword [rsp + LOC_FUNC]
 
-        mov     r10, [rsp + LOC_RETOUT]  ;; volatile, safe to use post-call
+        mov     r10, [rsp + LOC_RETOUT]  ;; volatile, safe post-call
         test    r10, r10
         jz      .no_ret_out
         mov     [r10], rax
@@ -272,9 +247,7 @@ xmm_abi_probe:
         CHECK_GP_REG r15, 5, rax, r9d
 %endif
 
-        ;; check whether func_ptr() left any of the seeded upper 128-bit
-        ;; halves of ymm6-ymm15 dirty (non-zero); only meaningful if the
-        ;; caller requested it (check_vzeroupper != 0)
+        ;; report the seeded upper ymm6-ymm15 halves if left dirty
         mov     r10, [rsp + LOC_VZU]
         test    r10, r10
         jz      .no_vzu_check
@@ -289,14 +262,13 @@ xmm_abi_probe:
         jz      .vzu_clean
         or      r9d, (1 << ABI_VZU_BIT)
 .vzu_clean:
-        ;; leave our own AVX state clean before returning to the caller
-        vzeroupper
+        vzeroupper      ;; leave our own AVX state clean
 .no_vzu_check:
 
-        mov     eax, r9d        ;; save the corruption mask before restoring xmm6-15
+        mov     eax, r9d        ;; return the corruption mask
 
 %if ABI_NUM_XMM > 0
-        ;; restore the caller's original xmm6-xmm15
+        ;; restore the caller's xmm6-xmm15
 %assign i 6
 %assign slot 0
 %rep ABI_NUM_XMM

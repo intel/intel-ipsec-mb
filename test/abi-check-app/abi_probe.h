@@ -10,48 +10,31 @@
 #include <stdint.h>
 
 /**
- * The set of callee-saved registers differs between the two x86-64 ABIs:
+ * Callee-saved register sets of the two x86-64 ABIs:
+ * - Windows x64: XMM6-XMM15 and RBX, RBP, RSI, RDI, R12-R15
+ * - System V AMD64: RBX, RBP, R12-R15 only (no XMM, and RSI/RDI are
+ *   argument registers)
  *
- * - Windows x64 declares XMM6-XMM15 and RBX, RBP, RSI, RDI, R12-R15
- *   callee-saved.
- * - System V AMD64 (Linux, FreeBSD) has no callee-saved XMM registers at
- *   all and declares only RBX, RBP and R12-R15 callee-saved; RSI and RDI
- *   are argument registers there.
- *
- * RSP is callee-saved on both ABIs but is not checked here, since a stack
- * imbalance would corrupt the probe itself.
+ * RSP is callee-saved on both but is not checked, as a stack imbalance
+ * would corrupt the probe itself.
  */
 #ifdef _WIN32
-/**
- * @brief Number of XMM registers checked by xmm_abi_probe() (XMM6-XMM15)
- */
+/** @brief Number of XMM registers checked by xmm_abi_probe() (XMM6-XMM15) */
 #define ABI_PROBE_NUM_XMM 10
 
-/**
- * @brief Number of general purpose registers checked by xmm_abi_probe()
- */
+/** @brief Number of general purpose registers checked by xmm_abi_probe() */
 #define ABI_PROBE_NUM_GP 8
 
-/**
- * @brief Names of the GP registers checked, indexed as per ABI_PROBE_GP_BIT()
- */
+/** @brief Names of the GP registers checked, indexed as per ABI_PROBE_GP_BIT() */
 #define ABI_PROBE_GP_NAMES { "rbx", "rbp", "rsi", "rdi", "r12", "r13", "r14", "r15" }
 #else
-/**
- * @brief Number of XMM registers checked by xmm_abi_probe()
- *
- * Zero on System V AMD64, where every XMM register is call-clobbered.
- */
+/** @brief Number of XMM registers checked, zero on System V AMD64 */
 #define ABI_PROBE_NUM_XMM  0
 
-/**
- * @brief Number of general purpose registers checked by xmm_abi_probe()
- */
+/** @brief Number of general purpose registers checked by xmm_abi_probe() */
 #define ABI_PROBE_NUM_GP   6
 
-/**
- * @brief Names of the GP registers checked, indexed as per ABI_PROBE_GP_BIT()
- */
+/** @brief Names of the GP registers checked, indexed as per ABI_PROBE_GP_BIT() */
 #define ABI_PROBE_GP_NAMES { "rbx", "rbp", "r12", "r13", "r14", "r15" }
 #endif /* _WIN32 */
 
@@ -76,12 +59,9 @@
  * @brief Bitmask bit set when func_ptr() leaves the upper 128 bits of
  *        YMM6-YMM15 dirty (non-zero) after the call
  *
- * Only meaningful when xmm_abi_probe() is called with check_vzeroupper
- * non-zero. This is a best-effort signal that AVX code was executed
- * without a trailing VZEROUPPER; unlike the XMM/GP bits above it is not a
- * callee-saved register ABI violation (the upper YMM/ZMM halves are not
- * defined as callee-saved on either ABI), but a performance-cliff issue
- * for callers that subsequently run legacy SSE code.
+ * Only meaningful with check_vzeroupper non-zero. Signals AVX code without
+ * a trailing VZEROUPPER: not an ABI violation (the upper YMM/ZMM halves
+ * are not callee-saved), but a performance cliff for legacy SSE callers.
  */
 #define ABI_PROBE_VZEROUPPER_BIT (ABI_PROBE_NUM_XMM + ABI_PROBE_NUM_GP)
 
@@ -90,25 +70,19 @@
  *        preservation
  *
  * Fills the callee-saved registers of the host ABI (see above) with unique
- * per-register sentinel patterns, calls func_ptr(arg1) and compares all of
- * them against the sentinels afterwards. Both x86-64 calling conventions
- * require a correctly behaving callee to leave these registers unchanged
- * across the call.
+ * per-register sentinels, calls func_ptr(arg1) and compares them against
+ * the sentinels afterwards.
  *
- * On Windows x64 the probe itself behaves as a proper callee: the caller's
- * original XMM6-XMM15 values are saved before the sentinels are loaded and
- * restored again before xmm_abi_probe() returns, so calling this function
- * does not corrupt the caller's own (compiler-managed) XMM state. On
- * System V AMD64 the XMM registers are call-clobbered, so they are neither
- * saved nor checked.
+ * On Windows x64 the caller's XMM6-XMM15 are saved and restored around the
+ * sentinels, so the probe does not corrupt the caller's own XMM state. On
+ * System V AMD64 those registers are call-clobbered and not checked.
  *
  * When check_vzeroupper is non-zero, the upper 128 bits of YMM6-YMM15 are
- * also seeded with a non-zero pattern and checked for being left dirty
- * (see ABI_PROBE_VZEROUPPER_BIT). Only pass a non-zero value for
- * architectures that are expected to execute AVX+ code (not for SSE),
- * otherwise the untouched seeded pattern will be reported as dirty. This
- * also gates the only non-baseline (AVX and SSE4.1) instructions of the
- * probe, so a zero value keeps it safe to run on any x86-64 CPU.
+ * seeded and checked for being left dirty (see
+ * ABI_PROBE_VZEROUPPER_BIT). Only pass a non-zero value for architectures
+ * expected to execute AVX+ code, otherwise the untouched seed is reported
+ * as dirty. It also gates the only non-baseline (AVX and SSE4.1)
+ * instructions of the probe, so a zero value is safe on any x86-64 CPU.
  *
  * @param [in] func_ptr  Function to call, taking a single pointer argument
  * @param [in] arg1      Argument passed to func_ptr
