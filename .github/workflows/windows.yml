@@ -41,7 +41,7 @@ jobs:
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}} --output-on-failure
 
   # CMake debug build with shared library (msbuild)
   debug-cmake-msvc-msbuild:
@@ -74,7 +74,7 @@ jobs:
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}  --output-on-failure
 
   # CMake release build with shared library (msbuild) on VS2022
   release-cmake-msvc-msbuild-vs2022:
@@ -107,7 +107,7 @@ jobs:
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}} --output-on-failure
 
   # CMake debug build with shared library (msbuild) on VS2022
   debug-cmake-msvc-msbuild-vs2022:
@@ -140,7 +140,7 @@ jobs:
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}} --output-on-failure
 
   # CMake release build with shared library (ninja) on VS2022
   release-cmake-ninja-vs2022:
@@ -173,4 +173,4 @@ jobs:
       run: cmake --build ${{env.BUILD_DIR}}
 
     - name: Test
-      run: ctest -j 5 --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 5 --test-dir ${{env.BUILD_DIR}} --output-on-failure
