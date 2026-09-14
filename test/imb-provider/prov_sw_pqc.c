@@ -244,8 +244,9 @@ prov_ml_dsa_key_sign(const PROV_ML_DSA_KEY *key, unsigned char *sig, size_t *sig
         if (key == NULL || !key->bound || !key->has_priv)
                 return 0;
 
-        params.ctx = (ctx_string_len != 0) ? ctx_string : NULL;
-        params.ctx_len = ctx_string_len;
+        /* As in OpenSSL, a pre-computed mu already binds the context string */
+        params.ctx = (!msg_is_mu && ctx_string_len != 0) ? ctx_string : NULL;
+        params.ctx_len = msg_is_mu ? 0 : ctx_string_len;
         params.rnd_32 = rnd_32;
         params.rnd_len = (rnd_32 != NULL) ? IMB_ML_DSA_SIGN_RND_BYTES : 0;
         params.msg_is_mu = msg_is_mu;
@@ -265,8 +266,9 @@ prov_ml_dsa_key_verify(const PROV_ML_DSA_KEY *key, const unsigned char *msg, siz
         if (key == NULL || !key->bound || !key->has_pub)
                 return 0;
 
-        params.ctx = (ctx_string_len != 0) ? ctx_string : NULL;
-        params.ctx_len = ctx_string_len;
+        /* As in OpenSSL, a pre-computed mu already binds the context string */
+        params.ctx = (!msg_is_mu && ctx_string_len != 0) ? ctx_string : NULL;
+        params.ctx_len = msg_is_mu ? 0 : ctx_string_len;
         params.msg_is_mu = msg_is_mu;
 
         return imb_ml_dsa_verify(key->imb_ctx, msg, msg_len, sig, sig_len, &params) == 0;

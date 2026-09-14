@@ -3082,6 +3082,21 @@ test_imb_ml_dsa_sign(struct IMB_MGR *mgr)
                         ret = 1;
         }
 
+        /* msg_is_mu set together with a context string */
+        if (ret == 0) {
+                IMB_ML_DSA_SIGN_PARAMS params;
+
+                IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
+                params.msg_is_mu = 1;
+                params.ctx = ctx;
+                params.ctx_len = 1;
+                sig_len = sizeof(sig);
+                if (ml_dsa_param_err(
+                            imb_ml_dsa_sign(self, sig, &sig_len, msg, IMB_ML_DSA_MU_BYTES, &params),
+                            IMB_ERR_PQC_PARAMS, "imb_ml_dsa_sign (mu with ctx)"))
+                        ret = 1;
+        }
+
         /* a non-zero reserved field requests an unsupported option */
         for (i = 0; ret == 0 && i < sizeof(((IMB_ML_DSA_SIGN_PARAMS *) NULL)->reserved); i++) {
                 IMB_ML_DSA_SIGN_PARAMS params;
@@ -3200,6 +3215,20 @@ test_imb_ml_dsa_verify(struct IMB_MGR *mgr)
                 if (ml_dsa_param_err(
                             imb_ml_dsa_verify(self, msg, BUFF_SIZE, sig, BUFF_SIZE, &params),
                             IMB_ERR_PQC_MSG_LEN, "imb_ml_dsa_verify (mu msg len)"))
+                        ret = 1;
+        }
+
+        /* msg_is_mu set together with a context string */
+        if (ret == 0) {
+                IMB_ML_DSA_VERIFY_PARAMS params;
+
+                IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
+                params.msg_is_mu = 1;
+                params.ctx = ctx;
+                params.ctx_len = 1;
+                if (ml_dsa_param_err(imb_ml_dsa_verify(self, msg, IMB_ML_DSA_MU_BYTES, sig,
+                                                       BUFF_SIZE, &params),
+                                     IMB_ERR_PQC_PARAMS, "imb_ml_dsa_verify (mu with ctx)"))
                         ret = 1;
         }
 

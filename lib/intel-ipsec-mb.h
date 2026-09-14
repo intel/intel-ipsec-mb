@@ -1910,7 +1910,11 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          * If non-zero, \a msg is a pre-computed \mu value (exactly
          * IMB_ML_DSA_MU_BYTES bytes)
          * and the SHAKE hashing step H(tr || M') is skipped entirely.
-         * \a ctx and \a ctx_len are ignored when this flag is set.
+         * The context string is already bound into \mu by the caller, so
+         * \a ctx must be NULL and \a ctx_len must be 0 when this flag is
+         * set (IMB_ERR_PQC_PARAMS otherwise).
+         * This is an interface extension (shared with OpenSSL) beyond the
+         * two top-level interfaces defined by FIPS 204 (Algorithms 2 and 3).
          */
         int msg_is_mu;
         /**
@@ -1964,7 +1968,11 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
          * If non-zero, \a msg is a pre-computed \mu value (exactly
          * IMB_ML_DSA_MU_BYTES bytes)
          * and the SHAKE hashing step H(tr || M') is skipped entirely.
-         * \a ctx and \a ctx_len are ignored when this flag is set.
+         * The context string is already bound into \mu by the caller, so
+         * \a ctx must be NULL and \a ctx_len must be 0 when this flag is
+         * set (IMB_ERR_PQC_PARAMS otherwise).
+         * This is an interface extension (shared with OpenSSL) beyond the
+         * two top-level interfaces defined by FIPS 204 (Algorithms 2 and 3).
          */
         int msg_is_mu;
         /**
@@ -2013,8 +2021,9 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  * @retval IMB_ERR_PQC_BUFFER_SIZE \a *sig_len on entry is smaller than
  *         the variant's SIG_BYTES
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
- *         sizeof(IMB_ML_DSA_SIGN_PARAMS), or \a params->reserved is not
- *         all zero
+ *         sizeof(IMB_ML_DSA_SIGN_PARAMS), \a params->reserved is not
+ *         all zero, or \a params->msg_is_mu is set together with a
+ *         non-NULL \a params->ctx or non-zero \a params->ctx_len
  * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
  *         IMB_ML_DSA_MAX_CTX_BYTES
  * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->rnd_len does not match the
@@ -2050,8 +2059,9 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
  * @retval IMB_ERR_PQC_VERIFY_FAILED the signature is cryptographically
  *         invalid (or malformed)
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
- *         sizeof(IMB_ML_DSA_VERIFY_PARAMS), or \a params->reserved is not
- *         all zero
+ *         sizeof(IMB_ML_DSA_VERIFY_PARAMS), \a params->reserved is not
+ *         all zero, or \a params->msg_is_mu is set together with a
+ *         non-NULL \a params->ctx or non-zero \a params->ctx_len
  * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
  *         IMB_ML_DSA_MAX_CTX_BYTES
  * @retval IMB_ERR_PQC_SIGNOP verification could not be performed (an

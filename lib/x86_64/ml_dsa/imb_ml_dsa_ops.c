@@ -175,11 +175,8 @@ op_sign_ctx(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, size_
         else if (imb_get_random(rnd, sizeof(rnd)) != 0)
                 goto end;
 
-        /* When msg_is_mu=1, ctx is already baked into mu - pass NULL/0. */
-        const void *sign_ctx = msg_is_mu ? NULL : ctx;
-        const size_t sign_ctx_len = msg_is_mu ? 0 : ctx_len;
-
-        if (!ossl_ml_dsa_sign(self, self->key, msg_is_mu, msg, msg_len, sign_ctx, sign_ctx_len, rnd,
+        /* imb_ml_dsa_sign() rejects a ctx supplied together with msg_is_mu. */
+        if (!ossl_ml_dsa_sign(self, self->key, msg_is_mu, msg, msg_len, ctx, ctx_len, rnd,
                               sizeof(rnd), 1 /* encode */, sig, &out_len, self->sig_len))
                 goto end;
 
@@ -201,12 +198,9 @@ op_verify_ctx(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void *ctx
         if (self->key == NULL || ossl_ml_dsa_key_get_pub(self->key) == NULL)
                 return -2; /* operational failure: no (public) key bound */
 
-        /* When msg_is_mu=1, ctx is already baked into mu - pass NULL/0. */
-        const void *verify_ctx = msg_is_mu ? NULL : ctx;
-        const size_t verify_ctx_len = msg_is_mu ? 0 : ctx_len;
-
-        const int rc = ossl_ml_dsa_verify(self, self->key, msg_is_mu, msg, msg_len, verify_ctx,
-                                          verify_ctx_len, 1 /* encode */, sig, sig_len);
+        /* imb_ml_dsa_verify() rejects a ctx supplied together with msg_is_mu. */
+        const int rc = ossl_ml_dsa_verify(self, self->key, msg_is_mu, msg, msg_len, ctx, ctx_len,
+                                          1 /* encode */, sig, sig_len);
 
         if (rc == 1)
                 return 0;           /* signature is valid */

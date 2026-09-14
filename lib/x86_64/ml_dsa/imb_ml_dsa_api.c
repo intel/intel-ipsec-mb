@@ -249,9 +249,16 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
                 return IMB_ERR_NULL_SRC;
         if (msg_is_mu && msg_len != IMB_ML_DSA_MU_BYTES)
                 return IMB_ERR_PQC_MSG_LEN;
-        if (!msg_is_mu && ctx == NULL && ctx_len != 0)
+        /*
+         * A pre-computed mu already binds the context string, so a ctx
+         * supplied alongside it cannot be honoured - reject rather than
+         * silently ignore it.
+         */
+        if (msg_is_mu && (ctx != NULL || ctx_len != 0))
+                return IMB_ERR_PQC_PARAMS;
+        if (ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
+        if (ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
                 return IMB_ERR_PQC_CTX_LEN;
         /*
          * *sig_len is [in,out]: on entry it must hold the caller's buffer
@@ -337,9 +344,12 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
                 return IMB_ERR_NULL_SRC;
         if (msg_is_mu && msg_len != IMB_ML_DSA_MU_BYTES)
                 return IMB_ERR_PQC_MSG_LEN;
-        if (!msg_is_mu && ctx == NULL && ctx_len != 0)
+        /* See imb_ml_dsa_sign(): ctx cannot be combined with a pre-computed mu. */
+        if (msg_is_mu && (ctx != NULL || ctx_len != 0))
+                return IMB_ERR_PQC_PARAMS;
+        if (ctx == NULL && ctx_len != 0)
                 return IMB_ERR_NULL_SRC;
-        if (!msg_is_mu && ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
+        if (ctx_len > IMB_ML_DSA_MAX_CTX_BYTES)
                 return IMB_ERR_PQC_CTX_LEN;
         const int rc = self->verify_ctx(self, msg, msg_len, ctx, ctx_len, sig, sig_len, msg_is_mu);
 
