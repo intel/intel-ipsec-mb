@@ -19,7 +19,8 @@
 ;;;  - scope : internal, private, default (ignored in win64 coff format)
 %define MKGLOBAL(name,type,scope) global name
 
-section .data
+;; read-only data, mapped to the COFF .rdata section on Windows
+section .rdata
 default rel
 
 ;; Unique 128-bit sentinel pattern per XMM register, index 0 => XMM6, index 9 => XMM15
