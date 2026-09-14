@@ -63,15 +63,16 @@ target_compile_definitions(
 
 include(kat_tests.cmake)
 
-# On Windows shared-library builds, the DLL lives in <build>/lib but CTest
-# runs tests from their own working directory where the DLL is not present.
-# Prepend the DLL directory to PATH so test executables can find
-# libIPSec_MB.dll at runtime without requiring an install step.
-if(WINDOWS AND BUILD_SHARED_LIBS)
+# On Windows shared-library builds, CTest runs tests from their own working
+# directory where the DLL is not present. Prepend the DLL directory to PATH so
+# test executables can find libIPSec_MB.dll at runtime without requiring an
+# install step. The directory is resolved from the library target because
+# multi-config generators (e.g. Visual Studio) place it in lib/<CONFIG>.
+if(WINDOWS AND BUILD_SHARED_LIBS AND TARGET ${IPSEC_MB_LIB})
         get_property(_kat_tests DIRECTORY PROPERTY TESTS)
         set_property(
     TEST ${_kat_tests}
     APPEND
     PROPERTY ENVIRONMENT_MODIFICATION
-             "PATH=path_list_prepend:${CMAKE_BINARY_DIR}/lib")
+             "PATH=path_list_prepend:$<TARGET_FILE_DIR:${IPSEC_MB_LIB}>")
 endif()
