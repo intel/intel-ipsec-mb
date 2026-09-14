@@ -446,9 +446,11 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 64, /* IMB_AUTH_HMAC_SHA3_512 */
         };
 
-        /* Maximum length of buffer in PON is 2^14 + 8, since maximum
+        /*
+         * Maximum length of buffer in PON is 2^14 + 8, since maximum
          * PLI value is 2^14 - 1 + 1 extra byte of padding + 8 bytes
-         * of XGEM header */
+         * of XGEM header
+         */
         const uint64_t max_pon_len = (1 << 14) + 8;
 
         uint64_t total_sgl_len;
@@ -1102,8 +1104,10 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                                 return 1;
                         }
 
-                        /* Subtract 8 bytes to maximum length since
-                         * XGEM header is not ciphered */
+                        /*
+                         * Subtract 8 bytes to maximum length since
+                         * XGEM header is not ciphered
+                         */
                         if ((job->msg_len_to_cipher_in_bytes > (max_pon_len - 8))) {
                                 imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                                 return 1;
@@ -1124,23 +1128,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         if (job->enc_keys == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                                 return 1;
-                        }
-                }
-                if (job->msg_len_to_cipher_in_bytes >= 4) {
-                        const uint64_t xgem_hdr = *(
-                                const uint64_t *) (job->src + job->hash_start_src_offset_in_bytes);
-
-                        /* PLI is 14 MS bits of XGEM header */
-                        const uint16_t pli = BSWAP64(xgem_hdr) >> 50;
-
-                        /* CRC only if PLI is more than 4 bytes */
-                        if (pli > 4) {
-                                const uint16_t crc_len = pli - 4;
-
-                                if (crc_len > job->msg_len_to_cipher_in_bytes - 4) {
-                                        imb_set_errno(state, IMB_ERR_JOB_PON_PLI);
-                                        return 1;
-                                }
                         }
                 }
                 break;
@@ -1915,6 +1902,30 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                /*
+                 * CRC length is not a job parameter - it is derived from the
+                 * PLI field of the XGEM header, which on receive comes from
+                 * the frame itself. Bound it against the buffer the CRC is
+                 * actually computed over:
+                 * - AES-CTR path:    msg_len_to_cipher_in_bytes
+                 * - no AES-CTR path: msg_len_to_hash_in_bytes - 8 (XGEM header)
+                 * Note: hash algorithm checks run after this switch, so the
+                 *       8-byte XGEM header read is guarded here.
+                 */
+                const uint64_t max_pli = (job->msg_len_to_cipher_in_bytes != UINT64_C(0))
+                                                 ? job->msg_len_to_cipher_in_bytes
+                                                 : (job->msg_len_to_hash_in_bytes - UINT64_C(8));
+                const uint64_t xgem_hdr =
+                        *(const uint64_t *) (job->src + job->hash_start_src_offset_in_bytes);
+
+                /* PLI is 14 MS bits of XGEM header */
+                const uint16_t pli = BSWAP64(xgem_hdr) >> 50;
+
+                /* CRC only if PLI is more than 4 bytes */
+                if ((pli > 4) && ((uint64_t) pli > max_pli)) {
+                        imb_set_errno(state, IMB_ERR_JOB_PON_PLI);
                         return 1;
                 }
                 break;

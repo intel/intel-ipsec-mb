@@ -2274,31 +2274,40 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
 
         /*
          * Invalid PLI for PON
+         * - cipher length 8 exercises the AES-CTR path
+         * - cipher length 0 exercises the no AES-CTR path, where the CRC
+         *   length is bound by msg_len_to_hash_in_bytes instead
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
+                        static const uint64_t pon_cipher_lens[] = { 8, 0 };
+
                         cipher = IMB_CIPHER_PON_AES_CNTR;
                         hash = IMB_AUTH_PON_CRC_BIP;
 
-                        /*
-                         * XGEM header is set to all 1s in fill_in_job()
-                         * This will result in an invalid PLI field
-                         */
-                        fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
+                        for (unsigned i = 0; i < IMB_DIM(pon_cipher_lens); i++) {
+                                /*
+                                 * XGEM header is set to all 1s in fill_in_job()
+                                 * This will result in an invalid PLI field
+                                 */
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
 
-                        /* Set msg len to ensure PLI error */
-                        template_job.msg_len_to_cipher_in_bytes = 8;
+                                /* Set msg len to ensure PLI error */
+                                template_job.msg_len_to_cipher_in_bytes = pon_cipher_lens[i];
 
-                        if (!is_submit_invalid(mb_mgr, &template_job, TEST_INVALID_PON_PLI,
-                                               IMB_ERR_JOB_PON_PLI))
-                                return 1;
+                                if (!is_submit_invalid(mb_mgr, &template_job, TEST_INVALID_PON_PLI,
+                                                       IMB_ERR_JOB_PON_PLI))
+                                        return 1;
 
-                        imb_set_session(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
 
-                        if (!is_submit_burst_invalid(mb_mgr, &template_job, TEST_INVALID_PON_PLI,
-                                                     IMB_ERR_JOB_PON_PLI))
-                                return 1;
-                        print_progress();
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
+                                                             TEST_INVALID_PON_PLI,
+                                                             IMB_ERR_JOB_PON_PLI))
+                                        return 1;
+                                print_progress();
+                        }
                 }
 
         /*

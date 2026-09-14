@@ -108,6 +108,9 @@ Fixes
 - Fixed DES/3DES-CBC plaintext/ciphertext output (issue #169).
 - Fixed AES-GCM, AES-GCM-SGL and SM4-GCM decrypt direction to use `dec_keys`
   key pointer consistently across all implementations.
+- Fixed PON XGEM PLI validation not being applied when
+  `msg_len_to_cipher_in_bytes` is 0 (no AES-CTR case). An oversized PLI could
+  result in out-of-bounds read and write access.
 
 v2.0 October 2024
 ======================================================================
