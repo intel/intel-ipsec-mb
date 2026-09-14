@@ -270,12 +270,12 @@ align_label
         mov     dword [STATE + _des_args_IV + MIN_IDX*4], 0
         mov     dword [STATE + _des_args_IV + MIN_IDX*4 + (AVX512_NUM_DES_LANES*4)], 0
 %endif
-        vzeroupper
 align_label
 %%_des_submit_restore:
         DES_XMM_RESTORE
 align_label
 %%_des_submit_return:
+        vzeroupper
 %endmacro
 
 ;;; ===========================================================================
@@ -446,11 +446,11 @@ align_label
         vmovdqa32       [STATE + _des_args_IV + (16*4)]{k6}, ZTMP1
 %endif
 align_label
-%%_des_flush_return:
-        vzeroupper
-align_label
 %%_des_flush_restore:
         DES_XMM_RESTORE
+align_label
+%%_des_flush_return:
+        vzeroupper
 %endmacro
 
 ;;; ========================================================
