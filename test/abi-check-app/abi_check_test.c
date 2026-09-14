@@ -17,7 +17,7 @@
  * The application does not verify any cryptographic results.
  * Use the imb-xvalid application for cross architecture result validation.
  *
- * This is a diagnostic application (see issue #973); it does not fix or
+ * This is a diagnostic application, it does not fix or
  * work around any register preservation problem it finds.
  */
 
@@ -34,18 +34,21 @@
 #include "utils.h"
 #include "abi_probe.h"
 
-/* size of the message buffer used for every probed job */
-#define JOB_BUF_SIZE 256
-/* IV buffer must be large enough for the widest iv_len_in_bytes fill_job()
+#define JOB_BUF_SIZE 256 /**< size of the message buffer used for every probed job */
+
+/**
+ * IV buffer must be large enough for the widest iv_len_in_bytes fill_job()
  * sets (e.g. 25 bytes for ZUC-EEA3-256), not just the common 16-byte case
  */
 #define MAX_IV_SIZE 32
-/* safety cap on flush calls needed to drain outstanding jobs */
+
+/** safety cap on flush calls needed to drain outstanding jobs */
 #define MAX_FLUSH_TRIES (TEST_MAX_NUM_JOBS + 8)
-/* maximum number of distinct algorithm/arch/stage failures recorded */
+
+/** maximum number of distinct algorithm/arch/stage failures recorded */
 #define MAX_FAILURES 4096
 
-/*
+/**
  * Per-algorithm scratch data for up to TEST_MAX_NUM_JOBS jobs.
  *
  * TEST_MAX_NUM_JOBS (see utils.h) is one more than the widest multi-buffer
@@ -62,11 +65,12 @@ struct probe_data {
         IMB_JOB job_template[TEST_MAX_NUM_JOBS];
 };
 
-/* architectures to test, indexed with IMB_ARCH; IMB_ARCH_NONE is never tested */
+/** architectures to test, indexed with IMB_ARCH; IMB_ARCH_NONE is never tested */
 static uint8_t archs[IMB_ARCH_NUM] = { 0, 1, 1, 1, 1 };
-static uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
-static int verbose = 0;
-/*
+static uint64_t flags = 0; /**< flags passed to alloc_mb_mgr() */
+static int verbose = 0;    /**< non-zero to print extra information */
+
+/**
  * Best-effort check for a missing VZEROUPPER on the AVX2/AVX512/AVX10 code
  * paths (see xmm_abi_probe()'s check_vzeroupper parameter). Off by default:
  * it cannot distinguish "never touched AVX/YMM state" from "used it and
@@ -78,32 +82,41 @@ static int verbose = 0;
  */
 static int check_vzeroupper_opt = 0;
 
+/** record of one algorithm/architecture/stage register corruption */
 struct failure {
         char algo[40];
         IMB_ARCH arch;
         const char *stage;
-        uint32_t mask;  /* union of all corrupted registers seen for this combination */
-        unsigned count; /* number of probe calls that detected a corruption */
+        uint32_t mask;  /**< union of all corrupted registers seen for this combination */
+        unsigned count; /**< number of probe calls that detected a corruption */
 };
 
 static struct failure failures[MAX_FAILURES];
 static unsigned num_failures = 0;
 static unsigned num_skipped_failures = 0;
-/* number of times an algorithm failed to fully drain its outstanding jobs;
+
+/**
+ * number of times an algorithm failed to fully drain its outstanding jobs;
  * treated as a hard error since it can misattribute later corruption
  * reports to the wrong algorithm
  */
 static unsigned num_drain_errors = 0;
 
-/* formats a corrupted register bitmask as e.g. "xmm6,xmm9,rbx" */
+/**
+ * @brief Format a corrupted register bitmask as e.g. "xmm6,xmm9,rbx".
+ *
+ * @param [in] mask      bitmask of corrupted registers, as returned by
+ *                       xmm_abi_probe()
+ * @param [out] buf      buffer receiving the NULL terminated register list
+ * @param [in] buf_size  size of \a buf in bytes
+ */
 static void
 mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
 {
         static const char *gp_names[ABI_PROBE_NUM_GP] = ABI_PROBE_GP_NAMES;
-        unsigned i;
 
         buf[0] = '\0';
-        for (i = 0; i < ABI_PROBE_NUM_XMM; i++) {
+        for (unsigned i = 0; i < ABI_PROBE_NUM_XMM; i++) {
                 if (mask & (1u << ABI_PROBE_XMM_BIT(i))) {
                         char tmp[16];
 
@@ -112,7 +125,7 @@ mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
                         strncat(buf, tmp, buf_size - strlen(buf) - 1);
                 }
         }
-        for (i = 0; i < ABI_PROBE_NUM_GP; i++) {
+        for (unsigned i = 0; i < ABI_PROBE_NUM_GP; i++) {
                 if (mask & (1u << ABI_PROBE_GP_BIT(i))) {
                         char tmp[16];
 
@@ -129,19 +142,24 @@ mask_to_str(const uint32_t mask, char *buf, const size_t buf_size)
         }
 }
 
-/*
- * Records a corrupted-register detection, merging it into an existing entry
- * for the same algorithm/architecture/stage (OR-ing the register mask and
- * incrementing the occurrence count) instead of adding a duplicate row, so
- * that e.g. many identical SUBMIT detections while an OOO manager's lanes
- * fill up are reported as a single line.
+/**
+ * @brief Record a corrupted-register detection.
+ *
+ * The detection is merged into an existing entry for the same
+ * algorithm/architecture/stage (OR-ing the register mask and incrementing
+ * the occurrence count) instead of adding a duplicate row, so that e.g.
+ * many identical SUBMIT detections while an OOO manager's lanes fill up
+ * are reported as a single line.
+ *
+ * @param [in] algo   algorithm name
+ * @param [in] arch   architecture the algorithm was probed on
+ * @param [in] stage  probed entry point ("SUBMIT" or "FLUSH")
+ * @param [in] mask   bitmask of corrupted registers
  */
 static void
 record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const uint32_t mask)
 {
-        unsigned i;
-
-        for (i = 0; i < num_failures; i++) {
+        for (unsigned i = 0; i < num_failures; i++) {
                 struct failure *f = &failures[i];
 
                 if (f->arch == arch && strcmp(f->stage, stage) == 0 && strcmp(f->algo, algo) == 0) {
@@ -165,7 +183,9 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
         f->count = 1;
 }
 
-/*
+/**
+ * @brief Probe one algorithm for callee-saved register corruption.
+ *
  * Submits jobs for the given algorithm one at a time, checking XMM6-XMM15
  * preservation after every IMB_SUBMIT_JOB() call, until a job completes.
  *
@@ -184,9 +204,17 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
  * (buffering and/or in-line processing) or the flush entry point that
  * forces a partially filled batch through.
  *
- * @return 0 on success, -1 if not every submitted job could be drained
- *         (mb_mgr is left with outstanding jobs in that case, so the
- *         caller must re-initialize it before probing the next algorithm)
+ * @param [in,out] mb_mgr     multi-buffer manager to submit the jobs to
+ * @param [in] arch           architecture \a mb_mgr is initialized for
+ * @param [in] params         cipher and hash parameters of the algorithm
+ * @param [in] algo_name      algorithm name used in the failure report
+ * @param [in,out] pd         scratch job and buffer data used for probing
+ *
+ * @return Probe status
+ * @retval 0  algorithm probed (or skipped as unsupported)
+ * @retval -1 not every submitted job could be drained (\a mb_mgr is left
+ *            with outstanding jobs in that case, so the caller must
+ *            re-initialize it before probing the next algorithm)
  */
 static int
 probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
@@ -332,6 +360,14 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         return 0;
 }
 
+/**
+ * @brief Initialize \a mb_mgr for a specific architecture.
+ *
+ * Exits the application if \a arch is not a valid architecture.
+ *
+ * @param [in,out] mb_mgr  multi-buffer manager to initialize
+ * @param [in] arch        target architecture
+ */
 static void
 init_arch_mgr(IMB_MGR *mb_mgr, const IMB_ARCH arch)
 {
@@ -355,13 +391,17 @@ init_arch_mgr(IMB_MGR *mb_mgr, const IMB_ARCH arch)
         }
 }
 
+/**
+ * @brief Probe every cipher, hash and AEAD algorithm on one architecture.
+ *
+ * @param [in] arch  architecture to test
+ */
 static void
 run_arch(const IMB_ARCH arch)
 {
         IMB_MGR *mb_mgr = alloc_mb_mgr(flags);
         struct params_s params;
         struct probe_data *pd;
-        size_t i;
 
         if (mb_mgr == NULL) {
                 fprintf(stderr, "MB MGR could not be allocated\n");
@@ -391,7 +431,7 @@ run_arch(const IMB_ARCH arch)
         print_tested_arch(features, arch);
 
         /* cipher algorithms, paired with NULL-HASH */
-        for (i = 0; i < num_cipher_algo_str_map; i++) {
+        for (size_t i = 0; i < num_cipher_algo_str_map; i++) {
                 memset(&params, 0, sizeof(params));
                 params.cipher_mode = cipher_algo_str_map[i].values.job_params.cipher_mode;
                 params.key_size = cipher_algo_str_map[i].values.job_params.key_size;
@@ -403,7 +443,7 @@ run_arch(const IMB_ARCH arch)
         }
 
         /* hash algorithms, paired with NULL-CIPHER */
-        for (i = 0; i < num_hash_algo_str_map; i++) {
+        for (size_t i = 0; i < num_hash_algo_str_map; i++) {
                 memset(&params, 0, sizeof(params));
                 params.cipher_mode = IMB_CIPHER_NULL;
                 params.hash_alg = hash_algo_str_map[i].values.job_params.hash_alg;
@@ -414,7 +454,7 @@ run_arch(const IMB_ARCH arch)
         }
 
         /* combined AEAD algorithms (cipher and hash tied together, e.g. AES-GCM/CCM) */
-        for (i = 0; i < num_aead_algo_str_map; i++) {
+        for (size_t i = 0; i < num_aead_algo_str_map; i++) {
                 memset(&params, 0, sizeof(params));
                 params.cipher_mode = aead_algo_str_map[i].values.job_params.cipher_mode;
                 params.hash_alg = aead_algo_str_map[i].values.job_params.hash_alg;
@@ -429,11 +469,12 @@ run_arch(const IMB_ARCH arch)
         free_mb_mgr(mb_mgr);
 }
 
+/**
+ * @brief Print the summary of all detected register corruptions.
+ */
 static void
 print_report(void)
 {
-        unsigned i;
-
         printf("\n");
         if (num_failures == 0 && num_drain_errors == 0) {
                 printf("PASS: no XMM6-XMM15 or callee-saved GP register corruption detected "
@@ -454,7 +495,7 @@ print_report(void)
                "callee-saved registers\n\n",
                num_failures);
         printf("%-30s %-8s %-12s %-8s %s\n", "ALGORITHM", "ARCH", "STAGE", "COUNT", "REGISTERS");
-        for (i = 0; i < num_failures; i++) {
+        for (unsigned i = 0; i < num_failures; i++) {
                 char reg_str[128];
 
                 mask_to_str(failures[i].mask, reg_str, sizeof(reg_str));
@@ -468,6 +509,11 @@ print_report(void)
                         num_skipped_failures);
 }
 
+/**
+ * @brief Print the application usage information.
+ *
+ * @param [in] app_name  application name to display
+ */
 static void
 usage(const char *app_name)
 {
@@ -491,14 +537,22 @@ usage(const char *app_name)
                 app_name);
 }
 
+/**
+ * @brief Application entry point.
+ *
+ * @param [in] argc  number of command line arguments
+ * @param [in] argv  command line argument vector
+ *
+ * @return Application status
+ * @retval EXIT_SUCCESS no register corruption detected
+ * @retval EXIT_FAILURE register corruption detected or invalid arguments
+ */
 int
 main(int argc, char *argv[])
 {
         uint8_t arch_support[IMB_ARCH_NUM];
-        unsigned int arch_id;
-        int i;
 
-        for (i = 1; i < argc; i++)
+        for (int i = 1; i < argc; i++)
                 if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
                         usage(argv[0]);
                         return EXIT_SUCCESS;
@@ -528,7 +582,7 @@ main(int argc, char *argv[])
         if (detect_arch(arch_support, flags) < 0)
                 return EXIT_FAILURE;
 
-        for (arch_id = IMB_ARCH_SSE; arch_id < IMB_ARCH_NUM; arch_id++) {
+        for (unsigned int arch_id = IMB_ARCH_SSE; arch_id < IMB_ARCH_NUM; arch_id++) {
                 if (arch_support[arch_id] == 0) {
                         archs[arch_id] = 0;
                         fprintf(stderr, "%s not supported. Disabling %s tests\n",
@@ -536,9 +590,7 @@ main(int argc, char *argv[])
                 }
         }
 
-        IMB_ARCH arch;
-
-        for (arch = IMB_ARCH_SSE; arch < IMB_ARCH_NUM; arch++) {
+        for (IMB_ARCH arch = IMB_ARCH_SSE; arch < IMB_ARCH_NUM; arch++) {
                 if (archs[arch] == 0)
                         continue;
                 run_arch(arch);
