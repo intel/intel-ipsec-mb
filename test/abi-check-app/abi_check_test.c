@@ -36,7 +36,10 @@
 
 /* size of the message buffer used for every probed job */
 #define JOB_BUF_SIZE 256
-#define MAX_IV_SIZE  16
+/* IV buffer must be large enough for the widest iv_len_in_bytes fill_job()
+ * sets (e.g. 25 bytes for ZUC-EEA3-256), not just the common 16-byte case
+ */
+#define MAX_IV_SIZE 32
 /* safety cap on flush calls needed to drain outstanding jobs */
 #define MAX_FLUSH_TRIES (TEST_MAX_NUM_JOBS + 8)
 /* maximum number of distinct algorithm/arch/stage failures recorded */
@@ -239,7 +242,8 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                 n_jobs++; /* count this submit */
 
                 ret_ptr = NULL;
-                mask = xmm_abi_probe((void *) (uintptr_t) imb_submit_job, mb_mgr, &ret_ptr);
+                mask = xmm_abi_probe((void *) (uintptr_t) imb_submit_job, mb_mgr, &ret_ptr,
+                                     check_vzu);
                 if (mask != 0)
                         record_failure(algo_name, arch, "SUBMIT", mask);
 
