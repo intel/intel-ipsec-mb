@@ -35,9 +35,15 @@
 #define ZUC_MIN_BYTELEN 1
 #define ZUC_MAX_BYTELEN 8188
 
-/* Range of input data for ZUC is from 1 to 2^16 - 1 bytes (due to phminposuw instruction) */
+/*
+ * Range of input data for ZUC-NEA6 is from 1 to 2^16 - 2 bytes.
+ * The upper bound must stay below the 0xFFFF "NULL lane" sentinel value
+ * used in the 16-bit _zuc_lens arrays by the out-of-order managers and
+ * cipher kernels (due to phminposuw instruction), otherwise a legitimate
+ * job length would be indistinguishable from an empty lane.
+ */
 #define ZUC_NEA6_MIN_BYTELEN 1
-#define ZUC_NEA6_MAX_BYTELEN ((1ULL << 16) - 1)
+#define ZUC_NEA6_MAX_BYTELEN ((1ULL << 16) - 2)
 
 /**
  ******************************************************************************
