@@ -37,7 +37,7 @@ ossl_ml_dsa_key_compress_power2_round(uint32_t r, uint32_t *r1, uint32_t *r0)
         unsigned int mask;
         uint32_t r0_adjusted, r1_adjusted;
 
-        *r1 = r >> ML_DSA_D_BITS;         /* top 13 bits */
+        *r1 = r >> ML_DSA_D_BITS;         /* top 10 bits */
         *r0 = r - (*r1 << ML_DSA_D_BITS); /* The remainder mod q */
 
         r0_adjusted = mod_sub(*r0, 1 << ML_DSA_D_BITS);
