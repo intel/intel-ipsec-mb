@@ -41,8 +41,7 @@ static int
 sm4_gcm_job_prepare(IMB_MGR *mb_mgr, IMB_JOB *job, const struct aead_test *vec, const void *ctx)
 {
         (void) mb_mgr;
-        job->enc_keys = ctx;
-        job->dec_keys = ctx;
+        set_gcm_job_keys(job, ctx, job->cipher_direction);
         job->u.GCM.aad = (const uint8_t *) vec->aad;
         job->u.GCM.aad_len_in_bytes = vec->aadSize / 8;
         return 0;

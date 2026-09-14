@@ -662,8 +662,7 @@ test_aead_gcm(IMB_MGR *p_mgr, const struct aead_test *vectors, struct test_suite
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
                 job->hash_alg = IMB_AUTH_AES_GMAC;
-                job->enc_keys = &gcm_key;
-                job->dec_keys = &gcm_key;
+                set_gcm_job_keys(job, &gcm_key, job->cipher_direction);
                 job->u.GCM.aad = v->aad;
                 job->u.GCM.aad_len_in_bytes = v->aadSize / 8;
 
@@ -691,8 +690,7 @@ test_aead_gcm(IMB_MGR *p_mgr, const struct aead_test *vectors, struct test_suite
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
                 job->hash_alg = IMB_AUTH_AES_GMAC;
-                job->enc_keys = &gcm_key;
-                job->dec_keys = &gcm_key;
+                set_gcm_job_keys(job, &gcm_key, job->cipher_direction);
                 job->u.GCM.aad = v->aad;
                 job->u.GCM.aad_len_in_bytes = v->aadSize / 8;
 
