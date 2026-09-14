@@ -78,6 +78,11 @@ struct failure {
 static struct failure failures[MAX_FAILURES];
 static unsigned num_failures = 0;
 static unsigned num_skipped_failures = 0;
+/* number of times an algorithm failed to fully drain its outstanding jobs;
+ * treated as a hard error since it can misattribute later corruption
+ * reports to the wrong algorithm
+ */
+static unsigned num_drain_errors = 0;
 
 /* formats a corrupted register bitmask as e.g. "xmm6,xmm9,rbx" */
 static void
@@ -161,8 +166,12 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
  * This lets a failure be attributed to one of two places: the submit path
  * (buffering and/or in-line processing) or the flush entry point that
  * forces a partially filled batch through.
+ *
+ * @return 0 on success, -1 if not every submitted job could be drained
+ *         (mb_mgr is left with outstanding jobs in that case, so the
+ *         caller must re-initialize it before probing the next algorithm)
  */
-static void
+static int
 probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
            const char *algo_name, struct probe_data *pd)
 {
@@ -182,13 +191,13 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         unsigned n_jobs, n_completed, flush_tries;
 
         if (!is_valid_combination(params->cipher_mode, params->hash_alg))
-                return;
+                return 0;
 
         for (buf_size = 64; buf_size <= JOB_BUF_SIZE; buf_size += 16)
                 if (is_valid_job_size(params, buf_size))
                         break;
         if (buf_size > JOB_BUF_SIZE)
-                return;
+                return 0;
 
         memset(&keys, 0, sizeof(keys));
 
@@ -202,7 +211,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                 memset(aad, 0, sizeof(aad));
 
         if (fill_keys(mb_mgr, &keys, ciph_key, auth_key, params, NULL) < 0)
-                return;
+                return 0;
 
         num_tags = get_tag_sizes(params, tag_sizes);
         tag_size = (num_tags != 0) ? tag_sizes[0] : 0;
@@ -216,14 +225,14 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                 if (set_job_ctx(ctx, params, buf_size, JOB_BUF_SIZE, pd->in_digest[n_jobs],
                                 pd->out_digest[n_jobs], tag_size, pd->test_buf[n_jobs],
                                 pd->src_dst_buf[n_jobs], generate_random_buf) < 0)
-                        return;
+                        return 0;
 
                 memory_copy(pd->src_dst_buf[n_jobs], pd->test_buf[n_jobs], ctx->buf_size);
 
                 if (fill_job(&pd->job_template[n_jobs], params, pd->src_dst_buf[n_jobs],
                              pd->in_digest[n_jobs], aad, ctx->buf_size, ctx->tag_size_to_check,
                              IMB_DIR_ENCRYPT, &keys, cipher_iv, auth_iv, n_jobs) < 0)
-                        return;
+                        return 0;
         }
 
         if (verbose) {
@@ -257,12 +266,14 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                 /* single-buffer algorithm: processed synchronously inside
                  * IMB_SUBMIT_JOB(), no flush required
                  */
-                return;
+                return 0;
         }
 
-        if (n_completed == 0)
-                fprintf(stderr, "[WARN] %s: no job completed after %u IMB_SUBMIT_JOB() calls\n",
+        if (n_completed == 0) {
+                fprintf(stderr, "[ERROR] %s: no job completed after %u IMB_SUBMIT_JOB() calls\n",
                         algo_name, n_jobs);
+                return -1;
+        }
 
         /* transition flush: forces the OOO manager's flush entry point,
          * checked and reported separately from later drain flushes
@@ -287,11 +298,38 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                 flush_tries++;
         }
 
-        if (n_completed < n_jobs)
+        if (n_completed < n_jobs) {
                 fprintf(stderr,
-                        "[WARN] %s: only %u/%u jobs completed after draining with "
+                        "[ERROR] %s: only %u/%u jobs completed after draining with "
                         "IMB_FLUSH_JOB()\n",
                         algo_name, n_completed, n_jobs);
+                return -1;
+        }
+
+        return 0;
+}
+
+static void
+init_arch_mgr(IMB_MGR *mb_mgr, const IMB_ARCH arch)
+{
+        switch (arch) {
+        case IMB_ARCH_SSE:
+                init_mb_mgr_sse(mb_mgr);
+                break;
+        case IMB_ARCH_AVX2:
+                init_mb_mgr_avx2(mb_mgr);
+                break;
+        case IMB_ARCH_AVX512:
+                init_mb_mgr_avx512(mb_mgr);
+                break;
+        case IMB_ARCH_AVX10:
+                init_mb_mgr_avx10(mb_mgr);
+                break;
+        default:
+                fprintf(stderr, "Invalid architecture\n");
+                free_mb_mgr(mb_mgr);
+                exit(EXIT_FAILURE);
+        }
 }
 
 static void
@@ -314,25 +352,7 @@ run_arch(const IMB_ARCH arch)
                 exit(EXIT_FAILURE);
         }
 
-        switch (arch) {
-        case IMB_ARCH_SSE:
-                init_mb_mgr_sse(mb_mgr);
-                break;
-        case IMB_ARCH_AVX2:
-                init_mb_mgr_avx2(mb_mgr);
-                break;
-        case IMB_ARCH_AVX512:
-                init_mb_mgr_avx512(mb_mgr);
-                break;
-        case IMB_ARCH_AVX10:
-                init_mb_mgr_avx10(mb_mgr);
-                break;
-        default:
-                fprintf(stderr, "Invalid architecture\n");
-                free(pd);
-                free_mb_mgr(mb_mgr);
-                exit(EXIT_FAILURE);
-        }
+        init_arch_mgr(mb_mgr, arch);
 
         uint64_t features = 0;
 
@@ -353,7 +373,10 @@ run_arch(const IMB_ARCH arch)
                 params.cipher_mode = cipher_algo_str_map[i].values.job_params.cipher_mode;
                 params.key_size = cipher_algo_str_map[i].values.job_params.key_size;
                 params.hash_alg = IMB_AUTH_NULL;
-                probe_algo(mb_mgr, arch, &params, cipher_algo_str_map[i].name, pd);
+                if (probe_algo(mb_mgr, arch, &params, cipher_algo_str_map[i].name, pd) < 0) {
+                        num_drain_errors++;
+                        init_arch_mgr(mb_mgr, arch);
+                }
         }
 
         /* hash algorithms, paired with NULL-CIPHER */
@@ -361,7 +384,10 @@ run_arch(const IMB_ARCH arch)
                 memset(&params, 0, sizeof(params));
                 params.cipher_mode = IMB_CIPHER_NULL;
                 params.hash_alg = hash_algo_str_map[i].values.job_params.hash_alg;
-                probe_algo(mb_mgr, arch, &params, hash_algo_str_map[i].name, pd);
+                if (probe_algo(mb_mgr, arch, &params, hash_algo_str_map[i].name, pd) < 0) {
+                        num_drain_errors++;
+                        init_arch_mgr(mb_mgr, arch);
+                }
         }
 
         /* combined AEAD algorithms (cipher and hash tied together, e.g. AES-GCM/CCM) */
@@ -370,7 +396,10 @@ run_arch(const IMB_ARCH arch)
                 params.cipher_mode = aead_algo_str_map[i].values.job_params.cipher_mode;
                 params.hash_alg = aead_algo_str_map[i].values.job_params.hash_alg;
                 params.key_size = aead_algo_str_map[i].values.job_params.key_size;
-                probe_algo(mb_mgr, arch, &params, aead_algo_str_map[i].name, pd);
+                if (probe_algo(mb_mgr, arch, &params, aead_algo_str_map[i].name, pd) < 0) {
+                        num_drain_errors++;
+                        init_arch_mgr(mb_mgr, arch);
+                }
         }
 
         free(pd);
@@ -383,11 +412,20 @@ print_report(void)
         unsigned i;
 
         printf("\n");
-        if (num_failures == 0) {
+        if (num_failures == 0 && num_drain_errors == 0) {
                 printf("PASS: no XMM6-XMM15 or callee-saved GP register corruption detected "
                        "across IMB_SUBMIT_JOB()/IMB_FLUSH_JOB()\n");
                 return;
         }
+
+        if (num_drain_errors != 0)
+                fprintf(stderr,
+                        "[ERROR] %u algorithm(s) failed to fully drain their jobs; results for "
+                        "algorithms tested immediately afterwards may be incomplete\n",
+                        num_drain_errors);
+
+        if (num_failures == 0)
+                return;
 
         printf("FAIL: %u distinct algorithm/architecture/stage combination(s) corrupted "
                "callee-saved registers\n\n",
@@ -480,5 +518,5 @@ main(int argc, char *argv[])
 
         print_report();
 
-        return (num_failures == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+        return (num_failures == 0 && num_drain_errors == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
