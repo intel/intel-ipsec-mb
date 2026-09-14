@@ -274,8 +274,6 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         if (ret_ptr != NULL)
                 n_completed++;
 
-        /* drain any remaining outstanding jobs */
-        flush_tries = 0;
         /* drain any remaining outstanding jobs without further register
          * checks: the flush entry point has already been exercised and
          * checked above, further drain calls run the same code path
