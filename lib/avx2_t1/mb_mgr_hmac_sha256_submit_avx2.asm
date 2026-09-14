@@ -72,8 +72,12 @@ mksection .text
 %endif
 
 ; we clobber rbx, rsi, rdi, rbp; called routine also clobbers r12, r13, r14
+; NOTE: _gpr_save is padded to 8 qwords (rather than the 7 registers
+; actually saved) so that _xmm_save starts at a 16-byte aligned offset,
+; as required by the vmovdqa (aligned) instructions used below.
 struc STACK
-_gpr_save:      resq    7
+_gpr_save:      resq    8
+_xmm_save:      resq    20
 _rsp_save:      resq    1
 endstruc
 
@@ -94,6 +98,17 @@ FUNC:
 %ifndef LINUX
         mov     [rsp + _gpr_save + 8*5], rsi
         mov     [rsp + _gpr_save + 8*6], rdi
+
+        vmovdqa [rsp + _xmm_save + 16*0], xmm6
+        vmovdqa [rsp + _xmm_save + 16*1], xmm7
+        vmovdqa [rsp + _xmm_save + 16*2], xmm8
+        vmovdqa [rsp + _xmm_save + 16*3], xmm9
+        vmovdqa [rsp + _xmm_save + 16*4], xmm10
+        vmovdqa [rsp + _xmm_save + 16*5], xmm11
+        vmovdqa [rsp + _xmm_save + 16*6], xmm12
+        vmovdqa [rsp + _xmm_save + 16*7], xmm13
+        vmovdqa [rsp + _xmm_save + 16*8], xmm14
+        vmovdqa [rsp + _xmm_save + 16*9], xmm15
 %endif
         mov     [rsp + _rsp_save], rax  ; original SP
 
@@ -391,6 +406,17 @@ return:
 %ifndef LINUX
         mov     rsi, [rsp + _gpr_save + 8*5]
         mov     rdi, [rsp + _gpr_save + 8*6]
+
+        vmovdqa xmm6,  [rsp + _xmm_save + 16*0]
+        vmovdqa xmm7,  [rsp + _xmm_save + 16*1]
+        vmovdqa xmm8,  [rsp + _xmm_save + 16*2]
+        vmovdqa xmm9,  [rsp + _xmm_save + 16*3]
+        vmovdqa xmm10, [rsp + _xmm_save + 16*4]
+        vmovdqa xmm11, [rsp + _xmm_save + 16*5]
+        vmovdqa xmm12, [rsp + _xmm_save + 16*6]
+        vmovdqa xmm13, [rsp + _xmm_save + 16*7]
+        vmovdqa xmm14, [rsp + _xmm_save + 16*8]
+        vmovdqa xmm15, [rsp + _xmm_save + 16*9]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
