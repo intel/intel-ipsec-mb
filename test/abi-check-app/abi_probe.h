@@ -56,6 +56,11 @@
  * callee-saved, so a correctly behaving callee must leave them unchanged
  * across the call.
  *
+ * The probe itself behaves as a proper Windows x64 callee: the caller's
+ * original XMM6-XMM15 values are saved before the sentinels are loaded and
+ * restored again before xmm_abi_probe() returns, so calling this function
+ * does not corrupt the caller's own (compiler-managed) XMM state.
+ *
  * @param [in] func_ptr  Function to call, taking a single pointer argument
  * @param [in] arg1      Argument passed to func_ptr
  * @param [out] ret_out  Return value of func_ptr, NULL if not needed

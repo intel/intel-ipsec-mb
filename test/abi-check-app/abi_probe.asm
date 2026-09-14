@@ -53,6 +53,12 @@ section .text
 ;; bit 11 => rbp, bit 12 => rsi, bit 13 => rdi, bit 14 => r12, bit 15 => r13,
 ;; bit 16 => r14, bit 17 => r15 (see ABI_PROBE_XMM_BIT()/ABI_PROBE_GP_BIT()).
 ;;
+;; The original caller-side values of XMM6-XMM15 are saved before the
+;; sentinels are loaded and restored before returning, so this probe itself
+;; behaves as a proper Windows x64 callee and does not corrupt the caller's
+;; (compiler-managed) XMM state - it only observes what func_ptr() does to
+;; the sentinel values in between.
+;;
 ;; rbx, rbp, rsi, rdi, r12-r15 are filled with sentinels for the whole
 ;; duration of the call, so func_ptr and its argument are kept in stack
 ;; slots and func_ptr is invoked with an indirect memory-operand call,
@@ -74,12 +80,26 @@ xmm_abi_probe:
         push    r14
         push    r15
         ;; 32 bytes shadow space + 24 bytes of locals (func_ptr, func_arg,
-        ;; ret_out), stack stays 16-byte aligned right before the call
-        sub     rsp, 56
+        ;; ret_out) + 160 bytes to save the caller's original xmm6-xmm15,
+        ;; stack stays 16-byte aligned right before the call below
+        sub     rsp, 216
 
         mov     [rsp + 32], rcx  ;; func_ptr
         mov     [rsp + 40], rdx  ;; arg1 for func_ptr
         mov     [rsp + 48], r8   ;; ret_out
+
+        ;; save the caller's original xmm6-xmm15 before they are clobbered
+        ;; with sentinel values, so they can be restored before returning
+        movdqu  [rsp + 56 + 0*16], xmm6
+        movdqu  [rsp + 56 + 1*16], xmm7
+        movdqu  [rsp + 56 + 2*16], xmm8
+        movdqu  [rsp + 56 + 3*16], xmm9
+        movdqu  [rsp + 56 + 4*16], xmm10
+        movdqu  [rsp + 56 + 5*16], xmm11
+        movdqu  [rsp + 56 + 6*16], xmm12
+        movdqu  [rsp + 56 + 7*16], xmm13
+        movdqu  [rsp + 56 + 8*16], xmm14
+        movdqu  [rsp + 56 + 9*16], xmm15
 
         lea     rax, [rel sentinel_tab]
         movdqu  xmm6, [rax + 0*16]
@@ -172,9 +192,21 @@ xmm_abi_probe:
         or      r9d, (1 << bit)
 .gpok %+ bit:
 
-        mov     eax, r9d
+        mov     eax, r9d        ;; save the corruption mask before restoring xmm6-15
 
-        add     rsp, 56
+        ;; restore the caller's original xmm6-xmm15
+        movdqu  xmm6,  [rsp + 56 + 0*16]
+        movdqu  xmm7,  [rsp + 56 + 1*16]
+        movdqu  xmm8,  [rsp + 56 + 2*16]
+        movdqu  xmm9,  [rsp + 56 + 3*16]
+        movdqu  xmm10, [rsp + 56 + 4*16]
+        movdqu  xmm11, [rsp + 56 + 5*16]
+        movdqu  xmm12, [rsp + 56 + 6*16]
+        movdqu  xmm13, [rsp + 56 + 7*16]
+        movdqu  xmm14, [rsp + 56 + 8*16]
+        movdqu  xmm15, [rsp + 56 + 9*16]
+
+        add     rsp, 216
         pop     r15
         pop     r14
         pop     r13
