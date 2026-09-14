@@ -2043,8 +2043,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_GCM_SGL:
                                 case IMB_CIPHER_CNTR:
                                 case IMB_CIPHER_PON_AES_CNTR:
-                                case IMB_CIPHER_SNOW5G_NEA4:
-                                case IMB_CIPHER_AES_NEA5:
                                 case IMB_CIPHER_NULL:
                                 case IMB_CIPHER_SM4_ECB:
                                 case IMB_CIPHER_SM4_CNTR:
@@ -2073,6 +2071,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_SNOW3G_UEA2:
                                         /* byte-aligned max is floor((2^32 - 1) / 8) */
                                         job->msg_len_to_cipher_in_bytes = (1ULL << 29);
+                                        break;
+                                case IMB_CIPHER_SNOW5G_NEA4:
+                                case IMB_CIPHER_AES_NEA5:
+                                        /* max is floor((2^32 - 1) / 8) bytes (3GPP limit) */
+                                        job->msg_len_to_cipher_in_bytes =
+                                                (((UINT32_MAX - 1) / 8) + 1);
                                         break;
                                 case IMB_CIPHER_KASUMI_UEA1:
                                         /* max is 20000 bits (2500 bytes) */

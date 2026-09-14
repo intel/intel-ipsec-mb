@@ -13,8 +13,7 @@
 #include "include/snow3g.h"
 #include "include/zuc_internal.h"
 
-#define NIA_MAX_BYTELEN     ((UINT32_MAX - 1) / BYTESIZE)
-#define NCA_MAX_BYTELEN     NIA_MAX_BYTELEN
+#define NXA_MAX_BYTELEN     ((UINT32_MAX - 1) / BYTESIZE)
 #define MB_MAX_LEN16        ((1 << 16) - 2)
 #define NCA_AAD_MAX_BYTELEN ((UINT32_MAX - 1) / BYTESIZE)
 
@@ -764,7 +763,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 break;
         case IMB_CIPHER_AES_NCA5:
-                if (job->msg_len_to_cipher_in_bytes > NCA_MAX_BYTELEN) {
+                if (job->msg_len_to_cipher_in_bytes > NXA_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
@@ -848,7 +847,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 break;
         case IMB_CIPHER_SNOW5G_NCA4:
-                if (job->msg_len_to_cipher_in_bytes > NCA_MAX_BYTELEN) {
+                if (job->msg_len_to_cipher_in_bytes > NXA_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
@@ -1385,6 +1384,10 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 break;
         case IMB_CIPHER_AES_NEA5:
         case IMB_CIPHER_SNOW5G_NEA4:
+                if (job->msg_len_to_cipher_in_bytes > NXA_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
@@ -1619,7 +1622,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 if (job->msg_len_to_hash_in_bytes == 0 ||
-                    job->msg_len_to_hash_in_bytes > NIA_MAX_BYTELEN) {
+                    job->msg_len_to_hash_in_bytes > NXA_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
                         return 1;
                 }
