@@ -3282,7 +3282,12 @@ imb_ghash_pre(const void *key, struct gcm_key_data *key_data, IMB_MGR *state);
  * @param [in] key_data     GCM expanded key data
  * @param [in] src          Pointer to source data
  * @param [in] len          Length of source data in bytes
- * @param [out] auth_tag    Authenticated Tag output
+ * @param [in,out] auth_tag Authenticated Tag input/output. A full 16 bytes
+ *                          are always read from this buffer as the initial
+ *                          GHASH state, even though only @a auth_tag_len
+ *                          bytes are written back, so the buffer must be at
+ *                          least 16 bytes and fully initialized (e.g.
+ *                          zeroed) regardless of @a auth_tag_len.
  * @param [in] auth_tag_len Authenticated Tag Length in bytes (must be
  *                          a multiple of 4 bytes). Valid values are 16
  *                          (most likely), 12 or 8
