@@ -5,6 +5,7 @@
 *******************************************************************************/
 
 /* Standard Includes */
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <xmmintrin.h>
@@ -378,31 +379,32 @@ sm4_block_update(ALG_CTX *ctx, mb_thread_data *tlv, ASYNC_JOB *async_job, unsign
 /*
  * sm4_gcm_append_aad - collect additional authenticated data.
  *
- * Only support a single AAD fragment per operation. A second AAD
- * update is rejected to avoid split-AAD behavior changes in this series.
+ * AAD may arrive over multiple update calls; keep a private contiguous copy
+ * so the job sees aad1 || aad2 || ... in order.
  */
 static int
 sm4_gcm_append_aad(ALG_CTX *ctx, const unsigned char *in, const size_t len)
 {
-        unsigned char *aad;
-
         if (len == 0)
                 return 1;
 
-        if (ctx->aad_len != 0) {
-                fprintf(stderr, "SM4-GCM: split AAD is not supported\n");
+        if (in == NULL)
                 return 0;
-        }
 
-        aad = OPENSSL_realloc(ctx->aad, len);
+        if (ctx->aad_len < 0 || len > ((size_t) INT_MAX - (size_t) ctx->aad_len))
+                return 0;
+
+        size_t total = (size_t) ctx->aad_len + len;
+        unsigned char *aad = OPENSSL_realloc(ctx->aad, total);
+
         if (aad == NULL) {
                 fprintf(stderr, "Failed to allocate SM4-GCM AAD buffer\n");
                 return 0;
         }
 
-        memcpy(aad, in, len);
+        memcpy(aad + ctx->aad_len, in, len);
         ctx->aad = aad;
-        ctx->aad_len = (int) len;
+        ctx->aad_len = (int) total;
 
         return 1;
 }
@@ -562,20 +564,35 @@ sm4_async_do_cipher(ALG_CTX *ctx, unsigned char *out, size_t *outl, size_t outsi
         if (ctx == NULL)
                 return 0;
 
-        if (in == NULL)
-                return 0;
-
         /* A NULL output means the input is AAD rather than payload. */
         if (out == NULL) {
                 if (ctx->nid != NID_sm4_gcm) {
                         fprintf(stderr, "SM4: AAD supplied to a non-AEAD mode\n");
                         return 0;
                 }
+
+                if (len == 0) {
+                        *outl = 0;
+                        return 1;
+                }
+
+                if (in == NULL)
+                        return 0;
+
                 if (!sm4_gcm_append_aad(ctx, in, len))
                         return 0;
                 *outl = len;
                 return 1;
         }
+
+        /* EVP permits NULL input pointers on zero-length data updates. */
+        if (len == 0) {
+                *outl = 0;
+                return 1;
+        }
+
+        if (in == NULL)
+                return 0;
 
         async_job = ASYNC_get_current_job();
         if (async_job == NULL) {

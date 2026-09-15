@@ -51,6 +51,10 @@ prov_sw_ccm_init(ALG_CTX *ctx, const unsigned char *key, const size_t keylen,
         memset(ctx->iv, 0, sizeof(ctx->iv));
         memset(ctx->next_iv, 0, sizeof(ctx->next_iv));
         ctx->iv_set = 0;
+        ctx->aad_len = 0;
+        ctx->tls_aad_len = -1;
+        ctx->tls_data_size = 0;
+        ctx->gcm_len = 0;
 
         if (iv != NULL && ivlen > 0) {
                 /* Use the smallest of ivlen, iv_len, and the buffer size to prevent overflow */
@@ -61,6 +65,30 @@ prov_sw_ccm_init(ALG_CTX *ctx, const unsigned char *key, const size_t keylen,
                 memcpy(ctx->next_iv, iv, copy_len);
                 ctx->iv_set = 1;
         }
+
+        return 1;
+}
+
+static int
+prov_sw_ccm_append_aad(ALG_CTX *ctx, const unsigned char *in, const size_t len)
+{
+        if (len == 0)
+                return 1;
+
+        if (in == NULL)
+                return 0;
+
+        if (ctx->aad_len < 0 || len > (size_t) INT_MAX - (size_t) ctx->aad_len)
+                return 0;
+
+        size_t total = (size_t) ctx->aad_len + len;
+        unsigned char *aad = OPENSSL_realloc(ctx->aad, total);
+        if (aad == NULL)
+                return 0;
+
+        memcpy(aad + (size_t) ctx->aad_len, in, len);
+        ctx->aad = aad;
+        ctx->aad_len = (int) total;
 
         return 1;
 }
@@ -80,7 +108,37 @@ prov_sw_ccm_do_cipher(ALG_CTX *ctx, unsigned char *out, size_t *outl, const size
         if (ctx == NULL)
                 return 0;
 
-        if (out == NULL && in == NULL)
+        if (out == NULL) {
+                /* EVP CCM message length declaration: NULL in/out with non-zero length. */
+                if (in == NULL) {
+                        ctx->tls_data_size = len;
+                        if (outl != NULL)
+                                *outl = len;
+                        return 1;
+                }
+
+                if (!prov_sw_ccm_append_aad(ctx, in, len)) {
+                        fprintf(stderr, "Failed to process CCM AAD fragment\n");
+                        return 0;
+                }
+
+                if (outl != NULL)
+                        *outl = len;
+                return 1;
+        }
+
+        if (ctx->tls_data_size > 0 && len != ctx->tls_data_size) {
+                fprintf(stderr, "CCM payload length does not match declared message length\n");
+                return 0;
+        }
+
+        if (len == 0) {
+                if (outl != NULL)
+                        *outl = 0;
+                return 1;
+        }
+
+        if (in == NULL)
                 return 0;
 
         const int key_len = ctx->keylen;
@@ -156,6 +214,8 @@ prov_sw_ccm_do_cipher(ALG_CTX *ctx, unsigned char *out, size_t *outl, const size
         imb_job->u.CCM.aad = ctx->aad;
         if (ctx->tls_aad_len > 0) {
                 imb_job->u.CCM.aad_len_in_bytes = ctx->tls_aad_len;
+        } else if (ctx->aad_len > 0) {
+                imb_job->u.CCM.aad_len_in_bytes = ctx->aad_len;
         } else {
                 imb_job->u.CCM.aad_len_in_bytes = 0;
         }
@@ -170,9 +230,8 @@ prov_sw_ccm_do_cipher(ALG_CTX *ctx, unsigned char *out, size_t *outl, const size
         }
 
         /* Set the output length to the input length for CCM */
-        if (outl) {
+        if (outl)
                 *outl = len;
-        }
 
         return 1; /* Return 1 for success instead of ret */
 }
@@ -194,6 +253,7 @@ prov_sw_ccm_cleanup(ALG_CTX *ctx)
                         OPENSSL_free(ctx->enc_keys);
                         ctx->enc_keys = NULL;
                 }
+                ctx->gcm_len = 0;
         }
 
         return 1;

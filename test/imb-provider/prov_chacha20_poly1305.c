@@ -17,6 +17,85 @@
 #define FAILURE 0
 
 static int
+chacha20_poly1305_replace_aad(ALG_CTX *ctx, const unsigned char *aad, size_t aad_len)
+{
+        unsigned char *new_aad;
+
+        if (ctx == NULL)
+                return FAILURE;
+
+        if (aad == NULL || aad_len == 0) {
+                /* Keep allocation for reuse across operations. */
+                ctx->aad_len = 0;
+                return SUCCESS;
+        }
+
+        if (aad_len > INT_MAX)
+                return FAILURE;
+
+        new_aad = OPENSSL_realloc(ctx->aad, aad_len);
+
+        if (new_aad == NULL)
+                return FAILURE;
+
+        memcpy(new_aad, aad, aad_len);
+        ctx->aad = new_aad;
+        ctx->aad_len = (int) aad_len;
+
+        return SUCCESS;
+}
+
+static int
+chacha20_poly1305_append_aad(ALG_CTX *ctx, const unsigned char *aad, size_t aad_len)
+{
+        unsigned char *new_aad;
+
+        if (ctx == NULL)
+                return FAILURE;
+
+        if (aad == NULL || aad_len == 0)
+                return SUCCESS;
+
+        if (ctx->aad_len < 0)
+                return FAILURE;
+
+        size_t total = (size_t) ctx->aad_len + aad_len;
+        if (total > INT_MAX)
+                return FAILURE;
+
+        new_aad = OPENSSL_realloc(ctx->aad, total);
+        if (new_aad == NULL)
+                return FAILURE;
+
+        memcpy(new_aad + (size_t) ctx->aad_len, aad, aad_len);
+        ctx->aad = new_aad;
+        ctx->aad_len = (int) total;
+
+        return SUCCESS;
+}
+
+static int
+chacha20_poly1305_ensure_init(ALG_CTX *ctx)
+{
+        mb_thread_data *tlv = mb_check_thread_local();
+
+        if (ctx == NULL || tlv == NULL || tlv->imb_mgr == NULL)
+                return FAILURE;
+
+        if (!ctx->key_set || !ctx->iv_set)
+                return FAILURE;
+
+        if (ctx->chacha20_poly1305_ctx_init)
+                return SUCCESS;
+
+        IMB_CHACHA20_POLY1305_INIT(tlv->imb_mgr, ctx->chacha20_key, &ctx->chacha20_poly1305_ctx,
+                                   ctx->chacha20_iv, ctx->aad, (uint64_t) ctx->aad_len);
+        ctx->chacha20_poly1305_ctx_init = 1;
+
+        return SUCCESS;
+}
+
+static int
 chacha20_poly1305_generic_init(void *ctx, const unsigned char *key, const int keylen,
                                const unsigned char *iv, const int ivlen, const int enc)
 {
@@ -28,9 +107,29 @@ chacha20_poly1305_generic_init(void *ctx, const unsigned char *key, const int ke
         }
 
         algctx->enc = enc;
+        algctx->tag_set = 0;
+        algctx->tag_calculated = 0;
+        algctx->chacha20_poly1305_ctx_init = 0;
 
-        if (key != NULL && iv != NULL) {
-                return chacha20_poly1305_async_init(algctx, key, keylen, iv, ivlen, enc);
+        if (!chacha20_poly1305_replace_aad(algctx, NULL, 0))
+                return FAILURE;
+
+        if (key != NULL) {
+                if (keylen != CHACHA20_POLY1305_KEY_SIZE)
+                        return FAILURE;
+
+                memcpy(algctx->chacha20_key, key, keylen);
+                algctx->keylen = keylen;
+                algctx->key_set = 1;
+        }
+
+        if (iv != NULL) {
+                if (ivlen != CHACHA20_POLY1305_IV_SIZE)
+                        return FAILURE;
+
+                memcpy(algctx->chacha20_iv, iv, ivlen);
+                algctx->ivlen = ivlen;
+                algctx->iv_set = 1;
         }
 
         return SUCCESS;
@@ -57,6 +156,11 @@ chacha20_poly1305_newctx(void *provctx)
         ctx->keylen = CHACHA20_POLY1305_KEY_SIZE;
         ctx->ivlen = CHACHA20_POLY1305_IV_SIZE;
         ctx->tag_len = CHACHA20_POLY1305_TAG_SIZE;
+        ctx->tag = OPENSSL_zalloc(CHACHA20_POLY1305_TAG_SIZE);
+        if (ctx->tag == NULL) {
+                OPENSSL_free(ctx);
+                return NULL;
+        }
 
         return ctx;
 }
@@ -67,7 +171,11 @@ chacha20_poly1305_freectx(void *ctx)
         ALG_CTX *algctx = (ALG_CTX *) ctx;
 
         if (algctx) {
-                chacha20_poly1305_async_cleanup(algctx);
+                if (algctx->aad != NULL)
+                        OPENSSL_free(algctx->aad);
+                if (algctx->tag != NULL)
+                        OPENSSL_free(algctx->tag);
+                OPENSSL_cleanse(algctx->chacha20_key, sizeof(algctx->chacha20_key));
                 OPENSSL_free(algctx);
         }
 }
@@ -109,42 +217,88 @@ chacha20_poly1305_stream_update(void *ctx, unsigned char *out, size_t *outl, con
                                 const unsigned char *in, const size_t inl)
 {
         ALG_CTX *algctx = (ALG_CTX *) ctx;
+        mb_thread_data *tlv = mb_check_thread_local();
 
-        if (!algctx || !in || inl == 0) {
+        (void) outsize;
+
+        if (!algctx) {
+                if (outl)
+                        *outl = 0;
+                return FAILURE;
+        }
+
+        if (in == NULL || inl == 0) {
                 if (outl)
                         *outl = 0;
                 return SUCCESS;
         }
 
-        algctx->out = out;
+        if (out == NULL) {
+                if (outl)
+                        *outl = 0;
+                return chacha20_poly1305_append_aad(algctx, in, inl);
+        }
 
-        if (!chacha20_poly1305_async_update(algctx, in, inl)) {
+        if (inl > outsize) {
+                if (outl)
+                        *outl = 0;
                 return FAILURE;
         }
 
-        *outl = inl;
+        if (tlv == NULL || tlv->imb_mgr == NULL)
+                return FAILURE;
+
+        if (!chacha20_poly1305_ensure_init(algctx))
+                return FAILURE;
+
+        if (algctx->enc)
+                IMB_CHACHA20_POLY1305_ENC_UPDATE(tlv->imb_mgr, algctx->chacha20_key,
+                                                 &algctx->chacha20_poly1305_ctx, out, in,
+                                                 (uint64_t) inl);
+        else
+                IMB_CHACHA20_POLY1305_DEC_UPDATE(tlv->imb_mgr, algctx->chacha20_key,
+                                                 &algctx->chacha20_poly1305_ctx, out, in,
+                                                 (uint64_t) inl);
+
+        if (outl)
+                *outl = inl;
+
         return SUCCESS;
 }
 
 int
 chacha20_poly1305_stream_final(void *ctx, unsigned char *out, size_t *outl, size_t outsize)
 {
-        (void) outsize;
         ALG_CTX *algctx = (ALG_CTX *) ctx;
+        mb_thread_data *tlv = mb_check_thread_local();
+        unsigned char calc_tag[CHACHA20_POLY1305_TAG_SIZE];
 
-        if (!algctx && outl) {
-                *outl = 0;
-                return FAILURE;
-        }
-
-        if (!chacha20_poly1305_async_final(algctx, out)) {
-                if (outl)
-                        *outl = 0;
-                return FAILURE;
-        }
+        (void) out;
+        (void) outsize;
 
         if (outl)
                 *outl = 0;
+
+        if (algctx == NULL || tlv == NULL || tlv->imb_mgr == NULL)
+                return FAILURE;
+
+        if (!chacha20_poly1305_ensure_init(algctx))
+                return FAILURE;
+
+        if (algctx->enc) {
+                IMB_CHACHA20_POLY1305_ENC_FINALIZE(tlv->imb_mgr, &algctx->chacha20_poly1305_ctx,
+                                                   algctx->auths, (uint64_t) algctx->tag_len);
+        } else {
+                if (algctx->tag == NULL || !algctx->tag_set)
+                        return FAILURE;
+                IMB_CHACHA20_POLY1305_DEC_FINALIZE(tlv->imb_mgr, &algctx->chacha20_poly1305_ctx,
+                                                   calc_tag, (uint64_t) algctx->tag_len);
+                if (CRYPTO_memcmp(algctx->tag, calc_tag, (size_t) algctx->tag_len) != 0)
+                        return FAILURE;
+                memcpy(algctx->auths, calc_tag, (size_t) algctx->tag_len);
+        }
+
+        algctx->tag_calculated = 1;
         return SUCCESS;
 }
 
@@ -257,8 +411,8 @@ chacha20_poly1305_set_ctx_params(void *ctx, const OSSL_PARAM params[])
 
         p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD);
         if (p != NULL) {
-                algctx->aad = p->data;
-                algctx->aad_len = p->data_size;
+                if (!chacha20_poly1305_replace_aad(algctx, p->data, p->data_size))
+                        return FAILURE;
         }
 
         p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_IVLEN);

@@ -88,7 +88,7 @@ prov_aes_ccm_stream_update(ALG_CTX *ctx, unsigned char *out, size_t *outl, const
                 return 1;
         }
 
-        if (outsize < inl)
+        if (out != NULL && outsize < inl)
                 return 0;
 
         if ((prov_sw_ccm_do_cipher(ctx, out, outl, outsize, in, inl)) <= 0)
@@ -299,6 +299,7 @@ prov_aes_ccm_dupctx(void *vctx)
 {
         ALG_CTX *in = (ALG_CTX *) vctx;
         ALG_CTX *ret = prov_alg_ctx_dup_base(in);
+        size_t aad_len = 0;
 
         if (ret == NULL)
                 return NULL;
@@ -312,7 +313,12 @@ prov_aes_ccm_dupctx(void *vctx)
         if (!prov_cipher_dup_buf(&ret->key, in->key, in->keylen))
                 goto err;
 
-        if (in->aad_len > 0 && !prov_cipher_dup_buf(&ret->aad, in->aad, in->aad_len))
+        if (in->tls_aad_len > 0)
+                aad_len = (size_t) in->tls_aad_len;
+        else if (in->aad_len > 0)
+                aad_len = (size_t) in->aad_len;
+
+        if (aad_len > 0 && !prov_cipher_dup_buf(&ret->aad, in->aad, aad_len))
                 goto err;
 
         if (!prov_cipher_dup_buf(&ret->enc_keys, in->enc_keys,

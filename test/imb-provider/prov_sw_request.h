@@ -115,6 +115,8 @@ typedef struct _alg_context {
         unsigned char *out;
         unsigned char chacha20_key[32]; /* ChaCha20 key (32 bytes) */
         unsigned char chacha20_iv[12];  /* ChaCha20 IV (12 bytes) */
+        struct chacha20_poly1305_context_data chacha20_poly1305_ctx;
+        int chacha20_poly1305_ctx_init;
 } ALG_CTX;
 
 typedef struct _op_data {
