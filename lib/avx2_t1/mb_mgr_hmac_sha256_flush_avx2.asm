@@ -93,7 +93,9 @@ mksection .text
 ; as required by the vmovdqa (aligned) instructions used below.
 struc STACK
 _gpr_save:      resq    8
+%ifndef LINUX
 _xmm_save:      resq    20
+%endif
 _rsp_save:      resq    1
 endstruc
 

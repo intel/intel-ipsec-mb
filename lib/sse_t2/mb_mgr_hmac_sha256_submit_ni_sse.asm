@@ -69,7 +69,9 @@ extern sha256_ni
 
 struc STACK
 _gpr_save:      resq    4       ; rbx, rbp, rsi (win), rdi (win)
+%ifndef LINUX
 _xmm_save:      resq    20      ; xmm6-xmm15, Windows only
+%endif
 _rsp_save:      resq    1
 endstruc
 

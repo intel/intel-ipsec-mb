@@ -74,8 +74,10 @@ mksection .text
 ; This routine clobbers rbx, rbp, rsi, rdi; called routine also clobbers r12
 struc STACK
 _gpr_save:      resq    5
+%ifndef LINUX
 _pad:           resq    1       ; padding for xmm_save alignment
 _xmm_save:      resq    20      ; xmm6-xmm15, Windows only
+%endif
 _rsp_save:      resq    1
 endstruc
 
