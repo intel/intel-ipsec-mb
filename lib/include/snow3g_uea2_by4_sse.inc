@@ -154,7 +154,9 @@ mksection .text
 struc STACK
 _keystream:     resb    (4 * 16)
 _gpr_save:      resq    10
+%ifndef LINUX
 _xmm_save:      resq    20
+%endif
 _rsp_save:      resq    1
 endstruc
 

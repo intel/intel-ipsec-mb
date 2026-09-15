@@ -285,7 +285,9 @@ struc STACK
 _keystream:     resb    (16 * 64)
 _offset_mask:   resq    16      ; per lane: all ones if lane processes data, zero otherwise
 _gpr_save:      resq    8
+%ifndef LINUX
 _xmm_save:      resq    20
+%endif
 _rsp_save:      resq    1
 endstruc
 
@@ -326,7 +328,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW3G_FUNC_END 0
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
