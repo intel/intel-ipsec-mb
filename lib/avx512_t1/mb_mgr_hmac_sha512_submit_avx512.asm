@@ -84,7 +84,9 @@ mksection .text
 ; we clobber rbx, rsi, rdi, rbp; called routine also clobbers r12
 struc STACK
 _gpr_save:      resq    8
+%ifndef LINUX
 _xmm_save:      resq    20
+%endif
 _rsp_save:      resq    1
 endstruc
 
@@ -390,7 +392,7 @@ clear_ret:
 align_label
 return:
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif

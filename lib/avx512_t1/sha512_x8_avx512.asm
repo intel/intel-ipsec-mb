@@ -502,7 +502,7 @@ lastLoop:
 
 %ifdef SAFE_DATA
         ;; Clear stack frame ((NUM_LANES*8)*64 bytes)
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %assign i 0
 %rep (NUM_LANES*8)
         vmovdqa64 [rsp + i*64], zmm0

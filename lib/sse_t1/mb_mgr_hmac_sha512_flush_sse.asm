@@ -75,7 +75,9 @@ mksection .text
 ; This routine clobbers rbx, rbp
 struc STACK
 _gpr_save:      resq    2
+%ifndef LINUX
 _xmm_save:      resq    20      ; xmm6-xmm15, Windows only
+%endif
 _rsp_save:      resq    1
 endstruc
 

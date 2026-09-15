@@ -94,7 +94,9 @@ mksection .text
 
 struc STACK
 _gpr_save:      resq    8 ; rbx, rbp, r12-r15, rdi (windows), pad
+%ifndef LINUX
 _xmm_save:      resq    20
+%endif
 _rsp_save:      resq    1
 endstruc
 
@@ -348,7 +350,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
