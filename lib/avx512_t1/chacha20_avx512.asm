@@ -2422,6 +2422,11 @@ no_partial_block_ks:
         mov     r15, [rsp + _GP_SAVE + 24]
         mov     rbx, [rsp + _GP_SAVE + 32]
         mov     rbp, [rsp + _GP_SAVE + 40]
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
+        vzeroupper
+%endif
 %ifndef LINUX
         mov     rdi, [rsp + _GP_SAVE + 48]
 %assign i 0
@@ -2433,11 +2438,6 @@ no_partial_block_ks:
 %endrep
 %endif
         mov     rsp, [rsp + _RSP_SAVE]; restore RSP
-%ifdef SAFE_DATA
-        clear_all_zmms_asm
-%else
-        vzeroupper
-%endif
 
 align_label
 exit_ks:
