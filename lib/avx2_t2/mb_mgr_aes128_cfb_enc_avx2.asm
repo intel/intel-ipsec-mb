@@ -80,7 +80,9 @@ mksection .text
 ; This routine and its callee clobbers all GPRs
 struc STACK
 _gpr_save:      resq    8
+%ifndef LINUX
 _xmm_save:      resq    10*2
+%endif
 _rsp_save:      resq    1
 endstruc
 
@@ -436,7 +438,7 @@ align_label
 align_label
 %%done:
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
