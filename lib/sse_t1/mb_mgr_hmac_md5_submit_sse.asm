@@ -71,7 +71,9 @@ mksection .text
 ; This routine and/or the called routine clobbers all GPRs
 struc STACK
 _gpr_save:      resq    8
+%ifndef LINUX
 _xmm_save:      resq    20      ; xmm6-xmm15, Windows only
+%endif
 _rsp_save:      resq    1
 endstruc
 
