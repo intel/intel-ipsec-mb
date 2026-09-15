@@ -693,7 +693,7 @@ align_label
         kmovw   k1, DWORD(tmp2)
 
         vpbroadcastw    ccm_lens{k1}, WORD(tmp)
-        vmovdqa64       [state + _aes_cmac_lens], ccm_lens
+        vmovdqa64       [state + _aes_ccm_lens], ccm_lens
         vphminposuw     min_len_idx, XWORD(ccm_lens)
 %ifidn %%SUBMIT_FLUSH, SUBMIT
         jmp     %%_ccm_round
@@ -717,7 +717,7 @@ align_label
 
         mov             DWORD(tmp2), 16
         vpbroadcastw    ccm_lens{k1}, WORD(tmp2)
-        vmovdqa64       [state + _aes_cmac_lens], ccm_lens
+        vmovdqa64       [state + _aes_ccm_lens], ccm_lens
         vphminposuw     min_len_idx, XWORD(ccm_lens)
 
         mov     tmp2, min_idx
