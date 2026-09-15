@@ -11,6 +11,7 @@
 
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
+#include "kat_common_aead.h"
 #include "utils.h"
 
 int
@@ -340,44 +341,42 @@ static const struct pon_test_vector {
         ponvector(13_PON),
 };
 
+struct pon_job_ctx {
+        const void *expkey;
+        const void *iv;
+        const uint8_t *in_text;
+        const uint8_t *out_text;
+        size_t len_to_cipher;
+        size_t len_to_bip;
+        size_t offset_to_cipher_crc;
+        uint32_t bip_out;
+        int dir;
+        int order;
+        uint8_t *target;
+        uint64_t tag_output;
+};
+
 static int
-test_pon(struct IMB_MGR *mb_mgr, const void *expkey, const void *iv, const uint8_t *in_text,
-         const uint8_t *out_text, const size_t len_to_cipher, const size_t len_to_bip,
-         const size_t offset_to_cipher_crc, const uint32_t bip_out, const int dir, const int order)
+pon_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, void *ctx_in)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t *target = malloc(len_to_bip + (sizeof(padding) * 2));
-        int ret = -1;
-        uint64_t tag_output = 0;
-        uint32_t bip_output = 0;
-        uint32_t crc_output = 0;
-        int err = 0;
+        if (ctx_in == NULL)
+                return -1;
 
-        if (target == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                return ret;
-        }
+        struct pon_job_ctx *ctx = ctx_in;
+        const uint16_t pli =
+                ((((uint16_t) ctx->in_text[0]) << 8) | ((uint16_t) ctx->in_text[1])) >> 2;
 
-        memset(target, -1, len_to_bip + (sizeof(padding) * 2));
-        memset(padding, -1, sizeof(padding));
+        (void) mb_mgr;
 
-        if (dir == IMB_DIR_ENCRYPT) {
-                const uint16_t pli =
-                        ((((uint16_t) in_text[0]) << 8) | ((uint16_t) in_text[1])) >> 2;
+        ctx->target = malloc(ctx->len_to_bip);
+        if (ctx->target == NULL)
+                return -1;
 
-                memcpy(target + sizeof(padding), in_text, len_to_bip);
-
-                /* Corrupt HEC on encrypt direction
-                 * This is to make sure HEC gets updated by the library
-                 */
-                target[sizeof(padding) + 7] ^= 0xff;
-
-                /* Corrupt Ethernet FCS/CRC on encrypt direction
-                 * This is to make sure CRC gets updated by the library
-                 */
+        if (ctx->dir == IMB_DIR_ENCRYPT) {
+                memcpy(ctx->target, ctx->in_text, ctx->len_to_bip);
+                ctx->target[7] ^= 0xff;
                 if (pli > 4) {
-                        uint8_t *p_crc = &target[sizeof(padding) + 8 + pli - 4];
+                        uint8_t *p_crc = &ctx->target[8 + pli - 4];
 
                         p_crc[0] ^= 0xff;
                         p_crc[1] ^= 0xff;
@@ -385,28 +384,23 @@ test_pon(struct IMB_MGR *mb_mgr, const void *expkey, const void *iv, const uint8
                         p_crc[3] ^= 0xff;
                 }
         } else {
-                memcpy(target + sizeof(padding), out_text, len_to_bip);
+                memcpy(ctx->target, ctx->out_text, ctx->len_to_bip);
         }
 
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = dir;
-        job->chain_order = order;
-        job->dst = target + sizeof(padding) + offset_to_cipher_crc;
-        job->src = target + sizeof(padding) /* in_text */;
+        job->cipher_direction = ctx->dir;
+        job->chain_order = ctx->order;
+        job->dst = ctx->target + ctx->offset_to_cipher_crc;
+        job->src = ctx->target;
         job->cipher_mode = IMB_CIPHER_PON_AES_CNTR;
-        job->cipher_start_src_offset_in_bytes = (uint64_t) offset_to_cipher_crc;
+        job->cipher_start_src_offset_in_bytes = (uint64_t) ctx->offset_to_cipher_crc;
 
-        /* If IV == NULL, NO CTR is done */
-        if (iv != NULL) {
-                job->enc_keys = expkey;
-                job->dec_keys = expkey;
+        if (ctx->iv != NULL) {
+                job->enc_keys = ctx->expkey;
+                job->dec_keys = ctx->expkey;
                 job->key_len_in_bytes = IMB_KEY_128_BYTES;
-                job->iv = iv;
+                job->iv = ctx->iv;
                 job->iv_len_in_bytes = 16;
-                job->msg_len_to_cipher_in_bytes = (uint64_t) len_to_cipher;
+                job->msg_len_to_cipher_in_bytes = (uint64_t) ctx->len_to_cipher;
         } else {
                 job->enc_keys = NULL;
                 job->dec_keys = NULL;
@@ -418,29 +412,35 @@ test_pon(struct IMB_MGR *mb_mgr, const void *expkey, const void *iv, const uint8
 
         job->hash_alg = IMB_AUTH_PON_CRC_BIP;
         job->hash_start_src_offset_in_bytes = 0;
-        job->msg_len_to_hash_in_bytes = (uint64_t) len_to_bip;
-        job->auth_tag_output = (void *) &tag_output;
-        job->auth_tag_output_len_in_bytes = (uint64_t) sizeof(tag_output);
-        job = IMB_SUBMIT_JOB(mb_mgr);
+        job->msg_len_to_hash_in_bytes = (uint64_t) ctx->len_to_bip;
+        job->auth_tag_output = (uint8_t *) &ctx->tag_output;
+        job->auth_tag_output_len_in_bytes = (uint64_t) sizeof(ctx->tag_output);
+        return 0;
+}
 
-        err = imb_get_errno(mb_mgr);
-        if (err != 0) {
-                printf("Error: %s!\n", imb_get_strerror(err));
-                goto end;
+static void
+pon_job_cleanup(struct IMB_JOB *job, void *ctx_in)
+{
+        (void) job;
+        if (ctx_in != NULL) {
+                struct pon_job_ctx *ctx = ctx_in;
+
+                free(ctx->target);
+                ctx->target = NULL;
         }
+}
 
-        if (job == NULL) {
-                printf("%d NULL job after submit()", __LINE__);
-                goto end;
-        }
+static int
+pon_job_validate(struct IMB_JOB *job, const void *ctx_in)
+{
+        if (ctx_in == NULL)
+                return -1;
 
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d Error status:%d", __LINE__, job->status);
-                goto end;
-        }
+        const struct pon_job_ctx *ctx = ctx_in;
+        const uint32_t bip_output = (uint32_t) ctx->tag_output;
+        const uint32_t crc_output = (uint32_t) (ctx->tag_output >> 32);
 
-        bip_output = (uint32_t) tag_output;
-        crc_output = (uint32_t) (tag_output >> 32);
+        (void) job;
 
 #ifdef DEBUG
         if (!quiet_mode) {
@@ -449,95 +449,76 @@ test_pon(struct IMB_MGR *mb_mgr, const void *expkey, const void *iv, const uint8
         }
 #endif
 
-#ifdef DEBUG
-        int is_error = 0;
-#endif
-
-        if (dir == IMB_DIR_DECRYPT) {
+        if (ctx->dir == IMB_DIR_DECRYPT) {
                 const uint16_t pli =
-                        ((((uint16_t) in_text[0]) << 8) | ((uint16_t) in_text[1])) >> 2;
+                        ((((uint16_t) ctx->in_text[0]) << 8) | ((uint16_t) ctx->in_text[1])) >> 2;
 
                 if (pli > 4) {
-                        const uint32_t crc_in_msg = *((const uint32_t *) &in_text[8 + pli - 4]);
+                        const uint32_t crc_in_msg =
+                                *((const uint32_t *) &ctx->in_text[8 + pli - 4]);
                         if (crc_in_msg != crc_output) {
                                 printf("CRC mismatch on decrypt! "
                                        "expected 0x%08x, received 0x%08x\n",
                                        crc_in_msg, crc_output);
-#ifdef DEBUG
-                                is_error = 1;
-#else
-                                goto end;
-#endif
+                                return -1;
                         }
                 }
         }
 
-        if (bip_output != bip_out) {
-                printf("BIP mismatch! expected 0x%08x, received 0x%08x\n", bip_out, bip_output);
-#ifdef DEBUG
-                is_error = 1;
-#else
-                goto end;
-#endif
+        if (bip_output != ctx->bip_out) {
+                printf("BIP mismatch! expected 0x%08x, received 0x%08x\n", ctx->bip_out,
+                       bip_output);
+                return -1;
         }
 
-        if (dir == IMB_DIR_ENCRYPT) {
-                if (memcmp(out_text, target + sizeof(padding), len_to_bip)) {
+        if (ctx->dir == IMB_DIR_ENCRYPT) {
+                if (memcmp(ctx->out_text, ctx->target, ctx->len_to_bip)) {
                         printf("output mismatch\n");
-                        hexdump(stderr, "Target", target, len_to_bip + (2 * sizeof(padding)));
-#ifdef DEBUG
-                        is_error = 1;
-#else
-                        goto end;
-#endif
+                        hexdump(stderr, "Target", ctx->target, ctx->len_to_bip);
+                        return -1;
                 }
         } else {
-                if (memcmp(in_text, target + sizeof(padding), len_to_bip - 4)) {
+                if (memcmp(ctx->in_text, ctx->target, ctx->len_to_bip - 4)) {
                         printf("output mismatch\n");
-                        hexdump(stderr, "Target", target, len_to_bip + (2 * sizeof(padding)));
-#ifdef DEBUG
-                        is_error = 1;
-#else
-                        goto end;
-#endif
+                        hexdump(stderr, "Target", ctx->target, ctx->len_to_bip);
+                        return -1;
                 }
         }
 
-        if (memcmp(padding, target, sizeof(padding))) {
-                printf("overwrite head\n");
-                hexdump(stderr, "Target", target, len_to_bip + (2 * sizeof(padding)));
-#ifdef DEBUG
-                is_error = 1;
-#else
-                goto end;
-#endif
-        }
+        return 0;
+}
 
-        if (memcmp(padding, target + sizeof(padding) + len_to_bip, sizeof(padding))) {
-                printf("overwrite tail\n");
-                hexdump(stderr, "Target", target, len_to_bip + (2 * sizeof(padding)));
-#ifdef DEBUG
-                is_error = 1;
-#else
-                goto end;
-#endif
-        }
+static int
+test_pon(struct IMB_MGR *mb_mgr, const void *expkey, const void *iv, const uint8_t *in_text,
+         const uint8_t *out_text, const size_t len_to_cipher, const size_t len_to_bip,
+         const size_t offset_to_cipher_crc, const uint32_t bip_out, const int dir, const int order)
+{
+        struct pon_job_ctx ctx = {
+                .expkey = expkey,
+                .iv = iv,
+                .in_text = in_text,
+                .out_text = out_text,
+                .len_to_cipher = len_to_cipher,
+                .len_to_bip = len_to_bip,
+                .offset_to_cipher_crc = offset_to_cipher_crc,
+                .bip_out = bip_out,
+                .dir = dir,
+                .order = order,
+                .target = NULL,
+                .tag_output = 0,
+        };
 
-#ifdef DEBUG
-        if (is_error)
-                goto end;
-#endif
+        const struct kat_custom_job_ops ops = {
+                .prepare = pon_job_prepare,
+                .cleanup = pon_job_cleanup,
+                .validate = pon_job_validate,
+                .ctx = &ctx,
+        };
 
-        /* all checks passed */
-        ret = 0;
+        if (kat_aead_test_custom_submit_flush(mb_mgr, &ops, 1) < 0)
+                return -1;
 
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-end:
-        if (target != NULL)
-                free(target);
-
-        return ret;
+        return 0;
 }
 
 static int
