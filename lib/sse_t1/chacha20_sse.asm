@@ -1639,7 +1639,10 @@ poly1305_key_gen_sse:
         movdqu  [arg3 + 1 * 16], xmm5
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        ;; Use the scratch-only clear here (rather than clear_all_xmms_sse_asm)
+        ;; since on Windows only xmm6-xmm8 are saved/restored by this function;
+        ;; xmm9-xmm15 are callee-saved and must be left untouched for the caller.
+        clear_scratch_xmms_sse_asm
 %endif
 
 %ifndef LINUX
