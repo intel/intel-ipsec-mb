@@ -303,7 +303,7 @@ align_label
 align_label
 .cleanup:
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif

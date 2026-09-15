@@ -335,7 +335,7 @@ align_label
 align_label
 .cleanup:
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
 
 %ifndef LINUX
