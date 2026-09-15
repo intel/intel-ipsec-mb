@@ -401,7 +401,7 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_NCA4_FUNC_END 0
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
