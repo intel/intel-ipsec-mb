@@ -1204,6 +1204,16 @@ align_loop
         mov     DWORD(%%TMP1_64), [rsp + _keystream + 3*4]
         mov     [%%DST_PTR + 16 + (3 * 32)], DWORD(%%TMP1_64)
 
+%ifdef SAFE_DATA
+        ;; clear the keystream and last read dword
+        xor     DWORD(%%TMP1_64), DWORD(%%TMP1_64)
+        pxor    %%TMP1, %%TMP1
+        movdqa  [rsp + _keystream + 0*16], %%TMP1
+        movdqa  [rsp + _keystream + 1*16], %%TMP1
+        movdqa  [rsp + _keystream + 2*16], %%TMP1
+        movdqa  [rsp + _keystream + 3*16], %%TMP1
+%endif
+
 %endmacro
 
 mksection stack-noexec
