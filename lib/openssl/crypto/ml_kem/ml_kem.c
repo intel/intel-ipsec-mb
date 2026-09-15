@@ -1570,6 +1570,8 @@ decap(const IMB_ML_KEM *self, uint8_t secret[ML_KEM_SHARED_SECRET_BYTES], const 
         mask = constant_time_eq_int_8(0, CRYPTO_memcmp(ctext, tmp_ctext, vinfo->ctext_bytes));
         for (i = 0; i < ML_KEM_SHARED_SECRET_BYTES; i++)
                 secret[i] = constant_time_select_8(mask, Kr[i], failure_key[i]);
+        /* |mask| records whether implicit rejection occurred */
+        OPENSSL_cleanse((void *) &mask, sizeof(mask));
         ret = 1;
 end:
         OPENSSL_cleanse(buf, DECAP_BUFFER_SZ);
