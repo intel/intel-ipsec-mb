@@ -143,7 +143,7 @@ align_loop
 align_label
 %%done:
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
 %ifndef LINUX
         movdqu  xmm6,  [rsp + 16*0]

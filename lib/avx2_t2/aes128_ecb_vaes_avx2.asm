@@ -197,7 +197,7 @@ align_label
 %%done:
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
