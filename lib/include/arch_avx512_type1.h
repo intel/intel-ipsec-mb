@@ -214,6 +214,21 @@ shake256_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *outp
 IMB_DLL_LOCAL IMB_JOB *
 hmac_sha3_submit_avx512(IMB_JOB *job);
 
+/*
+ * hmac_sha3_avx512.asm derives the algorithm rate from
+ * (job->hash_alg - HMAC_SHA3_ALG_FIRST), with HMAC_SHA3_ALG_FIRST hard-coded
+ * to 58. Fail the build if IMB_HASH_ALG is reordered or the four HMAC-SHA3
+ * values stop being contiguous, rather than silently mis-indexing at run time.
+ */
+#define HMAC_SHA3_ALG_FIRST 58
+
+_Static_assert((int) IMB_AUTH_HMAC_SHA3_224 == HMAC_SHA3_ALG_FIRST &&
+                       (int) IMB_AUTH_HMAC_SHA3_256 == HMAC_SHA3_ALG_FIRST + 1 &&
+                       (int) IMB_AUTH_HMAC_SHA3_384 == HMAC_SHA3_ALG_FIRST + 2 &&
+                       (int) IMB_AUTH_HMAC_SHA3_512 == HMAC_SHA3_ALG_FIRST + 3,
+               "HMAC-SHA3 IMB_HASH_ALG values changed, "
+               "update HMAC_SHA3_ALG_FIRST in hmac_sha3_avx512.asm");
+
 /* KASUMI */
 void
 kasumi_f8_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,

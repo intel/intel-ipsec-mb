@@ -47,6 +47,8 @@ extern keccak_1600_init_state
 ;; relocation are needed.  The digest size follows from the rate as
 ;; (200 - rate) / 2, so it needs no table of its own.
 %define HMAC_SHA3_ALG_FIRST     58      ; IMB_AUTH_HMAC_SHA3_224 .. _512 are contiguous
+                                        ; (checked at compile time by the
+                                        ;  _Static_assert in arch_avx512_type1.h)
 %define HMAC_SHA3_RATES_PACKED \
         (SHA3_224_RATE | (SHA3_256_RATE << 8) | (SHA3_384_RATE << 16) | \
         (SHA3_512_RATE << 24))
