@@ -117,7 +117,9 @@ extern ZUC_NCA6_4_BUFFER
 struc STACK
 _state_save    resq     2*(16+2) ; Space for ZUC LFSR + R1-2
 _gpr_save:      resq    10
+%ifndef LINUX
 _xmm_save:      resq    20      ; xmm6-xmm15, Windows only
+%endif
 _null_len_save: resq    1
 _rsp_save:      resq    1
 endstruc

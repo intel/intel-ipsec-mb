@@ -96,7 +96,9 @@ extern zuc_nia6_16_buffer_job_gfni_avx512
 ; This routine and its callee clobbers all GPRs
 struc STACK
 _gpr_save:        resq    8  ; slots 0-7: callee-saved GPRs (rbx, rbp, r12-r15; rsi/rdi on Windows)
+%ifndef LINUX
 _xmm_save:        resq    20 ; xmm6-xmm15, Windows only
+%endif
 _rsp_save:        resq    1
 _state_save:      resq    1
 _job_save:        resq    1
@@ -1534,7 +1536,7 @@ align_label
 align_label
 %%return_submit_nca6:
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
@@ -1724,7 +1726,7 @@ align_label
 align_label
 %%return_flush_nca6:
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
