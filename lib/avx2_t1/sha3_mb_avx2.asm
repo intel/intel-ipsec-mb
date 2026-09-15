@@ -1053,7 +1053,7 @@ align_label
         ;; The interleaved state left in the vector registers still holds
         ;; material belonging to the jobs in the other lanes.  Cleared here,
         ;; before the Windows non-volatile XMMs are restored below.
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif

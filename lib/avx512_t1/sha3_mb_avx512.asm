@@ -697,7 +697,7 @@ align_label
         ;; material belonging to the jobs in the other lanes, and on the
         ;; SHAKE path xmm0-xmm24 still hold the finishing lane's sponge.
         ;; Cleared here, before the Windows non-volatile XMMs are restored.
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
