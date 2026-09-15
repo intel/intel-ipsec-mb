@@ -469,7 +469,8 @@ typedef struct {
 typedef struct {
         DECLARE_ALIGNED(SNOW3G_ARGS args, 64);
         uint32_t lens[16];
-        IMB_JOB *job_in_lane[16];
+        /* Read with alignment-requiring instructions (vmovdqa64 / pcmpeqq) */
+        DECLARE_ALIGNED(IMB_JOB *job_in_lane[16], 64);
         uint64_t init_mask;
         uint64_t unused_lanes;
         uint64_t num_lanes_inuse;

@@ -495,7 +495,7 @@ START_FIELDS    ; MB_MGR_SNOW3G_OOO
 ;;      name                    size               align
 FIELD   _snow3g_args,           _SNOW3G_ARGS_size, _SNOW3G_ARGS_align
 FIELD   _snow3g_lens,           16*4,              64 ; 16 x 32-bit vector
-FIELD   _snow3g_job_in_lane,    16*8,              8
+FIELD   _snow3g_job_in_lane,    16*8,              64 ; read with vmovdqa64 / pcmpeqq
 FIELD   _snow3g_INIT_MASK,      8,                 8
 FIELD   _snow3g_unused_lanes,   8,                 8
 FIELD   _snow3g_lanes_in_use,   8,                 8
