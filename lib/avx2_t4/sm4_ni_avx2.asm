@@ -322,7 +322,7 @@ align_label
 done:
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -403,7 +403,7 @@ align_label
 cbc_enc_done:
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -614,7 +614,7 @@ align_label
 cbc_dec_done:
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -872,7 +872,7 @@ align_label
 ctr_done:
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -932,7 +932,7 @@ align_label
 sm4_set_key_ni_avx2_return:
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif

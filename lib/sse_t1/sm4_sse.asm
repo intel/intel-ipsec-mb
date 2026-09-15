@@ -433,7 +433,7 @@ SM4_SET_KEY:
 %endrep
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
         FUNC_RESTORE
 
@@ -492,7 +492,7 @@ align_label
 end_ecb_loop:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
         FUNC_RESTORE
 
@@ -548,7 +548,7 @@ align_label
 end_cbc_enc_loop:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
         FUNC_RESTORE
 
@@ -605,7 +605,7 @@ align_label
 end_cbc_dec_loop:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
         FUNC_RESTORE
 
@@ -695,7 +695,7 @@ align_label
 end_partial_block:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
         FUNC_RESTORE
 
