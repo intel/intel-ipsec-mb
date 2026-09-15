@@ -10,9 +10,9 @@
 #include <string.h>
 
 #include <intel-ipsec-mb.h>
-#include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "aead_test.h"
+#include "kat_common_aead.h"
 #include "wycheproof_test.h"
 
 int
@@ -58,369 +58,120 @@ free_ccm_vectors(struct test_json_alloc_ctx *ctx_128, struct test_json_alloc_ctx
         ccm_256_vectors = NULL;
 }
 
+struct ccm_job_ctx {
+        const uint32_t *exp_key;
+};
+
 static int
-ccm_job_ok(const struct aead_test *vec, const struct IMB_JOB *job, const uint8_t *target,
-           const uint8_t *padding, const uint8_t *auth, const size_t sizeof_padding, const int dir,
-           const int in_place)
+ccm_job_prepare(IMB_MGR *mb_mgr, IMB_JOB *job, const struct aead_test *vec, const void *ctx)
 {
-        if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d Error status:%d", __LINE__, job->status);
-                return 0;
-        }
+        const struct ccm_job_ctx *job_ctx = ctx;
 
-        /* cipher checks */
-        if (in_place) {
-                if (dir == IMB_DIR_ENCRYPT) {
-                        if (memcmp((const void *) vec->ct, target + sizeof_padding,
-                                   vec->msgSize / 8)) {
-                                printf("cipher mismatched\n");
-                                hexdump(stderr, "Received", target + sizeof_padding,
-                                        vec->msgSize / 8);
-                                hexdump(stderr, "Expected", (const void *) vec->ct,
-                                        vec->msgSize / 8);
-                                return 0;
-                        }
-                } else {
-                        if (memcmp((const void *) vec->msg, target + sizeof_padding,
-                                   vec->msgSize / 8)) {
-                                printf("cipher mismatched\n");
-                                hexdump(stderr, "Received", target + sizeof_padding,
-                                        vec->msgSize / 8);
-                                hexdump(stderr, "Expected", (const void *) vec->msg,
-                                        vec->msgSize / 8);
-                                return 0;
-                        }
-                }
-        } else { /* out-of-place */
-                if (dir == IMB_DIR_ENCRYPT) {
-                        if (memcmp(vec->ct, target + sizeof_padding, vec->msgSize / 8)) {
-                                printf("cipher mismatched\n");
-                                hexdump(stderr, "Received", target + sizeof_padding,
-                                        vec->msgSize / 8);
-                                hexdump(stderr, "Expected", (const void *) vec->ct,
-                                        vec->msgSize / 8);
-                                return 0;
-                        }
-                } else {
-                        if (memcmp(vec->msg, target + sizeof_padding, vec->msgSize / 8)) {
-                                printf("cipher mismatched\n");
-                                hexdump(stderr, "Received", target + sizeof_padding,
-                                        vec->msgSize / 8);
-                                hexdump(stderr, "Expected", (const void *) vec->msg,
-                                        vec->msgSize / 8);
-                                return 0;
-                        }
-                }
-        }
-
-        if (memcmp(padding, target, sizeof_padding)) {
-                printf("cipher overwrite head\n");
-                hexdump(stderr, "Target", target, sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, target + sizeof_padding + vec->msgSize / 8, sizeof_padding)) {
-                printf("cipher overwrite tail\n");
-                hexdump(stderr, "Target", target + sizeof_padding + vec->msgSize / 8,
-                        sizeof_padding);
-                return 0;
-        }
-
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + vec->tagSize / 8], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + vec->tagSize / 8], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", (const void *) vec->tag, vec->tagSize / 8);
-                return 0;
-        }
-        return 1;
+        (void) mb_mgr;
+        job->enc_keys = job_ctx->exp_key;
+        job->dec_keys = job_ctx->exp_key;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
+        job->u.CCM.aad = (const uint8_t *) vec->aad;
+        job->u.CCM.aad_len_in_bytes = vec->aadSize / 8;
+        return 0;
 }
 
-static int
-test_ccm_aead_burst(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir,
-                    const int in_place, const int num_jobs, const uint64_t key_length)
+static void
+test_ccm_vectors(struct IMB_MGR *mb_mgr, const struct aead_test *vector, const uint32_t key_len,
+                 struct test_suite_context *ts, const int num_jobs)
 {
-        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
-        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE];
-        uint8_t padding[16];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i, completed_jobs, jobs_rx = 0, ret = -1;
-        const int order = (dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_HASH_CIPHER : IMB_ORDER_CIPHER_HASH;
+        uint32_t *expkey = test_aligned_alloc(16, 4 * 15 * sizeof(*expkey));
+        uint32_t *dust = test_aligned_alloc(16, 4 * 15 * sizeof(*dust));
 
-        if (targets == NULL || auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
+        if (expkey == NULL || dust == NULL) {
+                test_suite_update(ts, 0, 1);
+                test_aligned_free(expkey);
+                test_aligned_free(dust);
+                return;
         }
 
-        memset(padding, -1, sizeof(padding));
-        memset(targets, 0, num_jobs * sizeof(void *));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(vec->msgSize / 8 + (sizeof(padding) * 2));
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
-                if (targets[i] == NULL || auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-
-                memset(targets[i], -1, vec->msgSize / 8 + (sizeof(padding) * 2));
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
-
-                if (in_place) {
-                        if (dir == IMB_DIR_ENCRYPT)
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->msg,
-                                       vec->msgSize / 8);
-                        else
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->ct,
-                                       vec->msgSize / 8);
-                }
-        }
-
-        if (key_length == 16)
-                IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
+        if (key_len == IMB_KEY_128_BYTES)
+                IMB_AES_KEYEXP_128(mb_mgr, vector->key, expkey, dust);
         else
-                IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
+                IMB_AES_KEYEXP_256(mb_mgr, vector->key, expkey, dust);
 
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-                job->cipher_direction = dir;
-                job->chain_order = order;
-                if (in_place) {
-                        job->dst = targets[i] + sizeof(padding);
-                        job->src = targets[i] + sizeof(padding);
-                } else {
-                        if (dir == IMB_DIR_ENCRYPT) {
-                                job->dst = targets[i] + sizeof(padding);
-                                job->src = (const void *) vec->msg;
-                        } else {
-                                job->dst = targets[i] + sizeof(padding);
-                                job->src = (const void *) vec->ct;
-                        }
+        struct ccm_job_ctx job_ctx = { .exp_key = expkey };
+
+        struct kat_aead_job_ops encrypt_ops = {
+                .prepare = ccm_job_prepare,
+                .ctx = &job_ctx,
+                .cipher_mode = IMB_CIPHER_CCM,
+                .hash_alg = IMB_AUTH_AES_CCM,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = key_len,
+                .in_place = 0,
+        };
+        struct kat_aead_job_ops encrypt_in_place_ops = {
+                .prepare = ccm_job_prepare,
+                .ctx = &job_ctx,
+                .cipher_mode = IMB_CIPHER_CCM,
+                .hash_alg = IMB_AUTH_AES_CCM,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = key_len,
+                .in_place = 1,
+        };
+        struct kat_aead_job_ops decrypt_ops = {
+                .prepare = ccm_job_prepare,
+                .ctx = &job_ctx,
+                .cipher_mode = IMB_CIPHER_CCM,
+                .hash_alg = IMB_AUTH_AES_CCM,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = key_len,
+                .in_place = 0,
+        };
+        struct kat_aead_job_ops decrypt_in_place_ops = {
+                .prepare = ccm_job_prepare,
+                .ctx = &job_ctx,
+                .cipher_mode = IMB_CIPHER_CCM,
+                .hash_alg = IMB_AUTH_AES_CCM,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_CIPHER_HASH,
+                .key_len_in_bytes = key_len,
+                .in_place = 1,
+        };
+
+        const struct kat_aead_job_ops *ops[] = { &encrypt_ops, &encrypt_in_place_ops, &decrypt_ops,
+                                                 &decrypt_in_place_ops };
+
+        for (size_t i = 0; i < DIM(ops); i++) {
+                if (kat_aead_test_submit_flush(mb_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                        test_suite_update(ts, 0, 1);
+                        test_aligned_free(expkey);
+                        test_aligned_free(dust);
+                        return;
                 }
-                job->cipher_mode = IMB_CIPHER_CCM;
-                job->enc_keys = expkey;
-                job->dec_keys = expkey;
-                job->key_len_in_bytes = key_length;
-                job->iv = (const void *) vec->iv;
-                job->iv_len_in_bytes = vec->ivSize / 8;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
+                test_suite_update(ts, 1, 0);
 
-                job->hash_alg = IMB_AUTH_AES_CCM;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                job->u.CCM.aad_len_in_bytes = vec->aadSize / 8;
-                job->u.CCM.aad = (const void *) vec->aad;
-
-                job->user_data = targets[i];
-                job->user_data2 = auths[i];
-        }
-
-        completed_jobs =
-                IMB_SUBMIT_AEAD_BURST(mb_mgr, jobs, num_jobs, IMB_CIPHER_CCM, dir, key_length);
-        if (completed_jobs != num_jobs) {
-                int err = imb_get_errno(mb_mgr);
-
-                if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                        goto end;
-                } else {
-                        printf("submit_burst error: not enough "
-                               "jobs returned!\n");
-                        goto end;
+                if (kat_aead_test_burst(mb_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                        test_suite_update(ts, 0, 1);
+                        test_aligned_free(expkey);
+                        test_aligned_free(dust);
+                        return;
                 }
+                test_suite_update(ts, 1, 0);
         }
 
-        for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i + 1);
-                        goto end;
+        if (num_jobs == 1) {
+                if (kat_aead_test_round_trip(mb_mgr, vector, &encrypt_ops, &decrypt_ops) < 0) {
+                        test_suite_update(ts, 0, 1);
+                        test_aligned_free(expkey);
+                        test_aligned_free(dust);
+                        return;
                 }
-
-                jobs_rx++;
-                if (!ccm_job_ok(vec, job, job->user_data, padding, job->user_data2, sizeof(padding),
-                                dir, in_place))
-                        goto end;
+                test_suite_update(ts, 1, 0);
         }
 
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        for (i = 0; i < num_jobs; i++) {
-                if (targets[i] != NULL)
-                        free(targets[i]);
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (targets != NULL)
-                free(targets);
-
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
-}
-
-static int
-test_ccm(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, const int in_place,
-         const int num_jobs, const uint64_t key_length)
-{
-        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
-        const int order = (dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_HASH_CIPHER : IMB_ORDER_CIPHER_HASH;
-
-        if (targets == NULL || auths == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
-
-        memset(padding, -1, sizeof(padding));
-        memset(targets, 0, num_jobs * sizeof(void *));
-        memset(auths, 0, num_jobs * sizeof(void *));
-
-        for (i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(vec->msgSize / 8 + (sizeof(padding) * 2));
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
-                if (targets[i] == NULL || auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
-                }
-
-                memset(targets[i], -1, vec->msgSize / 8 + (sizeof(padding) * 2));
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
-
-                if (in_place) {
-                        if (dir == IMB_DIR_ENCRYPT)
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->msg,
-                                       vec->msgSize / 8);
-                        else
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->ct,
-                                       vec->msgSize / 8);
-                }
-        }
-
-        if (key_length == 16)
-                IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
-        else
-                IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
-
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = order;
-                if (in_place) {
-                        job->dst = targets[i] + sizeof(padding);
-                        job->src = targets[i] + sizeof(padding);
-                } else {
-                        if (dir == IMB_DIR_ENCRYPT) {
-                                job->dst = targets[i] + sizeof(padding);
-                                job->src = (const void *) vec->msg;
-                        } else {
-                                job->dst = targets[i] + sizeof(padding);
-                                job->src = (const void *) vec->ct;
-                        }
-                }
-                job->cipher_mode = IMB_CIPHER_CCM;
-                job->enc_keys = expkey;
-                job->dec_keys = expkey;
-                job->key_len_in_bytes = key_length;
-                job->iv = (const void *) vec->iv;
-                job->iv_len_in_bytes = vec->ivSize / 8;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
-
-                job->hash_alg = IMB_AUTH_AES_CCM;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-
-                job->u.CCM.aad_len_in_bytes = vec->aadSize / 8;
-                job->u.CCM.aad = (const void *) vec->aad;
-
-                job->user_data = targets[i];
-                job->user_data2 = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (num_jobs < 4) {
-                                printf("%d Unexpected return from submit_job\n", __LINE__);
-                                goto end;
-                        }
-                        if (!ccm_job_ok(vec, job, job->user_data, padding, job->user_data2,
-                                        sizeof(padding), dir, in_place))
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-
-                if (!ccm_job_ok(vec, job, job->user_data, padding, job->user_data2, sizeof(padding),
-                                dir, in_place))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (i = 0; i < num_jobs; i++) {
-                if (targets[i] != NULL)
-                        free(targets[i]);
-                if (auths[i] != NULL)
-                        free(auths[i]);
-        }
-
-end2:
-        if (targets != NULL)
-                free(targets);
-
-        if (auths != NULL)
-                free(auths);
-
-        return ret;
+        test_aligned_free(expkey);
+        test_aligned_free(dust);
 }
 
 static void
@@ -431,7 +182,6 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
         if (!quiet_mode)
                 printf("AES-CCM-128 standard test vectors (N jobs = %d):\n", num_jobs);
         for (; v->msg != NULL; v++) {
-
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("Standard vector %zu NONCELen:%zu PktLen:%zu AADLen:%zu "
@@ -443,65 +193,7 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 #endif
                 }
 
-                if (test_ccm(mb_mgr, v, IMB_DIR_ENCRYPT, 1, num_jobs, IMB_KEY_128_BYTES)) {
-                        printf("error #%zu encrypt in-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm(mb_mgr, v, IMB_DIR_DECRYPT, 1, num_jobs, IMB_KEY_128_BYTES)) {
-                        printf("error #%zu decrypt in-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm(mb_mgr, v, IMB_DIR_ENCRYPT, 0, num_jobs, IMB_KEY_128_BYTES)) {
-                        printf("error #%zu encrypt out-of-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm(mb_mgr, v, IMB_DIR_DECRYPT, 0, num_jobs, IMB_KEY_128_BYTES)) {
-                        printf("error #%zu decrypt out-of-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_ENCRYPT, 1, num_jobs,
-                                        IMB_KEY_128_BYTES)) {
-                        printf("error #%zu encrypt in-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_DECRYPT, 1, num_jobs,
-                                        IMB_KEY_128_BYTES)) {
-                        printf("error #%zu decrypt in-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_ENCRYPT, 0, num_jobs,
-                                        IMB_KEY_128_BYTES)) {
-                        printf("error #%zu encrypt out-of-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_DECRYPT, 0, num_jobs,
-                                        IMB_KEY_128_BYTES)) {
-                        printf("error #%zu decrypt out-of-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
+                test_ccm_vectors(mb_mgr, v, IMB_KEY_128_BYTES, ctx, num_jobs);
         }
         if (!quiet_mode)
                 printf("\n");
@@ -515,7 +207,6 @@ test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
         if (!quiet_mode)
                 printf("AES-CCM-256 standard test vectors (N jobs = %d):\n", num_jobs);
         for (; v->msg != NULL; v++) {
-
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("Standard vector %zu NONCELen:%zu PktLen:%zu AADLen:%zu "
@@ -527,65 +218,7 @@ test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 #endif
                 }
 
-                if (test_ccm(mb_mgr, v, IMB_DIR_ENCRYPT, 1, num_jobs, IMB_KEY_256_BYTES)) {
-                        printf("error #%zu encrypt in-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm(mb_mgr, v, IMB_DIR_DECRYPT, 1, num_jobs, IMB_KEY_256_BYTES)) {
-                        printf("error #%zu decrypt in-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm(mb_mgr, v, IMB_DIR_ENCRYPT, 0, num_jobs, IMB_KEY_256_BYTES)) {
-                        printf("error #%zu encrypt out-of-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm(mb_mgr, v, IMB_DIR_DECRYPT, 0, num_jobs, IMB_KEY_256_BYTES)) {
-                        printf("error #%zu decrypt out-of-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_ENCRYPT, 1, num_jobs,
-                                        IMB_KEY_256_BYTES)) {
-                        printf("error #%zu encrypt in-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_DECRYPT, 1, num_jobs,
-                                        IMB_KEY_256_BYTES)) {
-                        printf("error #%zu decrypt in-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_ENCRYPT, 0, num_jobs,
-                                        IMB_KEY_256_BYTES)) {
-                        printf("error #%zu encrypt out-of-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_ccm_aead_burst(mb_mgr, v, IMB_DIR_DECRYPT, 0, num_jobs,
-                                        IMB_KEY_256_BYTES)) {
-                        printf("error #%zu decrypt out-of-place (aead burst)\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
+                test_ccm_vectors(mb_mgr, v, IMB_KEY_256_BYTES, ctx, num_jobs);
         }
         if (!quiet_mode)
                 printf("\n");
@@ -604,13 +237,13 @@ ccm_test(struct IMB_MGR *mb_mgr)
 
         /* AES-CCM-128 tests */
         test_suite_start(&ctx, "AES-CCM-128");
-        for (int i = 0; i <= 19; i++)
+        for (int i = 1; i <= 19; i++)
                 test_ccm_128_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
         /* AES-CCM-256 tests */
         test_suite_start(&ctx, "AES-CCM-256");
-        for (int i = 0; i <= 19; i++)
+        for (int i = 1; i <= 19; i++)
                 test_ccm_256_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
