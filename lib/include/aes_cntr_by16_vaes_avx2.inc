@@ -675,7 +675,7 @@ align_label
 %endif
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA

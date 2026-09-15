@@ -469,7 +469,7 @@ align_label
 %endif
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif ;; SAFE_DATA
 
 %ifndef LINUX

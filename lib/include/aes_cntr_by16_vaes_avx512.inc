@@ -986,7 +986,7 @@ align_label
         ;; No need to clear ZMMs for PON, as they will be cleared in caller
 %ifnidn %%CNTR_TYPE, CNTR_PON
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA

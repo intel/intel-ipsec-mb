@@ -468,7 +468,7 @@ align_label
 %endif
 
 %ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
+        clear_scratch_xmms_avx_asm
 %endif ;; SAFE_DATA
 
 %ifndef LINUX
