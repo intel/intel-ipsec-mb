@@ -76,7 +76,9 @@ struc STACK
 _B:             resb    64      ; two SM3 blocks (aligned to 16)
 _D:             resd    8       ; digest
 _gpr_save:      resq    8       ; space for GPR's
+%ifidn __OUTPUT_FORMAT__, win64
 _xmm_save:      resb    16*2    ; space for xmm10/xmm11
+%endif
 _rsp_save:      resq    1       ; space for rsp pointer
 endstruc
 
