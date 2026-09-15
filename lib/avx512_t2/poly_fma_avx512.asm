@@ -146,7 +146,9 @@ dw      0, 0x1, 0x5, 0x15, 0x55, 0x57, 0x5f, 0x7f, 0xff
 struc STACKFRAME
 _r_save:        resz    6  ; Memory to save limbs of powers of R
 _gpr_save:      resq    8  ; Memory to save GP registers
+%ifndef LINUX
 _xmm_save:      reso    10 ; Memory to save XMM registers
+%endif
 _rsp_save:      resq    1  ; Memory to save RSP
 endstruc
 
@@ -1648,7 +1650,7 @@ align_label
 %macro FUNC_EXIT 0
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA

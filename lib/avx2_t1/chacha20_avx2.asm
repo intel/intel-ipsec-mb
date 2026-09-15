@@ -65,7 +65,9 @@ dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 struc STACK
 _STATE:         reso    32      ; Space to store first 8 states
 _YMM_SAVE:      resy    2       ; Space to store up to 2 temporary YMM registers
+%ifndef LINUX
 _XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
+%endif
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
@@ -1500,7 +1502,7 @@ poly1305_key_gen_avx:
         vmovdqu [arg3 + 1 * 16], xmm5
 
 %ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
+        clear_scratch_xmms_avx_asm
 %endif
 %ifndef LINUX
         vmovdqa xmm6, [rsp]

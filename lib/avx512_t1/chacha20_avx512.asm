@@ -111,7 +111,9 @@ dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 dq      0xffffffffffffffff, 0xffffffffffffffff
 
 struc STACK
+%ifndef LINUX
 _XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
+%endif
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
@@ -1318,7 +1320,7 @@ align_label
 no_partial_block:
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
@@ -1622,7 +1624,7 @@ align_label
 no_partial_block_poly:
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
@@ -2103,7 +2105,7 @@ align_label
 no_partial_block_dec:
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
         ; Clear stored keystreams in stack
 %assign i 0
 %rep 15
@@ -2427,7 +2429,7 @@ no_partial_block_ks:
         mov     rbx, [rsp + _GP_SAVE + 32]
         mov     rbp, [rsp + _GP_SAVE + 40]
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif

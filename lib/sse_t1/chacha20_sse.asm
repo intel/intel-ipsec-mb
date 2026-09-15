@@ -74,8 +74,10 @@ dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 struc STACK
 _STATE:         reso    16      ; Space to store first 4 states
 _XMM_SAVE:      reso    2       ; Space to store up to 2 temporary XMM registers
+%ifndef LINUX
 _XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
 _XMM6_15_SAVE:  reso    10      ; Space to store xmm6-xmm15, Windows only
+%endif
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
@@ -1062,7 +1064,7 @@ align_label
 no_partial_block:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -1572,7 +1574,7 @@ no_partial_block_ks:
         mov     [ctx + LastBlkCount], blk_cnt
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -1672,7 +1674,7 @@ submit_job_chacha20_poly_enc_sse:
         mov     [rsp + _GP_SAVE], r12
         mov     [rsp + _GP_SAVE + 8], r13
         mov     [rsp + _GP_SAVE + 16], r14
-;%ifndef LINUX
+%ifndef LINUX
 %assign i 0
 %assign j 6
 %rep 10
@@ -1680,7 +1682,7 @@ submit_job_chacha20_poly_enc_sse:
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
-;%endif
+%endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         mov     added_len, 64
@@ -2237,7 +2239,7 @@ align_label
 no_partial_block_poly:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -2732,7 +2734,7 @@ align_label
 no_partial_block_dec:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -2882,7 +2884,7 @@ gen_keystr_poly_key_sse:
         movdqu  [ks + 16*15], xmm15
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -2980,7 +2982,7 @@ align_label
 exit_gen:
 
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
+        clear_scratch_xmms_sse_asm
 %endif
         jmp     restore_gen_keystr
 

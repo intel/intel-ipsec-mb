@@ -94,7 +94,9 @@ _r4_r1_save:    resy    3  ; Memory to save limbs of powers of R
 _r4_save:       resy    3  ; Memory to save limbs of powers of R
 _r4p_save:      resy    2  ; Memory to save limbs of powers of R
 _gpr_save:      resq    8  ; Memory to save GP registers
+%ifndef LINUX
 _xmm_save:      reso    10 ; Memory to save XMM registers
+%endif
 _rsp_save:      resq    1  ; Memory to save RSP
 endstruc
 
@@ -945,7 +947,7 @@ align_label
 %macro FUNC_EXIT 0
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
