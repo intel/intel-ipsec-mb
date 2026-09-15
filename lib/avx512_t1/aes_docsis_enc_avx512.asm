@@ -25,7 +25,9 @@
 
 struc STACK
 _gpr_save:      resq    8
+%ifndef LINUX
 _xmm_save:      resq    20
+%endif
 _rsp_save:      resq    1
 _idx:           resq    1
 _len:           resq    1
@@ -410,7 +412,7 @@ align_label
 ;; =====================================================================
 %macro FUNC_EXIT 0
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
