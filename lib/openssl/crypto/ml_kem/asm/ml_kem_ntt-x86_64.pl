@@ -50,6 +50,66 @@ open OUT, "| \"$^X\" \"$xlate\" $flavour \"$output\""
 
 my $code = '';
 
+# ---------------------------------------------------------------------------
+# Signed 16-bit range analysis (q = 3329, R = 2^16)
+#
+# Every kernel in this file operates on signed 16-bit lanes without widening
+# (except ntt_reduce). The bounds below are the invariants that keep every
+# intermediate inside [-32768, 32767]; any change to the butterfly structure,
+# the reduction points or the twiddle encoding must be re-checked against them.
+#
+# Montgomery product helper bound
+#   All multiplies have the form   t = high(a*c_hi) - high(low16(a*c_lo) * q)
+#   with c_lo = c_hi * q^-1 mod 2^16. The two floors cancel exactly, so
+#       t = (a*c_hi - m*q) / 2^16,   m = low16(a*c_lo), |m| <= 2^15
+#   and therefore
+#       |t| <= |a|*|c_hi| / 2^16 + q/2.                                 (M)
+#   Twiddle high parts (kNTTZetaHi, kInvNTTZetaHi, kBaseMulZetaHi) and the
+#   R^2 / 512 constants are stored in signed canonical form, |c_hi| <= (q-1)/2,
+#   so for any signed 16-bit |a| the product satisfies |t| <= 3q/4 < q.
+#
+# Forward NTT (ml_kem_ntt_avx2)
+#   Precondition: input coefficients canonical, in [0, q-1].
+#   Levels 1..7 run lazily (no reduction); each level widens the interval by
+#   the level's |t| bound from (M) applied to the incoming magnitude:
+#       after L1: (-0.53q, 1.53q)      after L5: (-2.76q, 3.76q)
+#       after L2: (-1.06q, 2.06q)      after L6: (-3.36q, 4.36q)
+#       after L3: (-1.62q, 2.62q)      after L7: (-3.97q, 4.97q)
+#       after L4: (-2.18q, 3.18q)
+#   Worst case after level 7 is (-13216, +16544), well inside int16.
+#   ntt_reduce then requires x > -5q so that (x + 5q) is non-negative before
+#   the logical shift in the Barrett step; the level-7 bound gives
+#   x + 5q in (q, 10q), and (10q)*5039 < 2^31 keeps the dword product exact.
+#   Output: canonical [0, q-1].
+#
+# Inverse NTT (ml_kem_inverse_ntt_avx2)
+#   Precondition: input canonical, in [0, q-1].
+#   intt_butterfly fully reduces both outputs at every level, so every level
+#   sees canonical inputs: w_even + w_odd in [0, 2q) feeds reduce_once, and
+#   w_even - w_odd in (-q, q) feeds the Montgomery multiply, giving
+#   |t| <= q*(q-1)/2 / 2^16 + q/2 < 0.53q. The final inverse-degree scale
+#   (intt_scale_reduce) is a Montgomery multiply by 512 (= 2^9, so the result
+#   is x * 2^9 * 2^-16 = x/128 mod q), again bounded by (M).
+#   Output: canonical [0, q-1].
+#
+# Basemul (ml_kem_mul_avx2 / ml_kem_mul_add_avx2)
+#   Precondition: both operands canonical, in [0, q-1].
+#       A, B, D, E = M(l, r):      |.| <= q^2/2^16 + q/2   ~ 1834 (0.55q)
+#       C = M(B, zeta*R):          |.| <= 1834*1664/2^16 + q/2 ~ 1711 (0.51q)
+#       A + C, D + E:              |.| <= 3545 (1.07q), fits int16
+#       o = M(A+C, R^2), M(D+E, R^2): |.| <= 3668*1664/2^16 + q/2 ~ 1758 (0.53q)
+#   The conditional +q therefore maps o from (-q, q) to canonical [0, q-1].
+#   ml_kem_mul_add_avx2 adds this canonical product to a canonical accumulator
+#   ([0, 2q)) and applies reduce_once, so the accumulator is canonical after
+#   every call; the bound is independent of the number of accumulated terms
+#   (rank 2, 3 or 4 in matrix_mult_intt / matrix_mult_transpose_add /
+#   inner_product).
+#
+# Add / sub (ml_kem_add_avx2 / ml_kem_sub_avx2)
+#   Precondition: both operands canonical. Sum in [0, 2q) feeds reduce_once;
+#   difference in (-q, q) is fixed up with a conditional +q.
+# ---------------------------------------------------------------------------
+
 # intt_scale_reduce: Multiply 16 coefficients by the inverse-degree factor
 # and reduce the results to the range [0, q-1]. Used on the final inverse NTT
 # output vectors to avoid an extra store/reload pass, similar to how
