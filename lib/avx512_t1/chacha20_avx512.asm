@@ -1773,6 +1773,10 @@ more_than_256_ks:
 
 align_label
 exit_gen_keystr:
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
+        vzeroupper
 %ifndef LINUX
 %assign i 0
 %assign j 6
