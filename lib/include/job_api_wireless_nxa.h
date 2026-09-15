@@ -17,16 +17,28 @@ snow5g_nca4_sse(IMB_JOB *job, uint8_t *state);
 static const uint8_t zero_low_4B_mask[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                               0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00 };
 
+__forceinline void
+submit_job_aes_nxa_ctr(IMB_JOB *job, const uint8_t *iv)
+{
+        const uint8_t *orig_iv = job->iv;
+        const uint64_t orig_iv_len = job->iv_len_in_bytes;
+
+        job->iv = iv;
+        job->iv_len_in_bytes = 16;
+        SUBMIT_JOB_AES_CTR(job, IMB_KEY_256_BYTES);
+
+        job->iv = orig_iv;
+        job->iv_len_in_bytes = orig_iv_len;
+}
+
 __forceinline IMB_JOB *
 submit_job_aes_nea5(IMB_JOB *job)
 {
         uint8_t iv[16];
         __m128i iv_reg = _mm_loadu_si128((const __m128i *) job->iv);
         iv_reg = _mm_and_si128(iv_reg, _mm_loadu_si128((const __m128i *) zero_low_4B_mask));
-
         _mm_storeu_si128((__m128i *) iv, iv_reg);
-        AES_CTR_256(job->src + job->cipher_start_src_offset_in_bytes, iv, job->enc_keys, job->dst,
-                    job->msg_len_to_cipher_in_bytes, 16);
+        submit_job_aes_nxa_ctr(job, iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
 
         return job;
@@ -72,7 +84,7 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         _mm_storeu_si128((__m128i *) iv, iv_reg);
         if (cipher_dir == IMB_DIR_ENCRYPT) {
                 /* Encrypt plaintext */
-                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
+                submit_job_aes_nxa_ctr(job, iv);
 
                 /* Digest ciphertext */
                 NCA_MSG(digest, HQP, job->dst, job->msg_len_to_cipher_in_bytes, job->u.NCA.aad,
@@ -83,7 +95,7 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
                         job->u.NCA.aad_len_in_bytes);
 
                 /* Decrypt ciphertext (assumes last 4 bytes of 16-byte IV as 0) */
-                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
+                submit_job_aes_nxa_ctr(job, iv);
         }
 
         job->status |= IMB_STATUS_COMPLETED;

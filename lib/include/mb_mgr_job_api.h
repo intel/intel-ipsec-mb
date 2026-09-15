@@ -30,7 +30,6 @@
 #include "include/job_api_gcm.h"
 #include "include/job_api_kasumi.h"
 #include "include/job_api_sha3.h"
-#include "include/job_api_wireless_nxa.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
 #define CRC(func, state, job)                                                                      \
@@ -315,6 +314,8 @@ SUBMIT_JOB_AES_CFB_DEC(IMB_JOB *job, const uint64_t key_sz)
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
+
+#include "include/job_api_wireless_nxa.h"
 
 /* ========================================================================= */
 /* Cipher submit & flush functions */
