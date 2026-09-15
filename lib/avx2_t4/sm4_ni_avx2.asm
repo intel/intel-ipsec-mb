@@ -912,6 +912,8 @@ sm4_set_key_ni_avx2:
         jz      error_set_key_ni_avx2
 %endif
 
+        FUNC_SAVE
+
         vmovdqu xmm0, [KEY]
         vpshufb xmm0, xmm0, [rel in_shufb]
         vpxor   xmm0, [rel constants]
@@ -934,6 +936,7 @@ sm4_set_key_ni_avx2_return:
 %else
         vzeroupper
 %endif
+        FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
