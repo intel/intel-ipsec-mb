@@ -328,7 +328,7 @@ align_label
         add     rsp, STACKFRAME_size
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -483,7 +483,7 @@ align_label
         add     rsp, STACKFRAME_size
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA

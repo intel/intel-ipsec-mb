@@ -201,16 +201,19 @@ record_failure(const char *algo, const IMB_ARCH arch, const char *stage, const u
  * @param [in,out] pd         scratch job and buffer data used for probing
  * @param [in] check_vzu      non-zero to also run the missing VZEROUPPER
  *                            check (see xmm_abi_probe())
+ * @param [in] direction      cipher direction
+ * @param [in] buf_size       first message size to try
  *
  * @return Probe status
  * @retval 0  algorithm probed (or skipped as unsupported)
- * @retval -1 not every submitted job could be drained (\a mb_mgr is left
- *            with outstanding jobs in that case, so the caller must
- *            re-initialize it before probing the next algorithm)
+ * @retval -1 a job failed or not every submitted job could be drained;
+ *            the caller must re-initialize \a mb_mgr before probing the
+ *            next algorithm
  */
 static int
-probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
-           const char *algo_name, struct probe_data *pd, const int check_vzu)
+probe_algo_job(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
+               const char *algo_name, struct probe_data *pd, const int check_vzu,
+               const IMB_CIPHER_DIRECTION direction, uint32_t buf_size)
 {
         uint8_t aad[MAX_AAD_SIZE];
         uint8_t cipher_iv[MAX_IV_SIZE];
@@ -221,7 +224,6 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         struct cipher_auth_keys keys;
         IMB_JOB *job;
         void *ret_ptr = NULL;
-        uint32_t buf_size;
         uint32_t mask;
         unsigned num_tags;
         uint8_t tag_size;
@@ -230,7 +232,7 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
         if (!is_valid_combination(params->cipher_mode, params->hash_alg))
                 return 0;
 
-        for (buf_size = 64; buf_size <= JOB_BUF_SIZE; buf_size += 16)
+        for (; buf_size <= JOB_BUF_SIZE; buf_size += 16)
                 if (is_valid_job_size(params, buf_size))
                         break;
         if (buf_size > JOB_BUF_SIZE)
@@ -264,9 +266,12 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
 
                 memory_copy(pd->src_dst_buf[n_jobs], pd->test_buf[n_jobs], ctx->buf_size);
 
+                /* PON compares only BIP, but the job must request BIP and CRC. */
                 if (fill_job(&pd->job_template[n_jobs], params, pd->src_dst_buf[n_jobs],
-                             pd->in_digest[n_jobs], aad, ctx->buf_size, ctx->tag_size_to_check,
-                             IMB_DIR_ENCRYPT, &keys, cipher_iv, auth_iv, n_jobs) < 0)
+                             pd->in_digest[n_jobs], aad, ctx->buf_size,
+                             params->hash_alg == IMB_AUTH_PON_CRC_BIP ? tag_size
+                                                                      : ctx->tag_size_to_check,
+                             direction, &keys, cipher_iv, auth_iv, n_jobs) < 0)
                         return 0;
         }
 
@@ -288,6 +293,12 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                                      check_vzu);
                 if (mask != 0)
                         record_failure(algo_name, arch, "SUBMIT", mask);
+
+                if (ret_ptr != NULL && ((IMB_JOB *) ret_ptr)->status != IMB_STATUS_COMPLETED) {
+                        fprintf(stderr, "[ERROR] %s: job did not complete successfully: %s\n",
+                                algo_name, imb_get_strerror(imb_get_errno(mb_mgr)));
+                        return -1;
+                }
 
                 if (ret_ptr != NULL)
                         break;
@@ -331,6 +342,34 @@ probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
                         algo_name, n_completed, n_jobs);
                 return -1;
         }
+
+        return 0;
+}
+
+static int
+probe_algo(IMB_MGR *mb_mgr, const IMB_ARCH arch, const struct params_s *params,
+           const char *algo_name, struct probe_data *pd, const int check_vzu)
+{
+        if (params->cipher_mode != IMB_CIPHER_PON_AES_CNTR)
+                return probe_algo_job(mb_mgr, arch, params, algo_name, pd, check_vzu,
+                                      IMB_DIR_ENCRYPT, 64);
+
+        /* Cover no CRC, partial blocks and the SSE/AVX multi-block paths.
+         * Leave room for the eight-byte XGEM header in JOB_BUF_SIZE.
+         */
+        static const uint32_t sizes[] = { 4, 8, 16, 20, 32, 64, 80, 128, 240 };
+        static const IMB_CIPHER_DIRECTION directions[] = { IMB_DIR_ENCRYPT, IMB_DIR_DECRYPT };
+
+        for (unsigned d = 0; d < DIM(directions); d++)
+                for (unsigned s = 0; s < DIM(sizes); s++) {
+                        char name[40];
+
+                        snprintf(name, sizeof(name), "%s-%s-%u", algo_name,
+                                 directions[d] == IMB_DIR_ENCRYPT ? "ENC" : "DEC", sizes[s]);
+                        if (probe_algo_job(mb_mgr, arch, params, name, pd, check_vzu, directions[d],
+                                           sizes[s]) < 0)
+                                return -1;
+                }
 
         return 0;
 }

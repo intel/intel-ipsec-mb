@@ -866,6 +866,16 @@ align_label
         push    r14
 %ifndef LINUX
         push    r15
+        sub     rsp, 9*16
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
+        vmovdqu [rsp + 3*16], xmm9
+        vmovdqu [rsp + 4*16], xmm10
+        vmovdqu [rsp + 5*16], xmm11
+        vmovdqu [rsp + 6*16], xmm12
+        vmovdqu [rsp + 7*16], xmm13
+        vmovdqu [rsp + 8*16], xmm14
 %endif
 
 %ifidn %%DIR, ENC
@@ -1187,6 +1197,16 @@ align_label
         mov     rax, job
 
 %ifndef LINUX
+        vmovdqu xmm6, [rsp + 0*16]
+        vmovdqu xmm7, [rsp + 1*16]
+        vmovdqu xmm8, [rsp + 2*16]
+        vmovdqu xmm9, [rsp + 3*16]
+        vmovdqu xmm10, [rsp + 4*16]
+        vmovdqu xmm11, [rsp + 5*16]
+        vmovdqu xmm12, [rsp + 6*16]
+        vmovdqu xmm13, [rsp + 7*16]
+        vmovdqu xmm14, [rsp + 8*16]
+        add     rsp, 9*16
         pop     r15
 %endif
         pop     r14
@@ -1194,8 +1214,9 @@ align_label
         pop     r12
 
 %ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
+        clear_scratch_xmms_avx_asm
 %endif ;; SAFE_DATA
+        vzeroupper
 
 %endmacro                       ; AES128_CTR_PON
 
