@@ -12,6 +12,7 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "aead_test.h"
+#include "kat_common_aead.h"
 #include "wycheproof_test.h"
 
 #define AAD_SZ    24
@@ -30,336 +31,85 @@ free_chacha20_poly1305_vectors(struct test_json_alloc_ctx *ctx)
 }
 
 static int
-aead_ok(const struct aead_test *vec, const size_t auth_len, const uint8_t *out_text,
-        const IMB_CIPHER_DIRECTION cipher_dir, const uint8_t *auth, const uint8_t *padding,
-        const size_t sizeof_padding)
+chacha20_poly1305_job_prepare(IMB_MGR *mb_mgr, IMB_JOB *job, const struct aead_test *vec,
+                              const void *ctx)
 {
-        /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + auth_len], sizeof_padding)) {
-                printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + auth_len], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, &auth[0], sizeof_padding)) {
-                printf("hash overwrite head\n");
-                hexdump(stderr, "Target", &auth[0], sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(vec->tag, &auth[sizeof_padding], auth_len)) {
-                printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], auth_len);
-                hexdump(stderr, "Expected", vec->tag, auth_len);
-                return 0;
-        }
-
-        if (cipher_dir == IMB_DIR_ENCRYPT) {
-                if (memcmp(vec->ct, out_text, vec->msgSize / 8)) {
-                        printf("cipher text mismatched\n");
-                        hexdump(stderr, "Received", out_text, vec->msgSize / 8);
-                        hexdump(stderr, "Expected", (const void *) vec->ct, vec->msgSize / 8);
-                        return 0;
-                }
-        } else {
-                if (memcmp(vec->msg, out_text, vec->msgSize / 8)) {
-                        printf("plain text mismatched\n");
-                        hexdump(stderr, "Received", out_text, vec->msgSize / 8);
-                        hexdump(stderr, "Expected", (const void *) vec->msg, vec->msgSize / 8);
-                        return 0;
-                }
-        }
-
-        if (memcmp(padding, out_text - sizeof_padding, sizeof_padding)) {
-                printf("destination buffer under-run (memory before)\n");
-                hexdump(stderr, "", out_text - sizeof_padding, sizeof_padding);
-                return 0;
-        }
-
-        if (memcmp(padding, out_text + vec->msgSize / 8, sizeof_padding)) {
-                printf("destination buffer overrun (memory after)\n");
-                hexdump(stderr, "", out_text + vec->msgSize / 8, sizeof_padding);
-                return 0;
-        }
-        return 1;
+        (void) mb_mgr;
+        (void) ctx;
+        job->enc_keys = (const void *) vec->key;
+        job->dec_keys = (const void *) vec->key;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
+        job->u.CHACHA20_POLY1305.aad = (const void *) vec->aad;
+        job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aadSize / 8;
+        return 0;
 }
 
-static int
-test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, const int num_jobs,
-          const int in_place)
+static void
+test_chacha20_poly1305_vectors(IMB_MGR *p_mgr, const struct aead_test *vector,
+                               struct test_suite_context *ts, const int num_jobs)
 {
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        static const struct kat_aead_job_ops encrypt_ops = {
+                .prepare = chacha20_poly1305_job_prepare,
+                .cipher_mode = IMB_CIPHER_CHACHA20_POLY1305,
+                .hash_alg = IMB_AUTH_CHACHA20_POLY1305,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE,
+                .in_place = 0,
+        };
+        static const struct kat_aead_job_ops encrypt_in_place_ops = {
+                .prepare = chacha20_poly1305_job_prepare,
+                .cipher_mode = IMB_CIPHER_CHACHA20_POLY1305,
+                .hash_alg = IMB_AUTH_CHACHA20_POLY1305,
+                .cipher_direction = IMB_DIR_ENCRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE,
+                .in_place = 1,
+        };
+        static const struct kat_aead_job_ops decrypt_ops = {
+                .prepare = chacha20_poly1305_job_prepare,
+                .cipher_mode = IMB_CIPHER_CHACHA20_POLY1305,
+                .hash_alg = IMB_AUTH_CHACHA20_POLY1305,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE,
+                .in_place = 0,
+        };
+        static const struct kat_aead_job_ops decrypt_in_place_ops = {
+                .prepare = chacha20_poly1305_job_prepare,
+                .cipher_mode = IMB_CIPHER_CHACHA20_POLY1305,
+                .hash_alg = IMB_AUTH_CHACHA20_POLY1305,
+                .cipher_direction = IMB_DIR_DECRYPT,
+                .chain_order = IMB_ORDER_HASH_CIPHER,
+                .key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE,
+                .in_place = 1,
+        };
 
-        if (auths == NULL || targets == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto end2;
-        }
-        memset(padding, -1, sizeof(padding));
-        memset(auths, 0, num_jobs * sizeof(void *));
-        memset(targets, 0, num_jobs * sizeof(void *));
+        const struct kat_aead_job_ops *ops[] = { &encrypt_ops, &encrypt_in_place_ops, &decrypt_ops,
+                                                 &decrypt_in_place_ops };
 
-        for (i = 0; i < num_jobs; i++) {
-                auths[i] = malloc(DIGEST_SZ + (sizeof(padding) * 2));
-                if (auths[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
+        for (size_t i = 0; i < DIM(ops); i++) {
+                if (kat_aead_test_submit_flush(p_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                        test_suite_update(ts, 0, 1);
+                        return;
                 }
+                test_suite_update(ts, 1, 0);
 
-                memset(auths[i], -1, DIGEST_SZ + (sizeof(padding) * 2));
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                targets[i] = malloc(vec->msgSize / 8 + (sizeof(padding) * 2));
-                if (targets[i] == NULL) {
-                        fprintf(stderr, "Can't allocate buffer memory\n");
-                        goto end;
+                if (kat_aead_test_burst(p_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                        test_suite_update(ts, 0, 1);
+                        return;
                 }
-                memset(targets[i], -1, vec->msgSize / 8 + (sizeof(padding) * 2));
+                test_suite_update(ts, 1, 0);
+        }
 
-                if (in_place) {
-                        if (dir == IMB_DIR_ENCRYPT)
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->msg,
-                                       vec->msgSize / 8);
-                        else
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->ct,
-                                       vec->msgSize / 8);
+        if (num_jobs == 1) {
+                if (kat_aead_test_round_trip(p_mgr, vector, &encrypt_ops, &decrypt_ops) < 0) {
+                        test_suite_update(ts, 0, 1);
+                        return;
                 }
+                test_suite_update(ts, 1, 0);
         }
-
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        /**
-         * Submit all jobs then flush any outstanding jobs
-         */
-        for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305;
-                job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
-                job->enc_keys = vec->key;
-                job->dec_keys = vec->key;
-                job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
-
-                job->u.CHACHA20_POLY1305.aad = (const void *) vec->aad;
-                job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aadSize / 8;
-
-                if (in_place)
-                        job->src = targets[i] + sizeof(padding);
-                else if (dir == IMB_DIR_ENCRYPT)
-                        job->src = (const void *) vec->msg;
-                else
-                        job->src = (const void *) vec->ct;
-                job->dst = targets[i] + sizeof(padding);
-
-                job->iv = (const void *) vec->iv;
-                job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
-                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
-                job->cipher_start_src_offset_in_bytes = 0;
-
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = DIGEST_SZ;
-
-                job->user_data = auths[i];
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        jobs_rx++;
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                const int errcode = imb_get_errno(mb_mgr);
-
-                                printf("Error!: job status %d, errno %d => %s\n", job->status,
-                                       errcode, imb_get_strerror(errcode));
-                                goto end;
-                        }
-
-                        if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir,
-                                     job->user_data, padding, sizeof(padding)))
-                                goto end;
-                } else {
-                        int err = imb_get_errno(mb_mgr);
-
-                        if (err != 0) {
-                                printf("submit_job error %d : '%s'\n", err, imb_get_strerror(err));
-                                goto end;
-                        }
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        const int errcode = imb_get_errno(mb_mgr);
-
-                        printf("Error!: job status %d, errno %d => %s\n", job->status, errcode,
-                               imb_get_strerror(errcode));
-                        goto end;
-                }
-
-                if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir, job->user_data,
-                             padding, sizeof(padding)))
-                        goto end;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
-                goto end;
-        }
-
-        /*
-         * *******************************************
-         * BURST API TEST
-         * *******************************************
-         */
-
-        /* create job array */
-        IMB_JOB *jobs[32] = { NULL };
-
-        jobs_rx = 0;
-
-        /* reset buffers */
-        for (i = 0; i < num_jobs; i++) {
-                memset(auths[i], -1, DIGEST_SZ + (sizeof(padding) * 2));
-                memset(targets[i], -1, vec->msgSize / 8 + (sizeof(padding) * 2));
-
-                if (in_place) {
-                        if (dir == IMB_DIR_ENCRYPT)
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->msg,
-                                       vec->msgSize / 8);
-                        else
-                                memcpy(targets[i] + sizeof(padding), (const void *) vec->ct,
-                                       vec->msgSize / 8);
-                }
-        }
-
-        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < (uint32_t) num_jobs)
-                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
-
-        /**
-         * Set all job params before submitting burst
-         */
-        for (i = 0; i < num_jobs; i++) {
-                job = jobs[i];
-                job->cipher_direction = dir;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305;
-                job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
-                job->enc_keys = vec->key;
-                job->dec_keys = vec->key;
-                job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
-
-                job->u.CHACHA20_POLY1305.aad = vec->aad;
-                job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aadSize / 8;
-
-                if (in_place)
-                        job->src = targets[i] + sizeof(padding);
-                else if (dir == IMB_DIR_ENCRYPT)
-                        job->src = (const void *) vec->msg;
-                else
-                        job->src = (const void *) vec->ct;
-                job->dst = targets[i] + sizeof(padding);
-
-                job->iv = (const void *) vec->iv;
-                job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
-                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
-                job->cipher_start_src_offset_in_bytes = 0;
-
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = DIGEST_SZ;
-
-                job->user_data = auths[i];
-
-                imb_set_session(mb_mgr, job);
-        }
-
-        uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
-
-        if (completed_jobs != (uint32_t) num_jobs) {
-                int err = imb_get_errno(mb_mgr);
-
-                if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
-                        goto end;
-                } else {
-                        printf("submit_burst error: not enough "
-                               "jobs returned!\n");
-                        goto end;
-                }
-        }
-
-        for (i = 0; i < num_jobs; i++) {
-                job = jobs[i];
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i + 1);
-                        goto end;
-                }
-
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        const int errcode = imb_get_errno(mb_mgr);
-
-                        printf("Error!: job status %d, errno %d => %s\n", job->status, errcode,
-                               imb_get_strerror(errcode));
-                        goto end;
-                }
-
-                if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir, job->user_data,
-                             padding, sizeof(padding)))
-                        goto end;
-                jobs_rx++;
-        }
-
-        if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs after burst, "
-                       "received %d\n",
-                       num_jobs, jobs_rx);
-                goto end;
-        }
-
-        /*
-         * *******************************************
-         * END BURST API TEST
-         * *******************************************
-         */
-
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        if (auths != NULL) {
-                for (i = 0; i < num_jobs; i++) {
-                        if (auths[i] != NULL)
-                                free(auths[i]);
-                }
-        }
-
-        if (targets != NULL) {
-                for (i = 0; i < num_jobs; i++) {
-                        if (targets[i] != NULL)
-                                free(targets[i]);
-                }
-        }
-
-end2:
-        if (auths != NULL)
-                free(auths);
-
-        if (targets != NULL)
-                free(targets);
-
-        return ret;
 }
 
 static void
@@ -377,30 +127,7 @@ test_aead_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const 
 #endif
                 }
 
-                if (test_aead(mb_mgr, v, IMB_DIR_ENCRYPT, num_jobs, 1)) {
-                        printf("error #%zu encrypt in-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-                if (test_aead(mb_mgr, v, IMB_DIR_DECRYPT, num_jobs, 1)) {
-                        printf("error #%zu decrypt in-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-                if (test_aead(mb_mgr, v, IMB_DIR_ENCRYPT, num_jobs, 0)) {
-                        printf("error #%zu encrypt out-of-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-                if (test_aead(mb_mgr, v, IMB_DIR_DECRYPT, num_jobs, 0)) {
-                        printf("error #%zu decrypt out-of-place\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
+                test_chacha20_poly1305_vectors(mb_mgr, v, ctx, num_jobs);
         }
         if (!quiet_mode)
                 printf("\n");
