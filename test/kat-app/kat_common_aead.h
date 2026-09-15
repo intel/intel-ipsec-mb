@@ -26,12 +26,30 @@ typedef int (*kat_job_prepare_aead_fn)(struct IMB_MGR *mb_mgr, struct IMB_JOB *j
                                        const struct aead_test *vec, const void *ctx);
 
 /**
+ * @brief Set custom algorithm-specific job fields for non-standard AEAD jobs.
+ *
+ * This is intentionally broader than the standard vec-based helper so packet-level
+ * and hybrid algorithms can still reuse the common submission/validation lifecycle.
+ */
+typedef int (*kat_job_prepare_generic_fn)(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, void *ctx);
+
+/**
  * @brief Release algorithm-specific per-job resources.
  *
  * @param [in,out] job job structure to clean up
  * @param [in,out] ctx callback context pointer
  */
 typedef void (*kat_job_cleanup_aead_fn)(struct IMB_JOB *job, const void *ctx);
+
+/**
+ * @brief Release algorithm-specific resources owned by a custom job.
+ */
+typedef void (*kat_job_cleanup_generic_fn)(struct IMB_JOB *job, void *ctx);
+
+/**
+ * @brief Validate a completed custom job against algorithm-specific expectations.
+ */
+typedef int (*kat_job_validate_generic_fn)(struct IMB_JOB *job, const void *ctx);
 
 /**
  * @brief AEAD test callback bundle.
@@ -48,6 +66,16 @@ struct kat_aead_job_ops {
         IMB_CHAIN_ORDER chain_order;
         uint32_t key_len_in_bytes;
         int in_place;
+};
+
+/**
+ * @brief Custom job callback bundle for non-standard AEAD jobs.
+ */
+struct kat_custom_job_ops {
+        kat_job_prepare_generic_fn prepare;
+        kat_job_cleanup_generic_fn cleanup;
+        kat_job_validate_generic_fn validate;
+        void *ctx;
 };
 
 /**
@@ -112,5 +140,15 @@ int
 kat_aead_test_round_trip(struct IMB_MGR *mb_mgr, const struct aead_test *vec,
                          const struct kat_aead_job_ops *encrypt_ops,
                          const struct kat_aead_job_ops *decrypt_ops);
+
+/**
+ * @brief Exercise submit/flush APIs with caller-owned custom job handling.
+ *
+ * Each prepare callback must associate per-job resources with @p job so they
+ * remain available to validate and cleanup until that job is returned.
+ */
+int
+kat_aead_test_custom_submit_flush(struct IMB_MGR *mb_mgr, const struct kat_custom_job_ops *ops,
+                                  uint32_t num_jobs);
 
 #endif /* KAT_COMMON_AEAD_H */

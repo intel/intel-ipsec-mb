@@ -402,3 +402,67 @@ end:
         free(decrypt_tag);
         return ret;
 }
+
+int
+kat_aead_test_custom_submit_flush(struct IMB_MGR *mb_mgr, const struct kat_custom_job_ops *ops,
+                                  const uint32_t num_jobs)
+{
+        IMB_JOB *job;
+        uint32_t jobs_rx = 0;
+        int ret = -1;
+
+        if (mb_mgr == NULL || ops == NULL || ops->prepare == NULL || num_jobs == 0)
+                return -1;
+
+        /* Do not consume jobs submitted by a previous test. */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
+        for (uint32_t i = 0; i < num_jobs; i++) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (job == NULL)
+                        goto end;
+                if (ops->prepare(mb_mgr, job, ops->ctx) < 0) {
+                        if (ops->cleanup != NULL)
+                                ops->cleanup(job, ops->ctx);
+                        goto end;
+                }
+
+                /* A full queue may return a completed job during submission. */
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job != NULL) {
+                        jobs_rx++;
+                        if (job->status != IMB_STATUS_COMPLETED ||
+                            (ops->validate != NULL && ops->validate(job, ops->ctx) < 0)) {
+                                if (ops->cleanup != NULL)
+                                        ops->cleanup(job, ops->ctx);
+                                goto end;
+                        }
+                        if (ops->cleanup != NULL)
+                                ops->cleanup(job, ops->ctx);
+                }
+        }
+
+        /* Drain any jobs that were queued without completing during submission. */
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                jobs_rx++;
+                if (job->status != IMB_STATUS_COMPLETED ||
+                    (ops->validate != NULL && ops->validate(job, ops->ctx) < 0)) {
+                        if (ops->cleanup != NULL)
+                                ops->cleanup(job, ops->ctx);
+                        goto end;
+                }
+                if (ops->cleanup != NULL)
+                        ops->cleanup(job, ops->ctx);
+        }
+
+        ret = jobs_rx == num_jobs ? 0 : -1;
+
+end:
+        /* Complete and release every remaining job before returning to the caller. */
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                if (ops->cleanup != NULL)
+                        ops->cleanup(job, ops->ctx);
+        }
+        return ret;
+}

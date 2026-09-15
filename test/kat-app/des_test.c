@@ -8,12 +8,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 
 #include <intel-ipsec-mb.h>
 
 #include "utils.h"
 #include "cipher_test.h"
+#include "kat_common_aead.h"
 #include "kat_common_cipher.h"
 
 int
@@ -122,15 +122,18 @@ test_des_many(struct IMB_MGR *mb_mgr, const uint64_t *ks, const void *iv, const 
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
+        uint8_t **targets = calloc(num_jobs, sizeof(*targets));
         int i, jobs_rx = 0, ret = -1;
 
-        assert(targets != NULL);
+        if (targets == NULL)
+                return -1;
 
         memset(padding, -1, sizeof(padding));
 
         for (i = 0; i < num_jobs; i++) {
                 targets[i] = malloc(text_len + (sizeof(padding) * 2));
+                if (targets[i] == NULL)
+                        goto end;
                 memset(targets[i], -1, text_len + (sizeof(padding) * 2));
                 if (in_place) {
                         /* copy input text to the allocated buffer */
@@ -296,6 +299,163 @@ test_des_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const char
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
+        }
+        if (!quiet_mode)
+                printf("\n");
+}
+
+struct docsis_des_job_ctx {
+        const uint64_t *ks;
+        const void *iv;
+        const struct cipher_test *vec;
+        int dir;
+        int in_place;
+};
+
+static int
+docsis_des_job_prepare(struct IMB_MGR *mb_mgr, struct IMB_JOB *job, void *ctx)
+{
+        job->dst = NULL;
+
+        if (ctx == NULL)
+                return -1;
+
+        const struct docsis_des_job_ctx *job_ctx = ctx;
+        if (job_ctx->vec == NULL)
+                return -1;
+
+        const size_t msg_len = job_ctx->vec->msgSize / 8;
+        uint8_t *target = malloc(msg_len == 0 ? 1 : msg_len);
+
+        (void) mb_mgr;
+        if (target == NULL)
+                return -1;
+
+        if (job_ctx->in_place)
+                memcpy(target,
+                       job_ctx->dir == IMB_DIR_ENCRYPT ? job_ctx->vec->msg : job_ctx->vec->ct,
+                       msg_len);
+
+        job->cipher_direction = job_ctx->dir;
+        job->chain_order =
+                job_ctx->dir == IMB_DIR_ENCRYPT ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
+        job->dst = target;
+        job->src = job_ctx->in_place
+                           ? target
+                           : (const void *) (job_ctx->dir == IMB_DIR_ENCRYPT ? job_ctx->vec->msg
+                                                                             : job_ctx->vec->ct);
+        job->cipher_mode = IMB_CIPHER_DOCSIS_DES;
+        job->enc_keys = job_ctx->ks;
+        job->dec_keys = job_ctx->ks;
+        job->key_len_in_bytes = 8;
+        job->iv = job_ctx->iv;
+        job->iv_len_in_bytes = IMB_DES_BLOCK_SIZE;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = msg_len;
+        job->hash_alg = IMB_AUTH_NULL;
+        return 0;
+}
+
+static void
+docsis_des_job_cleanup(struct IMB_JOB *job, void *ctx)
+{
+        (void) ctx;
+        free(job->dst);
+        job->dst = NULL;
+}
+
+static int
+docsis_des_job_validate(struct IMB_JOB *job, const void *ctx)
+{
+        if (ctx == NULL)
+                return -1;
+
+        const struct docsis_des_job_ctx *job_ctx = ctx;
+        if (job_ctx->vec == NULL)
+                return -1;
+
+        const void *expected =
+                job_ctx->dir == IMB_DIR_ENCRYPT ? job_ctx->vec->ct : job_ctx->vec->msg;
+
+        return memcmp(job->dst, expected, job_ctx->vec->msgSize / 8) == 0 ? 0 : -1;
+}
+
+static void
+test_docsis_des_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const char *banner,
+                        struct test_suite_context *ctx)
+{
+        const uint32_t num_jobs[] = { 1, 32 };
+
+        printf("%s:\n", banner);
+        for (; v->msg != NULL; v++) {
+                uint64_t ks[16];
+                struct docsis_des_job_ctx encrypt_ctx = {
+                        .ks = ks,
+                        .iv = v->iv,
+                        .vec = v,
+                        .dir = IMB_DIR_ENCRYPT,
+                        .in_place = 0,
+                };
+                struct docsis_des_job_ctx decrypt_ctx = {
+                        .ks = ks,
+                        .iv = v->iv,
+                        .vec = v,
+                        .dir = IMB_DIR_DECRYPT,
+                        .in_place = 0,
+                };
+                struct docsis_des_job_ctx encrypt_in_place_ctx = encrypt_ctx;
+                struct docsis_des_job_ctx decrypt_in_place_ctx = decrypt_ctx;
+                const struct kat_custom_job_ops encrypt_ops = {
+                        .prepare = docsis_des_job_prepare,
+                        .cleanup = docsis_des_job_cleanup,
+                        .validate = docsis_des_job_validate,
+                        .ctx = &encrypt_ctx,
+                };
+                const struct kat_custom_job_ops decrypt_ops = {
+                        .prepare = docsis_des_job_prepare,
+                        .cleanup = docsis_des_job_cleanup,
+                        .validate = docsis_des_job_validate,
+                        .ctx = &decrypt_ctx,
+                };
+                struct kat_custom_job_ops encrypt_in_place_ops = encrypt_ops;
+                struct kat_custom_job_ops decrypt_in_place_ops = decrypt_ops;
+                const struct kat_custom_job_ops *ops[] = {
+                        &encrypt_ops,
+                        &decrypt_ops,
+                        &encrypt_in_place_ops,
+                        &decrypt_in_place_ops,
+                };
+                const char *labels[] = {
+                        "encrypt",
+                        "decrypt",
+                        "encrypt in-place",
+                        "decrypt in-place",
+                };
+
+                if (!quiet_mode) {
+#ifdef DEBUG
+                        printf("Standard vector %zu PTLen:%zu\n", v->tcId, v->msgSize / 8);
+#else
+                        printf(".");
+#endif
+                }
+
+                des_key_schedule(ks, v->key);
+                encrypt_in_place_ctx.in_place = 1;
+                decrypt_in_place_ctx.in_place = 1;
+                encrypt_in_place_ops.ctx = &encrypt_in_place_ctx;
+                decrypt_in_place_ops.ctx = &decrypt_in_place_ctx;
+
+                for (size_t i = 0; i < DIM(num_jobs); i++)
+                        for (size_t j = 0; j < DIM(ops); j++)
+                                if (kat_aead_test_custom_submit_flush(mb_mgr, ops[j], num_jobs[i]) <
+                                    0) {
+                                        printf("error #%zu %s, %u jobs\n", v->tcId, labels[j],
+                                               num_jobs[i]);
+                                        test_suite_update(ctx, 0, 1);
+                                } else {
+                                        test_suite_update(ctx, 1, 0);
+                                }
         }
         if (!quiet_mode)
                 printf("\n");
@@ -478,8 +638,8 @@ des_test(struct IMB_MGR *mb_mgr)
         errors = test_suite_end(&ctx);
 
         test_suite_start(&ctx, "DOCSIS-DES-64");
-        test_des_vectors(mb_mgr, des_docsis_vectors, "DOCSIS DES standard test vectors",
-                         IMB_CIPHER_DOCSIS_DES, &ctx);
+        test_docsis_des_vectors(mb_mgr, des_docsis_vectors, "DOCSIS DES standard test vectors",
+                                &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "DES-CFB-64");
