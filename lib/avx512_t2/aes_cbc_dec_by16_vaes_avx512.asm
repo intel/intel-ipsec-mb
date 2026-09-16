@@ -448,15 +448,27 @@ align_function
 aes_cbc_dec_128_vaes_avx512:
 %ifndef LINUX
         mov     num_bytes, [rsp + 8*5]
+        ;; zTMP1-zTMP3 map onto XMM6-XMM8 which are non-volatile on Windows
+        sub     rsp, 3*16 + 8
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
 %endif
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 9, tmp
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
 
+%ifndef LINUX
+        ;; restore non-volatile XMM registers (after the clearing above)
+        vmovdqu xmm6, [rsp + 0*16]
+        vmovdqu xmm7, [rsp + 1*16]
+        vmovdqu xmm8, [rsp + 2*16]
+        add     rsp, 3*16 + 8
+%endif
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -467,15 +479,27 @@ align_function
 aes_cbc_dec_192_vaes_avx512:
 %ifndef LINUX
         mov     num_bytes, [rsp + 8*5]
+        ;; zTMP1-zTMP3 map onto XMM6-XMM8 which are non-volatile on Windows
+        sub     rsp, 3*16 + 8
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
 %endif
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 11, tmp
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
 
+%ifndef LINUX
+        ;; restore non-volatile XMM registers (after the clearing above)
+        vmovdqu xmm6, [rsp + 0*16]
+        vmovdqu xmm7, [rsp + 1*16]
+        vmovdqu xmm8, [rsp + 2*16]
+        add     rsp, 3*16 + 8
+%endif
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -486,15 +510,27 @@ align_function
 aes_cbc_dec_256_vaes_avx512:
 %ifndef LINUX
         mov     num_bytes, [rsp + 8*5]
+        ;; zTMP1-zTMP3 map onto XMM6-XMM8 which are non-volatile on Windows
+        sub     rsp, 3*16 + 8
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
 %endif
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 13, tmp
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
 
+%ifndef LINUX
+        ;; restore non-volatile XMM registers (after the clearing above)
+        vmovdqu xmm6, [rsp + 0*16]
+        vmovdqu xmm7, [rsp + 1*16]
+        vmovdqu xmm8, [rsp + 2*16]
+        add     rsp, 3*16 + 8
+%endif
         ret
 
 mksection stack-noexec

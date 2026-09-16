@@ -38,6 +38,9 @@
 %define xkeytmp xmm15
 
 struc STACK
+%ifndef LINUX
+_XMM_SAVE:      resb    10*16   ; xmm6-xmm15, Windows only
+%endif
 _IV:            resq    2
 _IV_new:        resq    2
 _rsp_save:      resq    1
@@ -217,6 +220,21 @@ align_label
         and             rsp, -16
         mov             [rsp + _rsp_save], %%tmp
 
+        ;; XMM6-XMM15 are non-volatile on Windows and are used
+        ;; below as working state, so preserve them here
+%ifndef LINUX
+        vmovdqa         [rsp + _XMM_SAVE + 0*16], xmm6
+        vmovdqa         [rsp + _XMM_SAVE + 1*16], xmm7
+        vmovdqa         [rsp + _XMM_SAVE + 2*16], xmm8
+        vmovdqa         [rsp + _XMM_SAVE + 3*16], xmm9
+        vmovdqa         [rsp + _XMM_SAVE + 4*16], xmm10
+        vmovdqa         [rsp + _XMM_SAVE + 5*16], xmm11
+        vmovdqa         [rsp + _XMM_SAVE + 6*16], xmm12
+        vmovdqa         [rsp + _XMM_SAVE + 7*16], xmm13
+        vmovdqa         [rsp + _XMM_SAVE + 8*16], xmm14
+        vmovdqa         [rsp + _XMM_SAVE + 9*16], xmm15
+%endif
+
         ;; check for zero length message
         or              %%length, %%length
         jz              %%_do_return
@@ -371,6 +389,20 @@ align_label
 %ifdef SAFE_DATA
         clear_xmms_avx xdata0, xdata1, xdata2, xdata3, xdata4, xdata5, xdata6, xdata7, xkeytmp
 %endif ;; SAFE_DATA
+
+        ;; restore non-volatile XMM registers (after the clearing above)
+%ifndef LINUX
+        vmovdqa         xmm6, [rsp + _XMM_SAVE + 0*16]
+        vmovdqa         xmm7, [rsp + _XMM_SAVE + 1*16]
+        vmovdqa         xmm8, [rsp + _XMM_SAVE + 2*16]
+        vmovdqa         xmm9, [rsp + _XMM_SAVE + 3*16]
+        vmovdqa         xmm10, [rsp + _XMM_SAVE + 4*16]
+        vmovdqa         xmm11, [rsp + _XMM_SAVE + 5*16]
+        vmovdqa         xmm12, [rsp + _XMM_SAVE + 6*16]
+        vmovdqa         xmm13, [rsp + _XMM_SAVE + 7*16]
+        vmovdqa         xmm14, [rsp + _XMM_SAVE + 8*16]
+        vmovdqa         xmm15, [rsp + _XMM_SAVE + 9*16]
+%endif
 
         ;; restore the stack pointer
         ;; - IV is cipher text, no need to clear it from the stack

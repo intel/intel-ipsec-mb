@@ -149,7 +149,7 @@ submit_job_hmac_sha_256_avx512:
         mov     tmp, len
         shr     tmp, 6  ; divide by 64, len in terms of blocks
 
-        VPINSRQ_M512x2 state + _job_in_lane_sha256, job, r12d, zmm6, zmm7, k4, lane
+        VPINSRQ_M512x2 state + _job_in_lane_sha256, job, r12d, zmm16, zmm17, k4, lane
 
         mov     dword [lane_data + _outer_done], 0
         vmovdqa ymm5, [state + _lens_sha256]
@@ -343,7 +343,7 @@ return_null:
 align_label
 end_loop:
         mov     job_rax, [state + _job_in_lane_sha256 + idx*8]
-        VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm6, zmm7, k4, idx
+        VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm16, zmm17, k4, idx
         mov     unused_lanes, [state + _unused_lanes_sha256]
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         shl     unused_lanes, 4

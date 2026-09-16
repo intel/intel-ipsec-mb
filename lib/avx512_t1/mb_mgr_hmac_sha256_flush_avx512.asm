@@ -299,7 +299,7 @@ return_null:
 align_label
 end_loop:
         mov     job_rax, [state + _job_in_lane_sha256 + idx*8]
-        VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm6, zmm7, k4, idx
+        VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm16, zmm17, k4, idx
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         mov     unused_lanes, [state + _unused_lanes_sha256]
         shl     unused_lanes, 4
