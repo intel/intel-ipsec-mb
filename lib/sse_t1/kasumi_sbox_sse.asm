@@ -373,8 +373,8 @@ mksection .text
 ;; Subkeys per round: KOi,j at key_sched[2j], KIi,j at key_sched[2j+1]
 ;;
 ;; Output:
-;;   TMPH = l3 (updated left half)
-;;   TMPL = r3 (updated right half)
+;;   TMPH = r3 (updated right half)
+;;   TMPL = l3 (updated left half)
 ;; Clobbers: TMP0, TMP1, STATE, xmm0-xmm9, xmm11, xmm13
 ;; ============================================================================
 %macro FOp1 0
