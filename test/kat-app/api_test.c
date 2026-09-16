@@ -2433,6 +2433,43 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 /* Null destination in non-zero length segment */
+
+                                /* Single segment length above maximum */
+                                const uint64_t sgl_max_len =
+                                        (cipher == IMB_CIPHER_GCM_SGL)
+                                                ? IMB_GCM_MAX_LEN
+                                                : IMB_CHACHA20_POLY1305_MAX_LEN;
+
+                                job->num_sgl_io_segs = 1;
+                                segs[0].in = buf;
+                                segs[0].out = buf;
+                                segs[0].len = sgl_max_len + 1;
+
+                                if (!is_submit_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                       IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
+                                imb_set_session(mb_mgr, job);
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                             IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
+                                /* Total segment length above maximum */
+                                job->num_sgl_io_segs = 2;
+                                segs[0].len = sgl_max_len;
+                                segs[1].in = buf;
+                                segs[1].out = buf;
+                                segs[1].len = 1;
+
+                                if (!is_submit_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                       IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
+                                imb_set_session(mb_mgr, job);
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                             IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
                                 print_progress();
                         }
                 }
