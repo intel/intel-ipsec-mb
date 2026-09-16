@@ -1996,8 +1996,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_PON_AES_CNTR:
-                                case IMB_CIPHER_SNOW5G_NEA4:
-                                case IMB_CIPHER_AES_NEA5:
                                 case IMB_CIPHER_CBC:
                                 case IMB_CIPHER_CFB:
                                         break;

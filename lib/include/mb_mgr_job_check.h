@@ -1384,15 +1384,21 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 break;
         case IMB_CIPHER_AES_NEA5:
         case IMB_CIPHER_SNOW5G_NEA4:
-                if (job->msg_len_to_cipher_in_bytes > NXA_MAX_BYTELEN) {
+                /*
+                 * 3GPP TS 35.240 (SNOW 5G) and TS 35.243 (AES-256) clause 7.1.1:
+                 * "The message shall be between 1 and (2^32-1) bits in length."
+                 * Byte-aligned API, so the range is 1 to floor((2^32 - 1) / 8) bytes.
+                 */
+                if (job->msg_len_to_cipher_in_bytes == 0 ||
+                    job->msg_len_to_cipher_in_bytes > NXA_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
-                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
+                if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
                 }
-                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
+                if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
                         return 1;
                 }

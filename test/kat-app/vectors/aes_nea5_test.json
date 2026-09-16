@@ -3,7 +3,7 @@
     "generatorVersion": "",
     "header": [],
     "notes": {},
-    "numberOfTests": 20,
+    "numberOfTests": 17,
     "schema": "ind_cpa_test_schema_v1.json",
     "testGroups": [
         {
@@ -16,16 +16,6 @@
                     "tcId": 1,
                     "comment": "",
                     "key": "0000000000000000000000000000000000000000000000000000000000000000",
-                    "iv": "00000000000000000000000000000000",
-                    "msg": "",
-                    "ct": "",
-                    "result": "valid",
-                    "flags": []
-                },
-                {
-                    "tcId": 2,
-                    "comment": "",
-                    "key": "0000000000000000000000000000000000000000000000000000000000000000",
                     "iv": "003f0000000000000000000000000000",
                     "msg": "00",
                     "ct": "e2",
@@ -33,7 +23,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 3,
+                    "tcId": 2,
                     "comment": "",
                     "key": "0100000000000000000000000000000000000000000000000000000000000000",
                     "iv": "001c1112131415168000000100000000",
@@ -43,27 +33,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 4,
-                    "comment": "",
-                    "key": "0000000000000000000000000000000000000000000000000000000000000001",
-                    "iv": "00001020304050000000000100000000",
-                    "msg": "",
-                    "ct": "",
-                    "result": "valid",
-                    "flags": []
-                },
-                {
-                    "tcId": 5,
-                    "comment": "",
-                    "key": "8000000000000000000000000000010100000000000000000000000000000008",
-                    "iv": "00000000000000000000000100000000",
-                    "msg": "",
-                    "ct": "",
-                    "result": "valid",
-                    "flags": []
-                },
-                {
-                    "tcId": 6,
+                    "tcId": 3,
                     "comment": "",
                     "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
                     "iv": "003f000000000000ffffffff00000000",
@@ -73,7 +43,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 7,
+                    "tcId": 4,
                     "comment": "",
                     "key": "5555555555555555555555555555555555555555555555555555555555555555",
                     "iv": "000d000000000000aa00aa0000000000",
@@ -83,7 +53,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 8,
+                    "tcId": 5,
                     "comment": "",
                     "key": "1f2f3f4f5f6f7f8f9fafbfcfdfefff0f1f3f5f7f9f2f4f6f8fafffffffffffff",
                     "iv": "003fffffffffffffffffffff00000000",
@@ -93,7 +63,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 9,
+                    "tcId": 6,
                     "comment": "",
                     "key": "64e7f9a3ef617d7e6cff9f64191c1fa35c953230a62282999ee6773a7c44b5b4",
                     "iv": "00282923be84e16c37ab2e7f00000000",
@@ -103,7 +73,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 10,
+                    "tcId": 7,
                     "comment": "",
                     "key": "dce001a5ef617d7e6cff9f64191c1fa35c953230a62282999ee6773a7c44b5b4",
                     "iv": "00350123456789ab0123456700000000",
@@ -113,7 +83,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 11,
+                    "tcId": 8,
                     "comment": "",
                     "key": "9e9a1ccb62485fdbe12010d024c9089bb81f7b0765913d822d48fda51d7755e6",
                     "iv": "003125e1d53c3dc4cc99f83700000000",
@@ -123,7 +93,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 12,
+                    "tcId": 9,
                     "comment": "",
                     "key": "25180565aecf4c27503e08219bd6b2c63a1de1e54280d85b4ada0fed157caa83",
                     "iv": "001ecf527ee1751f26a0782600000000",
@@ -133,7 +103,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 13,
+                    "tcId": 10,
                     "comment": "",
                     "key": "8e73e524a097ca6fb173253efeae9650e4a1df90f54d548e0453391d4964b256",
                     "iv": "0021a12a257f53bf6b8fdb8f00000000",
@@ -143,7 +113,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 14,
+                    "tcId": 11,
                     "comment": "",
                     "key": "d67b49d581b5adbaacb626301c3b07c258ada19b98b637ea8bc1a44c4bb7f4a7",
                     "iv": "00391d7b05071c7421c7a4da00000000",
@@ -153,7 +123,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 15,
+                    "tcId": 12,
                     "comment": "",
                     "key": "766ff3c4d798b234e0b7d0a722a614172c33834c11782d989b25b3a52baf664a",
                     "iv": "003c2290bc635bcd2e719c5000000000",
@@ -163,7 +133,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 16,
+                    "tcId": 13,
                     "comment": "",
                     "key": "d8bfe55b9fe853b827b55c4370b9979e7274b8e6335aa527bab1a31245db8de8",
                     "iv": "0037eca7eeef211e3c1109d500000000",
@@ -173,7 +143,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 17,
+                    "tcId": 14,
                     "comment": "",
                     "key": "4d0e462a5b512a03e1a3e97cf0c5b5920b0290bee22f83d9402f5fa1d8544cde",
                     "iv": "0006b39affb7b11af1bdc82700000000",
@@ -183,7 +153,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 18,
+                    "tcId": 15,
                     "comment": "",
                     "key": "ed28726f3e6922f7999aebcae9ee6bcda5a77641933e7af3d677d9814de882eb",
                     "iv": "003df17fe38d2ae1e11db6b700000000",
@@ -193,7 +163,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 19,
+                    "tcId": 16,
                     "comment": "",
                     "key": "d4d42f85090757ff0fd74868ee454980cc90c973e334ba608031b60058426c64",
                     "iv": "000099652c8ef093da823d3600000000",
@@ -203,7 +173,7 @@
                     "flags": []
                 },
                 {
-                    "tcId": 20,
+                    "tcId": 17,
                     "comment": "",
                     "key": "f1389dff592e8cc55cb0365ea90271d5b9bea14609a8770c595f9c6ccd7e89d2",
                     "iv": "0017413e368a2ea7f727e97b00000000",
