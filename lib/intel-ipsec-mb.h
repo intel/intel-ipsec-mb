@@ -580,12 +580,22 @@ typedef struct IMB_JOB {
         /* Start hash algorithm-specific fields */
         union {
                 struct _HMAC_specific_fields {
+                        /**
+                         * For MD5, SHA1, SHA2 and SM3:
+                         * hashed result of HMAC key xor'd with ipad (0x36).
+                         * For SHA3:
+                         * block size long HMAC key xor'd with ipad (0x36),
+                         * not hashed.
+                         */
                         const uint8_t *_hashed_auth_key_xor_ipad;
-                        /**< Hashed result of HMAC key xor'd
-                         * with ipad (0x36). */
+                        /**
+                         * For MD5, SHA1, SHA2 and SM3:
+                         * hashed result of HMAC key xor'd with opad (0x5c).
+                         * For SHA3:
+                         * block size long HMAC key xor'd with opad (0x5c),
+                         * not hashed.
+                         */
                         const uint8_t *_hashed_auth_key_xor_opad;
-                        /**< Hashed result of HMAC key xor'd
-                         * with opad (0x5c). */
                 } HMAC; /**< HMAC specific fields */
                 struct _AES_XCBC_specific_fields {
                         const uint32_t *_k1_expanded;
