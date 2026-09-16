@@ -26,6 +26,15 @@
 mksection .rodata
 default rel
 
+;; DWORD i of each half holds the init_lanes bit of the lane that keystream
+;; DWORD belongs to; shifted left by 2 for each consecutive pair of lanes
+align 64
+lane_bit_tab:
+        dd (1 << 0), (1 << 0), (1 << 0), (1 << 0)
+        dd (1 << 0), (1 << 0), (1 << 0), (1 << 0)
+        dd (1 << 1), (1 << 1), (1 << 1), (1 << 1)
+        dd (1 << 1), (1 << 1), (1 << 1), (1 << 1)
+
 extern snow3g_f9_1_buffer_internal_vaes_avx512
 extern snow3g_f9_1_buffer_internal_avx
 
@@ -224,6 +233,29 @@ align_label
                         {state + _snow3g_ks}, \
                         tmp, tmp2, k1, k2, k3, k4, k5, k6, \
                         %%GEN
+
+%ifdef SAFE_DATA
+        ;; clear keystream generated for "dummy" lanes
+        ;; (i.e. lanes not marked in init_lanes that were only filled in
+        ;; with a copy of a valid job's key/IV to keep SIMD width at 16)
+        ;; keystream of valid lanes is consumed and cleared lane by lane later
+        ;; LFSR/FSM registers are not kept in the OOO manager - nothing to clear
+        ;; done branch free: keystream of 2 lanes fits into one ZMM (8 DWORD's
+        ;; per lane), so a 16-bit write mask is built for each pair of lanes by
+        ;; testing the two matching bits of init_lanes
+        vpxorq          zmm0, zmm0, zmm0
+        vpbroadcastd    zmm1, DWORD(init_lanes)
+        vmovdqa32       zmm2, [rel lane_bit_tab]
+%assign i 0
+%rep 8
+        ;; test bits 2*i (low half) and 2*i + 1 (high half) of init_lanes;
+        ;; vptestnmd sets mask bits for lanes NOT present in init_lanes
+        vpslld          zmm3, zmm2, (i * 2)
+        vptestnmd       k1, zmm1, zmm3
+        vmovdqu32       [state + _snow3g_ks + i*64]{k1}, zmm0
+%assign i (i+1)
+%endrep
+%endif
 
         ;; update init_done for valid initialized lanes
         mov     [state + _snow3g_init_done], WORD(init_lanes)
