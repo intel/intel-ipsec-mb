@@ -1201,7 +1201,7 @@ align_label
         jz      %%_poly1305_blocks_exit
 
         lea     %%T1, [rel byte_len_to_mask_table]
-        kmovq   k1, [%%T1 + %%LEN*2]
+        kmovw   k1, [%%T1 + %%LEN*2]
         vmovdqu8 xmm0{k1}{z}, [%%MSG]
 
 %ifnidn %%PAD_16,pad_to_16
