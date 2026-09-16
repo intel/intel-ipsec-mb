@@ -27,6 +27,11 @@ align 16
 lane_mask_tab:
         dw ~(1 << 0), ~(1 << 1), ~(1 << 2), ~(1 << 3)
 
+align 16
+lane_and_mask_tab:
+        dq 0x0000000000000000, 0x0000000000000000 ;; dummy lane - clear
+        dq 0xffffffffffffffff, 0xffffffffffffffff ;; valid lane - keep
+
 mksection .text
 %ifdef LINUX
 %define arg1    rdi
@@ -229,6 +234,9 @@ align_label
         and     [state + _snow3g_init_done], WORD(%%TGP1)
 
 %ifdef SAFE_DATA
+        ;; LFSR/FSM state is already cleared right after the init
+        ;; (see %%init_lanes_uia2) - only the keystream is left to clear here
+
         ;; clear keystream for processed job
         pxor    %%TMP_XMM_0, %%TMP_XMM_0
         shl     WORD(%%LANE), 5 ;; ks stored at 32 byte offsets
@@ -259,6 +267,46 @@ align_label
                                 %%TMP_XMM_9, %%TMP_XMM_10, %%TMP_XMM_11,  \
                                 %%TMP_XMM_12, %%TMP_XMM_13, %%TMP_XMM_14, \
                                 %%TMP_XMM_15, state
+
+%ifdef SAFE_DATA
+        ;; The init above generates and stores the complete keystream
+        ;; (5 DW's per lane) required to authenticate all 4 lanes.
+        ;; LFSR/FSM registers are dead from this point on - the keystream
+        ;; is simply consumed lane by lane by the F9 calls that follow.
+        ;; Hence LFSR/FSM state of all 4 lanes can be cleared in one go here.
+        ;; LFSR 0..15 and FSM 1..3 are consecutive fields in the OOO manager,
+        ;; so they are cleared as one block of 19 fields.
+%define SNOW3G_ARG_FIELD_SZ (_snow3g_args_LFSR_1 - _snow3g_args_LFSR_0)
+        pxor    %%TMP_XMM_0, %%TMP_XMM_0
+%assign i 0
+%rep 19
+        movdqa  [state + _snow3g_args_LFSR_0 + i*SNOW3G_ARG_FIELD_SZ], %%TMP_XMM_0
+%assign i (i+1)
+%endrep
+
+        ;; clear keystream generated for "dummy" lanes
+        ;; (i.e. lanes not marked in init_lanes that were only filled in
+        ;; with a copy of a valid job's key/IV to keep SIMD width at 4)
+        ;; done branch free: bit "i" of init_lanes selects 16 bytes of
+        ;; either 0x00 (dummy lane) or 0xff (valid lane) from the mask table
+        ;; and the selected mask is applied on keystream of lane "i"
+        lea     %%TGP1, [rel lane_and_mask_tab]
+        mov     DWORD(%%TGP2), DWORD(init_lanes)
+        shl     DWORD(%%TGP2), 4        ;; mask table entry is 16 bytes
+%assign i 0
+%rep 4
+        mov     DWORD(%%TGP0), DWORD(%%TGP2)
+        shr     DWORD(%%TGP0), i
+        and     DWORD(%%TGP0), 16
+        movdqa  %%TMP_XMM_1, [state + _snow3g_ks + i*32]
+        movdqa  %%TMP_XMM_2, [state + _snow3g_ks + i*32 + 16]
+        pand    %%TMP_XMM_1, [%%TGP1 + %%TGP0]
+        pand    %%TMP_XMM_2, [%%TGP1 + %%TGP0]
+        movdqa  [state + _snow3g_ks + i*32], %%TMP_XMM_1
+        movdqa  [state + _snow3g_ks + i*32 + 16], %%TMP_XMM_2
+%assign i (i+1)
+%endrep
+%endif
 
         ;; update init_done for valid initialized lanes
         mov     [state + _snow3g_init_done], WORD(init_lanes)
