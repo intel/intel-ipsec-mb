@@ -251,7 +251,7 @@ end_loop:
         mov     [p + 1*4], DWORD(tmp4)
         mov     [p + 2*4], DWORD(tmp5)
 
-        cmp     DWORD [job_rax + _auth_tag_output_len_in_bytes], 12
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
         je      clear_ret
 
         ; copy 16 bytes
