@@ -711,11 +711,13 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
                                         return 1;
                                 }
+                                /* check for wrap around while accumulating */
+                                if (seg->len > IMB_GCM_MAX_LEN ||
+                                    total_sgl_len > (IMB_GCM_MAX_LEN - seg->len)) {
+                                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                                        return 1;
+                                }
                                 total_sgl_len += seg->len;
-                        }
-                        if (total_sgl_len > IMB_GCM_MAX_LEN) {
-                                imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                                return 1;
                         }
                         break;
                 default:
@@ -1375,11 +1377,13 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
                                         return 1;
                                 }
+                                /* check for wrap around while accumulating */
+                                if (seg->len > IMB_CHACHA20_POLY1305_MAX_LEN ||
+                                    total_sgl_len > (IMB_CHACHA20_POLY1305_MAX_LEN - seg->len)) {
+                                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                                        return 1;
+                                }
                                 total_sgl_len += seg->len;
-                        }
-                        if (total_sgl_len > IMB_CHACHA20_POLY1305_MAX_LEN) {
-                                imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                                return 1;
                         }
                         break;
                 default:
