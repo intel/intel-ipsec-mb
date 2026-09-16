@@ -2059,8 +2059,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                         continue;
                                 case IMB_CIPHER_ZUC_NEA6:
-                                        /* max is 2^32 - 1 bits (2^29 bytes) */
-                                        job->msg_len_to_cipher_in_bytes = ((1ULL << 29));
+                                        /* max is 2^16 - 2 bytes (0xFFFF is the
+                                         * NULL lane sentinel in the flush path)
+                                         */
+                                        job->msg_len_to_cipher_in_bytes = ((1ULL << 16) - 1);
                                         break;
                                 case IMB_CIPHER_ZUC_EEA3:
                                         /* max is 8188 bytes */

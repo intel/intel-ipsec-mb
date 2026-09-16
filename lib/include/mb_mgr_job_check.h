@@ -1182,7 +1182,12 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
                         return 1;
                 }
-                if (job->msg_len_to_cipher_in_bytes == 0 ||
+                /*
+                 * 3GPP TS 35.246 clause 7.1.1 allows 1 to (2^32-1) bits, but the
+                 * multi-buffer implementation limits the upper bound further
+                 * (see ZUC_NEA6_MAX_BYTELEN in zuc_internal.h).
+                 */
+                if (job->msg_len_to_cipher_in_bytes < ZUC_NEA6_MIN_BYTELEN ||
                     job->msg_len_to_cipher_in_bytes > ZUC_NEA6_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
