@@ -103,14 +103,6 @@ mksection .text
 %define BOTH_LANES      2
 
 struc STACK
-_LFSR_A_HDQ_01:     resb    (16 * 8)
-_LFSR_A_HDQ_23:     resb    (16 * 8)
-_LFSR_A_HDQ_45:     resb    (16 * 8)
-_LFSR_A_HDQ_67:     resb    (16 * 8)
-_LFSR_B_HDQ_01:     resb    (16 * 8)
-_LFSR_B_HDQ_23:     resb    (16 * 8)
-_LFSR_B_HDQ_45:     resb    (16 * 8)
-_LFSR_B_HDQ_67:     resb    (16 * 8)
 _gpr_save:      resq    8
 %ifndef LINUX
 _xmm_save:      resb    (16 * 10)       ; XMM6-15 save area (Windows only)

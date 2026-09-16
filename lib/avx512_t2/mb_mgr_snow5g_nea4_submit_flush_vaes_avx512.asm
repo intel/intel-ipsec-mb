@@ -350,13 +350,9 @@ align_label
 align_label
 %%return_nea4:
 %ifdef SAFE_DATA
-        ;; Clear STACK structure containing temporary LFSR and keystream data
-        ;; Each field is exactly one YMM register (32 bytes)
         ;; clear register contents
+        ;; no temporary LFSR or keystream data is kept on the stack
         clear_scratch_ymms_asm
-
-        vmovdqa32       [rsp + _LFSR_A_HDQ_01], ymm0
-        vmovdqa32       [rsp + _LFSR_B_HDQ_01], ymm0
 %else
         vzeroupper
 %endif
