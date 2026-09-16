@@ -589,7 +589,7 @@ aes_gcm_test_op(IMB_MGR *mb_mgr, const struct aead_test *vec, const struct gcm_k
                 .in_place = in_place,
         };
 
-        return kat_aead_test_submit_flush(mb_mgr, &vec, 1, 1, &ops);
+        return kat_aead_test(mb_mgr, &vec, 1, 1, &ops, NULL, KAT_AEAD_SUBMIT_FLUSH);
 }
 
 static void
@@ -657,7 +657,8 @@ test_gcm_job_vectors(struct aead_test const *vector, struct test_suite_context *
                 .key_len_in_bytes = key_len,
         };
 
-        if (kat_aead_test_round_trip(p_gcm_mgr, vector, &encrypt_ops, &decrypt_ops)) {
+        if (kat_aead_test(p_gcm_mgr, &vector, 1, 1, &encrypt_ops, &decrypt_ops,
+                          KAT_AEAD_ROUND_TRIP)) {
                 test_suite_update(ts, 0, 1);
                 return;
         }

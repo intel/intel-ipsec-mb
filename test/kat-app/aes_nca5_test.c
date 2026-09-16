@@ -104,7 +104,7 @@ test_aes_nca5_vectors(IMB_MGR *p_mgr, struct aead_test const *vector, struct tes
                                                  &decrypt_in_place_ops };
 
         for (size_t i = 0; i < DIM(ops); i++) {
-                if (kat_aead_test_submit_flush(p_mgr, &vector, 1, 1, ops[i])) {
+                if (kat_aead_test(p_mgr, &vector, 1, 1, ops[i], NULL, KAT_AEAD_SUBMIT_FLUSH)) {
                         test_suite_update(ts, 0, 1);
                         test_aligned_free(exp_key);
                         test_aligned_free(dust);
@@ -113,8 +113,8 @@ test_aes_nca5_vectors(IMB_MGR *p_mgr, struct aead_test const *vector, struct tes
                 test_suite_update(ts, 1, 0);
         }
 
-        if (kat_aead_test_burst(p_mgr, &vector, 1, 2, &encrypt_ops) < 0 ||
-            kat_aead_test_burst(p_mgr, &vector, 1, 2, &decrypt_ops) < 0) {
+        if (kat_aead_test(p_mgr, &vector, 1, 2, &encrypt_ops, NULL, KAT_AEAD_BURST) < 0 ||
+            kat_aead_test(p_mgr, &vector, 1, 2, &decrypt_ops, NULL, KAT_AEAD_BURST) < 0) {
                 test_suite_update(ts, 0, 1);
                 test_aligned_free(exp_key);
                 test_aligned_free(dust);
@@ -122,7 +122,7 @@ test_aes_nca5_vectors(IMB_MGR *p_mgr, struct aead_test const *vector, struct tes
         }
         test_suite_update(ts, 1, 0);
 
-        if (kat_aead_test_round_trip(p_mgr, vector, &encrypt_ops, &decrypt_ops)) {
+        if (kat_aead_test(p_mgr, &vector, 1, 1, &encrypt_ops, &decrypt_ops, KAT_AEAD_ROUND_TRIP)) {
                 test_suite_update(ts, 0, 1);
                 test_aligned_free(exp_key);
                 test_aligned_free(dust);

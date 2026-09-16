@@ -194,57 +194,6 @@ kat_aead_process_mixed_job(struct IMB_JOB *job, const struct aead_test *const *v
         return ret;
 }
 
-/* Submit/flush test: one operation type is reused for all jobs. Each job allocates its own
- * output/tag storage and validates the returned result before the helper frees those buffers.
- */
-int
-kat_aead_test_submit_flush(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
-                           const uint32_t vec_tab_num, const uint32_t num_jobs,
-                           const struct kat_aead_job_ops *ops)
-{
-        IMB_JOB *job;
-        uint32_t jobs_rx = 0;
-        int ret = -1;
-
-        if (ops == NULL || num_jobs == 0 || kat_aead_validate_vec_tab(vec_tab, vec_tab_num) < 0)
-                return -1;
-
-        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
-                ;
-
-        for (uint32_t i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                if (job == NULL)
-                        goto end;
-                if (kat_aead_prepare_job(mb_mgr, job, kat_aead_get_vec(vec_tab, vec_tab_num, i),
-                                         ops) < 0)
-                        goto end;
-                job->user_data2 = (void *) (uintptr_t) i;
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
-                        jobs_rx++;
-                        if (kat_aead_process_job(job, vec_tab, vec_tab_num, ops) < 0)
-                                goto end;
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                jobs_rx++;
-                if (kat_aead_process_job(job, vec_tab, vec_tab_num, ops) < 0)
-                        goto end;
-        }
-
-        ret = jobs_rx == num_jobs ? 0 : -1;
-
-end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
-                kat_aead_job_cleanup(job, ops);
-        return ret;
-}
-
-/* Mixed submit/flush test: each job can use a different direction or chain order, but the helper
- * still owns the per-job output/tag storage created during prepare().
- */
 int
 kat_aead_test_submit_flush_mixed(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
                                  const uint32_t vec_tab_num, const uint32_t num_jobs,
@@ -269,27 +218,26 @@ kat_aead_test_submit_flush_mixed(struct IMB_MGR *mb_mgr, const struct aead_test 
 
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 if (job == NULL)
-                        goto end;
+                        goto mixed_end;
                 if (kat_aead_prepare_job(mb_mgr, job, vec, ops_tab[i]) < 0)
-                        goto end;
+                        goto mixed_end;
                 job->user_data2 = (void *) (uintptr_t) i;
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
                         if (kat_aead_process_mixed_job(job, vec_tab, vec_tab_num, ops_tab) < 0)
-                                goto end;
+                                goto mixed_end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
                 if (kat_aead_process_mixed_job(job, vec_tab, vec_tab_num, ops_tab) < 0)
-                        goto end;
+                        goto mixed_end;
         }
 
         ret = jobs_rx == num_jobs ? 0 : -1;
-
-end:
+mixed_end:
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 const uint32_t vec_idx = (uint32_t) (uintptr_t) job->user_data2;
 
@@ -298,71 +246,13 @@ end:
         return ret;
 }
 
-/* AEAD burst path: prepare every job first, submit the full burst, and then consume completed jobs
- * in submission order while still validating each result against the correct vector.
+/**
+ * @brief Exercise an encrypt/decrypt round trip with one test vector and job.
  */
-int
-kat_aead_test_burst(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
-                    const uint32_t vec_tab_num, const uint32_t num_jobs,
-                    const struct kat_aead_job_ops *ops)
-{
-        IMB_JOB *jobs[KAT_MAX_BURST_SIZE] = { NULL };
-        IMB_JOB *prepared[KAT_MAX_BURST_SIZE] = { NULL };
-        uint32_t prepared_jobs = 0, jobs_rx = 0, completed_jobs;
-        int ret = -1;
-
-        if (ops == NULL || num_jobs == 0 || num_jobs > KAT_MAX_BURST_SIZE ||
-            kat_aead_validate_vec_tab(vec_tab, vec_tab_num) < 0)
-                return -1;
-
-        /* Fill the burst with a fresh set of jobs before submission so the burst API always sees a
-         * clean queue.
-         */
-        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
-                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
-
-        for (uint32_t i = 0; i < num_jobs; i++) {
-                /* Every prepared job keeps its own destination and tag buffer until validation. */
-                if (kat_aead_prepare_job(mb_mgr, jobs[i], kat_aead_get_vec(vec_tab, vec_tab_num, i),
-                                         ops) < 0)
-                        goto end;
-                jobs[i]->user_data2 = (void *) (uintptr_t) i;
-                prepared[prepared_jobs++] = jobs[i];
-                imb_set_session(mb_mgr, jobs[i]);
-        }
-
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
-        while (jobs_rx < num_jobs) {
-                for (uint32_t i = 0; i < completed_jobs; i++) {
-                        /* A returned job is consumed regardless of validation result. */
-                        if (kat_aead_process_job(jobs[i], vec_tab, vec_tab_num, ops) < 0)
-                                goto end;
-                        jobs_rx++;
-                }
-                if (jobs_rx == num_jobs)
-                        break;
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - jobs_rx, jobs);
-                if (completed_jobs == 0)
-                        goto end;
-        }
-        ret = 0;
-
-end:
-        while (IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs) != 0)
-                ;
-        for (uint32_t i = 0; i < prepared_jobs; i++)
-                if (prepared[i]->dst != NULL)
-                        kat_aead_job_cleanup(prepared[i], ops);
-        return ret;
-}
-
-/* Round-trip validation for one vector: encrypt a temporary ciphertext/tag buffer, decrypt it to a
- * temporary plaintext buffer, and confirm the recovered plaintext and tag match the original.
- * The caller owns the staging buffers; this helper only allocates and frees its temporary arrays.
- */
-int
-kat_aead_test_round_trip(struct IMB_MGR *mb_mgr, const struct aead_test *vec,
-                         const struct kat_aead_job_ops *encrypt_ops,
+static int
+kat_aead_test_round_trip(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
+                         const uint32_t vec_tab_num, const uint32_t num_jobs,
+                         const struct kat_aead_job_ops *ops,
                          const struct kat_aead_job_ops *decrypt_ops)
 {
         size_t msg_len, tag_len;
@@ -370,32 +260,35 @@ kat_aead_test_round_trip(struct IMB_MGR *mb_mgr, const struct aead_test *vec,
         uint8_t *encrypt_tag = NULL, *decrypt_tag = NULL;
         int ret = -1;
 
-        if (mb_mgr == NULL || vec == NULL || encrypt_ops == NULL || decrypt_ops == NULL ||
-            IMB_QUEUE_SIZE(mb_mgr) != 0)
-                goto end;
+        if (mb_mgr == NULL || vec_tab == NULL || vec_tab_num != 1 || vec_tab[0] == NULL ||
+            ops == NULL || decrypt_ops == NULL || num_jobs != 1 || IMB_QUEUE_SIZE(mb_mgr) != 0)
+                return -1;
 
-        msg_len = vec->msgSize / 8;
-        tag_len = vec->tagSize / 8;
+        msg_len = vec_tab[0]->msgSize / 8;
+        tag_len = vec_tab[0]->tagSize / 8;
         ciphertext = malloc(msg_len == 0 ? 1 : msg_len);
         plaintext = malloc(msg_len == 0 ? 1 : msg_len);
         encrypt_tag = malloc(tag_len == 0 ? 1 : tag_len);
         decrypt_tag = malloc(tag_len == 0 ? 1 : tag_len);
-        if (ciphertext == NULL || plaintext == NULL || encrypt_tag == NULL || decrypt_tag == NULL)
-                goto end;
 
-        if (kat_aead_round_trip_job(mb_mgr, vec, encrypt_ops, vec->msg, ciphertext, encrypt_tag) <
-            0)
-                goto end;
-        if (kat_aead_round_trip_job(mb_mgr, vec, decrypt_ops, ciphertext, plaintext, decrypt_tag) <
-            0)
-                goto end;
-        if (memcmp(plaintext, vec->msg, msg_len) != 0 ||
+        if (ciphertext == NULL || plaintext == NULL || encrypt_tag == NULL || decrypt_tag == NULL)
+                goto round_trip_end;
+
+        if (kat_aead_round_trip_job(mb_mgr, vec_tab[0], ops, vec_tab[0]->msg, ciphertext,
+                                    encrypt_tag) < 0)
+                goto round_trip_end;
+
+        if (kat_aead_round_trip_job(mb_mgr, vec_tab[0], decrypt_ops, ciphertext, plaintext,
+                                    decrypt_tag) < 0)
+                goto round_trip_end;
+
+        if (memcmp(plaintext, vec_tab[0]->msg, msg_len) != 0 ||
             memcmp(encrypt_tag, decrypt_tag, tag_len) != 0)
-                goto end;
+                goto round_trip_end;
 
         ret = 0;
 
-end:
+round_trip_end:
         free(ciphertext);
         free(plaintext);
         free(encrypt_tag);
@@ -403,6 +296,156 @@ end:
         return ret;
 }
 
+/**
+ * @brief Exercise the standard submit/flush AEAD job API.
+ */
+static int
+kat_aead_test_submit_flush(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
+                           const uint32_t vec_tab_num, const uint32_t num_jobs,
+                           const struct kat_aead_job_ops *ops)
+{
+        IMB_JOB *job;
+        uint32_t jobs_rx = 0;
+        int ret = -1;
+
+        if (ops == NULL || num_jobs == 0 || kat_aead_validate_vec_tab(vec_tab, vec_tab_num) < 0)
+                return -1;
+
+        /* Start with an empty queue so returned jobs belong to this test. */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
+        for (uint32_t i = 0; i < num_jobs; i++) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (job == NULL)
+                        goto submit_end;
+
+                if (kat_aead_prepare_job(mb_mgr, job, kat_aead_get_vec(vec_tab, vec_tab_num, i),
+                                         ops) < 0)
+                        goto submit_end;
+
+                job->user_data2 = (void *) (uintptr_t) i;
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job != NULL) {
+                        jobs_rx++;
+                        if (kat_aead_process_job(job, vec_tab, vec_tab_num, ops) < 0)
+                                goto submit_end;
+                }
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                jobs_rx++;
+                if (kat_aead_process_job(job, vec_tab, vec_tab_num, ops) < 0)
+                        goto submit_end;
+        }
+        ret = jobs_rx == num_jobs ? 0 : -1;
+
+submit_end:
+        /* Release any jobs still queued after an error. */
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                kat_aead_job_cleanup(job, ops);
+        return ret;
+}
+
+/**
+ * @brief Exercise a generic or CCM AEAD burst API.
+ */
+static int
+kat_aead_test_burst(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
+                    const uint32_t vec_tab_num, const uint32_t num_jobs,
+                    const struct kat_aead_job_ops *ops, const enum kat_aead_test_mode mode)
+{
+        IMB_JOB *jobs[KAT_MAX_BURST_SIZE] = { NULL };
+        IMB_JOB aead_jobs[KAT_MAX_BURST_SIZE] = { 0 };
+        IMB_JOB *prepared[KAT_MAX_BURST_SIZE] = { NULL };
+        uint32_t prepared_jobs = 0, jobs_rx = 0, completed_jobs;
+        int ret = -1;
+
+        if (ops == NULL || num_jobs == 0 || kat_aead_validate_vec_tab(vec_tab, vec_tab_num) < 0)
+                return -1;
+        if (num_jobs > KAT_MAX_BURST_SIZE)
+                return -1;
+
+        if (mode == KAT_AEAD_BURST)
+                while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
+                        IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
+
+        for (uint32_t i = 0; i < num_jobs; i++) {
+                IMB_JOB *job = mode == KAT_AEAD_CCM_BURST ? &aead_jobs[i] : jobs[i];
+
+                if (kat_aead_prepare_job(mb_mgr, job, kat_aead_get_vec(vec_tab, vec_tab_num, i),
+                                         ops) < 0)
+                        goto burst_end;
+
+                job->user_data2 = (void *) (uintptr_t) i;
+                prepared[prepared_jobs++] = job;
+                if (mode == KAT_AEAD_BURST)
+                        imb_set_session(mb_mgr, job);
+        }
+
+        if (mode == KAT_AEAD_CCM_BURST) {
+                completed_jobs =
+                        IMB_SUBMIT_AEAD_BURST(mb_mgr, aead_jobs, num_jobs, ops->cipher_mode,
+                                              ops->cipher_direction, ops->key_len_in_bytes);
+                if (completed_jobs != num_jobs)
+                        goto burst_end;
+        } else {
+                completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
+        }
+
+        while (jobs_rx < num_jobs) {
+                for (uint32_t i = 0; i < completed_jobs; i++) {
+                        IMB_JOB *job = mode == KAT_AEAD_CCM_BURST ? &aead_jobs[i] : jobs[i];
+
+                        if (kat_aead_process_job(job, vec_tab, vec_tab_num, ops) < 0)
+                                goto burst_end;
+                        jobs_rx++;
+                }
+                if (jobs_rx == num_jobs)
+                        break;
+                if (mode == KAT_AEAD_CCM_BURST)
+                        goto burst_end;
+                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - jobs_rx, jobs);
+                if (completed_jobs == 0)
+                        goto burst_end;
+        }
+        ret = 0;
+
+burst_end:
+        /* Generic bursts may leave work queued; AEAD bursts complete synchronously. */
+        if (mode == KAT_AEAD_BURST)
+                while (IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs) != 0)
+                        ;
+
+        for (uint32_t i = 0; i < prepared_jobs; i++)
+                if (prepared[i]->dst != NULL)
+                        kat_aead_job_cleanup(prepared[i], ops);
+        return ret;
+}
+
+int
+kat_aead_test(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
+              const uint32_t vec_tab_num, const uint32_t num_jobs,
+              const struct kat_aead_job_ops *ops, const struct kat_aead_job_ops *decrypt_ops,
+              const enum kat_aead_test_mode mode)
+{
+        switch (mode) {
+        case KAT_AEAD_ROUND_TRIP:
+                return kat_aead_test_round_trip(mb_mgr, vec_tab, vec_tab_num, num_jobs, ops,
+                                                decrypt_ops);
+        case KAT_AEAD_SUBMIT_FLUSH:
+                return kat_aead_test_submit_flush(mb_mgr, vec_tab, vec_tab_num, num_jobs, ops);
+        case KAT_AEAD_BURST:
+        case KAT_AEAD_CCM_BURST:
+                return kat_aead_test_burst(mb_mgr, vec_tab, vec_tab_num, num_jobs, ops, mode);
+        default:
+                return -1;
+        }
+}
+
+/**
+ * @brief Exercise submit/flush with caller-owned custom job handling.
+ */
 int
 kat_aead_test_custom_submit_flush(struct IMB_MGR *mb_mgr, const struct kat_custom_job_ops *ops,
                                   const uint32_t num_jobs)

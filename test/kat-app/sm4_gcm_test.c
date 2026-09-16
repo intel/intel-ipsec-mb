@@ -105,7 +105,7 @@ test_gcm_vectors(struct aead_test const *vector, struct test_suite_context *ts)
                                                  &decrypt_in_place_ops };
 
         for (size_t i = 0; i < DIM(ops); i++) {
-                if (kat_aead_test_submit_flush(p_gcm_mgr, &vector, 1, 1, ops[i])) {
+                if (kat_aead_test(p_gcm_mgr, &vector, 1, 1, ops[i], NULL, KAT_AEAD_SUBMIT_FLUSH)) {
                         test_suite_update(ts, 0, 1);
                         test_aligned_free(gdata_key);
                         return;
@@ -113,7 +113,8 @@ test_gcm_vectors(struct aead_test const *vector, struct test_suite_context *ts)
                 test_suite_update(ts, 1, 0);
         }
 
-        if (kat_aead_test_round_trip(p_gcm_mgr, vector, &encrypt_ops, &decrypt_ops)) {
+        if (kat_aead_test(p_gcm_mgr, &vector, 1, 1, &encrypt_ops, &decrypt_ops,
+                          KAT_AEAD_ROUND_TRIP)) {
                 test_suite_update(ts, 0, 1);
                 test_aligned_free(gdata_key);
                 return;

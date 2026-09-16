@@ -90,13 +90,14 @@ test_chacha20_poly1305_vectors(IMB_MGR *p_mgr, const struct aead_test *vector,
                                                  &decrypt_in_place_ops };
 
         for (size_t i = 0; i < DIM(ops); i++) {
-                if (kat_aead_test_submit_flush(p_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                if (kat_aead_test(p_mgr, &vector, 1, num_jobs, ops[i], NULL,
+                                  KAT_AEAD_SUBMIT_FLUSH) < 0) {
                         test_suite_update(ts, 0, 1);
                         return;
                 }
                 test_suite_update(ts, 1, 0);
 
-                if (kat_aead_test_burst(p_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                if (kat_aead_test(p_mgr, &vector, 1, num_jobs, ops[i], NULL, KAT_AEAD_BURST) < 0) {
                         test_suite_update(ts, 0, 1);
                         return;
                 }
@@ -104,7 +105,8 @@ test_chacha20_poly1305_vectors(IMB_MGR *p_mgr, const struct aead_test *vector,
         }
 
         if (num_jobs == 1) {
-                if (kat_aead_test_round_trip(p_mgr, vector, &encrypt_ops, &decrypt_ops) < 0) {
+                if (kat_aead_test(p_mgr, &vector, 1, 1, &encrypt_ops, &decrypt_ops,
+                                  KAT_AEAD_ROUND_TRIP) < 0) {
                         test_suite_update(ts, 0, 1);
                         return;
                 }

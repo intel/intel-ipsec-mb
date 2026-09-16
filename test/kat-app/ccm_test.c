@@ -143,7 +143,8 @@ test_ccm_vectors(struct IMB_MGR *mb_mgr, const struct aead_test *vector, const u
                                                  &decrypt_in_place_ops };
 
         for (size_t i = 0; i < DIM(ops); i++) {
-                if (kat_aead_test_submit_flush(mb_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                if (kat_aead_test(mb_mgr, &vector, 1, num_jobs, ops[i], NULL,
+                                  KAT_AEAD_SUBMIT_FLUSH) < 0) {
                         test_suite_update(ts, 0, 1);
                         test_aligned_free(expkey);
                         test_aligned_free(dust);
@@ -151,7 +152,8 @@ test_ccm_vectors(struct IMB_MGR *mb_mgr, const struct aead_test *vector, const u
                 }
                 test_suite_update(ts, 1, 0);
 
-                if (kat_aead_test_burst(mb_mgr, &vector, 1, num_jobs, ops[i]) < 0) {
+                if (kat_aead_test(mb_mgr, &vector, 1, num_jobs, ops[i], NULL, KAT_AEAD_CCM_BURST) <
+                    0) {
                         test_suite_update(ts, 0, 1);
                         test_aligned_free(expkey);
                         test_aligned_free(dust);
@@ -161,7 +163,8 @@ test_ccm_vectors(struct IMB_MGR *mb_mgr, const struct aead_test *vector, const u
         }
 
         if (num_jobs == 1) {
-                if (kat_aead_test_round_trip(mb_mgr, vector, &encrypt_ops, &decrypt_ops) < 0) {
+                if (kat_aead_test(mb_mgr, &vector, 1, 1, &encrypt_ops, &decrypt_ops,
+                                  KAT_AEAD_ROUND_TRIP) < 0) {
                         test_suite_update(ts, 0, 1);
                         test_aligned_free(expkey);
                         test_aligned_free(dust);

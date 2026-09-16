@@ -133,7 +133,7 @@ test_snow5g_nca4_vectors(IMB_MGR *p_mgr, struct aead_test const *vector,
         const struct kat_aead_job_ops *ops[] = { &encrypt_ops, &encrypt_in_place_ops, &decrypt_ops,
                                                  &decrypt_in_place_ops };
         for (size_t i = 0; i < DIM(ops); i++) {
-                if (kat_aead_test_submit_flush(p_mgr, &vector, 1, 1, ops[i])) {
+                if (kat_aead_test(p_mgr, &vector, 1, 1, ops[i], NULL, KAT_AEAD_SUBMIT_FLUSH)) {
                         test_suite_update(ts, 0, 1);
                         return;
                 }

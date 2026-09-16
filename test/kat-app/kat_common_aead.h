@@ -78,21 +78,26 @@ struct kat_custom_job_ops {
         void *ctx;
 };
 
+enum kat_aead_test_mode {
+        KAT_AEAD_SUBMIT_FLUSH,
+        KAT_AEAD_BURST,
+        KAT_AEAD_CCM_BURST,
+        KAT_AEAD_ROUND_TRIP,
+};
+
 /**
- * @brief Exercise submit/flush AEAD APIs with caller-supplied preparation.
+ * @brief Dispatch an AEAD test to the appropriate internal test API.
  *
- * @param [in,out] mb_mgr      multi-buffer manager
- * @param [in]     vec_tab     array of test vector pointers
- * @param [in]     vec_tab_num number of test vectors in vec_tab
- * @param [in]     num_jobs    number of jobs to test
- * @param [in]     ops         test callback operations bundle
+ * The selected internal API uses @p ops for submit/flush and burst modes,
+ * including CCM burst mode. Round-trip mode also uses @p decrypt_ops and
+ * requires exactly one vector and job from @p vec_tab.
  *
- * @return 0 if all num_jobs completed and matched expected output, -1 otherwise.
+ * @return 0 on success or -1 on failure.
  */
 int
-kat_aead_test_submit_flush(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
-                           const uint32_t vec_tab_num, const uint32_t num_jobs,
-                           const struct kat_aead_job_ops *ops);
+kat_aead_test(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab, uint32_t vec_tab_num,
+              uint32_t num_jobs, const struct kat_aead_job_ops *ops,
+              const struct kat_aead_job_ops *decrypt_ops, enum kat_aead_test_mode mode);
 
 /**
  * @brief Exercise mixed-direction submit/flush AEAD APIs with per-job preparation.
@@ -109,37 +114,6 @@ int
 kat_aead_test_submit_flush_mixed(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
                                  const uint32_t vec_tab_num, const uint32_t num_jobs,
                                  const struct kat_aead_job_ops *const *ops_tab);
-
-/**
- * @brief Exercise AEAD burst APIs with caller-supplied preparation.
- *
- * @param [in,out] mb_mgr      multi-buffer manager
- * @param [in]     vec_tab     array of test vector pointers
- * @param [in]     vec_tab_num number of test vectors in vec_tab
- * @param [in]     num_jobs    number of jobs to test
- * @param [in]     ops         test callback operations bundle
- *
- * @return 0 if all num_jobs completed and matched expected output, -1 otherwise.
- */
-int
-kat_aead_test_burst(struct IMB_MGR *mb_mgr, const struct aead_test *const *vec_tab,
-                    const uint32_t vec_tab_num, const uint32_t num_jobs,
-                    const struct kat_aead_job_ops *ops);
-
-/**
- * @brief Encrypt and decrypt one vector on an empty manager and verify the round-trip result.
- *
- * @param [in,out] mb_mgr      multi-buffer manager
- * @param [in]     vec         test vector
- * @param [in]     encrypt_ops encryption callback operations bundle
- * @param [in]     decrypt_ops decryption callback operations bundle
- *
- * @return 0 if the ciphertext/plaintext and tags round-trip correctly, -1 otherwise.
- */
-int
-kat_aead_test_round_trip(struct IMB_MGR *mb_mgr, const struct aead_test *vec,
-                         const struct kat_aead_job_ops *encrypt_ops,
-                         const struct kat_aead_job_ops *decrypt_ops);
 
 /**
  * @brief Exercise submit/flush APIs with caller-owned custom job handling.
