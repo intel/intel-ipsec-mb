@@ -625,10 +625,21 @@ typedef struct IMB_JOB {
                         const void *_iv;
                         /**< Authentication IV (16-byte aligned) */
                 } SNOW3G_UIA2; /**< SNOW3G-UIA2 specific fields */
+                /**
+                 * For 3GPP UIA1, the caller must construct the source data at
+                 * src + hash_start_src_offset_in_bytes as a byte sequence:
+                 * COUNT || FRESH || user-data || DIRECTION || '1' || 0-padding.
+                 * User data may be bit-aligned, but the caller must supply the
+                 * complete frame including the DIRECTION bit, the terminating '1' bit,
+                 * and any zero-padding to the end of the final supplied byte.
+                 * msg_len_to_hash_in_bytes is the length of the caller-supplied frame.
+                 * For a trailing partial 64-bit block, the library zero-fills the remaining
+                 * bytes internally.
+                 */
                 struct _KASUMI_UIA1_specific_fields {
                         const void *_key;
                         /**< Authentication key (16-byte aligned) */
-                } KASUMI_UIA1; /**< KASUMI-UIA2 specific fields */
+                } KASUMI_UIA1; /**< KASUMI-UIA1 specific fields. */
                 struct _AES_GMAC_specific_fields {
                         const struct gcm_key_data *_key;
                         /**< Authentication key */
