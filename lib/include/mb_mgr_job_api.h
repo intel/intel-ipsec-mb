@@ -53,7 +53,7 @@ __forceinline IMB_JOB *
 SUBMIT_JOB_AES_CBC_192_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes, job->iv, job->dec_keys,
-                        job->dst, job->msg_len_to_cipher_in_bytes);
+                        job->dst, job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
