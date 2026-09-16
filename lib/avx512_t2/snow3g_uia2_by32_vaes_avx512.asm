@@ -119,6 +119,15 @@ mksection .text
 
 %macro FUNC_RESTORE 0
 
+%ifdef SAFE_DATA
+        ;; clear keystream derived constants kept on the stack
+        vpxorq          zmm0, zmm0, zmm0
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 0*64], zmm0
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 1*64], zmm0
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 2*64], zmm0
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 3*64], zmm0
+%endif
+
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqa xmm6,  [rsp + 0*16]
         vmovdqa xmm7,  [rsp + 1*16]
