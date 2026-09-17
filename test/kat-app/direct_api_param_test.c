@@ -289,6 +289,55 @@ test_IMB_DES_KEYSCHED(struct IMB_MGR *mgr)
 }
 
 /*
+ * @brief Performs direct API invalid param tests for des_cfb_one */
+static int
+test_des_cfb_one(struct IMB_MGR *mgr)
+{
+        (void) mgr;
+
+        const int seg_err = setjmp(dir_api_param_env); /* segfault flag */
+
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        uint8_t out[IMB_DES_BLOCK_SIZE];
+        const uint8_t in[IMB_DES_BLOCK_SIZE] = { 0 };
+        const uint64_t iv = 0;
+        const uint64_t ks[16] = { 0 };
+
+        const struct fn_args {
+                void *out;
+                const void *in;
+                const uint64_t *iv;
+                const uint64_t *ks;
+                int len;
+                IMB_ERR exp_err;
+        } fn_args[] = { { NULL, in, &iv, ks, 7, IMB_ERR_NULL_DST },
+                        { out, NULL, &iv, ks, 7, IMB_ERR_NULL_SRC },
+                        { out, in, NULL, ks, 7, IMB_ERR_NULL_IV },
+                        { out, in, &iv, NULL, 7, IMB_ERR_NULL_EXP_KEY },
+                        { out, in, &iv, ks, -1, IMB_ERR_CIPH_LEN },
+                        { out, in, &iv, ks, IMB_DES_BLOCK_SIZE, IMB_ERR_CIPH_LEN },
+                        { out, in, &iv, ks, IMB_DES_BLOCK_SIZE + 1, IMB_ERR_CIPH_LEN },
+                        { out, in, &iv, ks, 0, 0 },
+                        { out, in, &iv, ks, IMB_DES_BLOCK_SIZE - 1, 0 } };
+
+        for (unsigned i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+                const int ret = des_cfb_one(ap->out, ap->in, ap->iv, ap->ks, ap->len);
+
+                if (ret != (int) ap->exp_err) {
+                        printf("des_cfb_one error: expected %s, got %s\n",
+                               imb_get_strerror(ap->exp_err), imb_get_strerror(ret));
+                        return 1;
+                }
+        }
+        return 0;
+}
+
+/*
  * @brief Performs direct API invalid param tests for IMB_SHA1_ONE_BLOCK */
 static int
 test_IMB_SHA1_ONE_BLOCK(struct IMB_MGR *mgr)
@@ -3907,6 +3956,9 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_IMB_DES_KEYSCHED(mb_mgr);
+        run++;
+
+        errors += test_des_cfb_one(mb_mgr);
         run++;
 
         errors += test_IMB_SHA1_ONE_BLOCK(mb_mgr);
