@@ -422,7 +422,7 @@ run_arch(const IMB_ARCH arch)
                 exit(EXIT_FAILURE);
         }
 
-        pd = malloc(sizeof(*pd));
+        pd = calloc(1, sizeof(*pd));
         if (pd == NULL) {
                 fprintf(stderr, "Probe data could not be allocated\n");
                 free_mb_mgr(mb_mgr);
