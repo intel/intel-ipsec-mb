@@ -496,6 +496,12 @@ kasumi_1_block_avx512:
 
         vzeroall                                 ; single vzeroall at the end
 
+%ifdef SAFE_DATA
+        kxord       k1, k1, k1
+        kxord       k2, k2, k2
+        kxord       k6, k6, k6
+%endif
+
 %ifndef LINUX
         ;; Restore non-volatile XMM registers (Windows)
         vmovdqu xmm6,  [rsp + 0*16]

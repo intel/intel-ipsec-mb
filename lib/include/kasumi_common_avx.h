@@ -42,6 +42,10 @@ KASUMI_F8_1_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void
         }
 #endif
         kasumi_f8_1_buffer(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBytes);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        CLEAR_SCRATCH_GPS();
+#endif
 }
 
 void
@@ -72,4 +76,8 @@ KASUMI_F9_1_BUFFER(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
         }
 #endif
         kasumi_f9_1_buffer(pCtx, pBufferIn, lengthInBytes, pDigest);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        CLEAR_SCRATCH_GPS();
+#endif
 }
