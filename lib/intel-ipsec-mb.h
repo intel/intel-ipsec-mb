@@ -907,7 +907,16 @@ imb_get_version(void);
 /**
  * @brief API to get error status
  *
- * @param mb_mgr Pointer to multi-buffer manager
+ * Error status is kept per IMB_MGR; when \a mb_mgr is not NULL and its
+ * status is set, that value is returned. Since an IMB_MGR is owned by a
+ * single thread this makes the status thread specific.
+ * When \a mb_mgr is NULL, or the manager has no error recorded, a process
+ * wide status is returned instead. That fallback is shared by all threads
+ * and can be overwritten by another thread's API call, so it is only
+ * reliable for APIs that do not take an IMB_MGR (e.g. alloc_mb_mgr()).
+ * Always pass the manager used for the failing call when one exists.
+ *
+ * @param mb_mgr Pointer to multi-buffer manager (may be NULL)
  *
  * @retval Integer error type
  */
