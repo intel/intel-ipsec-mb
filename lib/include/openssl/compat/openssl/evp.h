@@ -161,7 +161,7 @@ EVP_DigestInit_ex2(EVP_MD_CTX *ctx, const EVP_MD *md, const OSSL_PARAM *p)
                 return 0;
         ctx->md = md;
         if (!ossl_sha3_init(&ctx->sctx, (unsigned char) md->suffix, (size_t) md->bitlen))
-                return 1;
+                return 0;
         ctx->sctx.meth = shake_meth;
         return 1;
 }
