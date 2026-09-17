@@ -128,3 +128,8 @@ Please refer to the aforementioned sections to understand the details, trade off
 This library does not check for uniqueness on AES-GCM key/IV pair.
 It is up to the application using the library AES-GCM API to conduct this check.
 Please refer to [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 8 and Appendix A, to find requirements details and instructions on constructing an IV.
+
+### KASUMI
+The AVX2 KASUMI bitsliced S-box implementation uses the BMI2 `PEXT` instruction
+with a fixed, public mask to extract the result. On supported Intel platforms,
+its execution is considered data-independent.

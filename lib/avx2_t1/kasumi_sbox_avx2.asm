@@ -200,6 +200,7 @@ mksection .text
         vpxor       y0, ymm0, ymm1                        ; word parity in MSB of each word
 
         vpmovmskb   DWORD(TMP1), y0
+        ;; See SECURITY.md for platform-specific PEXT timing considerations.
         pext        %%sbox_result, TMP1, [rel pext_odd_bytes_mask]
 %endmacro
 
