@@ -137,11 +137,19 @@ The library GCM and GMAC implementation provides flexibility as to tag size sele
 As explained in [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 5.2.1.2 and Appendix C, using tag sizes shorter than 96 bits can be insecure.
 Please refer to the aforementioned sections to understand the details, trade offs and mitigations of using shorter tag sizes.
 
-### Galois Counter Mode Key/IV Pair Uniqueness
+### Key/IV (Nonce) Pair Uniqueness
 
-This library does not check for uniqueness on AES-GCM key/IV pair.
-It is up to the application using the library AES-GCM API to conduct this check.
-Please refer to [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 8 and Appendix A, to find requirements details and instructions on constructing an IV.
+This library does not check for uniqueness of the key/IV (nonce) pair.
+It is up to the application using the library to guarantee it.
+This applies to every counter based and AEAD mode offered by the library, in particular:
+- AES-GCM, AES-GMAC and SM4-GCM: see [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 8 and Appendix A for requirements and instructions on constructing an IV.
+  Reusing a key/IV pair with GCM leaks the XOR of the plaintexts and allows recovery of the authentication key.
+- AES-CTR, PON-AES-CTR, SM4-CTR, ChaCha20 and ChaCha20-Poly1305: see [NIST Special Publication 800-38A](https://csrc.nist.gov/publications/detail/sp/800-38a/final) Appendix B and [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439) section 4.
+  Reusing a key/counter block or key/nonce pair leaks the XOR of the plaintexts.
+- AES-CCM: see [NIST Special Publication 800-38C](https://csrc.nist.gov/publications/detail/sp/800-38c/final) Appendix A.
+- 3GPP algorithms (SNOW3G, ZUC, KASUMI, SNOW5G, AES-NEA5/NIA5/NCA5): COUNT/BEARER/DIRECTION derived IVs must be unique per key as required by the respective 3GPP specifications.
+
+Unlike in AES-CBC, where IV reuse is a lesser confidentiality leak, reuse of a key/IV pair in the modes above is a critical failure and the library cannot detect it because it keeps no per key state across jobs.
 
 ### KASUMI
 The AVX2 KASUMI bitsliced S-box implementation uses the BMI2 `PEXT` instruction

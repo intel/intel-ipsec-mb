@@ -394,19 +394,26 @@ typedef enum {
 
 /**
  * Cipher mode definitions
+ *
+ * @note The library does not track key/IV (nonce) usage. For counter based
+ *       and AEAD modes (CTR, GCM, CCM, ChaCha20, ChaCha20-Poly1305, SM4-CTR,
+ *       SM4-GCM and the 3GPP algorithms) reusing an IV with the same key is
+ *       a critical security failure and the application is responsible for
+ *       guaranteeing uniqueness. See SECURITY.md "Key/IV (Nonce) Pair
+ *       Uniqueness".
  */
 typedef enum {
-        IMB_CIPHER_CBC = 1,                               /**< AES-CBC */
-        IMB_CIPHER_CNTR,                                  /**< AES-CTR */
-        IMB_CIPHER_CTR = IMB_CIPHER_CNTR,                 /**< Alias of IMB_CIPHER_CNTR */
-        IMB_CIPHER_NULL,                                  /**< No cipher */
-        IMB_CIPHER_DOCSIS_SEC_BPI,                        /**< DOCSIS (AES-CBC + AES-CFB) */
-        IMB_CIPHER_GCM,                                   /**< AEAD AES-GCM */
-        IMB_CIPHER_DES,                                   /**< DES-CBC */
-        IMB_CIPHER_DOCSIS_DES,                            /**< DOCSIS (DES-CBC + DES-CFB) */
-        IMB_CIPHER_CCM,                                   /**< AEAD AES-CCM */
-        IMB_CIPHER_DES3,                                  /**< 3DES-CBC */
-        IMB_CIPHER_PON_AES_CNTR,                          /**< PON AES-CTR */
+        IMB_CIPHER_CBC = 1,               /**< AES-CBC */
+        IMB_CIPHER_CNTR,                  /**< AES-CTR: key/IV pair must be unique */
+        IMB_CIPHER_CTR = IMB_CIPHER_CNTR, /**< Alias of IMB_CIPHER_CNTR */
+        IMB_CIPHER_NULL,                  /**< No cipher */
+        IMB_CIPHER_DOCSIS_SEC_BPI,        /**< DOCSIS (AES-CBC + AES-CFB) */
+        IMB_CIPHER_GCM,                   /**< AEAD AES-GCM: key/IV pair must be unique */
+        IMB_CIPHER_DES,                   /**< DES-CBC */
+        IMB_CIPHER_DOCSIS_DES,            /**< DOCSIS (DES-CBC + DES-CFB) */
+        IMB_CIPHER_CCM,                   /**< AEAD AES-CCM: key/nonce pair must be unique */
+        IMB_CIPHER_DES3,                  /**< 3DES-CBC */
+        IMB_CIPHER_PON_AES_CNTR,          /**< PON AES-CTR */
         IMB_CIPHER_PON_AES_CTR = IMB_CIPHER_PON_AES_CNTR, /**< Alias of PON_AES_CNTR */
         IMB_CIPHER_ECB,                                   /**< AES-ECB */
         IMB_CIPHER_ZUC_EEA3,                              /**< 128-EEA3/NEA3 (3GPP) */
@@ -2884,7 +2891,9 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
  * @param [in] len              Length of data in bytes for encryption
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authentication Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [out] auth_tag        Authenticated Tag output
@@ -2907,7 +2916,9 @@ imb_aes128_gcm_enc(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] len              Length of data in bytes for encryption
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authentication Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [out] auth_tag        Authenticated Tag output
@@ -2931,7 +2942,9 @@ imb_aes192_gcm_enc(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] len              Length of data in bytes for encryption
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authentication Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [out] auth_tag        Authenticated Tag output
@@ -2955,7 +2968,9 @@ imb_aes256_gcm_enc(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] len              Length of data in bytes for decryption
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authentication Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [out] auth_tag        Authenticated Tag output
@@ -2984,7 +2999,9 @@ imb_aes128_gcm_dec(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] len              Length of data in bytes for decryption
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authentication Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [out] auth_tag        Authenticated Tag output
@@ -3013,7 +3030,9 @@ imb_aes192_gcm_dec(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] len              Length of data in bytes for decryption
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authentication Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [out] auth_tag        Authenticated Tag output
@@ -3040,7 +3059,9 @@ imb_aes256_gcm_dec(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in,out] context_data GCM operation context data
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authenticated Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [in] state  Pointer to initialized IMB_MGR structure
@@ -3057,7 +3078,9 @@ imb_aes128_gcm_init(const struct gcm_key_data *key_data, struct gcm_context_data
  * @param [in,out] context_data GCM operation context data
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authenticated Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [in] state  Pointer to initialized IMB_MGR structure
@@ -3074,7 +3097,9 @@ imb_aes192_gcm_init(const struct gcm_key_data *key_data, struct gcm_context_data
  * @param [in,out] context_data GCM operation context data
  * @param [in] iv               Pointer to 12 byte IV structure
  *                              Internally, the library concatenates 0x00000001
- *                              to the IV
+ *                              to the IV. Must be unique for every message
+ *                              encrypted with the same key (SP 800-38D
+ *                              section 8); uniqueness is not checked
  * @param [in] aad              Additional Authenticated Data (AAD)
  * @param [in] aad_len          Length of AAD in bytes
  * @param [in] state  Pointer to initialized IMB_MGR structure
