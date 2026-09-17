@@ -262,6 +262,8 @@ imb_aes128_cfb_one(void *dst, const void *src, const void *iv, const void *enc_e
         if (len > IMB_AES_BLOCK_SIZE)
                 return IMB_ERR_CIPH_LEN;
 #endif
+        if (self_test_failed(state))
+                return IMB_ERR_SELFTEST;
         CALL_AES128_CFB_ONE(state, dst, src, iv, enc_exp_key, len);
         return 0;
 }
@@ -284,6 +286,8 @@ imb_aes256_cfb_one(void *dst, const void *src, const void *iv, const void *enc_e
         if (len > IMB_AES_BLOCK_SIZE)
                 return IMB_ERR_CIPH_LEN;
 #endif
+        if (self_test_failed(state))
+                return IMB_ERR_SELFTEST;
         CALL_AES256_CFB_ONE(state, dst, src, iv, enc_exp_key, len);
         return 0;
 }

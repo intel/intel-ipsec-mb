@@ -17,6 +17,8 @@
 #include "ipsec_ooo_mgr.h"
 #include "cpu_feature.h"
 #include "error.h"
+#include "mb_mgr.h"      /* self_test_failed() */
+#include "arch_x86_64.h" /* self_test_fail_closed() */
 
 #define IMB_OOO_ROAD_BLOCK 0xDEADCAFEDEADCAFEULL
 
@@ -175,6 +177,9 @@ imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags, const unsigned rese
         uint8_t *free_ptr = &ptr8[ALIGN(sizeof(IMB_MGR), ALIGNMENT)];
         const size_t mem_size = imb_get_mb_mgr_size();
 
+        /* a failed self-test state must survive a pointer reset */
+        const int keep_fail_closed = (!reset_mgr) && self_test_failed(ptr);
+
         if (reset_mgr) {
                 /* Zero out MB_MGR memory */
                 memset(mem_ptr, 0, mem_size);
@@ -203,6 +208,13 @@ imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags, const unsigned rese
                         break;
                 default:
                         break;
+                }
+
+                if (keep_fail_closed) {
+                        ptr->features |= IMB_FEATURE_SELF_TEST;
+                        ptr->features &= ~IMB_FEATURE_SELF_TEST_PASS;
+                        self_test_fail_closed(ptr);
+                        imb_set_errno(ptr, IMB_ERR_SELFTEST);
                 }
         }
 

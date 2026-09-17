@@ -354,7 +354,7 @@ typedef enum {
         IMB_ERR_NULL_BURST,
         IMB_ERR_BURST_SIZE,
         IMB_ERR_BURST_OOO,
-        IMB_ERR_SELFTEST,
+        IMB_ERR_SELFTEST, /**< self-test failed, manager is fail-closed */
         IMB_ERR_BURST_SUITE_ID,
         IMB_ERR_JOB_SGL_STATE,
         /* add new error types above this comment */
@@ -1002,6 +1002,11 @@ imb_get_mb_mgr_size(void);
  * init_mb_mgr_XXX() must be called after this function call,
  * whereas XXX is the desired architecture.
  *
+ * @note If the manager is in the fail-closed self-test error state
+ *       (see init_mb_mgr_auto()) and \a reset_mgr is 0, that state is
+ *       preserved: the API's remain disabled until a subsequent successful
+ *       init_mb_mgr_XXX() call.
+ *
  * @param [in] ptr a pointer to allocated memory
  * @param [in] flags multi-buffer manager flags
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
@@ -1099,12 +1104,37 @@ IMB_DLL_EXPORT IMB_JOB *
 imb_get_next_job(IMB_MGR *state);
 
 /**
+ * Manager initialization and the power-up self-test.
+ *
+ * Every init_mb_mgr_*() call runs the library self-test (see
+ * IMB_FEATURE_SELF_TEST and IMB_FEATURE_SELF_TEST_PASS). If the test fails
+ * the manager enters a fail-closed error state:
+ * - imb_get_errno() returns IMB_ERR_SELFTEST and IMB_FEATURE_SELF_TEST_PASS
+ *   is cleared in the feature flags;
+ * - every job, burst and direct API on that manager is disabled: calls
+ *   return NULL / 0 / -1 as appropriate, do not write to any output buffer
+ *   and set IMB_ERR_SELFTEST;
+ * - imb_ml_kem_new() and imb_ml_dsa_new() return IMB_ERR_SELFTEST, and every
+ *   operation on ML-KEM/ML-DSA contexts created earlier with that manager
+ *   (other than imb_ml_kem_free()/imb_ml_dsa_free()) returns
+ *   IMB_ERR_SELFTEST;
+ * - imb_get_errno(), imb_get_strerror(), imb_get_features(), imb_get_flags(),
+ *   imb_self_test_set_cb()/imb_self_test_get_cb() and free_mb_mgr() remain
+ *   functional.
+ * The application should check imb_get_errno() after initialization.
+ * A subsequent successful init_mb_mgr_*() call on the same manager restores
+ * normal operation.
+ */
+
+/**
  * @brief Automatically initialize most performant
  *        Multi-buffer manager based on CPU features
  *
  * @param [in]  state Pointer to MB_MGR struct
  * @param [out] arch Pointer to arch enum to be set (can be NULL)
  *
+ * @note On self-test failure the manager is left in the fail-closed
+ *       state described above and imb_get_errno() returns IMB_ERR_SELFTEST.
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
@@ -1113,6 +1143,10 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @brief Initialize multi-buffer manager for SSE architecture
  *
  * @param [in,out] state Pointer to IMB_MGR struct
+ *
+ * @note On self-test failure the manager is left in the fail-closed
+ *       state (see init_mb_mgr_auto()) and imb_get_errno() returns
+ *       IMB_ERR_SELFTEST.
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_sse(IMB_MGR *state);
@@ -1121,6 +1155,10 @@ init_mb_mgr_sse(IMB_MGR *state);
  * @brief Initialize multi-buffer manager for AVX2 architecture
  *
  * @param [in,out] state Pointer to IMB_MGR struct
+ *
+ * @note On self-test failure the manager is left in the fail-closed
+ *       state (see init_mb_mgr_auto()) and imb_get_errno() returns
+ *       IMB_ERR_SELFTEST.
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_avx2(IMB_MGR *state);
@@ -1129,6 +1167,10 @@ init_mb_mgr_avx2(IMB_MGR *state);
  * @brief Initialize multi-buffer manager for AVX512 architecture
  *
  * @param [in,out] state Pointer to IMB_MGR struct
+ *
+ * @note On self-test failure the manager is left in the fail-closed
+ *       state (see init_mb_mgr_auto()) and imb_get_errno() returns
+ *       IMB_ERR_SELFTEST.
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_avx512(IMB_MGR *state);
@@ -1137,6 +1179,10 @@ init_mb_mgr_avx512(IMB_MGR *state);
  * @brief Initialize multi-buffer manager for AVX10 architecture
  *
  * @param [in,out] state Pointer to IMB_MGR struct
+ *
+ * @note On self-test failure the manager is left in the fail-closed
+ *       state (see init_mb_mgr_auto()) and imb_get_errno() returns
+ *       IMB_ERR_SELFTEST.
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_avx10(IMB_MGR *state);
@@ -1787,6 +1833,10 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
 /**
  * @brief Allocate and initialize an ML-DSA context for a given parameter set.
  *
+ * @note The context keeps a reference to \a mgr and checks its self-test
+ *       state on every operation, so \a mgr must remain valid (not freed)
+ *       until the context is released with imb_ml_dsa_free().
+ *
  * @param [in]  mgr      Pointer to initialized IMB_MGR structure
  * @param [in]  alg      ML-DSA parameter set (IMB_ML_DSA_44/65/87)
  * @param [out] new_self Receives the new IMB_ML_DSA context on success, or
@@ -2268,6 +2318,10 @@ typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB
 
 /**
  * @brief Allocate and initialize an ML-KEM context for a parameter set.
+ *
+ * @note The context keeps a reference to \a mgr and checks its self-test
+ *       state on every operation, so \a mgr must remain valid (not freed)
+ *       until the context is released with imb_ml_kem_free().
  *
  * @param [in]  mgr      Pointer to initialized IMB_MGR structure
  * @param [in]  alg      ML-KEM parameter set (IMB_ML_KEM_512/768/1024)

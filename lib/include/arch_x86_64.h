@@ -29,6 +29,19 @@ IMB_DLL_LOCAL int
 self_test(IMB_MGR *p_mgr);
 
 /**
+ * @brief Puts the manager into the fail-closed self-test error state
+ *
+ * Every IMB_MGR function pointer is replaced with a stub that sets
+ * IMB_ERR_SELFTEST and returns without performing any operation.
+ * The manager can only leave this state through a successful re-run of
+ * init_mb_mgr_*().
+ *
+ * @param p_mgr MB manager structure
+ */
+IMB_DLL_LOCAL void
+self_test_fail_closed(IMB_MGR *p_mgr);
+
+/**
  * @brief Atomic 64-bit counter increment
  *
  * This implements counter post increment.

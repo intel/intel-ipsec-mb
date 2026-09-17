@@ -8,6 +8,10 @@ General
 - Updated GCC and Clang builds to use the C11 standard, aligning them with the MSVC builds.
 
 Library
+- Changed library initialization to fail closed on self-test failure: all job, burst, direct and
+  ML-KEM/ML-DSA APIs on the affected manager perform no operation, produce no output and report
+  `IMB_ERR_SELFTEST` (previously only the error code was set and the APIs remained operational).
+  A subsequent successful `init_mb_mgr_*()` call restores the manager.
 - Added AES-CFB AVX2 type 2 implementation.
 - Added AES-CBC AVX2 type 2 implementation.
 - Added AES-CMAC AVX2 type 2 implementation.

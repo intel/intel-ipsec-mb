@@ -637,6 +637,8 @@ The test is always performed as part of library initialization (power-up). There
 software/firmware load test, manual key entry test, continuous random number generator test, and
 bypass test).
 
+If the self-test fails the manager enters a **fail-closed** error state: `imb_get_errno()` returns `IMB_ERR_SELFTEST`, the `IMB_FEATURE_SELF_TEST_PASS` feature flag is cleared and all job, burst and direct APIs on that manager are disabled - they return `NULL`/`0`/`-1`, do not produce any output and report `IMB_ERR_SELFTEST`. `imb_ml_kem_new()` and `imb_ml_dsa_new()` return `IMB_ERR_SELFTEST`, and all operations on ML-KEM/ML-DSA contexts created earlier with that manager (except `imb_ml_kem_free()`/`imb_ml_dsa_free()`) return `IMB_ERR_SELFTEST` as well. Status/query APIs (`imb_get_errno()`, `imb_get_strerror()`, `imb_get_features()`, `imb_get_flags()`, self-test callback APIs) and `free_mb_mgr()` remain functional. A subsequent successful `init_mb_mgr_*()` call on the same manager restores normal operation.
+
 Application can register self-test callback function to track test progress. Optionally application can corrupt input message for selected tests and observe change in the test result.
 
 Example sequence of callbacks received by an application is:
@@ -703,9 +705,14 @@ if (p_mgr->features & IMB_FEATURE_SELF_TEST) {
         printf("SELF-TEST: N/A (requires library >= v1.3)\n");
 }
 
-/* check for initialization self-test error */
+/*
+ * check for initialization self-test error
+ * - on failure the manager is fail-closed and all crypto APIs
+ *   are disabled; free it or re-initialize it
+ */
 if (imb_get_errno(p_mgr) == IMB_ERR_SELFTEST) {
         /* self-test error */
+        free_mb_mgr(p_mgr);
         exit(EXIT_FAILURE);
 }
 ```

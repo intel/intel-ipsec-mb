@@ -98,6 +98,8 @@ struct IMB_MGR {
 
         int imb_errno; /**< per mb_mgr error status */
 
+        uint32_t self_test_in_progress; /**< non-zero while self-test executes */
+
         /**
          * ARCH handlers / API
          * Careful as changes here can break ABI compatibility
@@ -285,6 +287,25 @@ struct IMB_MGR {
         void *snow5g_nca4_dec_ooo;
         void *end_ooo; /* add new out-of-order managers above this line */
 };
+
+/**
+ * @brief Checks whether the manager is in the self-test error state
+ *
+ * @param p_mgr MB manager structure
+ *
+ * @retval 1 self-test feature is present and the test did not pass
+ * @retval 0 otherwise (test passed, in progress or self-test compiled out)
+ */
+__forceinline int
+self_test_failed(const IMB_MGR *p_mgr)
+{
+        /* API's used by the self-test itself are allowed while it executes */
+        if (p_mgr->self_test_in_progress)
+                return 0;
+
+        return ((p_mgr->features & (IMB_FEATURE_SELF_TEST | IMB_FEATURE_SELF_TEST_PASS)) ==
+                IMB_FEATURE_SELF_TEST);
+}
 
 /*
  * Wrapper macros to call arch API's set up

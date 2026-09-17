@@ -13,7 +13,9 @@
  * ISA specific primitives matching the dispatch level the caller selected
  * via init_mb_mgr_*(). The selection is per context and read-only
  * afterwards, so contexts created from different managers, on different
- * threads, run independently.
+ * threads, run independently. The context keeps the manager pointer and
+ * every operation checks its self-test state, so the manager must outlive
+ * the context.
  */
 
 #include <stdlib.h>
@@ -40,6 +42,8 @@ imb_ml_kem_new(IMB_MGR *mgr, IMB_ML_KEM_ALG alg, IMB_ML_KEM **new_self)
         *new_self = NULL;
         if (mgr == NULL)
                 return IMB_ERR_NULL_MBMGR;
+        if (self_test_failed(mgr))
+                return IMB_ERR_SELFTEST;
         if (alg != IMB_ML_KEM_512 && alg != IMB_ML_KEM_768 && alg != IMB_ML_KEM_1024)
                 return IMB_ERR_PQC_ALG;
 
@@ -97,6 +101,8 @@ imb_ml_kem_keypair(IMB_ML_KEM *self, void *ek, size_t ek_len, void *dk, size_t d
 
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
 
         /*
          * The params structure size check is done before any other field is
@@ -139,6 +145,8 @@ imb_ml_kem_set_privkey(IMB_ML_KEM *self, const void *dk, size_t dk_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (dk == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */
@@ -155,6 +163,8 @@ imb_ml_kem_set_pubkey(IMB_ML_KEM *self, const void *ek, size_t ek_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (ek == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */
@@ -178,6 +188,8 @@ imb_ml_kem_encap(IMB_ML_KEM *self, void *ct, size_t ct_len, void *shared_secret,
 
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
 
         /*
          * The params structure size check is done before any other field is
@@ -219,6 +231,8 @@ imb_ml_kem_decap(IMB_ML_KEM *self, void *shared_secret, size_t ss_len, const voi
         (void) params; /* reserved for future use; decap has no randomness input */
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (shared_secret == NULL)
                 return IMB_ERR_NULL_DST;
         if (self->key == NULL)
@@ -250,6 +264,8 @@ imb_ml_kem_pubkey_validate(IMB_ML_KEM *self, const void *ek, size_t ek_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (ek == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */
@@ -266,6 +282,8 @@ imb_ml_kem_privkey_validate(IMB_ML_KEM *self, const void *dk, size_t dk_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (dk == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */

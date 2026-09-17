@@ -12,6 +12,8 @@
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
+/* FIPS 204 internal interface - exported for kat-app/acvp-app testing only */
+#include <ml_dsa/ml_dsa_internal_api.h>
 
 #ifdef _WIN32
 #define __func__ __FUNCTION__
@@ -2666,6 +2668,10 @@ struct self_test_context {
         int fail_counter;
         int pass_counter;
         int all_counter;
+
+        /* optional: manager under test - PASS flag must not be visible mid-test */
+        struct IMB_MGR *mgr;
+        int pass_flag_seen;
 };
 
 static int
@@ -2679,6 +2685,14 @@ self_test_callback(void *arg, const IMB_SELF_TEST_CALLBACK_DATA *data)
                 return 1;
 
         p->all_counter++;
+
+        if (p->mgr != NULL) {
+                uint64_t features = 0;
+
+                if (imb_get_features(p->mgr, &features) == 0 &&
+                    (features & IMB_FEATURE_SELF_TEST_PASS) != 0)
+                        p->pass_flag_seen++;
+        }
 
         IMB_ASSERT(data != NULL);
         if (data == NULL) {
@@ -2896,6 +2910,285 @@ test_self_test_api(struct IMB_MGR *mb_mgr)
         return 0;
 }
 
+/*
+ * @brief Test fail-closed behaviour after a self-test failure
+ *
+ * Forces a self-test failure through the corrupt callback and checks that
+ * every API class refuses to operate and reports IMB_ERR_SELFTEST, then
+ * verifies that a clean re-initialization restores the manager.
+ */
+static int
+test_self_test_fail_closed(void)
+{
+        struct IMB_MGR *t_mgr = alloc_mb_mgr(0);
+        struct self_test_context test_ctx;
+        IMB_ARCH arch;
+        uint64_t features;
+        IMB_ML_KEM *kem = NULL;
+        IMB_ML_DSA *dsa = NULL;
+        int ret = 1;
+
+        printf("Self-Test fail-closed test:\n");
+
+        if (t_mgr == NULL)
+                return 1;
+
+        /* healthy init first - create PQC contexts that outlive the failed re-init */
+        init_mb_mgr_auto(t_mgr, &arch);
+        if (imb_get_errno(t_mgr) != 0 || imb_get_features(t_mgr, &features) != 0)
+                goto exit;
+        if ((features & IMB_FEATURE_SELF_TEST) == 0) {
+                /* self-test compiled out - nothing to check */
+                ret = 0;
+                goto exit;
+        }
+        if (imb_ml_kem_new(t_mgr, IMB_ML_KEM_768, &kem) != 0 || kem == NULL ||
+            imb_ml_dsa_new(t_mgr, IMB_ML_DSA_65, &dsa) != 0 || dsa == NULL) {
+                printf("%s: PQC context creation failed on healthy manager\n", __func__);
+                goto exit;
+        }
+
+        /* corrupt the first self-test vector to force failure */
+        self_test_set_context(&test_ctx, 1, 1);
+        test_ctx.mgr = t_mgr;
+        if (imb_self_test_set_cb(t_mgr, self_test_callback, &test_ctx) != 0)
+                goto exit;
+
+        init_mb_mgr_auto(t_mgr, &arch);
+
+        if (test_ctx.pass_flag_seen != 0) {
+                printf("%s: IMB_FEATURE_SELF_TEST_PASS visible while self-test in progress\n",
+                       __func__);
+                goto exit;
+        }
+        if (imb_get_features(t_mgr, &features) != 0)
+                goto exit;
+        if (features & IMB_FEATURE_SELF_TEST_PASS) {
+                printf("%s: self-test unexpectedly passed\n", __func__);
+                goto exit;
+        }
+        if (imb_get_errno(t_mgr) != IMB_ERR_SELFTEST) {
+                printf("%s: IMB_ERR_SELFTEST not set after init\n", __func__);
+                goto exit;
+        }
+        print_progress();
+
+#define CHECK_ST(_cond, _name)                                                                     \
+        do {                                                                                       \
+                if (!(_cond) || imb_get_errno(t_mgr) != IMB_ERR_SELFTEST) {                        \
+                        printf("%s: %s not fail-closed\n", __func__, _name);                       \
+                        goto exit;                                                                 \
+                }                                                                                  \
+                print_progress();                                                                  \
+        } while (0)
+
+        /* job API */
+        CHECK_ST(IMB_GET_NEXT_JOB(t_mgr) == NULL, "IMB_GET_NEXT_JOB");
+        CHECK_ST(IMB_SUBMIT_JOB(t_mgr) == NULL, "IMB_SUBMIT_JOB");
+        CHECK_ST(IMB_SUBMIT_JOB_NOCHECK(t_mgr) == NULL, "IMB_SUBMIT_JOB_NOCHECK");
+        CHECK_ST(IMB_FLUSH_JOB(t_mgr) == NULL, "IMB_FLUSH_JOB");
+        CHECK_ST(IMB_GET_COMPLETED_JOB(t_mgr) == NULL, "IMB_GET_COMPLETED_JOB");
+        CHECK_ST(IMB_QUEUE_SIZE(t_mgr) == 0, "IMB_QUEUE_SIZE");
+
+        /* burst API */
+        IMB_JOB *jobs[4] = { NULL };
+        IMB_JOB job_arr[4];
+
+        memset(job_arr, 0, sizeof(job_arr));
+        CHECK_ST(IMB_GET_NEXT_BURST(t_mgr, 4, jobs) == 0, "IMB_GET_NEXT_BURST");
+        CHECK_ST(IMB_SUBMIT_BURST(t_mgr, 4, jobs) == 0, "IMB_SUBMIT_BURST");
+        CHECK_ST(IMB_SUBMIT_BURST_NOCHECK(t_mgr, 4, jobs) == 0, "IMB_SUBMIT_BURST_NOCHECK");
+        CHECK_ST(IMB_FLUSH_BURST(t_mgr, 4, jobs) == 0, "IMB_FLUSH_BURST");
+        CHECK_ST(IMB_SUBMIT_CIPHER_BURST(t_mgr, job_arr, 4, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT,
+                                         IMB_KEY_128_BYTES) == 0,
+                 "IMB_SUBMIT_CIPHER_BURST");
+        CHECK_ST(IMB_SUBMIT_HASH_BURST(t_mgr, job_arr, 4, IMB_AUTH_SHA_256) == 0,
+                 "IMB_SUBMIT_HASH_BURST");
+        CHECK_ST(IMB_SUBMIT_AEAD_BURST(t_mgr, job_arr, 4, IMB_CIPHER_GCM, IMB_DIR_ENCRYPT,
+                                       IMB_KEY_128_BYTES) == 0,
+                 "IMB_SUBMIT_AEAD_BURST");
+
+        /* direct API - output buffers/structures must stay untouched */
+        uint8_t key[32], out[64];
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
+        struct gcm_key_data gdata;
+        struct gcm_context_data gctx;
+        /* sentinel copies of every output object */
+        uint8_t ref_out[sizeof(out)];
+        DECLARE_ALIGNED(uint32_t ref_enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t ref_dec_keys[15 * 4], 16);
+        struct gcm_key_data ref_gdata;
+        struct gcm_context_data ref_gctx;
+
+        memset(key, 0x11, sizeof(key));
+        memset(out, 0xa5, sizeof(out));
+        memset(enc_keys, 0xa5, sizeof(enc_keys));
+        memset(dec_keys, 0x5a, sizeof(dec_keys));
+        memset(&gdata, 0xa5, sizeof(gdata));
+        memset(&gctx, 0x5a, sizeof(gctx));
+        memcpy(ref_out, out, sizeof(out));
+        memcpy(ref_enc_keys, enc_keys, sizeof(enc_keys));
+        memcpy(ref_dec_keys, dec_keys, sizeof(dec_keys));
+        memcpy(&ref_gdata, &gdata, sizeof(gdata));
+        memcpy(&ref_gctx, &gctx, sizeof(gctx));
+
+        IMB_AES_KEYEXP_128(t_mgr, key, enc_keys, dec_keys);
+        CHECK_ST(memcmp(enc_keys, ref_enc_keys, sizeof(enc_keys)) == 0 &&
+                         memcmp(dec_keys, ref_dec_keys, sizeof(dec_keys)) == 0,
+                 "IMB_AES_KEYEXP_128");
+
+        IMB_SHA256(t_mgr, key, sizeof(key), out);
+        CHECK_ST(memcmp(out, ref_out, sizeof(out)) == 0, "IMB_SHA256");
+
+        IMB_AES128_GCM_PRE(t_mgr, key, &gdata);
+        CHECK_ST(memcmp(&gdata, &ref_gdata, sizeof(gdata)) == 0, "IMB_AES128_GCM_PRE");
+
+        IMB_AES128_GCM_ENC(t_mgr, &gdata, &gctx, out, key, 16, key, key, 16, out + 32, 16);
+        CHECK_ST(memcmp(out, ref_out, sizeof(out)) == 0 &&
+                         memcmp(&gdata, &ref_gdata, sizeof(gdata)) == 0 &&
+                         memcmp(&gctx, &ref_gctx, sizeof(gctx)) == 0,
+                 "IMB_AES128_GCM_ENC");
+
+        /* status returning wrappers (no errno) must report the self-test state */
+        if (IMB_AES128_CFB_ONE(t_mgr, out, key, key, enc_keys, 16) != IMB_ERR_SELFTEST ||
+            IMB_AES256_CFB_ONE(t_mgr, out, key, key, enc_keys, 16) != IMB_ERR_SELFTEST ||
+            memcmp(out, ref_out, sizeof(out)) != 0) {
+                printf("%s: IMB_AES128/256_CFB_ONE not fail-closed\n", __func__);
+                goto exit;
+        }
+        print_progress();
+
+        /* direct entry point doing work outside of manager dispatch */
+        imb_sm4_gcm_pre(t_mgr, key, &gdata);
+        CHECK_ST(memcmp(&gdata, &ref_gdata, sizeof(gdata)) == 0, "imb_sm4_gcm_pre");
+
+        CHECK_ST(IMB_HEC_32(t_mgr, key) == 0, "IMB_HEC_32");
+        CHECK_ST(IMB_SNOW3G_KEY_SCHED_SIZE(t_mgr) == 0, "IMB_SNOW3G_KEY_SCHED_SIZE");
+
+        imb_hmac_ipad_opad(t_mgr, IMB_AUTH_HMAC_SHA_256, key, sizeof(key), out, out + 32);
+        CHECK_ST(memcmp(out, ref_out, sizeof(out)) == 0, "imb_hmac_ipad_opad");
+#undef CHECK_ST
+
+#define CHECK_PQC(_call, _name)                                                                    \
+        do {                                                                                       \
+                if ((_call) != IMB_ERR_SELFTEST) {                                                 \
+                        printf("%s: %s not fail-closed\n", __func__, _name);                       \
+                        goto exit;                                                                 \
+                }                                                                                  \
+                print_progress();                                                                  \
+        } while (0)
+
+        /* PQC context creation is rejected */
+        IMB_ML_KEM *kem2 = NULL;
+        IMB_ML_DSA *dsa2 = NULL;
+
+        CHECK_PQC(imb_ml_kem_new(t_mgr, IMB_ML_KEM_768, &kem2), "imb_ml_kem_new");
+        CHECK_PQC(imb_ml_dsa_new(t_mgr, IMB_ML_DSA_65, &dsa2), "imb_ml_dsa_new");
+        if (kem2 != NULL || dsa2 != NULL) {
+                printf("%s: PQC context created on failed manager\n", __func__);
+                imb_ml_kem_free(kem2);
+                imb_ml_dsa_free(dsa2);
+                goto exit;
+        }
+
+        /* PQC contexts created before the failed re-init are disabled too */
+        uint8_t kem_ek[IMB_ML_KEM_768_PUBKEY_BYTES], kem_dk[IMB_ML_KEM_768_PRIVKEY_BYTES];
+        uint8_t kem_ct[IMB_ML_KEM_768_CIPHERTEXT_BYTES], kem_ss[32];
+        uint8_t dsa_pk[IMB_ML_DSA_65_PUBKEY_BYTES], dsa_sk[IMB_ML_DSA_65_PRIVKEY_BYTES];
+        uint8_t dsa_sig[IMB_ML_DSA_65_SIG_BYTES];
+        size_t dsa_sig_len = sizeof(dsa_sig);
+
+        memset(kem_ek, 0, sizeof(kem_ek));
+        memset(kem_dk, 0, sizeof(kem_dk));
+        memset(kem_ct, 0, sizeof(kem_ct));
+        memset(dsa_pk, 0, sizeof(dsa_pk));
+        memset(dsa_sk, 0, sizeof(dsa_sk));
+        memset(dsa_sig, 0, sizeof(dsa_sig));
+
+        CHECK_PQC(imb_ml_kem_keypair(kem, kem_ek, sizeof(kem_ek), kem_dk, sizeof(kem_dk), NULL),
+                  "imb_ml_kem_keypair");
+        CHECK_PQC(imb_ml_kem_set_pubkey(kem, kem_ek, sizeof(kem_ek)), "imb_ml_kem_set_pubkey");
+        CHECK_PQC(imb_ml_kem_set_privkey(kem, kem_dk, sizeof(kem_dk)), "imb_ml_kem_set_privkey");
+        CHECK_PQC(imb_ml_kem_encap(kem, kem_ct, sizeof(kem_ct), kem_ss, sizeof(kem_ss), NULL),
+                  "imb_ml_kem_encap");
+        CHECK_PQC(imb_ml_kem_decap(kem, kem_ss, sizeof(kem_ss), kem_ct, sizeof(kem_ct), NULL),
+                  "imb_ml_kem_decap");
+        CHECK_PQC(imb_ml_kem_pubkey_validate(kem, kem_ek, sizeof(kem_ek)),
+                  "imb_ml_kem_pubkey_validate");
+        CHECK_PQC(imb_ml_kem_privkey_validate(kem, kem_dk, sizeof(kem_dk)),
+                  "imb_ml_kem_privkey_validate");
+
+        CHECK_PQC(imb_ml_dsa_keypair(dsa, dsa_pk, sizeof(dsa_pk), dsa_sk, sizeof(dsa_sk), NULL),
+                  "imb_ml_dsa_keypair");
+        CHECK_PQC(imb_ml_dsa_set_pubkey(dsa, dsa_pk, sizeof(dsa_pk)), "imb_ml_dsa_set_pubkey");
+        CHECK_PQC(imb_ml_dsa_set_privkey(dsa, dsa_sk, sizeof(dsa_sk)), "imb_ml_dsa_set_privkey");
+        CHECK_PQC(imb_ml_dsa_sign(dsa, dsa_sig, &dsa_sig_len, key, sizeof(key), NULL),
+                  "imb_ml_dsa_sign");
+        CHECK_PQC(imb_ml_dsa_verify(dsa, key, sizeof(key), dsa_sig, sizeof(dsa_sig), NULL),
+                  "imb_ml_dsa_verify");
+        CHECK_PQC(imb_ml_dsa_sign_internal(dsa, dsa_sig, &dsa_sig_len, key, sizeof(key), NULL, 0),
+                  "imb_ml_dsa_sign_internal");
+        CHECK_PQC(imb_ml_dsa_verify_internal(dsa, key, sizeof(key), dsa_sig, sizeof(dsa_sig)),
+                  "imb_ml_dsa_verify_internal");
+        CHECK_PQC(imb_ml_dsa_pubkey_validate(dsa, dsa_pk, sizeof(dsa_pk)),
+                  "imb_ml_dsa_pubkey_validate");
+        CHECK_PQC(imb_ml_dsa_privkey_validate(dsa, dsa_sk, sizeof(dsa_sk)),
+                  "imb_ml_dsa_privkey_validate");
+        CHECK_PQC(
+                imb_ml_dsa_pubkey_from_privkey(dsa, dsa_sk, sizeof(dsa_sk), dsa_pk, sizeof(dsa_pk)),
+                "imb_ml_dsa_pubkey_from_privkey");
+#undef CHECK_PQC
+
+        /* pointer reset without re-running the self-test must not lift the state */
+        if (imb_set_pointers_mb_mgr(t_mgr, 0, 0) != t_mgr) {
+                printf("%s: imb_set_pointers_mb_mgr failed\n", __func__);
+                goto exit;
+        }
+        if (imb_get_errno(t_mgr) != IMB_ERR_SELFTEST || imb_get_features(t_mgr, &features) != 0 ||
+            (features & IMB_FEATURE_SELF_TEST) == 0 ||
+            (features & IMB_FEATURE_SELF_TEST_PASS) != 0) {
+                printf("%s: imb_set_pointers_mb_mgr cleared the fail-closed state\n", __func__);
+                goto exit;
+        }
+        memset(out, 0xa5, sizeof(out));
+        IMB_SHA256(t_mgr, key, sizeof(key), out);
+        if (IMB_GET_NEXT_JOB(t_mgr) != NULL || imb_get_errno(t_mgr) != IMB_ERR_SELFTEST ||
+            memcmp(out, ref_out, sizeof(out)) != 0) {
+                printf("%s: API's usable after imb_set_pointers_mb_mgr on failed manager\n",
+                       __func__);
+                goto exit;
+        }
+        print_progress();
+
+        /* clean re-initialization must restore the manager */
+        if (imb_self_test_set_cb(t_mgr, NULL, NULL) != 0)
+                goto exit;
+        init_mb_mgr_auto(t_mgr, &arch);
+        if (imb_get_errno(t_mgr) != 0 || imb_get_features(t_mgr, &features) != 0 ||
+            (features & IMB_FEATURE_SELF_TEST_PASS) == 0) {
+                printf("%s: re-init after self-test failure did not recover\n", __func__);
+                goto exit;
+        }
+        if (IMB_GET_NEXT_JOB(t_mgr) == NULL) {
+                printf("%s: job API not restored after re-init\n", __func__);
+                goto exit;
+        }
+        print_progress();
+
+        ret = 0;
+exit:
+        /* free() must keep working on a fail-closed manager */
+        if (kem != NULL)
+                imb_ml_kem_free(kem);
+        if (dsa != NULL)
+                imb_ml_dsa_free(dsa);
+        free_mb_mgr(t_mgr);
+        if (!quiet_mode)
+                printf("\n");
+        return ret;
+}
+
 static int
 test_get_apis(struct IMB_MGR *mb_mgr)
 {
@@ -3071,6 +3364,9 @@ api_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_self_test_api(mb_mgr);
+        run++;
+
+        errors += test_self_test_fail_closed();
         run++;
 
         errors += test_get_apis(mb_mgr);

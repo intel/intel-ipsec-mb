@@ -317,9 +317,9 @@ test_snow5g_nca4_submit_all_vectors(IMB_MGR *mb_mgr, struct test_suite_context *
                 printf("SNOW5G-NCA4 sequential all-vectors test:\n");
 
         /* Submit all vectors without flushing between them */
-        size_t idx = 0;
+        for (size_t idx = 0; idx < n_vec; idx++) {
+                v = &vectors[idx];
 
-        for (v = vectors; v->msg != NULL; v++, idx++) {
                 const uint64_t msg_len = v->msgSize / 8;
                 const uint64_t tag_len = v->tagSize / 8;
                 struct seq_job_ctx *ctx = &ctxs[idx];

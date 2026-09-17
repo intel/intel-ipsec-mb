@@ -50,8 +50,8 @@ cfb_validate_ok(const uint8_t *output, const uint8_t *in_text, const size_t plen
 static int
 cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
 {
-        uint8_t output1[16];
-        uint8_t output2[16];
+        uint8_t output1[16] = { 0 };
+        uint8_t output2[16] = { 0 };
         const uint32_t kLength = (unsigned) p_vec->keySize / 8;
         DECLARE_ALIGNED(uint32_t keys_enc[15 * 4], 16);
         DECLARE_ALIGNED(uint32_t keys_dec[15 * 4], 16);

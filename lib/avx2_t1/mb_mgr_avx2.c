@@ -52,7 +52,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
         init_mb_mgr_avx2_internal(state, 1);
 
         if (!self_test(state))
-                imb_set_errno(state, IMB_ERR_SELFTEST);
+                self_test_fail_closed(state);
 }
 
 IMB_JOB *

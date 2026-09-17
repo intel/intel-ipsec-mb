@@ -3737,8 +3737,11 @@ self_test(IMB_MGR *p_mgr)
         p_mgr->features |= IMB_FEATURE_SELF_TEST;
         p_mgr->features &= ~IMB_FEATURE_SELF_TEST_PASS;
 
+        /* allow API's used by the test itself without exposing PASS early */
+        p_mgr->self_test_in_progress = 1;
         if (!self_test_exec(p_mgr))
                 ret = 0;
+        p_mgr->self_test_in_progress = 0;
 
         if (ret)
                 p_mgr->features |= IMB_FEATURE_SELF_TEST_PASS;

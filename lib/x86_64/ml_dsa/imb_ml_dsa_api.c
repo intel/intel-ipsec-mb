@@ -13,7 +13,9 @@
  * ISA specific primitives matching the dispatch level the caller selected
  * via init_mb_mgr_*(). The selection is per context and read-only
  * afterwards, so contexts created from different managers, on different
- * threads, run independently.
+ * threads, run independently. The context keeps the manager pointer and
+ * every operation checks its self-test state, so the manager must outlive
+ * the context.
  */
 
 #include <stdlib.h>
@@ -69,6 +71,8 @@ imb_ml_dsa_new(IMB_MGR *mgr, IMB_ML_DSA_ALG alg, IMB_ML_DSA **new_self)
         *new_self = NULL;
         if (mgr == NULL)
                 return IMB_ERR_NULL_MBMGR;
+        if (self_test_failed(mgr))
+                return IMB_ERR_SELFTEST;
         if (alg != IMB_ML_DSA_44 && alg != IMB_ML_DSA_65 && alg != IMB_ML_DSA_87)
                 return IMB_ERR_PQC_ALG;
 
@@ -133,6 +137,8 @@ imb_ml_dsa_keypair(IMB_ML_DSA *self, void *pk, size_t pk_len, void *sk, size_t s
 
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
 
         /*
          * The params structure size check is done before any other field is
@@ -177,6 +183,8 @@ imb_ml_dsa_set_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */
@@ -193,6 +201,8 @@ imb_ml_dsa_set_pubkey(IMB_ML_DSA *self, const void *pk, size_t pk_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (pk == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */
@@ -218,6 +228,8 @@ imb_ml_dsa_sign(IMB_ML_DSA *self, void *sig, size_t *sig_len, const void *msg, s
 
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
 
         /*
          * The params structure size check is done before any other field is
@@ -291,6 +303,8 @@ imb_ml_dsa_sign_internal(IMB_ML_DSA *self, void *sig, size_t *sig_len, const voi
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (sig == NULL || sig_len == NULL)
                 return IMB_ERR_NULL_DST;
         if (self->key == NULL)
@@ -323,6 +337,8 @@ imb_ml_dsa_verify(IMB_ML_DSA *self, const void *msg, size_t msg_len, const void 
 
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
 
         /*
          * The params structure size check is done before any other field is
@@ -364,6 +380,8 @@ imb_ml_dsa_verify_internal(IMB_ML_DSA *self, const void *msg, size_t msg_len, co
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (sig == NULL)
                 return IMB_ERR_NULL_SRC;
         if (self->key == NULL)
@@ -385,6 +403,8 @@ imb_ml_dsa_pubkey_validate(IMB_ML_DSA *self, const void *pk, size_t pk_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (pk == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */
@@ -401,6 +421,8 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len)
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
         /* the encoded key size is fixed by the parameter set, reject anything else */
@@ -418,6 +440,8 @@ imb_ml_dsa_pubkey_from_privkey(IMB_ML_DSA *self, const void *sk, size_t sk_len, 
 {
         if (self == NULL)
                 return IMB_ERR_NULL_CTX;
+        if (self_test_failed(self->mgr))
+                return IMB_ERR_SELFTEST;
         if (sk == NULL)
                 return IMB_ERR_NULL_KEY;
         if (pk == NULL)

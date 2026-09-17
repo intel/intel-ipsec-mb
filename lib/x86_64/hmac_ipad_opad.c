@@ -31,6 +31,11 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
         }
         imb_set_errno(mb_mgr, 0);
 #endif
+        if (self_test_failed(mb_mgr)) {
+                imb_set_errno(mb_mgr, IMB_ERR_SELFTEST);
+                return;
+        }
+
         uint32_t i = 0;
         size_t local_key_len = 0;
 

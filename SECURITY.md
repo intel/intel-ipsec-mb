@@ -117,6 +117,17 @@ the library provides the `imb_clear_mem()` API. This API zeros _'size'_ bytes
 of memory pointed to by _'mem'_ followed by the _sfence_ instruction to
 ensure memory is cleared before the function returns.
 
+### Self-Test Failure (Fail-Closed)
+
+The library runs a power-up self-test (known answer tests) in every `init_mb_mgr_*()` call.
+If any test fails the manager is put into a fail-closed error state:
+all job, burst and direct cryptographic APIs on that manager are replaced with stubs that
+perform no operation, produce no output and report `IMB_ERR_SELFTEST`; ML-KEM/ML-DSA context
+operations (new or pre-existing contexts) return `IMB_ERR_SELFTEST`;
+`imb_get_errno()` returns `IMB_ERR_SELFTEST` and `IMB_FEATURE_SELF_TEST_PASS` is cleared.
+This prevents an application from unknowingly using a library instance whose code or
+underlying hardware may be faulty. See the *Self-Test* section in README.md for details.
+
 ### Authentication Tag Verification
 
 The library does not verify authentication tags on decryption.

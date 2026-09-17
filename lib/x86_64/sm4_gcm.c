@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "intel-ipsec-mb.h"
+#include "mb_mgr.h" /* self_test_failed() */
 #include "arch_sse_type1.h"
 #include "gcm.h"
 #include "error.h"
@@ -42,6 +43,10 @@ imb_sm4_gcm_pre(IMB_MGR *state, const void *key, struct gcm_key_data *key_data)
                 return;
         }
 #endif
+        if (self_test_failed(state)) {
+                imb_set_errno(state, IMB_ERR_SELFTEST);
+                return;
+        }
 
         DECLARE_ALIGNED(uint32_t dust[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
         DECLARE_ALIGNED(uint8_t hash_key[16], 16);
