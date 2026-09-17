@@ -94,6 +94,15 @@ END_FIELDS
 %assign _NIA_spec_fields_size   _FIELD_OFFSET
 %assign _NIA_spec_fields_align  _STRUCT_ALIGN
 
+START_FIELDS    ; NCA4/5/6 Specific Fields
+;;;     name                            size    align
+FIELD   __nca_aad,                      8,      8       ; pointer to AAD
+FIELD   __nca_aad_len,                  8,      8       ; 64-bit AAD length
+END_FIELDS
+
+%assign _NCA_spec_fields_size   _FIELD_OFFSET
+%assign _NCA_spec_fields_align  _STRUCT_ALIGN
+
 START_FIELDS    ; POLY1305 Specific Fields
 ;;;     name                            size    align
 FIELD   __poly1305_key,                 8,      8       ; ptr to 32 byte key
@@ -126,6 +135,7 @@ UNION   _u,     _HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
                 _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align, \
                 _SNOW3G_UIA2_spec_fields_size, _SNOW3G_UIA2_spec_fields_align, \
                 _NIA_spec_fields_size, _NIA_spec_fields_align, \
+                _NCA_spec_fields_size, _NCA_spec_fields_align, \
                 _POLY1305_spec_fields_size, _POLY1305_spec_fields_align
 
 FIELD   _status,                        4,      4       ; IMB_JOB_STS
@@ -167,6 +177,8 @@ END_FIELDS
 %assign _snow3g_uia2_iv                 _u + __snow3g_uia2_iv
 %assign _nia_key                        _u + __nia_key
 %assign _nia_iv                         _u + __nia_iv
+%assign _nca_aad                        _u + __nca_aad
+%assign _nca_aad_len                    _u + __nca_aad_len
 %assign _poly1305_key                   _u + __poly1305_key
 %assign _gcm_aad                        _u + __gcm_aad
 %assign _gcm_aad_len                    _u + __gcm_aad_len

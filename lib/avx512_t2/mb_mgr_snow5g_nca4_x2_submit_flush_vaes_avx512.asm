@@ -56,11 +56,11 @@ endstruc
         mov     arg3, [p_state + %%DATA_FLD + %%LANE*8]
         mov     arg4, [rax + _msg_len_to_cipher_in_bytes]
 %ifdef LINUX
-        mov     arg5, [rax + _cbcmac_aad]
-        mov     arg6, [rax + _cbcmac_aad_len]
+        mov     arg5, [rax + _nca_aad]
+        mov     arg6, [rax + _nca_aad_len]
 %else
-        mov     r10, [rax + _cbcmac_aad]
-        mov     r11, [rax + _cbcmac_aad_len]
+        mov     r10, [rax + _nca_aad]
+        mov     r11, [rax + _nca_aad_len]
         sub     rsp, 48
         mov     [rsp + 32], r10
         mov     [rsp + 40], r11
