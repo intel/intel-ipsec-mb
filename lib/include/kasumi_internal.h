@@ -22,7 +22,7 @@
 #include "error.h"
 #include "kasumi_interface.h"
 #include "include/arch_avx2_type1.h"
-#include "include/arch_avx512_type1.h"
+#include "include/arch_avx512_type2.h"
 #include "include/arch_sse_type1.h"
 
 /* KASUMI cipher definitions */

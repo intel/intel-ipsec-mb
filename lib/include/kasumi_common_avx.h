@@ -13,7 +13,7 @@
 #include "include/clear_regs_mem.h"
 #include "include/kasumi_internal.h"
 #include "include/arch_avx2_type1.h"
-#include "include/arch_avx512_type1.h"
+#include "include/arch_avx512_type2.h"
 #include "include/error.h"
 
 void

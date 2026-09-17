@@ -229,18 +229,6 @@ _Static_assert((int) IMB_AUTH_HMAC_SHA3_224 == HMAC_SHA3_ALG_FIRST &&
                "HMAC-SHA3 IMB_HASH_ALG values changed, "
                "update HMAC_SHA3_ALG_FIRST in hmac_sha3_avx512.asm");
 
-/* KASUMI */
-void
-kasumi_f8_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
-                          void *pBufferOut, const uint32_t cipherLengthInBytes);
-
-void
-kasumi_f9_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
-                          const uint32_t lengthInBytes, void *pDigest);
-
-IMB_DLL_LOCAL void
-kasumi_1_block_avx512(const uint16_t *key_sched, uint16_t *data);
-
 /* SHA3 / SHAKE multi-buffer submit / flush (sha3_mb_avx512.asm)
  *
  * One pair of functions serves SHA3-224/256/384/512 and SHAKE128/256.

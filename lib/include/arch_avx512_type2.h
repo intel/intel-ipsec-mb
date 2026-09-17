@@ -260,4 +260,16 @@ flush_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 IMB_DLL_EXPORT void
 set_suite_id_avx512_t2(IMB_MGR *state, IMB_JOB *job);
 
+/* KASUMI */
+void
+kasumi_f8_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                          void *pBufferOut, const uint32_t cipherLengthInBytes);
+
+void
+kasumi_f9_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
+                          const uint32_t lengthInBytes, void *pDigest);
+
+IMB_DLL_LOCAL void
+kasumi_1_block_avx512(const uint16_t *key_sched, uint16_t *data);
+
 #endif /* IMB_ASM_AVX512_T2_H */
