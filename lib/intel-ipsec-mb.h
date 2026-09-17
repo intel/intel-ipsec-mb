@@ -2736,7 +2736,7 @@ IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
 
 /**
- * @brief DES-CFB Encrypt/Decrypt up to one block.
+ * @brief DES-CFB Encrypt/Decrypt a partial block (less than one block).
  *
  * Processes only one buffer at a time.
  * Designed to manage partial blocks of DOCSIS 3.1 SEC BPI.
@@ -2745,7 +2745,8 @@ des_key_schedule(uint64_t *ks, const void *key);
  * @param [in] in   Plain/cipher text input
  * @param [in] iv   Pointer to 8 byte IV
  * @param [in] ks   Pointer to DES key schedule
- * @param [in] len  Length of data in bytes
+ * @param [in] len  Length of data in bytes, valid range is 0 to 7 (inclusive).
+ *                  No data is processed if \a len is out of range.
  */
 IMB_DLL_EXPORT void
 des_cfb_one(void *out, const void *in, const uint64_t *iv, const uint64_t *ks, const int len);

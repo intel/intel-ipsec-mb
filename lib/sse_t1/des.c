@@ -207,10 +207,11 @@ cfb_one_sse(const void *input, void *output, const int size, const uint64_t *ks,
             const uint64_t *ks_sse, const uint64_t *p_iv)
 {
 #ifdef SAFE_PARAM
-        if ((input == NULL) || (output == NULL) || (ks == NULL) || (p_iv == NULL) || (size < 0))
+        if ((input == NULL) || (output == NULL) || (ks == NULL) || (p_iv == NULL) || (size < 0) ||
+            (size >= IMB_DES_BLOCK_SIZE))
                 return;
 #else
-        IMB_ASSERT(size <= 8 && size >= 0);
+        IMB_ASSERT(size < IMB_DES_BLOCK_SIZE && size >= 0);
         IMB_ASSERT(input != NULL);
         IMB_ASSERT(output != NULL);
         IMB_ASSERT(ks != NULL);
