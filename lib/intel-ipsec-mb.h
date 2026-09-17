@@ -597,7 +597,15 @@ typedef struct IMB_JOB {
         }; /**< Length of message to hash */
         const uint8_t *iv;                     /**< Initialization Vector (IV) */
         uint64_t iv_len_in_bytes;              /**< IV length in bytes */
-        uint8_t *auth_tag_output;              /**< Authentication tag output */
+        uint8_t *auth_tag_output;              /**< Authentication tag output.
+                                                    For AEAD and MAC algorithms
+                                                    in decrypt/verify direction
+                                                    the library only computes
+                                                    the tag; the application
+                                                    must compare it against
+                                                    the received tag in
+                                                    constant time and reject
+                                                    the message on mismatch */
         uint64_t auth_tag_output_len_in_bytes; /**< Authentication tag output
                                                     length in bytes */
 
@@ -2709,6 +2717,11 @@ imb_chacha20_poly1305_enc_finalize(struct chacha20_poly1305_context_data *ctx, v
  * @param [in,out] ctx      ChaCha20-Poly1305 operation context data
  * @param [out] tag         Authenticated Tag output
  * @param [in] tagl         Authenticated Tag Length in bytes (must be 16)
+ *
+ * @note The library computes the authentication tag but does NOT verify it.
+ *       The caller MUST compare \a tag against the tag received with the
+ *       message using a constant-time comparison (not memcmp()) and MUST
+ *       discard the plaintext if they differ.
  * @param [in] state  Pointer to initialized IMB_MGR structure
  */
 IMB_DLL_EXPORT void
@@ -2853,6 +2866,11 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
  * =========================================================
  * AES-GCM
  * Note: GCM is also available through job and burst API's.
+ *
+ * Decryption APIs output the computed authentication tag and do not
+ * verify it. The caller is responsible for comparing it against the
+ * received tag in constant time and for rejecting the plaintext on
+ * mismatch (NIST SP 800-38D section 7.2).
  * =========================================================
  */
 
@@ -2944,6 +2962,11 @@ imb_aes256_gcm_enc(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
  *                              a multiple of 4 bytes). Valid values are 16
  *                              (most likely), 12 or 8
+ *
+ * @note The library computes the authentication tag but does NOT verify it.
+ *       The caller MUST compare \a auth_tag against the tag received with the
+ *       message using a constant-time comparison (not memcmp()) and MUST
+ *       discard the plaintext if they differ.
  * @param [in] state  Pointer to initialized IMB_MGR structure
  */
 IMB_DLL_EXPORT void
@@ -2968,6 +2991,11 @@ imb_aes128_gcm_dec(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
  *                              a multiple of 4 bytes). Valid values are 16
  *                              (most likely), 12 or 8
+ *
+ * @note The library computes the authentication tag but does NOT verify it.
+ *       The caller MUST compare \a auth_tag against the tag received with the
+ *       message using a constant-time comparison (not memcmp()) and MUST
+ *       discard the plaintext if they differ.
  * @param [in] state  Pointer to initialized IMB_MGR structure
  */
 IMB_DLL_EXPORT void
@@ -2992,6 +3020,11 @@ imb_aes192_gcm_dec(const struct gcm_key_data *key_data, struct gcm_context_data 
  * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
  *                              a multiple of 4 bytes). Valid values are 16
  *                              (most likely), 12 or 8
+ *
+ * @note The library computes the authentication tag but does NOT verify it.
+ *       The caller MUST compare \a auth_tag against the tag received with the
+ *       message using a constant-time comparison (not memcmp()) and MUST
+ *       discard the plaintext if they differ.
  * @param [in] state  Pointer to initialized IMB_MGR structure
  */
 IMB_DLL_EXPORT void
@@ -3251,6 +3284,11 @@ imb_aes256_gcm_enc_finalize(const struct gcm_key_data *key_data,
  * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
  *                              a multiple of 4 bytes). Valid values are
  *                              16 (most likely), 12 or 8.
+ *
+ * @note The library computes the authentication tag but does NOT verify it.
+ *       The caller MUST compare \a auth_tag against the tag received with the
+ *       message using a constant-time comparison (not memcmp()) and MUST
+ *       discard the plaintext if they differ.
  * @param [in] state  Pointer to initialized IMB_MGR structure
  */
 IMB_DLL_EXPORT void
@@ -3267,6 +3305,11 @@ imb_aes128_gcm_dec_finalize(const struct gcm_key_data *key_data,
  * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
  *                              a multiple of 4 bytes). Valid values are
  *                              16 (most likely), 12 or 8.
+ *
+ * @note The library computes the authentication tag but does NOT verify it.
+ *       The caller MUST compare \a auth_tag against the tag received with the
+ *       message using a constant-time comparison (not memcmp()) and MUST
+ *       discard the plaintext if they differ.
  * @param [in] state  Pointer to initialized IMB_MGR structure
  */
 IMB_DLL_EXPORT void
@@ -3283,6 +3326,11 @@ imb_aes192_gcm_dec_finalize(const struct gcm_key_data *key_data,
  * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
  *                              a multiple of 4 bytes). Valid values are
  *                              16 (most likely), 12 or 8.
+ *
+ * @note The library computes the authentication tag but does NOT verify it.
+ *       The caller MUST compare \a auth_tag against the tag received with the
+ *       message using a constant-time comparison (not memcmp()) and MUST
+ *       discard the plaintext if they differ.
  * @param [in] state  Pointer to initialized IMB_MGR structure
  */
 IMB_DLL_EXPORT void

@@ -117,6 +117,20 @@ the library provides the `imb_clear_mem()` API. This API zeros _'size'_ bytes
 of memory pointed to by _'mem'_ followed by the _sfence_ instruction to
 ensure memory is cleared before the function returns.
 
+### Authentication Tag Verification
+
+The library does not verify authentication tags on decryption.
+For all AEAD and MAC algorithms (AES-GCM, AES-CCM, ChaCha20-Poly1305, SM4-GCM,
+AES-GMAC, AES-CMAC, HMAC-*, etc.) and for the JOB, burst and direct APIs alike,
+the decrypt/verify direction only **computes** the tag and writes it to the
+`auth_tag_output` / `auth_tag` buffer supplied by the application.
+It is up to the application to compare the computed tag against the tag
+received with the message and to discard the plaintext if they differ, as
+required by [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 7.2.
+The comparison must be done in constant time (i.e. without a data dependent
+early exit such as in `memcmp()`), otherwise timing differences may allow an
+attacker to forge a valid tag byte by byte.
+
 ### Galois Counter Mode (GCM) TAG Size
 
 The library GCM and GMAC implementation provides flexibility as to tag size selection.
