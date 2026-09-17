@@ -244,18 +244,48 @@ imb_sha512(const void *src, const uint64_t length, void *digest, IMB_MGR *state)
         CALL_SHA512(state, src, length, digest);
 }
 
-IMB_DLL_EXPORT void
+IMB_DLL_EXPORT int
 imb_aes128_cfb_one(void *dst, const void *src, const void *iv, const void *enc_exp_key,
                    uint64_t len, IMB_MGR *state)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL)
+                return IMB_ERR_NULL_MBMGR;
+        if (dst == NULL)
+                return IMB_ERR_NULL_DST;
+        if (src == NULL)
+                return IMB_ERR_NULL_SRC;
+        if (iv == NULL)
+                return IMB_ERR_NULL_IV;
+        if (enc_exp_key == NULL)
+                return IMB_ERR_NULL_EXP_KEY;
+        if (len > IMB_AES_BLOCK_SIZE)
+                return IMB_ERR_CIPH_LEN;
+#endif
         CALL_AES128_CFB_ONE(state, dst, src, iv, enc_exp_key, len);
+        return 0;
 }
 
-IMB_DLL_EXPORT void
+IMB_DLL_EXPORT int
 imb_aes256_cfb_one(void *dst, const void *src, const void *iv, const void *enc_exp_key,
                    uint64_t len, IMB_MGR *state)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL)
+                return IMB_ERR_NULL_MBMGR;
+        if (dst == NULL)
+                return IMB_ERR_NULL_DST;
+        if (src == NULL)
+                return IMB_ERR_NULL_SRC;
+        if (iv == NULL)
+                return IMB_ERR_NULL_IV;
+        if (enc_exp_key == NULL)
+                return IMB_ERR_NULL_EXP_KEY;
+        if (len > IMB_AES_BLOCK_SIZE)
+                return IMB_ERR_CIPH_LEN;
+#endif
         CALL_AES256_CFB_ONE(state, dst, src, iv, enc_exp_key, len);
+        return 0;
 }
 
 IMB_DLL_EXPORT void

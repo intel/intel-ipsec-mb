@@ -2548,10 +2548,19 @@ imb_md5_one_block(const void *src, void *digest, IMB_MGR *state);
  * @param [in] src     Plain/cipher text input
  * @param [in] iv      Pointer to 16 byte IV
  * @param [in] exp_key Pointer to expanded AES keys
- * @param [in] len     Length of data in bytes
- * @param [in] state  Pointer to initialized IMB_MGR structure
+ * @param [in] len     Length of data in bytes, valid range is 0 to 16 (inclusive).
+ * @param [in] state   Pointer to initialized IMB_MGR structure
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_MBMGR \a state is NULL
+ * @retval IMB_ERR_NULL_DST \a dst is NULL
+ * @retval IMB_ERR_NULL_SRC \a src is NULL
+ * @retval IMB_ERR_NULL_IV \a iv is NULL
+ * @retval IMB_ERR_NULL_EXP_KEY \a exp_key is NULL
+ * @retval IMB_ERR_CIPH_LEN \a len is out of range
  */
-IMB_DLL_EXPORT void
+IMB_DLL_EXPORT int
 imb_aes128_cfb_one(void *dst, const void *src, const void *iv, const void *exp_key, uint64_t len,
                    IMB_MGR *state);
 
@@ -2565,10 +2574,19 @@ imb_aes128_cfb_one(void *dst, const void *src, const void *iv, const void *exp_k
  * @param [in] src     Plain/cipher text input
  * @param [in] iv      Pointer to 16 byte IV
  * @param [in] exp_key Pointer to expanded AES keys
- * @param [in] len     Length of data in bytes
- * @param [in] state  Pointer to initialized IMB_MGR structure
+ * @param [in] len     Length of data in bytes, valid range is 0 to 16 (inclusive).
+ * @param [in] state   Pointer to initialized IMB_MGR structure
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_MBMGR \a state is NULL
+ * @retval IMB_ERR_NULL_DST \a dst is NULL
+ * @retval IMB_ERR_NULL_SRC \a src is NULL
+ * @retval IMB_ERR_NULL_IV \a iv is NULL
+ * @retval IMB_ERR_NULL_EXP_KEY \a exp_key is NULL
+ * @retval IMB_ERR_CIPH_LEN \a len is out of range
  */
-IMB_DLL_EXPORT void
+IMB_DLL_EXPORT int
 imb_aes256_cfb_one(void *dst, const void *src, const void *iv, const void *exp_key, uint64_t len,
                    IMB_MGR *state);
 

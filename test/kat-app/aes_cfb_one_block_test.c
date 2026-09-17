@@ -55,6 +55,7 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
         const uint32_t kLength = (unsigned) p_vec->keySize / 8;
         DECLARE_ALIGNED(uint32_t keys_enc[15 * 4], 16);
         DECLARE_ALIGNED(uint32_t keys_dec[15 * 4], 16);
+        int ret;
 
         if (kLength == 16)
                 IMB_AES_KEYEXP_128(mb_mgr, p_vec->key, keys_enc, keys_dec);
@@ -64,22 +65,32 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
 
         /* encrypt test */
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES128_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg, p_vec->iv,
+                                         keys_enc, p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES256_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg, p_vec->iv,
+                                         keys_enc, p_vec->msgSize / 8);
+        if (ret != 0) {
+                printf("AES-CFB-%u one block vector %u: unexpected return %d\n",
+                       (unsigned) p_vec->keySize, (unsigned) p_vec->tcId, ret);
+                return 0;
+        }
         if (!cfb_validate_ok(output1, (const void *) p_vec->ct, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 1, 0))
                 return 0;
 
         /* decrypt test */
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output2, output1, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES128_CFB_ONE(mb_mgr, output2, output1, p_vec->iv, keys_enc,
+                                         p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output2, output1, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES256_CFB_ONE(mb_mgr, output2, output1, p_vec->iv, keys_enc,
+                                         p_vec->msgSize / 8);
+        if (ret != 0) {
+                printf("AES-CFB-%u one block vector %u: unexpected return %d\n",
+                       (unsigned) p_vec->keySize, (unsigned) p_vec->tcId, ret);
+                return 0;
+        }
         if (!cfb_validate_ok(output2, (const void *) p_vec->msg, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 0, 0))
                 return 0;
@@ -88,11 +99,16 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
         /* encrypt test */
         memcpy(output1, (const void *) p_vec->msg, p_vec->msgSize / 8);
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                         p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                         p_vec->msgSize / 8);
+        if (ret != 0) {
+                printf("AES-CFB-%u one block vector %u: unexpected return %d\n",
+                       (unsigned) p_vec->keySize, (unsigned) p_vec->tcId, ret);
+                return 0;
+        }
         if (!cfb_validate_ok(output1, (const void *) p_vec->ct, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 1, 1))
                 return 0;
@@ -100,11 +116,16 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
         /* decrypt test */
         memcpy(output1, (const void *) p_vec->ct, p_vec->msgSize / 8);
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                         p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
-                                   p_vec->msgSize / 8);
+                ret = IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                         p_vec->msgSize / 8);
+        if (ret != 0) {
+                printf("AES-CFB-%u one block vector %u: unexpected return %d\n",
+                       (unsigned) p_vec->keySize, (unsigned) p_vec->tcId, ret);
+                return 0;
+        }
         if (!cfb_validate_ok(output1, (const void *) p_vec->msg, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 0, 1))
                 return 0;

@@ -338,6 +338,64 @@ test_des_cfb_one(struct IMB_MGR *mgr)
 }
 
 /*
+ * @brief Performs direct API invalid param tests for
+ *        IMB_AES128_CFB_ONE and IMB_AES256_CFB_ONE */
+static int
+test_imb_aes_cfb_one(struct IMB_MGR *mgr)
+{
+        const int seg_err = setjmp(dir_api_param_env); /* segfault flag */
+
+        if (seg_err) {
+                printf("%s: segfault occurred!", __func__);
+                return 1;
+        }
+
+        uint8_t out[IMB_AES_BLOCK_SIZE];
+        const uint8_t in[IMB_AES_BLOCK_SIZE] = { 0 };
+        const uint8_t iv[IMB_AES_BLOCK_SIZE] = { 0 };
+        DECLARE_ALIGNED(const uint32_t exp_key[15 * 4], 16) = { 0 };
+
+        const struct fn_args {
+                IMB_MGR *mgr;
+                void *out;
+                const void *in;
+                const void *iv;
+                const void *exp_key;
+                uint64_t len;
+                IMB_ERR exp_err;
+        } fn_args[] = { { NULL, out, in, iv, exp_key, 16, IMB_ERR_NULL_MBMGR },
+                        { mgr, NULL, in, iv, exp_key, 16, IMB_ERR_NULL_DST },
+                        { mgr, out, NULL, iv, exp_key, 16, IMB_ERR_NULL_SRC },
+                        { mgr, out, in, NULL, exp_key, 16, IMB_ERR_NULL_IV },
+                        { mgr, out, in, iv, NULL, 16, IMB_ERR_NULL_EXP_KEY },
+                        { mgr, out, in, iv, exp_key, IMB_AES_BLOCK_SIZE + 1, IMB_ERR_CIPH_LEN },
+                        { mgr, out, in, iv, exp_key, IMB_AES_BLOCK_SIZE * 2, IMB_ERR_CIPH_LEN },
+                        { mgr, out, in, iv, exp_key, 0, 0 },
+                        { mgr, out, in, iv, exp_key, 1, 0 },
+                        { mgr, out, in, iv, exp_key, IMB_AES_BLOCK_SIZE, 0 } };
+
+        for (unsigned i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+                int ret;
+
+                ret = IMB_AES128_CFB_ONE(ap->mgr, ap->out, ap->in, ap->iv, ap->exp_key, ap->len);
+                if (ret != (int) ap->exp_err) {
+                        printf("IMB_AES128_CFB_ONE error: expected %s, got %s\n",
+                               imb_get_strerror(ap->exp_err), imb_get_strerror(ret));
+                        return 1;
+                }
+
+                ret = IMB_AES256_CFB_ONE(ap->mgr, ap->out, ap->in, ap->iv, ap->exp_key, ap->len);
+                if (ret != (int) ap->exp_err) {
+                        printf("IMB_AES256_CFB_ONE error: expected %s, got %s\n",
+                               imb_get_strerror(ap->exp_err), imb_get_strerror(ret));
+                        return 1;
+                }
+        }
+        return 0;
+}
+
+/*
  * @brief Performs direct API invalid param tests for IMB_SHA1_ONE_BLOCK */
 static int
 test_IMB_SHA1_ONE_BLOCK(struct IMB_MGR *mgr)
@@ -710,48 +768,6 @@ test_IMB_SHA512(struct IMB_MGR *mgr)
 
                 IMB_SHA512(mgr, ap->src, ap->length, ap->tag);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_SHA512"))
-                        return 1;
-        }
-        return 0;
-}
-
-/*
- * @brief Performs direct API invalid param tests for IMB_AES128_CFB_ONE */
-static int
-test_IMB_AES128_CFB_ONE(struct IMB_MGR *mgr)
-{
-        unsigned i = 1;
-        uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE] = { 0 };
-        const uint8_t iv[BUFF_SIZE] = { 0 };
-        const uint8_t enc_exp_key[BUFF_SIZE] = { 0 };
-        uint64_t len = 1;
-        int seg_err; /* segfault flag */
-
-        seg_err = setjmp(dir_api_param_env);
-        if (seg_err) {
-                printf("%s: segfault occurred!", __func__);
-                return 1;
-        }
-
-        struct fn_args {
-                void *dst;
-                const void *src;
-                const void *iv;
-                const void *enc_exp_key;
-                uint64_t len;
-                const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, src, iv, enc_exp_key, len, IMB_ERR_NULL_DST },
-                        { dst, NULL, iv, enc_exp_key, len, IMB_ERR_NULL_SRC },
-                        { dst, src, NULL, enc_exp_key, len, IMB_ERR_NULL_IV },
-                        { dst, src, iv, NULL, len, IMB_ERR_NULL_EXP_KEY } };
-
-        /* Iterate over args */
-        for (i = 0; i < DIM(fn_args); i++) {
-                const struct fn_args *ap = &fn_args[i];
-
-                IMB_AES128_CFB_ONE(mgr, ap->dst, ap->src, ap->iv, ap->enc_exp_key, ap->len);
-                if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_CFB_ONE"))
                         return 1;
         }
         return 0;
@@ -3961,6 +3977,9 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         errors += test_des_cfb_one(mb_mgr);
         run++;
 
+        errors += test_imb_aes_cfb_one(mb_mgr);
+        run++;
+
         errors += test_IMB_SHA1_ONE_BLOCK(mb_mgr);
         run++;
 
@@ -3992,9 +4011,6 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_IMB_SHA512(mb_mgr);
-        run++;
-
-        errors += test_IMB_AES128_CFB_ONE(mb_mgr);
         run++;
 
         errors += test_IMB_AES128_GCM_ENC(mb_mgr);

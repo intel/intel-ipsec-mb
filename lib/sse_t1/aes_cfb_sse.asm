@@ -8,7 +8,6 @@
 %include "include/memcpy.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
-%include "include/error.inc"
 %include "include/align_sse.inc"
 ;;; Routines to do 128/256 bit CFB AES encrypt/decrypt operations on one block only.
 ;;; It processes only one buffer at a time.
@@ -29,6 +28,8 @@
 ;;                      -----------------------------------------------------------
 ;;
 ;; Linux/Windows clobbers: xmm0
+;;
+;; Note: no parameter validation is done, caller is responsible for it.
 ;;
 
 %ifndef AES_CFB_128_ONE
@@ -75,43 +76,6 @@ mksection .text
 %ifndef LINUX
         mov             LEN, LEN2
 %endif
-%ifdef SAFE_PARAM
-        IMB_ERR_CHECK_RESET
-
-        cmp             IV, 0
-        jz              %%cfb_error
-
-        cmp             KEYS, 0
-        jz              %%cfb_error
-
-        cmp             LEN, 0
-        jz              %%skip_in_out_check
-
-        cmp             OUT, 0
-        jz              %%cfb_error
-
-        cmp             IN, 0
-        jz              %%cfb_error
-
-        jmp             %%cfb_no_error
-
-align_label
-%%cfb_error:
-        IMB_ERR_CHECK_START rax
-        IMB_ERR_CHECK_NULL IV, rax, IMB_ERR_NULL_IV
-        IMB_ERR_CHECK_NULL KEYS, rax, IMB_ERR_NULL_EXP_KEY
-        IMB_ERR_CHECK_ZERO LEN, rax, IMB_ERR_CIPH_LEN
-        IMB_ERR_CHECK_NULL OUT, rax, IMB_ERR_NULL_DST
-        IMB_ERR_CHECK_NULL IN, rax, IMB_ERR_NULL_SRC
-        IMB_ERR_CHECK_END rax
-
-        jmp %%exit_cfb
-
-align_label
-%%cfb_no_error:
-%%skip_in_out_check:
-%endif
-
         simd_load_sse_16 XIN, IN, LEN
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -136,8 +100,6 @@ align_label
         clear_xmms_sse  XDATA, XIN
         clear_scratch_gps_asm
 %endif
-align_label
-%%exit_cfb:
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

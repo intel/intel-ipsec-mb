@@ -51,6 +51,7 @@ Library
 - Added support for zero-length messages in AES-CBC.
 - Restricted `des_cfb_one()` to partial blocks (0 to 7 bytes).
 - Changed `des_cfb_one()` to return operation status.
+- Changed `imb_aes128_cfb_one()` and `imb_aes256_cfb_one()` to return operation status.
 
 Test Applications
 - Added zero-length job acceptance checks to the checked submit paths of the
