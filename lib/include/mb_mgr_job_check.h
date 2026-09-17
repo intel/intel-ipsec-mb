@@ -695,14 +695,16 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 case IMB_SGL_ALL:
                         total_sgl_len = 0;
 
+                        /* Check segment array pointer before indexing into it */
+                        if (job->num_sgl_io_segs != 0 && job->sgl_io_segs == NULL) {
+                                imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                                return 1;
+                        }
+
                         /* Check message length (per segment) */
                         for (uint64_t i = 0; i < job->num_sgl_io_segs; i++) {
                                 const struct IMB_SGL_IOV *seg = &job->sgl_io_segs[i];
 
-                                if (seg == NULL) {
-                                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                                        return 1;
-                                }
                                 if (seg->len != 0 && seg->in == NULL) {
                                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                                         return 1;
@@ -1361,14 +1363,16 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 case IMB_SGL_ALL:
                         total_sgl_len = 0;
 
+                        /* Check segment array pointer before indexing into it */
+                        if (job->num_sgl_io_segs != 0 && job->sgl_io_segs == NULL) {
+                                imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                                return 1;
+                        }
+
                         /* Check message length (per segment) */
                         for (uint64_t i = 0; i < job->num_sgl_io_segs; i++) {
                                 const struct IMB_SGL_IOV *seg = &job->sgl_io_segs[i];
 
-                                if (seg == NULL) {
-                                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                                        return 1;
-                                }
                                 if (seg->len != 0 && seg->in == NULL) {
                                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                                         return 1;
