@@ -1269,7 +1269,7 @@ hec_32_avx:
 
         mov     eax, [arg1]
         bswap   eax
-        HEC_COMPUTE_32 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
+        HEC_COMPUTE_32 rax, tmp_1, xmm0, xmm1, xmm2, xmm3
         bswap   eax
         ret
 
@@ -1305,7 +1305,7 @@ hec_64_avx:
 
         mov     rax, [arg1]
         bswap   rax
-        HEC_COMPUTE_64 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
+        HEC_COMPUTE_64 rax, tmp_1, xmm0, xmm1, xmm2, xmm3
         bswap   rax
         ret
 
