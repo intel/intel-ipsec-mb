@@ -2746,9 +2746,16 @@ des_key_schedule(uint64_t *ks, const void *key);
  * @param [in] iv   Pointer to 8 byte IV
  * @param [in] ks   Pointer to DES key schedule
  * @param [in] len  Length of data in bytes, valid range is 0 to 7 (inclusive).
- *                  No data is processed if \a len is out of range.
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_DST \a out is NULL
+ * @retval IMB_ERR_NULL_SRC \a in is NULL
+ * @retval IMB_ERR_NULL_IV \a iv is NULL
+ * @retval IMB_ERR_NULL_EXP_KEY \a ks is NULL
+ * @retval IMB_ERR_CIPH_LEN \a len is out of range
  */
-IMB_DLL_EXPORT void
+IMB_DLL_EXPORT int
 des_cfb_one(void *out, const void *in, const uint64_t *iv, const uint64_t *ks, const int len);
 
 /*

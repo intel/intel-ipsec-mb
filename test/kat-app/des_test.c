@@ -574,18 +574,18 @@ des_cfb_validate(struct test_suite_context *ctx)
                 /* Out of place */
 
                 /* encrypt test */
-                des_cfb_one(output1, (const void *) v->msg, (const uint64_t *) v->iv, ks,
-                            (int) v->msgSize / 8);
-                if (memcmp(output1, (const void *) v->ct, v->msgSize / 8)) {
+                if (des_cfb_one(output1, (const void *) v->msg, (const uint64_t *) v->iv, ks,
+                                (int) v->msgSize / 8) != 0 ||
+                    memcmp(output1, (const void *) v->ct, v->msgSize / 8)) {
                         printf("DES-CFB enc (OOP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
                 /* decrypt test */
-                des_cfb_one(output2, (const void *) v->ct, (const uint64_t *) v->iv, ks,
-                            (int) v->msgSize / 8);
-                if (memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
+                if (des_cfb_one(output2, (const void *) v->ct, (const uint64_t *) v->iv, ks,
+                                (int) v->msgSize / 8) != 0 ||
+                    memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
                         printf("DES-CFB dec (OOP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -596,8 +596,9 @@ des_cfb_validate(struct test_suite_context *ctx)
 
                 /* encrypt test */
                 memcpy(output1, (const void *) v->msg, v->msgSize / 8);
-                des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks, (int) v->msgSize / 8);
-                if (memcmp(output2, (const void *) v->ct, v->msgSize / 8)) {
+                if (des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks,
+                                (int) v->msgSize / 8) != 0 ||
+                    memcmp(output2, (const void *) v->ct, v->msgSize / 8)) {
                         printf("DES-CFB enc (IP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -605,8 +606,9 @@ des_cfb_validate(struct test_suite_context *ctx)
                 }
                 /* decrypt test */
                 memcpy(output1, (const void *) v->ct, v->msgSize / 8);
-                des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks, (int) v->msgSize / 8);
-                if (memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
+                if (des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks,
+                                (int) v->msgSize / 8) != 0 ||
+                    memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
                         printf("DES-CFB dec (IP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {

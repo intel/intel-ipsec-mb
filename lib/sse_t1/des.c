@@ -202,21 +202,14 @@ des3_dec_cbc_sse(const void *input, void *output, const int size, const uint64_t
 #endif
 }
 
+/*
+ * Processes a partial block (0 to 7 bytes) in CFB mode.
+ * No parameter validation is done, caller is responsible for it.
+ */
 __forceinline void
 cfb_one_sse(const void *input, void *output, const int size, const uint64_t *ks,
             const uint64_t *ks_sse, const uint64_t *p_iv)
 {
-#ifdef SAFE_PARAM
-        if ((input == NULL) || (output == NULL) || (ks == NULL) || (p_iv == NULL) || (size < 0) ||
-            (size >= IMB_DES_BLOCK_SIZE))
-                return;
-#else
-        IMB_ASSERT(size < IMB_DES_BLOCK_SIZE && size >= 0);
-        IMB_ASSERT(input != NULL);
-        IMB_ASSERT(output != NULL);
-        IMB_ASSERT(ks != NULL);
-        IMB_ASSERT(p_iv != NULL);
-#endif
         uint8_t *out = (uint8_t *) output;
         const uint8_t *in = (const uint8_t *) input;
         DECLARE_ALIGNED(uint64_t ks_exp[16], 64);
@@ -359,8 +352,21 @@ clear_and_exit:;
 }
 
 IMB_DLL_EXPORT
-void
+int
 des_cfb_one(void *output, const void *input, const uint64_t *iv, const uint64_t *ks, const int size)
 {
+#ifdef SAFE_PARAM
+        if (output == NULL)
+                return IMB_ERR_NULL_DST;
+        if (input == NULL)
+                return IMB_ERR_NULL_SRC;
+        if (iv == NULL)
+                return IMB_ERR_NULL_IV;
+        if (ks == NULL)
+                return IMB_ERR_NULL_EXP_KEY;
+        if ((size < 0) || (size >= IMB_DES_BLOCK_SIZE))
+                return IMB_ERR_CIPH_LEN;
+#endif
         cfb_one_sse(input, output, size, ks, NULL, iv);
+        return 0;
 }

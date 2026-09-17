@@ -50,6 +50,7 @@ Library
 - Added message length limit check (2^16 - 2 bytes) for AES-CBC and AES-CFB encrypt direction jobs.
 - Added support for zero-length messages in AES-CBC.
 - Restricted `des_cfb_one()` to partial blocks (0 to 7 bytes).
+- Changed `des_cfb_one()` to return operation status.
 
 Test Applications
 - Added zero-length job acceptance checks to the checked submit paths of the
