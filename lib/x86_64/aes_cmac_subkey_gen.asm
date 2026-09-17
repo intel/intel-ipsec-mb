@@ -49,24 +49,11 @@
 %define XL      xmm0
 %define XKEY1   xmm1
 %define XKEY2   xmm2
+%define XTMP1   xmm3
+%define XTMP2   xmm4
 
 mksection .rodata
 default rel
-
-align 16
-xmm_bit127:
-        ;ddq 0x80000000000000000000000000000000
-        dq 0x0000000000000000, 0x8000000000000000
-
-align 16
-xmm_bit63:
-        ;ddq 0x00000000000000008000000000000000
-        dq 0x8000000000000000, 0x0000000000000000
-
-align 16
-xmm_bit64:
-        ;ddq 0x00000000000000010000000000000000
-        dq 0x0000000000000000, 0x0000000000000001
 
 align 16
 const_Rb:
@@ -113,6 +100,51 @@ mksection .text
 ;;; +   Step 4.  return K1, K2                        ;                  +
 ;;; +                                                                    +
 ;;; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+;;;
+;;; Constant-time 128-bit "shift left by one and conditionally XOR const_Rb"
+;;; (SP 800-38B section 6.1 subkey derivation step).
+;;; No data dependent branches: the carry between the two 64-bit halves and
+;;; the const_Rb reduction are both applied through arithmetic masks.
+;;;
+;;; %%OUT  : OUT : (IN << 1) XOR (MSB(IN) ? const_Rb : 0)
+;;; %%IN   : IN  : 128-bit value (byte-swapped to little endian, preserved)
+;;; %%T1   : CLOBBERED
+;;; %%T2   : CLOBBERED
+;;;
+%macro CMAC_SUBKEY_SHIFT_XOR_RB_SSE 4
+%define %%OUT   %1
+%define %%IN    %2
+%define %%T1    %3
+%define %%T2    %4
+
+        movdqa          %%OUT, %%IN
+        psllq           %%OUT, 1                ; shift each 64-bit half
+        movdqa          %%T1, %%IN
+        psrlq           %%T1, 63                ; bit 0 of each half = its old MSB
+        pslldq          %%T1, 8                 ; carry of low half -> bit 64
+        por             %%OUT, %%T1             ; OUT = IN << 1 (128-bit)
+        pshufd          %%T2, %%IN, 0xFF        ; broadcast top dword
+        psrad           %%T2, 31                ; all ones if MSB(IN) is set
+        pand            %%T2, [rel const_Rb]
+        pxor            %%OUT, %%T2
+%endmacro
+
+%macro CMAC_SUBKEY_SHIFT_XOR_RB_AVX 4
+%define %%OUT   %1
+%define %%IN    %2
+%define %%T1    %3
+%define %%T2    %4
+
+        vpsllq          %%OUT, %%IN, 1          ; shift each 64-bit half
+        vpsrlq          %%T1, %%IN, 63          ; bit 0 of each half = its old MSB
+        vpslldq         %%T1, %%T1, 8           ; carry of low half -> bit 64
+        vpor            %%OUT, %%OUT, %%T1      ; OUT = IN << 1 (128-bit)
+        vpshufd         %%T2, %%IN, 0xFF        ; broadcast top dword
+        vpsrad          %%T2, %%T2, 31          ; all ones if MSB(IN) is set
+        vpand           %%T2, %%T2, [rel const_Rb]
+        vpxor           %%OUT, %%OUT, %%T2
+%endmacro
 
 %macro AES_CMAC_SUBKEY_GEN_SSE 1-2
 %define %%NROUNDS       %1
@@ -167,35 +199,14 @@ mksection .text
         ;; Step 2.  if MSB(L) is equal to 0
         ;;          then    K1 := L << 1 ;
         ;;          else    K1 := (L << 1) XOR const_Rb ;
+        ;;          (constant-time, no data dependent branches)
         pshufb          XL, [rel byteswap_const]
-        movdqa          XKEY1, XL
-        psllq           XKEY1, 1
-        ptest           XL, [rel xmm_bit63]
-        jz              %%_K1_no_carry_bit_sse
-        ;; set carry bit
-        por             XKEY1, [rel xmm_bit64]
-%%_K1_no_carry_bit_sse:
-        ptest           XL, [rel xmm_bit127]
-        jz              %%_K1_msb_is_zero_sse
-        ;; XOR const_Rb
-        pxor            XKEY1, [rel const_Rb]
-%%_K1_msb_is_zero_sse:
+        CMAC_SUBKEY_SHIFT_XOR_RB_SSE XKEY1, XL, XTMP1, XTMP2
 
         ;; Step 3.  if MSB(K1) is equal to 0
         ;;          then    K2 := K1 << 1 ;
         ;;          else    K2 := (K1 << 1) XOR const_Rb ;
-        movdqa          XKEY2, XKEY1
-        psllq           XKEY2, 1
-        ptest           XKEY1, [rel xmm_bit63]
-        jz              %%_K2_no_carry_bit_sse
-        ;; set carry bit
-        por             XKEY2, [rel xmm_bit64]
-%%_K2_no_carry_bit_sse:
-        ptest           XKEY1, [rel xmm_bit127]
-        jz              %%_K2_msb_is_zero_sse
-        ;; XOR const_Rb
-        pxor            XKEY2, [rel const_Rb]
-%%_K2_msb_is_zero_sse:
+        CMAC_SUBKEY_SHIFT_XOR_RB_SSE XKEY2, XKEY1, XTMP1, XTMP2
 
         ;; Step 4.  return K1, K2
         pshufb          XKEY1, [rel byteswap_const]
@@ -260,35 +271,14 @@ mksection .text
         ;; Step 2.  if MSB(L) is equal to 0
         ;;          then    K1 := L << 1 ;
         ;;          else    K1 := (L << 1) XOR const_Rb ;
+        ;;          (constant-time, no data dependent branches)
         vpshufb         XL, [rel byteswap_const]
-        vmovdqa         XKEY1, XL
-        vpsllq          XKEY1, 1
-        vptest          XL, [rel xmm_bit63]
-        jz              %%_K1_no_carry_bit_avx
-        ;; set carry bit
-        vpor            XKEY1, [rel xmm_bit64]
-%%_K1_no_carry_bit_avx:
-        vptest          XL, [rel xmm_bit127]
-        jz              %%_K1_msb_is_zero_avx
-        ;; XOR const_Rb
-        vpxor           XKEY1, [rel const_Rb]
-%%_K1_msb_is_zero_avx:
+        CMAC_SUBKEY_SHIFT_XOR_RB_AVX XKEY1, XL, XTMP1, XTMP2
 
         ;; Step 3.  if MSB(K1) is equal to 0
         ;;          then    K2 := K1 << 1 ;
         ;;          else    K2 := (K1 << 1) XOR const_Rb ;
-        vmovdqa         XKEY2, XKEY1
-        vpsllq          XKEY2, 1
-        vptest          XKEY1, [rel xmm_bit63]
-        jz              %%_K2_no_carry_bit_avx
-        ;; set carry bit
-        vpor            XKEY2, [rel xmm_bit64]
-%%_K2_no_carry_bit_avx:
-        vptest          XKEY1, [rel xmm_bit127]
-        jz              %%_K2_msb_is_zero_avx
-        ;; XOR const_Rb
-        vpxor           XKEY2, [rel const_Rb]
-%%_K2_msb_is_zero_avx:
+        CMAC_SUBKEY_SHIFT_XOR_RB_AVX XKEY2, XKEY1, XTMP1, XTMP2
 
         ;; Step 4.  return K1, K2
         vpshufb         XKEY1, [rel byteswap_const]
