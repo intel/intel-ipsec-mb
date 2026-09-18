@@ -1697,7 +1697,7 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
 /* Maximum context string length in bytes. See FIPS 204 Section 5.2. */
 #define IMB_ML_DSA_MAX_CTX_BYTES 255
 
-/* Size in bytes of the pre-computed message representative \mu.
+/* Size in bytes of the pre-computed message representative mu.
  * See FIPS 204 Algorithms 7 & 8. */
 #define IMB_ML_DSA_MU_BYTES 64
 
@@ -1806,11 +1806,11 @@ typedef struct IMB_ML_DSA_KEYGEN_PARAMS {
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a pk or \a sk pointer
  * @retval IMB_ERR_PQC_BUFFER_SIZE \a pk_len or \a sk_len is smaller than
- *         the variant's PUBKEY_BYTES / PRIVKEY_BYTES
+ *         the variant's PUBKEY_BYTES / PRIVKEY_BYTES, or \a params->xi_len
+ *         does not match the seed size fixed by FIPS 204 (or is not zero
+ *         for a NULL \a params->xi_32)
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_DSA_KEYGEN_PARAMS)
- * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->xi_len does not match the seed
- *         size fixed by FIPS 204 (or is not zero for a NULL \a params->xi_32)
  * @retval IMB_ERR_PQC_KEYOP the key generation operation failed
  */
 IMB_DLL_EXPORT int
@@ -1907,10 +1907,10 @@ typedef struct IMB_ML_DSA_SIGN_PARAMS {
          */
         size_t rnd_len;
         /**
-         * If non-zero, \a msg is a pre-computed \mu value (exactly
+         * If non-zero, \a msg is a pre-computed mu value (exactly
          * IMB_ML_DSA_MU_BYTES bytes)
          * and the SHAKE hashing step H(tr || M') is skipped entirely.
-         * The context string is already bound into \mu by the caller, so
+         * The context string is already bound into mu by the caller, so
          * \a ctx must be NULL and \a ctx_len must be 0 when this flag is
          * set (IMB_ERR_PQC_PARAMS otherwise).
          * This is an interface extension (shared with OpenSSL) beyond the
@@ -1965,10 +1965,10 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
         /** Context string length in bytes (0..IMB_ML_DSA_MAX_CTX_BYTES) */
         size_t ctx_len;
         /**
-         * If non-zero, \a msg is a pre-computed \mu value (exactly
+         * If non-zero, \a msg is a pre-computed mu value (exactly
          * IMB_ML_DSA_MU_BYTES bytes)
          * and the SHAKE hashing step H(tr || M') is skipped entirely.
-         * The context string is already bound into \mu by the caller, so
+         * The context string is already bound into mu by the caller, so
          * \a ctx must be NULL and \a ctx_len must be 0 when this flag is
          * set (IMB_ERR_PQC_PARAMS otherwise).
          * This is an interface extension (shared with OpenSSL) beyond the
@@ -2019,16 +2019,15 @@ typedef struct IMB_ML_DSA_VERIFY_PARAMS {
  *         not IMB_ML_DSA_MU_BYTES
  * @retval IMB_ERR_PQC_NO_KEY no private key bound to \a self
  * @retval IMB_ERR_PQC_BUFFER_SIZE \a *sig_len on entry is smaller than
- *         the variant's SIG_BYTES
+ *         the variant's SIG_BYTES, or \a params->rnd_len does not match
+ *         the randomizer size fixed by FIPS 204 (or is not zero for a
+ *         NULL \a params->rnd_32)
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_DSA_SIGN_PARAMS), \a params->reserved is not
  *         all zero, or \a params->msg_is_mu is set together with a
  *         non-NULL \a params->ctx or non-zero \a params->ctx_len
  * @retval IMB_ERR_PQC_CTX_LEN \a params->ctx_len exceeds
  *         IMB_ML_DSA_MAX_CTX_BYTES
- * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->rnd_len does not match the
- *         randomizer size fixed by FIPS 204 (or is not zero for a NULL
- *         \a params->rnd_32)
  * @retval IMB_ERR_PQC_SIGNOP the signing operation failed
  */
 IMB_DLL_EXPORT int
@@ -2123,9 +2122,8 @@ imb_ml_dsa_privkey_validate(IMB_ML_DSA *self, const void *sk, size_t sk_len);
  * @retval IMB_ERR_NULL_KEY invalid \a sk pointer
  * @retval IMB_ERR_NULL_DST invalid \a pk pointer
  * @retval IMB_ERR_PQC_BUFFER_SIZE \a pk_len is smaller than the
- *         variant's PUBKEY_BYTES
- * @retval IMB_ERR_PQC_BUFFER_SIZE \a sk_len does not match the encoded key
- *         size fixed by the parameter set
+ *         variant's PUBKEY_BYTES, or \a sk_len does not match the encoded
+ *         key size fixed by the parameter set
  * @retval IMB_ERR_PQC_KEYOP derivation failed
  */
 IMB_DLL_EXPORT int
@@ -2290,12 +2288,11 @@ typedef struct IMB_ML_KEM_KEYGEN_PARAMS {
  * @retval IMB_ERR_NULL_CTX invalid \a self pointer
  * @retval IMB_ERR_NULL_KEY invalid \a ek or \a dk pointer
  * @retval IMB_ERR_PQC_BUFFER_SIZE \a ek_len or \a dk_len is smaller than
- *         the variant's PUBKEY_BYTES / PRIVKEY_BYTES
+ *         the variant's PUBKEY_BYTES / PRIVKEY_BYTES, or
+ *         \a params->seed_d_z_len does not match the seed size fixed by
+ *         FIPS 203 (or is not zero for a NULL \a params->seed_d_z)
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_KEM_KEYGEN_PARAMS)
- * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->seed_d_z_len does not match the
- *         seed size fixed by FIPS 203 (or is not zero for a NULL
- *         \a params->seed_d_z)
  * @retval IMB_ERR_PQC_KEYOP the key generation operation failed
  */
 IMB_DLL_EXPORT int
@@ -2421,12 +2418,11 @@ typedef struct IMB_ML_KEM_ENCAP_PARAMS {
  * @retval IMB_ERR_NULL_DST invalid \a ct or \a shared_secret pointer
  * @retval IMB_ERR_PQC_NO_KEY no encapsulation key bound to \a self
  * @retval IMB_ERR_PQC_BUFFER_SIZE \a ct_len or \a ss_len is smaller than
- *         the variant's CIPHERTEXT_BYTES / IMB_ML_KEM_SHARED_SECRET_BYTES
+ *         the variant's CIPHERTEXT_BYTES / IMB_ML_KEM_SHARED_SECRET_BYTES,
+ *         or \a params->m_len does not match the randomness size fixed by
+ *         FIPS 203 (or is not zero for a NULL \a params->m_32)
  * @retval IMB_ERR_PQC_PARAMS non-NULL \a params->size does not equal
  *         sizeof(IMB_ML_KEM_ENCAP_PARAMS)
- * @retval IMB_ERR_PQC_BUFFER_SIZE \a params->m_len does not match the
- *         randomness size fixed by FIPS 203 (or is not zero for a NULL
- *         \a params->m_32)
  * @retval IMB_ERR_PQC_KEMOP the encapsulation operation failed
  */
 IMB_DLL_EXPORT int
