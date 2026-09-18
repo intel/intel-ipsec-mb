@@ -1,0 +1,64 @@
+\doxysection{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS Struct Reference}
+\hypertarget{structIMB__ML__DSA__VERIFY__PARAMS}{}\label{structIMB__ML__DSA__VERIFY__PARAMS}\index{IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}}
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__VERIFY__PARAMS_a985c498ef5076011b48bef7826b5d52e}{size}}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__ML__DSA__VERIFY__PARAMS_a743387372f41d95cb707ad920c302966}{ctx}}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__VERIFY__PARAMS_ab86360cde804600fcae1503c58d7e91e}{ctx\+\_\+len}}
+\item 
+int \doxymbox{\hyperlink{structIMB__ML__DSA__VERIFY__PARAMS_aac82611e966e4636824ccb547f1d2066}{msg\+\_\+is\+\_\+mu}}
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__VERIFY__PARAMS_abb61c742a68244cf6c5da3c4580273bf}{reserved}} \+[8]
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Optional parameters for \doxylink{intel-ipsec-mb_8h_af9be64a076f93953a2fc7912d553b613}{imb\+\_\+ml\+\_\+dsa\+\_\+verify()}. A NULL {\itshape params} pointer selects the common-\/case default: no context string. Note that passing a bare {\ttfamily = \{ 0 \}} structure instead is not equivalent, as its {\itshape size} field would be rejected -\/ see {\itshape size} below.
+
+Always initialize instances of this structure with \doxylink{intel-ipsec-mb_8h_ac55ed271f30df231e413e7ad1d7693cf}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS\+\_\+\+INIT()} (or otherwise ensure {\itshape size} is set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS)) -\/ see {\itshape size} below. 
+
+\label{structIMB__ML__DSA__VERIFY__PARAMS_doc-variable-members}
+\Hypertarget{structIMB__ML__DSA__VERIFY__PARAMS_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__ML__DSA__VERIFY__PARAMS_a743387372f41d95cb707ad920c302966}\index{IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}!ctx@{ctx}}
+\index{ctx@{ctx}!IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{ctx}{ctx}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__VERIFY__PARAMS_a743387372f41d95cb707ad920c302966} 
+const void\texorpdfstring{$\ast$}{*} IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS::\+ctx}
+
+Optional context string (FIPS 204 ctx) for domain separation. NULL together with ctx\+\_\+len = 0 means no context string. \Hypertarget{structIMB__ML__DSA__VERIFY__PARAMS_ab86360cde804600fcae1503c58d7e91e}\index{IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}!ctx\_len@{ctx\_len}}
+\index{ctx\_len@{ctx\_len}!IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{ctx\_len}{ctx\_len}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__VERIFY__PARAMS_ab86360cde804600fcae1503c58d7e91e} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS::\+ctx\+\_\+len}
+
+Context string length in bytes (0..IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+MAX\+\_\+\+CTX\+\_\+\+BYTES) \Hypertarget{structIMB__ML__DSA__VERIFY__PARAMS_aac82611e966e4636824ccb547f1d2066}\index{IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}!msg\_is\_mu@{msg\_is\_mu}}
+\index{msg\_is\_mu@{msg\_is\_mu}!IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{msg\_is\_mu}{msg\_is\_mu}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__VERIFY__PARAMS_aac82611e966e4636824ccb547f1d2066} 
+int IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS::\+msg\+\_\+is\+\_\+mu}
+
+If non-\/zero, {\itshape msg} is a pre-\/computed mu value (exactly IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+MU\+\_\+\+BYTES bytes) and the SHAKE hashing step H(tr \texorpdfstring{$\vert$}{|}\texorpdfstring{$\vert$}{|} M\textquotesingle{}) is skipped entirely. The context string is already bound into mu by the caller, so {\itshape ctx} must be NULL and {\itshape ctx\+\_\+len} must be 0 when this flag is set (IMB\+\_\+\+ERR\+\_\+\+PQC\+\_\+\+PARAMS otherwise). This is an interface extension (shared with Open\+SSL) beyond the two top-\/level interfaces defined by FIPS 204 (Algorithms 2 and 3). \Hypertarget{structIMB__ML__DSA__VERIFY__PARAMS_abb61c742a68244cf6c5da3c4580273bf}\index{IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}!reserved@{reserved}}
+\index{reserved@{reserved}!IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{reserved}{reserved}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__VERIFY__PARAMS_abb61c742a68244cf6c5da3c4580273bf} 
+uint8\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS::\+reserved\+[8]}
+
+Reserved for future use (e.\+g. Hash\+ML-\/\+DSA pre-\/hash support). Must be zero-\/initialized -\/ use \doxylink{intel-ipsec-mb_8h_ac55ed271f30df231e413e7ad1d7693cf}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS\+\_\+\+INIT()}. Every byte is validated to be zero on each call, so that a newer caller requesting an option carved out of this field is rejected with IMB\+\_\+\+ERR\+\_\+\+PQC\+\_\+\+PARAMS by a library that predates it, rather than silently ignoring the request. \Hypertarget{structIMB__ML__DSA__VERIFY__PARAMS_a985c498ef5076011b48bef7826b5d52e}\index{IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}!size@{size}}
+\index{size@{size}!IMB\_ML\_DSA\_VERIFY\_PARAMS@{IMB\_ML\_DSA\_VERIFY\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{size}{size}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__VERIFY__PARAMS_a985c498ef5076011b48bef7826b5d52e} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS::\+size}
+
+Struct size in bytes: must be set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS) as compiled by the caller. Enables the library to detect a struct-\/layout mismatch between the caller and this build of the library (e.\+g. an older caller built against a struct that predates a field added in a newer library), rather than silently reading uninitialized/\+out-\/of-\/bounds memory. Set automatically by \doxylink{intel-ipsec-mb_8h_ac55ed271f30df231e413e7ad1d7693cf}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+VERIFY\+\_\+\+PARAMS\+\_\+\+INIT()}. 
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}

@@ -1,0 +1,107 @@
+\doxysection{chacha20\+\_\+poly1305\+\_\+context\+\_\+data Struct Reference}
+\hypertarget{structchacha20__poly1305__context__data}{}\label{structchacha20__poly1305__context__data}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+
+
+holds Chacha20-\/\+Poly1305 operation context  
+
+
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+uint64\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_ae12447b2fd2e9f8a6f09f443bd303887}{hash}} \+[3]
+\item 
+uint64\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_a7b5edcebc9a6bec3776daf6d13bf950c}{aad\+\_\+len}}
+\item 
+uint64\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_ade4568d041695b318df773787872127f}{hash\+\_\+len}}
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_afc74af4af99449f0b9f01338ae723c1a}{last\+\_\+ks}} \+[64]
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_a832afc28000f27f503bce3fd04462a19}{poly\+\_\+key}} \+[\doxymbox{\hyperlink{intel-ipsec-mb_8h_a3260a6651abb0c37dc6558770966d582}{IMB\+\_\+\+CHACHA20\+\_\+\+POLY1305\+\_\+\+KEY\+\_\+\+SIZE}}]
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_a674f6c26aae1076e938726f18401bf6d}{poly\+\_\+scratch}} \+[\doxymbox{\hyperlink{intel-ipsec-mb_8h_a603f272890d272f0bbd467ee8c632452}{IMB\+\_\+\+POLY1305\+\_\+\+BLOCK\+\_\+\+SIZE}}]
+\item 
+uint64\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_add03511d1f95376b3ac64a7916c27368}{last\+\_\+block\+\_\+count}}
+\item 
+uint64\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_a84693b96048f6130a749b633c65e2105}{remain\+\_\+ks\+\_\+bytes}}
+\item 
+uint64\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_a74e971fe76c8b946e30e8f0c8cce111a}{remain\+\_\+ct\+\_\+bytes}}
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structchacha20__poly1305__context__data_a576d50687b0bc16916b01f1364fd5845}{IV}} \+[\doxymbox{\hyperlink{intel-ipsec-mb_8h_a682613e829c603f3c328f7fd6813d6ff}{IMB\+\_\+\+CHACHA20\+\_\+\+POLY1305\+\_\+\+IV\+\_\+\+SIZE}}]
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+holds Chacha20-\/\+Poly1305 operation context 
+
+\label{structchacha20__poly1305__context__data_doc-variable-members}
+\Hypertarget{structchacha20__poly1305__context__data_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structchacha20__poly1305__context__data_a7b5edcebc9a6bec3776daf6d13bf950c}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!aad\_len@{aad\_len}}
+\index{aad\_len@{aad\_len}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{aad\_len}{aad\_len}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_a7b5edcebc9a6bec3776daf6d13bf950c} 
+uint64\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+aad\+\_\+len}
+
+Total AAD length \Hypertarget{structchacha20__poly1305__context__data_ae12447b2fd2e9f8a6f09f443bd303887}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!hash@{hash}}
+\index{hash@{hash}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{hash}{hash}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_ae12447b2fd2e9f8a6f09f443bd303887} 
+uint64\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+hash\+[3]}
+
+Intermediate computation of hash value \Hypertarget{structchacha20__poly1305__context__data_ade4568d041695b318df773787872127f}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!hash\_len@{hash\_len}}
+\index{hash\_len@{hash\_len}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{hash\_len}{hash\_len}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_ade4568d041695b318df773787872127f} 
+uint64\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+hash\+\_\+len}
+
+Total length to digest (excluding AAD) \Hypertarget{structchacha20__poly1305__context__data_a576d50687b0bc16916b01f1364fd5845}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!IV@{IV}}
+\index{IV@{IV}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{IV}{IV}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_a576d50687b0bc16916b01f1364fd5845} 
+uint8\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+\+IV\+[\doxymbox{\hyperlink{intel-ipsec-mb_8h_a682613e829c603f3c328f7fd6813d6ff}{IMB\+\_\+\+CHACHA20\+\_\+\+POLY1305\+\_\+\+IV\+\_\+\+SIZE}}]}
+
+IV (12 bytes) \Hypertarget{structchacha20__poly1305__context__data_add03511d1f95376b3ac64a7916c27368}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!last\_block\_count@{last\_block\_count}}
+\index{last\_block\_count@{last\_block\_count}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{last\_block\_count}{last\_block\_count}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_add03511d1f95376b3ac64a7916c27368} 
+uint64\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+last\+\_\+block\+\_\+count}
+
+Last block count used in last segment \Hypertarget{structchacha20__poly1305__context__data_afc74af4af99449f0b9f01338ae723c1a}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!last\_ks@{last\_ks}}
+\index{last\_ks@{last\_ks}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{last\_ks}{last\_ks}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_afc74af4af99449f0b9f01338ae723c1a} 
+uint8\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+last\+\_\+ks\+[64]}
+
+Last 64 bytes of KS \Hypertarget{structchacha20__poly1305__context__data_a832afc28000f27f503bce3fd04462a19}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!poly\_key@{poly\_key}}
+\index{poly\_key@{poly\_key}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{poly\_key}{poly\_key}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_a832afc28000f27f503bce3fd04462a19} 
+uint8\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+poly\+\_\+key\+[\doxymbox{\hyperlink{intel-ipsec-mb_8h_a3260a6651abb0c37dc6558770966d582}{IMB\+\_\+\+CHACHA20\+\_\+\+POLY1305\+\_\+\+KEY\+\_\+\+SIZE}}]}
+
+Poly key \Hypertarget{structchacha20__poly1305__context__data_a674f6c26aae1076e938726f18401bf6d}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!poly\_scratch@{poly\_scratch}}
+\index{poly\_scratch@{poly\_scratch}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{poly\_scratch}{poly\_scratch}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_a674f6c26aae1076e938726f18401bf6d} 
+uint8\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+poly\+\_\+scratch\+[\doxymbox{\hyperlink{intel-ipsec-mb_8h_a603f272890d272f0bbd467ee8c632452}{IMB\+\_\+\+POLY1305\+\_\+\+BLOCK\+\_\+\+SIZE}}]}
+
+Scratchpad to compute Poly on 16 bytes \Hypertarget{structchacha20__poly1305__context__data_a74e971fe76c8b946e30e8f0c8cce111a}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!remain\_ct\_bytes@{remain\_ct\_bytes}}
+\index{remain\_ct\_bytes@{remain\_ct\_bytes}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{remain\_ct\_bytes}{remain\_ct\_bytes}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_a74e971fe76c8b946e30e8f0c8cce111a} 
+uint64\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+remain\+\_\+ct\+\_\+bytes}
+
+Amount of cipher text bytes still to use of previous segment to authenticate (up to 16 bytes) \Hypertarget{structchacha20__poly1305__context__data_a84693b96048f6130a749b633c65e2105}\index{chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}!remain\_ks\_bytes@{remain\_ks\_bytes}}
+\index{remain\_ks\_bytes@{remain\_ks\_bytes}!chacha20\_poly1305\_context\_data@{chacha20\_poly1305\_context\_data}}
+\doxysubsubsection{\texorpdfstring{remain\_ks\_bytes}{remain\_ks\_bytes}}
+{\footnotesize\ttfamily \label{structchacha20__poly1305__context__data_a84693b96048f6130a749b633c65e2105} 
+uint64\+\_\+t chacha20\+\_\+poly1305\+\_\+context\+\_\+data::\+remain\+\_\+ks\+\_\+bytes}
+
+Amount of bytes still to use of key stream (up to 63 bytes) 
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}

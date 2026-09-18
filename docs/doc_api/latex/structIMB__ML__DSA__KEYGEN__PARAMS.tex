@@ -1,0 +1,48 @@
+\doxysection{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS Struct Reference}
+\hypertarget{structIMB__ML__DSA__KEYGEN__PARAMS}{}\label{structIMB__ML__DSA__KEYGEN__PARAMS}\index{IMB\_ML\_DSA\_KEYGEN\_PARAMS@{IMB\_ML\_DSA\_KEYGEN\_PARAMS}}
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__KEYGEN__PARAMS_a4f90e994fac2dbfd27089035db61c9ad}{size}}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__ML__DSA__KEYGEN__PARAMS_a3e02c433d375220136a5ed7b964eb2ce}{xi\+\_\+32}}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__KEYGEN__PARAMS_acdf4acd7d529beccaa1ba810b8325612}{xi\+\_\+len}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Optional parameters for \doxylink{intel-ipsec-mb_8h_ac0b5fae08828f115f40479c942b9b1c3}{imb\+\_\+ml\+\_\+dsa\+\_\+keypair()}. A NULL {\itshape params} pointer selects the common-\/case default: fresh-\/random key generation. Note that passing a bare {\ttfamily = \{ 0 \}} structure instead is not equivalent, as its {\itshape size} field would be rejected -\/ see {\itshape size} below.
+
+Always initialize instances of this structure with \doxylink{intel-ipsec-mb_8h_a1c5fd3bda1ce2b8574ddd93879a430dc}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS\+\_\+\+INIT()} (or otherwise ensure {\itshape size} is set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS)) -\/ see {\itshape size} below. 
+
+\label{structIMB__ML__DSA__KEYGEN__PARAMS_doc-variable-members}
+\Hypertarget{structIMB__ML__DSA__KEYGEN__PARAMS_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__ML__DSA__KEYGEN__PARAMS_a4f90e994fac2dbfd27089035db61c9ad}\index{IMB\_ML\_DSA\_KEYGEN\_PARAMS@{IMB\_ML\_DSA\_KEYGEN\_PARAMS}!size@{size}}
+\index{size@{size}!IMB\_ML\_DSA\_KEYGEN\_PARAMS@{IMB\_ML\_DSA\_KEYGEN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{size}{size}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__KEYGEN__PARAMS_a4f90e994fac2dbfd27089035db61c9ad} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS::\+size}
+
+Struct size in bytes: must be set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS) as compiled by the caller. Enables the library to detect a struct-\/layout mismatch between the caller and this build of the library (e.\+g. an older caller built against a struct that predates a field added in a newer library), rather than silently reading uninitialized/\+out-\/of-\/bounds memory. Set automatically by \doxylink{intel-ipsec-mb_8h_a1c5fd3bda1ce2b8574ddd93879a430dc}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS\+\_\+\+INIT()}. \Hypertarget{structIMB__ML__DSA__KEYGEN__PARAMS_a3e02c433d375220136a5ed7b964eb2ce}\index{IMB\_ML\_DSA\_KEYGEN\_PARAMS@{IMB\_ML\_DSA\_KEYGEN\_PARAMS}!xi\_32@{xi\_32}}
+\index{xi\_32@{xi\_32}!IMB\_ML\_DSA\_KEYGEN\_PARAMS@{IMB\_ML\_DSA\_KEYGEN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{xi\_32}{xi\_32}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__KEYGEN__PARAMS_a3e02c433d375220136a5ed7b964eb2ce} 
+const void\texorpdfstring{$\ast$}{*} IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS::\+xi\+\_\+32}
+
+Optional key generation seed (FIPS 204 xi). NULL requests fresh-\/random key generation: the library generates a fresh random seed internally for each call. Non-\/\+NULL uses the supplied seed verbatim, producing a deterministic key pair. \Hypertarget{structIMB__ML__DSA__KEYGEN__PARAMS_acdf4acd7d529beccaa1ba810b8325612}\index{IMB\_ML\_DSA\_KEYGEN\_PARAMS@{IMB\_ML\_DSA\_KEYGEN\_PARAMS}!xi\_len@{xi\_len}}
+\index{xi\_len@{xi\_len}!IMB\_ML\_DSA\_KEYGEN\_PARAMS@{IMB\_ML\_DSA\_KEYGEN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{xi\_len}{xi\_len}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__KEYGEN__PARAMS_acdf4acd7d529beccaa1ba810b8325612} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+PARAMS::\+xi\+\_\+len}
+
+Size of the seed pointed to by {\itshape xi\+\_\+32} in bytes. Must be IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+KEYGEN\+\_\+\+SEED\+\_\+\+BYTES when {\itshape xi\+\_\+32} is not NULL, otherwise must be 0. 
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}

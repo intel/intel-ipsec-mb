@@ -1,0 +1,29 @@
+\doxysection{IMB\+\_\+\+JOB::\+[struct]\+\_\+\+HMAC\+\_\+specific\+\_\+fields.\+u.\+HMAC Struct Reference}
+\hypertarget{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC}{}\label{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC}\index{IMB\_JOB::\+[struct]\+\_HMAC\_specific\_fields.u.HMAC@{IMB\_JOB::[struct]\_HMAC\_specific\_fields.u.HMAC}}
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+const uint8\+\_\+t \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_a1e32ed2c7f49571b330a196c37781ed9}{\+\_\+hashed\+\_\+auth\+\_\+key\+\_\+xor\+\_\+ipad}}
+\item 
+const uint8\+\_\+t \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_a40b653fef0dd7283a44bba1869378c48}{\+\_\+hashed\+\_\+auth\+\_\+key\+\_\+xor\+\_\+opad}}
+\end{DoxyCompactItemize}
+
+
+\label{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_doc-variable-members}
+\Hypertarget{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_a1e32ed2c7f49571b330a196c37781ed9}\index{IMB\_JOB::\+[struct]\+\_HMAC\_specific\_fields.u.HMAC@{IMB\_JOB::[struct]\_HMAC\_specific\_fields.u.HMAC}!\_hashed\_auth\_key\_xor\_ipad@{\_hashed\_auth\_key\_xor\_ipad}}
+\index{\_hashed\_auth\_key\_xor\_ipad@{\_hashed\_auth\_key\_xor\_ipad}!IMB\_JOB::\+[struct]\+\_HMAC\_specific\_fields.u.HMAC@{IMB\_JOB::[struct]\_HMAC\_specific\_fields.u.HMAC}}
+\doxysubsubsection{\texorpdfstring{\_hashed\_auth\_key\_xor\_ipad}{\_hashed\_auth\_key\_xor\_ipad}}
+{\footnotesize\ttfamily \label{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_a1e32ed2c7f49571b330a196c37781ed9} 
+const uint8\+\_\+t\texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC}{IMB\+\_\+\+JOB::\+\+[struct]\+\+\_\+\+HMAC\+\_\+specific\+\_\+fields.\+u.\+HMAC}} \+\_\+hashed\+\_\+auth\+\_\+key\+\_\+xor\+\_\+ipad}
+
+For MD5, SHA1, SHA2 and SM3: hashed result of HMAC key xor\textquotesingle{}d with ipad (0x36). For SHA3: block size long HMAC key xor\textquotesingle{}d with ipad (0x36), not hashed. \Hypertarget{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_a40b653fef0dd7283a44bba1869378c48}\index{IMB\_JOB::\+[struct]\+\_HMAC\_specific\_fields.u.HMAC@{IMB\_JOB::[struct]\_HMAC\_specific\_fields.u.HMAC}!\_hashed\_auth\_key\_xor\_opad@{\_hashed\_auth\_key\_xor\_opad}}
+\index{\_hashed\_auth\_key\_xor\_opad@{\_hashed\_auth\_key\_xor\_opad}!IMB\_JOB::\+[struct]\+\_HMAC\_specific\_fields.u.HMAC@{IMB\_JOB::[struct]\_HMAC\_specific\_fields.u.HMAC}}
+\doxysubsubsection{\texorpdfstring{\_hashed\_auth\_key\_xor\_opad}{\_hashed\_auth\_key\_xor\_opad}}
+{\footnotesize\ttfamily \label{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC_a40b653fef0dd7283a44bba1869378c48} 
+const uint8\+\_\+t\texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__HMAC__specific__fields_8u_8HMAC}{IMB\+\_\+\+JOB::\+\+[struct]\+\+\_\+\+HMAC\+\_\+specific\+\_\+fields.\+u.\+HMAC}} \+\_\+hashed\+\_\+auth\+\_\+key\+\_\+xor\+\_\+opad}
+
+For MD5, SHA1, SHA2 and SM3: hashed result of HMAC key xor\textquotesingle{}d with opad (0x5c). For SHA3: block size long HMAC key xor\textquotesingle{}d with opad (0x5c), not hashed. 
+
+The documentation for this struct was generated from the following files:

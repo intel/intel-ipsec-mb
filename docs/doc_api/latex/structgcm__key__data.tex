@@ -1,0 +1,51 @@
+\doxysection{gcm\+\_\+key\+\_\+data Struct Reference}
+\hypertarget{structgcm__key__data}{}\label{structgcm__key__data}\index{gcm\_key\_data@{gcm\_key\_data}}
+
+
+holds intermediate key data needed to improve performance  
+
+
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structgcm__key__data_a5777083456254a4b8523431f648d3fa7}{expanded\+\_\+keys}} \+[16 \texorpdfstring{$\ast$}{*}15]
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structgcm__key__data_a3d34b0add2eae1505be6b56ae4ddf165}{ghash\+\_\+keys}} \+[32 \texorpdfstring{$\ast$}{*}2 \texorpdfstring{$\ast$}{*}16]
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+holds intermediate key data needed to improve performance 
+
+\doxylink{structgcm__key__data}{gcm\+\_\+key\+\_\+data} hold internal key information used by gcm128, gcm192 and gcm256. 
+
+\label{structgcm__key__data_doc-variable-members}
+\Hypertarget{structgcm__key__data_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structgcm__key__data_a5777083456254a4b8523431f648d3fa7}\index{gcm\_key\_data@{gcm\_key\_data}!expanded\_keys@{expanded\_keys}}
+\index{expanded\_keys@{expanded\_keys}!gcm\_key\_data@{gcm\_key\_data}}
+\doxysubsubsection{\texorpdfstring{expanded\_keys}{expanded\_keys}}
+{\footnotesize\ttfamily \label{structgcm__key__data_a5777083456254a4b8523431f648d3fa7} 
+uint8\+\_\+t gcm\+\_\+key\+\_\+data::\+expanded\+\_\+keys\+[16 \texorpdfstring{$\ast$}{*}15]}
+
+AES key schedule takes at most 15 expanded keys (AES256). Each expanded key is 16 bytes long. \Hypertarget{structgcm__key__data_a3d34b0add2eae1505be6b56ae4ddf165}\index{gcm\_key\_data@{gcm\_key\_data}!ghash\_keys@{ghash\_keys}}
+\index{ghash\_keys@{ghash\_keys}!gcm\_key\_data@{gcm\_key\_data}}
+\doxysubsubsection{\texorpdfstring{ghash\_keys}{ghash\_keys}}
+{\footnotesize\ttfamily \label{structgcm__key__data_a3d34b0add2eae1505be6b56ae4ddf165} 
+uint8\+\_\+t gcm\+\_\+key\+\_\+data::\+ghash\+\_\+keys\+[32 \texorpdfstring{$\ast$}{*}2 \texorpdfstring{$\ast$}{*}16]}
+
+Hash key size is 16 bytes. Hash key structure sizes for various architectures look as follows:
+\begin{DoxyItemize}
+\item SSE: 8 pairs of hash keys -\/\texorpdfstring{$>$}{>} 8 \texorpdfstring{$\ast$}{*} 2 \texorpdfstring{$\ast$}{*} 16 bytes
+\item AVX2: 8 pairs of hash keys -\/\texorpdfstring{$>$}{>} 8 \texorpdfstring{$\ast$}{*} 2 \texorpdfstring{$\ast$}{*} 16 bytes
+\item AVX2 Type2: 16 pairs of hash keys -\/\texorpdfstring{$>$}{>} 16 \texorpdfstring{$\ast$}{*} 2 \texorpdfstring{$\ast$}{*} 16 bytes
+\item AVX512 Type2: 32 pairs of hash keys -\/\texorpdfstring{$>$}{>} 32 \texorpdfstring{$\ast$}{*} 2 \texorpdfstring{$\ast$}{*} 16 bytes 
+\end{DoxyItemize}
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}

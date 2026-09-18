@@ -1,0 +1,80 @@
+\doxysection{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS Struct Reference}
+\hypertarget{structIMB__ML__DSA__SIGN__PARAMS}{}\label{structIMB__ML__DSA__SIGN__PARAMS}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__SIGN__PARAMS_aa82f35a001bb719ef433667d1a2ed013}{size}}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__ML__DSA__SIGN__PARAMS_a2dfcf777613a44c963090ec326459ddf}{ctx}}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__SIGN__PARAMS_a7bab6c8c8deeba03467d9cc79bacc6f0}{ctx\+\_\+len}}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__ML__DSA__SIGN__PARAMS_af16b391a682525f970570b87ceda3beb}{rnd\+\_\+32}}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__SIGN__PARAMS_af611c7191985faceb992163ad0ab5953}{rnd\+\_\+len}}
+\item 
+int \doxymbox{\hyperlink{structIMB__ML__DSA__SIGN__PARAMS_a571cc5086b6f9ec48022f94e197b7f3e}{msg\+\_\+is\+\_\+mu}}
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{structIMB__ML__DSA__SIGN__PARAMS_a9ebed052169a09109124ddf2c8c9a0e5}{reserved}} \+[8]
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Optional parameters for \doxylink{intel-ipsec-mb_8h_acb09c1c128bde519ecad568ed2e13fd7}{imb\+\_\+ml\+\_\+dsa\+\_\+sign()}. A NULL {\itshape params} pointer selects the common-\/case default: no context string and hedged (fresh-\/random) signing. Note that passing a bare {\ttfamily = \{ 0 \}} structure instead is not equivalent, as its {\itshape size} field would be rejected -\/ see {\itshape size} below.
+
+Always initialize instances of this structure with \doxylink{intel-ipsec-mb_8h_a125180ddf8ba005fc87265b021590dd5}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS\+\_\+\+INIT()} (or otherwise ensure {\itshape size} is set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS)) -\/ see {\itshape size} below. 
+
+\label{structIMB__ML__DSA__SIGN__PARAMS_doc-variable-members}
+\Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_a2dfcf777613a44c963090ec326459ddf}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}!ctx@{ctx}}
+\index{ctx@{ctx}!IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{ctx}{ctx}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__SIGN__PARAMS_a2dfcf777613a44c963090ec326459ddf} 
+const void\texorpdfstring{$\ast$}{*} IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS::\+ctx}
+
+Optional context string (FIPS 204 ctx) for domain separation. NULL together with ctx\+\_\+len = 0 means no context string. \Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_a7bab6c8c8deeba03467d9cc79bacc6f0}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}!ctx\_len@{ctx\_len}}
+\index{ctx\_len@{ctx\_len}!IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{ctx\_len}{ctx\_len}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__SIGN__PARAMS_a7bab6c8c8deeba03467d9cc79bacc6f0} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS::\+ctx\+\_\+len}
+
+Context string length in bytes (0..IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+MAX\+\_\+\+CTX\+\_\+\+BYTES) \Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_a571cc5086b6f9ec48022f94e197b7f3e}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}!msg\_is\_mu@{msg\_is\_mu}}
+\index{msg\_is\_mu@{msg\_is\_mu}!IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{msg\_is\_mu}{msg\_is\_mu}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__SIGN__PARAMS_a571cc5086b6f9ec48022f94e197b7f3e} 
+int IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS::\+msg\+\_\+is\+\_\+mu}
+
+If non-\/zero, {\itshape msg} is a pre-\/computed mu value (exactly IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+MU\+\_\+\+BYTES bytes) and the SHAKE hashing step H(tr \texorpdfstring{$\vert$}{|}\texorpdfstring{$\vert$}{|} M\textquotesingle{}) is skipped entirely. The context string is already bound into mu by the caller, so {\itshape ctx} must be NULL and {\itshape ctx\+\_\+len} must be 0 when this flag is set (IMB\+\_\+\+ERR\+\_\+\+PQC\+\_\+\+PARAMS otherwise). This is an interface extension (shared with Open\+SSL) beyond the two top-\/level interfaces defined by FIPS 204 (Algorithms 2 and 3). \Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_a9ebed052169a09109124ddf2c8c9a0e5}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}!reserved@{reserved}}
+\index{reserved@{reserved}!IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{reserved}{reserved}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__SIGN__PARAMS_a9ebed052169a09109124ddf2c8c9a0e5} 
+uint8\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS::\+reserved\+[8]}
+
+Reserved for future use (e.\+g. Hash\+ML-\/\+DSA pre-\/hash support). Must be zero-\/initialized -\/ use \doxylink{intel-ipsec-mb_8h_a125180ddf8ba005fc87265b021590dd5}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS\+\_\+\+INIT()}. Every byte is validated to be zero on each call, so that a newer caller requesting an option carved out of this field is rejected with IMB\+\_\+\+ERR\+\_\+\+PQC\+\_\+\+PARAMS by a library that predates it, rather than silently ignoring the request. \Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_af16b391a682525f970570b87ceda3beb}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}!rnd\_32@{rnd\_32}}
+\index{rnd\_32@{rnd\_32}!IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{rnd\_32}{rnd\_32}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__SIGN__PARAMS_af16b391a682525f970570b87ceda3beb} 
+const void\texorpdfstring{$\ast$}{*} IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS::\+rnd\+\_\+32}
+
+Optional 32-\/byte randomizer. NULL requests hedged signing: the library generates a fresh random value internally for each call. Non-\/\+NULL uses the supplied 32 bytes verbatim -\/ an all-\/zero buffer yields deterministic signing, any other value supplies caller-\/controlled entropy. \Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_af611c7191985faceb992163ad0ab5953}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}!rnd\_len@{rnd\_len}}
+\index{rnd\_len@{rnd\_len}!IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{rnd\_len}{rnd\_len}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__SIGN__PARAMS_af611c7191985faceb992163ad0ab5953} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS::\+rnd\+\_\+len}
+
+Size of the randomizer pointed to by {\itshape rnd\+\_\+32} in bytes. Must be IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+RND\+\_\+\+BYTES when {\itshape rnd\+\_\+32} is not NULL, otherwise must be 0. \Hypertarget{structIMB__ML__DSA__SIGN__PARAMS_aa82f35a001bb719ef433667d1a2ed013}\index{IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}!size@{size}}
+\index{size@{size}!IMB\_ML\_DSA\_SIGN\_PARAMS@{IMB\_ML\_DSA\_SIGN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{size}{size}}
+{\footnotesize\ttfamily \label{structIMB__ML__DSA__SIGN__PARAMS_aa82f35a001bb719ef433667d1a2ed013} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS::\+size}
+
+Struct size in bytes: must be set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS) as compiled by the caller. Enables the library to detect a struct-\/layout mismatch between the caller and this build of the library (e.\+g. an older caller built against a struct that predates a field added in a newer library), rather than silently reading uninitialized/\+out-\/of-\/bounds memory. Set automatically by \doxylink{intel-ipsec-mb_8h_a125180ddf8ba005fc87265b021590dd5}{IMB\+\_\+\+ML\+\_\+\+DSA\+\_\+\+SIGN\+\_\+\+PARAMS\+\_\+\+INIT()}. 
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}

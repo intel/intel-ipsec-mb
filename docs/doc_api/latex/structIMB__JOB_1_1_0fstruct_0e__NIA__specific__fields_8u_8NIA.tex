@@ -1,0 +1,33 @@
+\doxysection{IMB\+\_\+\+JOB::\+[struct]\+\_\+\+NIA\+\_\+specific\+\_\+fields.\+u.\+NIA Struct Reference}
+\hypertarget{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA}{}\label{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA}\index{IMB\_JOB::\+[struct]\+\_NIA\_specific\_fields.u.NIA@{IMB\_JOB::[struct]\_NIA\_specific\_fields.u.NIA}}
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_ac95b5049794940a9b082fdc1989334c7}{\+\_\+key}}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_af0d9c466f7a876f34bbecbcc14469dc5}{\+\_\+iv}}
+\end{DoxyCompactItemize}
+
+
+\label{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_doc-variable-members}
+\Hypertarget{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_af0d9c466f7a876f34bbecbcc14469dc5}\index{IMB\_JOB::\+[struct]\+\_NIA\_specific\_fields.u.NIA@{IMB\_JOB::[struct]\_NIA\_specific\_fields.u.NIA}!\_iv@{\_iv}}
+\index{\_iv@{\_iv}!IMB\_JOB::\+[struct]\+\_NIA\_specific\_fields.u.NIA@{IMB\_JOB::[struct]\_NIA\_specific\_fields.u.NIA}}
+\doxysubsubsection{\texorpdfstring{\_iv}{\_iv}}
+{\footnotesize\ttfamily \label{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_af0d9c466f7a876f34bbecbcc14469dc5} 
+const void\texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA}{IMB\+\_\+\+JOB::\+\+[struct]\+\+\_\+\+NIA\+\_\+specific\+\_\+fields.\+u.\+NIA}} \+\_\+iv}
+
+Authentication IV pointer (16 bytes) \Hypertarget{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_ac95b5049794940a9b082fdc1989334c7}\index{IMB\_JOB::\+[struct]\+\_NIA\_specific\_fields.u.NIA@{IMB\_JOB::[struct]\_NIA\_specific\_fields.u.NIA}!\_key@{\_key}}
+\index{\_key@{\_key}!IMB\_JOB::\+[struct]\+\_NIA\_specific\_fields.u.NIA@{IMB\_JOB::[struct]\_NIA\_specific\_fields.u.NIA}}
+\doxysubsubsection{\texorpdfstring{\_key}{\_key}}
+{\footnotesize\ttfamily \label{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA_ac95b5049794940a9b082fdc1989334c7} 
+const void\texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__NIA__specific__fields_8u_8NIA}{IMB\+\_\+\+JOB::\+\+[struct]\+\+\_\+\+NIA\+\_\+specific\+\_\+fields.\+u.\+NIA}} \+\_\+key}
+
+Authentication key pointer:
+\begin{DoxyItemize}
+\item NIA4 / NIA6: 32-\/byte (256-\/bit) raw key (zero-\/extend 128-\/bit keys to 256 bits on the application side before calling the library)
+\item NIA5: AES-\/256 expanded encryption key schedule, 16-\/byte aligned 
+\end{DoxyItemize}
+
+The documentation for this struct was generated from the following files:

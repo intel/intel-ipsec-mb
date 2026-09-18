@@ -1,0 +1,24 @@
+\doxysection{IMB\+\_\+\+JOB::\+[struct]\+\_\+\+KASUMI\+\_\+\+UIA1\+\_\+specific\+\_\+fields.\+u.\+KASUMI\+\_\+\+UIA1 Struct Reference}
+\hypertarget{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1}{}\label{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1}\index{IMB\_JOB::\+[struct]\+\_KASUMI\_UIA1\_specific\_fields.u.KASUMI\_UIA1@{IMB\_JOB::[struct]\_KASUMI\_UIA1\_specific\_fields.u.KASUMI\_UIA1}}
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1_a16898bb1644cdd5db1fb8831fa8dacce}{\+\_\+key}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+For 3GPP UIA1, the caller must construct the source data at src + hash\+\_\+start\+\_\+src\+\_\+offset\+\_\+in\+\_\+bytes as a byte sequence: COUNT \texorpdfstring{$\vert$}{|}\texorpdfstring{$\vert$}{|} FRESH \texorpdfstring{$\vert$}{|}\texorpdfstring{$\vert$}{|} user-\/data \texorpdfstring{$\vert$}{|}\texorpdfstring{$\vert$}{|} DIRECTION \texorpdfstring{$\vert$}{|}\texorpdfstring{$\vert$}{|} \textquotesingle{}1\textquotesingle{} \texorpdfstring{$\vert$}{|}\texorpdfstring{$\vert$}{|} 0-\/padding. User data may be bit-\/aligned, but the caller must supply the complete frame including the DIRECTION bit, the terminating \textquotesingle{}1\textquotesingle{} bit, and any zero-\/padding to the end of the final supplied byte. msg\+\_\+len\+\_\+to\+\_\+hash\+\_\+in\+\_\+bytes is the length of the caller-\/supplied frame. For a trailing partial 64-\/bit block, the library zero-\/fills the remaining bytes internally. 
+
+\label{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1_doc-variable-members}
+\Hypertarget{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1_a16898bb1644cdd5db1fb8831fa8dacce}\index{IMB\_JOB::\+[struct]\+\_KASUMI\_UIA1\_specific\_fields.u.KASUMI\_UIA1@{IMB\_JOB::[struct]\_KASUMI\_UIA1\_specific\_fields.u.KASUMI\_UIA1}!\_key@{\_key}}
+\index{\_key@{\_key}!IMB\_JOB::\+[struct]\+\_KASUMI\_UIA1\_specific\_fields.u.KASUMI\_UIA1@{IMB\_JOB::[struct]\_KASUMI\_UIA1\_specific\_fields.u.KASUMI\_UIA1}}
+\doxysubsubsection{\texorpdfstring{\_key}{\_key}}
+{\footnotesize\ttfamily \label{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1_a16898bb1644cdd5db1fb8831fa8dacce} 
+const void\texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__JOB_1_1_0fstruct_0e__KASUMI__UIA1__specific__fields_8u_8KASUMI__UIA1}{IMB\+\_\+\+JOB::\+\+[struct]\+\+\_\+\+KASUMI\+\_\+\+UIA1\+\_\+specific\+\_\+fields.\+u.\+KASUMI\+\_\+\+UIA1}} \+\_\+key}
+
+Authentication key (16-\/byte aligned) 
+
+The documentation for this struct was generated from the following files:

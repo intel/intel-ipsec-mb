@@ -1,0 +1,48 @@
+\doxysection{IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS Struct Reference}
+\hypertarget{structIMB__ML__KEM__KEYGEN__PARAMS}{}\label{structIMB__ML__KEM__KEYGEN__PARAMS}\index{IMB\_ML\_KEM\_KEYGEN\_PARAMS@{IMB\_ML\_KEM\_KEYGEN\_PARAMS}}
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__KEM__KEYGEN__PARAMS_ae5efd0283ca3ac04aef403c72ac424dd}{size}}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__ML__KEM__KEYGEN__PARAMS_ad1a06899494db6b33c58fe2a159379b6}{seed\+\_\+d\+\_\+z}}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__KEM__KEYGEN__PARAMS_aaa6fe969e89a8105998b304a97f125b5}{seed\+\_\+d\+\_\+z\+\_\+len}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Optional parameters for \doxylink{intel-ipsec-mb_8h_a2873c501ebcee72b3acbc9c00d54003e}{imb\+\_\+ml\+\_\+kem\+\_\+keypair()}. A NULL {\itshape params} pointer selects the common-\/case default: fresh-\/random key generation. Note that passing a bare {\ttfamily = \{ 0 \}} structure instead is not equivalent, as its {\itshape size} field would be rejected -\/ see {\itshape size} below.
+
+Always initialize instances of this structure with \doxylink{intel-ipsec-mb_8h_a08f3ea3b7ea131f4310e57c7621ff80b}{IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS\+\_\+\+INIT()} (or otherwise ensure {\itshape size} is set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS)) -\/ see {\itshape size} below. 
+
+\label{structIMB__ML__KEM__KEYGEN__PARAMS_doc-variable-members}
+\Hypertarget{structIMB__ML__KEM__KEYGEN__PARAMS_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__ML__KEM__KEYGEN__PARAMS_ad1a06899494db6b33c58fe2a159379b6}\index{IMB\_ML\_KEM\_KEYGEN\_PARAMS@{IMB\_ML\_KEM\_KEYGEN\_PARAMS}!seed\_d\_z@{seed\_d\_z}}
+\index{seed\_d\_z@{seed\_d\_z}!IMB\_ML\_KEM\_KEYGEN\_PARAMS@{IMB\_ML\_KEM\_KEYGEN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{seed\_d\_z}{seed\_d\_z}}
+{\footnotesize\ttfamily \label{structIMB__ML__KEM__KEYGEN__PARAMS_ad1a06899494db6b33c58fe2a159379b6} 
+const void\texorpdfstring{$\ast$}{*} IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS::\+seed\+\_\+d\+\_\+z}
+
+Optional key generation seed: the FIPS 203 "{}d"{} (first 32 bytes) concatenated with "{}z"{} (last 32 bytes). NULL requests fresh-\/random key generation: the library generates a fresh random seed internally for each call. Non-\/\+NULL uses the supplied seed verbatim, producing a deterministic key pair. \Hypertarget{structIMB__ML__KEM__KEYGEN__PARAMS_aaa6fe969e89a8105998b304a97f125b5}\index{IMB\_ML\_KEM\_KEYGEN\_PARAMS@{IMB\_ML\_KEM\_KEYGEN\_PARAMS}!seed\_d\_z\_len@{seed\_d\_z\_len}}
+\index{seed\_d\_z\_len@{seed\_d\_z\_len}!IMB\_ML\_KEM\_KEYGEN\_PARAMS@{IMB\_ML\_KEM\_KEYGEN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{seed\_d\_z\_len}{seed\_d\_z\_len}}
+{\footnotesize\ttfamily \label{structIMB__ML__KEM__KEYGEN__PARAMS_aaa6fe969e89a8105998b304a97f125b5} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS::\+seed\+\_\+d\+\_\+z\+\_\+len}
+
+Size of the seed pointed to by {\itshape seed\+\_\+d\+\_\+z} in bytes. Must be IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+SEED\+\_\+\+BYTES when {\itshape seed\+\_\+d\+\_\+z} is not NULL, otherwise must be 0. \Hypertarget{structIMB__ML__KEM__KEYGEN__PARAMS_ae5efd0283ca3ac04aef403c72ac424dd}\index{IMB\_ML\_KEM\_KEYGEN\_PARAMS@{IMB\_ML\_KEM\_KEYGEN\_PARAMS}!size@{size}}
+\index{size@{size}!IMB\_ML\_KEM\_KEYGEN\_PARAMS@{IMB\_ML\_KEM\_KEYGEN\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{size}{size}}
+{\footnotesize\ttfamily \label{structIMB__ML__KEM__KEYGEN__PARAMS_ae5efd0283ca3ac04aef403c72ac424dd} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS::\+size}
+
+Struct size in bytes: must be set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS) as compiled by the caller. Enables the library to detect a struct-\/layout mismatch between the caller and this build of the library (e.\+g. an older caller built against a struct that predates a field added in a newer library), rather than silently reading uninitialized/\+out-\/of-\/bounds memory. Set automatically by \doxylink{intel-ipsec-mb_8h_a08f3ea3b7ea131f4310e57c7621ff80b}{IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+KEYGEN\+\_\+\+PARAMS\+\_\+\+INIT()}. 
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}

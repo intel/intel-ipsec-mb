@@ -1,0 +1,46 @@
+\doxysection{gcm\+\_\+context\+\_\+data Struct Reference}
+\hypertarget{structgcm__context__data}{}\label{structgcm__context__data}\index{gcm\_context\_data@{gcm\_context\_data}}
+
+
+holds GCM operation context  
+
+
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+uint64\+\_\+t \doxymbox{\hyperlink{structgcm__context__data_ac11f478500b1c31ed08eeb71214410f4}{ctx}} \+[11]
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+holds GCM operation context 
+
+init, update and finalize context data 
+
+\label{structgcm__context__data_doc-variable-members}
+\Hypertarget{structgcm__context__data_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structgcm__context__data_ac11f478500b1c31ed08eeb71214410f4}\index{gcm\_context\_data@{gcm\_context\_data}!ctx@{ctx}}
+\index{ctx@{ctx}!gcm\_context\_data@{gcm\_context\_data}}
+\doxysubsubsection{\texorpdfstring{ctx}{ctx}}
+{\footnotesize\ttfamily \label{structgcm__context__data_ac11f478500b1c31ed08eeb71214410f4} 
+uint64\+\_\+t gcm\+\_\+context\+\_\+data::\+ctx\+[11]}
+
+The context includes:
+\begin{DoxyItemize}
+\item AAD hash (16 bytes)
+\item AAD length (8 bytes)
+\item message length (8 bytes)
+\item partial block encrypted (16 bytes)
+\item original IV (16 bytes)
+\item current counter block (16 bytes)
+\item partial blocklength (8 bytes) 
+\end{DoxyItemize}
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}

@@ -1,0 +1,48 @@
+\doxysection{IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS Struct Reference}
+\hypertarget{structIMB__ML__KEM__ENCAP__PARAMS}{}\label{structIMB__ML__KEM__ENCAP__PARAMS}\index{IMB\_ML\_KEM\_ENCAP\_PARAMS@{IMB\_ML\_KEM\_ENCAP\_PARAMS}}
+
+
+{\ttfamily \+\#include $<$intel-\/ipsec-\/mb.\+h$>$}
+
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__KEM__ENCAP__PARAMS_a2c48f4b4cc55e40b51171759bfd6bf34}{size}}
+\item 
+const void \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{structIMB__ML__KEM__ENCAP__PARAMS_a5662f6054872b4cc6d727a3d8e14aaa5}{m\+\_\+32}}
+\item 
+size\+\_\+t \doxymbox{\hyperlink{structIMB__ML__KEM__ENCAP__PARAMS_acec61134dc71f6ad696293b83c67970b}{m\+\_\+len}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Optional parameters for \doxylink{intel-ipsec-mb_8h_a7c3e13ecdef0a99cf8147633301e109e}{imb\+\_\+ml\+\_\+kem\+\_\+encap()}. A NULL {\itshape params} pointer selects the common-\/case default: fresh-\/random encapsulation. Note that passing a bare {\ttfamily = \{ 0 \}} structure instead is not equivalent, as its {\itshape size} field would be rejected -\/ see {\itshape size} below.
+
+Always initialize instances of this structure with \doxylink{intel-ipsec-mb_8h_a3e87808472519c5512ace55f14608ede}{IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS\+\_\+\+INIT()} (or otherwise ensure {\itshape size} is set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS)) -\/ see {\itshape size} below. 
+
+\label{structIMB__ML__KEM__ENCAP__PARAMS_doc-variable-members}
+\Hypertarget{structIMB__ML__KEM__ENCAP__PARAMS_doc-variable-members}
+\doxysubsection{Field Documentation}
+\Hypertarget{structIMB__ML__KEM__ENCAP__PARAMS_a5662f6054872b4cc6d727a3d8e14aaa5}\index{IMB\_ML\_KEM\_ENCAP\_PARAMS@{IMB\_ML\_KEM\_ENCAP\_PARAMS}!m\_32@{m\_32}}
+\index{m\_32@{m\_32}!IMB\_ML\_KEM\_ENCAP\_PARAMS@{IMB\_ML\_KEM\_ENCAP\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{m\_32}{m\_32}}
+{\footnotesize\ttfamily \label{structIMB__ML__KEM__ENCAP__PARAMS_a5662f6054872b4cc6d727a3d8e14aaa5} 
+const void\texorpdfstring{$\ast$}{*} IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS::\+m\+\_\+32}
+
+Optional 32-\/byte randomness (FIPS 203 "{}m"{}). NULL requests fresh-\/random encapsulation: the library generates a fresh random value internally for each call. Non-\/\+NULL uses the supplied 32 bytes verbatim, producing deterministic encapsulation output (e.\+g. for ACVP conformance testing). \Hypertarget{structIMB__ML__KEM__ENCAP__PARAMS_acec61134dc71f6ad696293b83c67970b}\index{IMB\_ML\_KEM\_ENCAP\_PARAMS@{IMB\_ML\_KEM\_ENCAP\_PARAMS}!m\_len@{m\_len}}
+\index{m\_len@{m\_len}!IMB\_ML\_KEM\_ENCAP\_PARAMS@{IMB\_ML\_KEM\_ENCAP\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{m\_len}{m\_len}}
+{\footnotesize\ttfamily \label{structIMB__ML__KEM__ENCAP__PARAMS_acec61134dc71f6ad696293b83c67970b} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS::\+m\+\_\+len}
+
+Size of the randomness pointed to by {\itshape m\+\_\+32} in bytes. Must be IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+SEED\+\_\+\+BYTES when {\itshape m\+\_\+32} is not NULL, otherwise must be 0. \Hypertarget{structIMB__ML__KEM__ENCAP__PARAMS_a2c48f4b4cc55e40b51171759bfd6bf34}\index{IMB\_ML\_KEM\_ENCAP\_PARAMS@{IMB\_ML\_KEM\_ENCAP\_PARAMS}!size@{size}}
+\index{size@{size}!IMB\_ML\_KEM\_ENCAP\_PARAMS@{IMB\_ML\_KEM\_ENCAP\_PARAMS}}
+\doxysubsubsection{\texorpdfstring{size}{size}}
+{\footnotesize\ttfamily \label{structIMB__ML__KEM__ENCAP__PARAMS_a2c48f4b4cc55e40b51171759bfd6bf34} 
+size\+\_\+t IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS::\+size}
+
+Struct size in bytes: must be set to sizeof(\+IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS) as compiled by the caller. Enables the library to detect a struct-\/layout mismatch between the caller and this build of the library (e.\+g. an older caller built against a struct that predates a field added in a newer library), rather than silently reading uninitialized/\+out-\/of-\/bounds memory. Set automatically by \doxylink{intel-ipsec-mb_8h_a3e87808472519c5512ace55f14608ede}{IMB\+\_\+\+ML\+\_\+\+KEM\+\_\+\+ENCAP\+\_\+\+PARAMS\+\_\+\+INIT()}. 
+
+The documentation for this struct was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h}{intel-\/ipsec-\/mb.\+h}}\end{DoxyCompactItemize}
