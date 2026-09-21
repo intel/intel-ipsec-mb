@@ -30,6 +30,28 @@ keccak_f1600_x4_avx2_ossl(uint64_t *state);
 /* Internal helpers                                                     */
 /* ------------------------------------------------------------------ */
 
+/* Load/store a 64-bit word from/to a caller supplied byte stream.
+ *
+ * x86 performs misaligned loads and stores without complaint, so this is not
+ * a correctness issue for this x86-only library. However, dereferencing a
+ * misaligned uint64_t pointer is undefined behaviour in C and UBSan reports
+ * it, so memcpy() is used to express the same access. It compiles down to the
+ * very same single unaligned mov. */
+static inline uint64_t
+load_u64(const uint8_t *p)
+{
+        uint64_t v;
+
+        memcpy(&v, p, sizeof(v));
+        return v;
+}
+
+static inline void
+store_u64(uint8_t *p, const uint64_t v)
+{
+        memcpy(p, &v, sizeof(v));
+}
+
 /* Absorb n bytes one at a time; used for unaligned head and tail.
  * Reads pos from ctx->A[100] and writes back the updated value.
  * in0..in3 - input byte streams for lanes 0-3
@@ -86,10 +108,10 @@ absorb_x4_avx2(KECCAK1600_X4_CTX *ctx, const uint8_t *in0, const uint8_t *in1, c
         while (inlen >= sizeof(uint64_t)) {
                 const size_t word = pos >> 3;
 
-                ctx->A[word * 4 + 0] ^= *(const uint64_t *) in0;
-                ctx->A[word * 4 + 1] ^= *(const uint64_t *) in1;
-                ctx->A[word * 4 + 2] ^= *(const uint64_t *) in2;
-                ctx->A[word * 4 + 3] ^= *(const uint64_t *) in3;
+                ctx->A[word * 4 + 0] ^= load_u64(in0);
+                ctx->A[word * 4 + 1] ^= load_u64(in1);
+                ctx->A[word * 4 + 2] ^= load_u64(in2);
+                ctx->A[word * 4 + 3] ^= load_u64(in3);
                 in0 += 8;
                 in1 += 8;
                 in2 += 8;
@@ -161,10 +183,10 @@ squeeze_x4_avx2(KECCAK1600_X4_CTX *ctx, uint8_t *out0, uint8_t *out1, uint8_t *o
                         const size_t shift = (cur & 7) << 3;
 
                         if (shift == 0 && (todo - done) >= sizeof(uint64_t)) {
-                                *(uint64_t *) (out0 + done) = ctx->A[word * 4 + 0];
-                                *(uint64_t *) (out1 + done) = ctx->A[word * 4 + 1];
-                                *(uint64_t *) (out2 + done) = ctx->A[word * 4 + 2];
-                                *(uint64_t *) (out3 + done) = ctx->A[word * 4 + 3];
+                                store_u64(out0 + done, ctx->A[word * 4 + 0]);
+                                store_u64(out1 + done, ctx->A[word * 4 + 1]);
+                                store_u64(out2 + done, ctx->A[word * 4 + 2]);
+                                store_u64(out3 + done, ctx->A[word * 4 + 3]);
                                 done += sizeof(uint64_t);
                         } else {
                                 *(out0 + done) = (uint8_t) (ctx->A[word * 4 + 0] >> shift);

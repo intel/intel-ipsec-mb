@@ -229,20 +229,31 @@ cfb_one_sse(const void *input, void *output, const int size, const uint64_t *ks,
         }
 
         if (size & 2) {
-                uint16_t *out2 = (uint16_t *) out;
-                const uint16_t *in2 = (const uint16_t *) in;
+                /* x86 handles misaligned accesses fine, but dereferencing a
+                 * misaligned uint16_t pointer is undefined behaviour in C and
+                 * is flagged by UBSan. memcpy() expresses the same load/store
+                 * and compiles down to the very same instructions. */
+                uint16_t in2;
 
-                *out2 = *in2 ^ ((uint16_t) t);
+                memcpy(&in2, in, sizeof(in2));
+
+                const uint16_t out2 = in2 ^ ((uint16_t) t);
+
+                memcpy(out, &out2, sizeof(out2));
                 t >>= 16;
                 out += 2;
                 in += 2;
         }
 
         if (size & 4) {
-                uint32_t *out4 = (uint32_t *) out;
-                const uint32_t *in4 = (const uint32_t *) in;
+                /* see the misaligned access note above */
+                uint32_t in4;
 
-                *out4 = *in4 ^ ((uint32_t) t);
+                memcpy(&in4, in, sizeof(in4));
+
+                const uint32_t out4 = in4 ^ ((uint32_t) t);
+
+                memcpy(out, &out4, sizeof(out4));
         }
 
 #ifdef SAFE_DATA

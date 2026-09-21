@@ -338,9 +338,15 @@ imb_get_ooo_mgr(IMB_MGR *state, const int index, void **ooo_ptr, size_t *ooo_siz
                 const size_t start_offset = (max_size > 256) ? max_size - 256 : 0;
 
                 for (size_t offset = start_offset; offset < stop_offset; offset++) {
-                        const uint64_t *ptr64 = (const uint64_t *) &ptr8[offset];
+                        /* The marker is searched for at every byte offset, so
+                         * the load is not 8-byte aligned. x86 does not care,
+                         * but a misaligned uint64_t dereference is undefined
+                         * behaviour in C and is reported by UBSan, hence the
+                         * memcpy(). It generates the same unaligned load. */
+                        uint64_t val;
 
-                        if (*ptr64 == IMB_OOO_ROAD_BLOCK) {
+                        memcpy(&val, &ptr8[offset], sizeof(val));
+                        if (val == IMB_OOO_ROAD_BLOCK) {
                                 *ooo_size = offset + sizeof(uint64_t);
                                 return 0;
                         }
