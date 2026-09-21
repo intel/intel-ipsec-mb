@@ -16,7 +16,9 @@
 extern "C" {
 #endif
 
-/* 128-bit data type that is not in sdtint.h */
+/**
+ * 128-bit data type that is not in stdint.h
+ */
 typedef struct {
         uint64_t low;
         uint64_t high;
@@ -26,7 +28,7 @@ typedef struct {
  * Macros for aligning data structures and function inlines
  */
 #if defined __linux__ || defined __FreeBSD__
-/**< Linux/FreeBSD */
+/* Linux/FreeBSD */
 #define DECLARE_ALIGNED(decl, alignval) decl __attribute__((aligned(alignval)))
 #define __forceinline                   static inline __attribute__((always_inline))
 
@@ -36,7 +38,7 @@ typedef struct {
 #else /* GNU C 4.0 and later */
 #define IMB_DLL_EXPORT
 #define IMB_DLL_LOCAL
-#endif /**< different C compiler */
+#endif /* different C compiler */
 
 #else
 /* Windows */
@@ -54,7 +56,7 @@ typedef struct {
 
 #endif /* __MINGW__ */
 
-/**
+/*
  * Windows DLL export is done via DEF file
  */
 #define IMB_DLL_EXPORT
@@ -65,12 +67,8 @@ typedef struct {
 /**
  * Library version
  */
-#define IMB_VERSION_STR "3.0.0-dev"
-#define IMB_VERSION_NUM 0x30000
-
-/**
- * Macro to translate version number
- */
+#define IMB_VERSION_STR      "3.0.0-dev"
+#define IMB_VERSION_NUM      0x30000
 #define IMB_VERSION(a, b, c) (((a) << 16) + ((b) << 8) + (c))
 
 /**
@@ -274,19 +272,22 @@ __attribute__((aligned(64)));
 ;
 #endif
 
-#define IMB_CCM_AAD_MAX_SIZE (46) /* Maximum CCM AAD size */
+#define IMB_CCM_AAD_MAX_SIZE (46) /**< Maximum CCM AAD size */
 
 /**
  * Snow3G key scheduling structure
  */
 typedef struct snow3g_key_schedule_s {
-        uint32_t k[4];
+        uint32_t k[4]; /**< 128-bit key expressed as four 32-bit words */
 } snow3g_key_schedule_t;
 
 /**
  * Job structure definitions
  */
 
+/**
+ * Job status definitions
+ */
 typedef enum {
         IMB_STATUS_BEING_PROCESSED = 0,
         IMB_STATUS_COMPLETED_CIPHER = 1,
@@ -391,62 +392,71 @@ typedef enum {
 #endif
 #endif
 
+/**
+ * Cipher mode definitions
+ */
 typedef enum {
-        IMB_CIPHER_CBC = 1,
-        IMB_CIPHER_CNTR,
-        IMB_CIPHER_CTR = IMB_CIPHER_CNTR,
-        IMB_CIPHER_NULL,
-        IMB_CIPHER_DOCSIS_SEC_BPI,
-        IMB_CIPHER_GCM,
-        IMB_CIPHER_DES,
-        IMB_CIPHER_DOCSIS_DES,
-        IMB_CIPHER_CCM,
-        IMB_CIPHER_DES3,
-        IMB_CIPHER_PON_AES_CNTR,
-        IMB_CIPHER_PON_AES_CTR = IMB_CIPHER_PON_AES_CNTR,
-        IMB_CIPHER_ECB,
-        IMB_CIPHER_ZUC_EEA3,    /**< 128-EEA3/NEA3 (3GPP) */
-        IMB_CIPHER_SNOW3G_UEA2, /**< 128-UEA2 (3GPP) */
-        IMB_CIPHER_KASUMI_UEA1, /**< 128-UEA1 (3GPP) */
-        IMB_CIPHER_CHACHA20,
-        IMB_CIPHER_CHACHA20_POLY1305,     /**< AEAD CHACHA20 */
-        IMB_CIPHER_CHACHA20_POLY1305_SGL, /**< AEAD CHACHA20 with SGL support*/
-        IMB_CIPHER_GCM_SGL,
-        IMB_CIPHER_SM4_ECB,
-        IMB_CIPHER_SM4_CBC,
-        IMB_CIPHER_CFB,
-        IMB_CIPHER_SM4_CNTR,
-        IMB_CIPHER_SM4_CTR = IMB_CIPHER_SM4_CNTR,
-        IMB_CIPHER_SM4_GCM,
-        IMB_CIPHER_ZUC_NEA6,
-        IMB_CIPHER_SNOW5G_NEA4,
-        IMB_CIPHER_AES_NEA5,    /**< AES256-NEA5 */
-        IMB_CIPHER_AES_NCA5,    /**< AES256-NCA5 */
-        IMB_CIPHER_ZUC_NCA6,    /**< ZUC256-NCA6 */
-        IMB_CIPHER_SNOW5G_NCA4, /**< SNOW5G-NCA4 */
-        IMB_CIPHER_NUM          /**< Number of cipher modes */
+        IMB_CIPHER_CBC = 1,                               /**< AES-CBC */
+        IMB_CIPHER_CNTR,                                  /**< AES-CTR */
+        IMB_CIPHER_CTR = IMB_CIPHER_CNTR,                 /**< Alias of IMB_CIPHER_CNTR */
+        IMB_CIPHER_NULL,                                  /**< No cipher */
+        IMB_CIPHER_DOCSIS_SEC_BPI,                        /**< DOCSIS (AES-CBC + AES-CFB) */
+        IMB_CIPHER_GCM,                                   /**< AEAD AES-GCM */
+        IMB_CIPHER_DES,                                   /**< DES-CBC */
+        IMB_CIPHER_DOCSIS_DES,                            /**< DOCSIS (DES-CBC + DES-CFB) */
+        IMB_CIPHER_CCM,                                   /**< AEAD AES-CCM */
+        IMB_CIPHER_DES3,                                  /**< 3DES-CBC */
+        IMB_CIPHER_PON_AES_CNTR,                          /**< PON AES-CTR */
+        IMB_CIPHER_PON_AES_CTR = IMB_CIPHER_PON_AES_CNTR, /**< Alias of PON_AES_CNTR */
+        IMB_CIPHER_ECB,                                   /**< AES-ECB */
+        IMB_CIPHER_ZUC_EEA3,                              /**< 128-EEA3/NEA3 (3GPP) */
+        IMB_CIPHER_SNOW3G_UEA2,                           /**< 128-UEA2 (3GPP) */
+        IMB_CIPHER_KASUMI_UEA1,                           /**< 128-UEA1 (3GPP) */
+        IMB_CIPHER_CHACHA20,                              /**< CHACHA20 */
+        IMB_CIPHER_CHACHA20_POLY1305,                     /**< AEAD CHACHA20 */
+        IMB_CIPHER_CHACHA20_POLY1305_SGL,                 /**< AEAD CHACHA20 with SGL support*/
+        IMB_CIPHER_GCM_SGL,                               /**< AEAD AES-GCM with SGL support */
+        IMB_CIPHER_SM4_ECB,                               /**< SM4-ECB */
+        IMB_CIPHER_SM4_CBC,                               /**< SM4-CBC */
+        IMB_CIPHER_CFB,                                   /**< AES-CFB */
+        IMB_CIPHER_SM4_CNTR,                              /**< SM4-CTR */
+        IMB_CIPHER_SM4_CTR = IMB_CIPHER_SM4_CNTR,         /**< Alias of IMB_CIPHER_SM4_CNTR */
+        IMB_CIPHER_SM4_GCM,                               /**< AEAD SM4-GCM */
+        IMB_CIPHER_ZUC_NEA6,                              /**< ZUC256-NEA6 (3GPP) */
+        IMB_CIPHER_SNOW5G_NEA4,                           /**< SNOW5G-NEA4 (3GPP) */
+        IMB_CIPHER_AES_NEA5,                              /**< AES256-NEA5 */
+        IMB_CIPHER_AES_NCA5,                              /**< AES256-NCA5 */
+        IMB_CIPHER_ZUC_NCA6,                              /**< ZUC256-NCA6 */
+        IMB_CIPHER_SNOW5G_NCA4,                           /**< SNOW5G-NCA4 */
+        IMB_CIPHER_NUM                                    /**< Number of cipher modes */
 } IMB_CIPHER_MODE;
 
+/**
+ * Cipher direction definitions
+ */
 typedef enum { IMB_DIR_ENCRYPT = 1, IMB_DIR_DECRYPT } IMB_CIPHER_DIRECTION;
 
+/**
+ * Hash algorithm definitions
+ */
 typedef enum {
-        IMB_AUTH_HMAC_SHA_1 = 1, /**< HMAC-SHA1 */
-        IMB_AUTH_HMAC_SHA_224,   /**< HMAC-SHA224 */
-        IMB_AUTH_HMAC_SHA_256,   /**< HMAC-SHA256 */
-        IMB_AUTH_HMAC_SHA_384,   /**< HMAC-SHA384 */
-        IMB_AUTH_HMAC_SHA_512,   /**< HMAC-SHA512 */
-        IMB_AUTH_AES_XCBC,
-        IMB_AUTH_MD5, /**< HMAC-MD5 */
-        IMB_AUTH_NULL,
-        IMB_AUTH_AES_GMAC,
-        IMB_AUTH_AES_CCM,  /**< AES128-CCM */
-        IMB_AUTH_AES_CMAC, /**< AES128-CMAC */
-        IMB_AUTH_SHA_1,    /**< SHA1 */
-        IMB_AUTH_SHA_224,  /**< SHA224 */
-        IMB_AUTH_SHA_256,  /**< SHA256 */
-        IMB_AUTH_SHA_384,  /**< SHA384 */
-        IMB_AUTH_SHA_512,  /**< SHA512 */
-        IMB_AUTH_PON_CRC_BIP,
+        IMB_AUTH_HMAC_SHA_1 = 1,         /**< HMAC-SHA1 */
+        IMB_AUTH_HMAC_SHA_224,           /**< HMAC-SHA224 */
+        IMB_AUTH_HMAC_SHA_256,           /**< HMAC-SHA256 */
+        IMB_AUTH_HMAC_SHA_384,           /**< HMAC-SHA384 */
+        IMB_AUTH_HMAC_SHA_512,           /**< HMAC-SHA512 */
+        IMB_AUTH_AES_XCBC,               /**< AES128-XCBC */
+        IMB_AUTH_MD5,                    /**< HMAC-MD5 */
+        IMB_AUTH_NULL,                   /**< No authentication */
+        IMB_AUTH_AES_GMAC,               /**< AES-GMAC (128-bit key) */
+        IMB_AUTH_AES_CCM,                /**< AES128-CCM */
+        IMB_AUTH_AES_CMAC,               /**< AES128-CMAC */
+        IMB_AUTH_SHA_1,                  /**< SHA1 */
+        IMB_AUTH_SHA_224,                /**< SHA224 */
+        IMB_AUTH_SHA_256,                /**< SHA256 */
+        IMB_AUTH_SHA_384,                /**< SHA384 */
+        IMB_AUTH_SHA_512,                /**< SHA512 */
+        IMB_AUTH_PON_CRC_BIP,            /**< PON CRC32 and BIP */
         IMB_AUTH_ZUC_EIA3,               /**< 128-EIA3/NIA3 (3GPP) */
         IMB_AUTH_DOCSIS_CRC32,           /**< with DOCSIS_SEC_BPI only */
         IMB_AUTH_SNOW3G_UIA2,            /**< 128-UIA2 (3GPP) */
@@ -491,11 +501,17 @@ typedef enum {
         IMB_AUTH_HMAC_SHA3_256,          /**< HMAC-SHA3-256 */
         IMB_AUTH_HMAC_SHA3_384,          /**< HMAC-SHA3-384 */
         IMB_AUTH_HMAC_SHA3_512,          /**< HMAC-SHA3-512 */
-        IMB_AUTH_NUM
+        IMB_AUTH_NUM                     /**< Number of hash algorithms */
 } IMB_HASH_ALG;
 
+/**
+ * Cipher and hash chain order definitions
+ */
 typedef enum { IMB_ORDER_CIPHER_HASH = 1, IMB_ORDER_HASH_CIPHER } IMB_CHAIN_ORDER;
 
+/**
+ * Key size definitions
+ */
 typedef enum {
         IMB_KEY_64_BYTES = 8,
         IMB_KEY_128_BYTES = 16,
@@ -503,7 +519,15 @@ typedef enum {
         IMB_KEY_256_BYTES = 32
 } IMB_KEY_SIZE_BYTES;
 
-typedef enum { IMB_SGL_INIT = 0, IMB_SGL_UPDATE, IMB_SGL_COMPLETE, IMB_SGL_ALL } IMB_SGL_STATE;
+/**
+ * Scatter-gather list (SGL) operation state definitions
+ */
+typedef enum {
+        IMB_SGL_INIT = 0, /**< Start of SGL operation */
+        IMB_SGL_UPDATE,   /**< Intermediate SGL segments */
+        IMB_SGL_COMPLETE, /**< End of SGL operation */
+        IMB_SGL_ALL       /**< Complete SGL operation in one job */
+} IMB_SGL_STATE;
 
 /**
  * Input/output SGL segment structure.
@@ -511,7 +535,7 @@ typedef enum { IMB_SGL_INIT = 0, IMB_SGL_UPDATE, IMB_SGL_COMPLETE, IMB_SGL_ALL }
 struct IMB_SGL_IOV {
         const void *in; /**< Input segment */
         void *out;      /**< Output segment */
-        uint64_t len;   /** Length of segment */
+        uint64_t len;   /**< Length of segment */
 };
 
 /**
@@ -566,7 +590,7 @@ typedef struct IMB_JOB {
                 uint64_t msg_len_to_cipher_in_bytes;
                 /**< Length of message to cipher (in bytes) */
         }; /**< Length of message to cipher */
-        uint64_t hash_start_src_offset_in_bytes;
+        uint64_t hash_start_src_offset_in_bytes; /**< Offset to start hashing (in bytes) */
         union {
                 uint64_t msg_len_to_hash_in_bytes;
                 /**< Length of message to hash (in bytes) */
@@ -713,25 +737,47 @@ typedef struct IMB_JOB {
         uint32_t session_id;  /**< see imb_set_session() */
 } IMB_JOB;
 
-/* Multi buffer manager data type definitions */
+/**
+ * Multi buffer manager data type definitions.
+ * Opaque handle to the multi-buffer manager - allocate with
+ * alloc_mb_mgr() / imb_get_mb_mgr() and initialize with init_mb_mgr().
+ */
 struct IMB_MGR;
-typedef struct IMB_MGR IMB_MGR;
+typedef struct IMB_MGR IMB_MGR; /**< Opaque multi-buffer manager handle */
 
+/** Maximum number of jobs that can be submitted or flushed in one burst */
 #define IMB_MAX_BURST_SIZE 128
-#define IMB_MAX_JOBS       (IMB_MAX_BURST_SIZE * 2)
+/** Maximum number of jobs held by the manager's internal job queue */
+#define IMB_MAX_JOBS (IMB_MAX_BURST_SIZE * 2)
 
 /**
  * Maximum Authenticated Tag Length in bytes.
  */
 #define IMB_MAX_TAG_LEN (64)
 
-/* Self-Test callback definitions */
+/**
+ * Self-test callback data.
+ * Describes the self-test in progress - passed to the callback function
+ * registered with imb_self_test_set_cb().
+ */
 typedef struct {
-        const char *phase;
-        const char *type;
-        const char *descr;
+        const char *phase; /**< Test phase, see IMB_SELF_TEST_PHASE_xxx */
+        const char *type;  /**< Test type, see IMB_SELF_TEST_TYPE_xxx
+                                (NULL in the START and PASS/FAIL phases) */
+        const char *descr; /**< Test description, e.g. algorithm name
+                                (NULL in the START and PASS/FAIL phases) */
 } IMB_SELF_TEST_CALLBACK_DATA;
 
+/**
+ * Self-test callback function prototype.
+ *
+ * @param [in] cb_arg  User argument registered with imb_self_test_set_cb()
+ * @param [in] data    Description of the self-test in progress
+ *
+ * @return Callback status
+ * @retval 0     stop the self-test
+ * @retval != 0  continue the self-test
+ */
 typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DATA *data);
 
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
@@ -756,28 +802,29 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_FEATURE_AVX512CD  (1ULL << 9)
 #define IMB_FEATURE_AVX512BW  (1ULL << 10)
 #define IMB_FEATURE_AVX512VL  (1ULL << 11)
+/** AVX512 extensions available on SKX and later */
 #define IMB_FEATURE_AVX512_SKX                                                                     \
         (IMB_FEATURE_AVX512F | IMB_FEATURE_AVX512DQ | IMB_FEATURE_AVX512CD |                       \
          IMB_FEATURE_AVX512BW | IMB_FEATURE_AVX512VL)
 #define IMB_FEATURE_VAES           (1ULL << 12)
 #define IMB_FEATURE_VPCLMULQDQ     (1ULL << 13)
-#define IMB_FEATURE_SAFE_DATA      (1ULL << 14)
-#define IMB_FEATURE_SAFE_PARAM     (1ULL << 15)
+#define IMB_FEATURE_SAFE_DATA      (1ULL << 14) /**< library built with SAFE_DATA option */
+#define IMB_FEATURE_SAFE_PARAM     (1ULL << 15) /**< library built with SAFE_PARAM option */
 #define IMB_FEATURE_GFNI           (1ULL << 16)
 #define IMB_FEATURE_AVX512_IFMA    (1ULL << 17)
 #define IMB_FEATURE_BMI2           (1ULL << 18)
-#define IMB_FEATURE_SELF_TEST      (1ULL << 19) /* self-test feature present */
-#define IMB_FEATURE_SELF_TEST_PASS (1ULL << 20) /* self-test passed */
+#define IMB_FEATURE_SELF_TEST      (1ULL << 19) /**< self-test feature present */
+#define IMB_FEATURE_SELF_TEST_PASS (1ULL << 20) /**< self-test passed */
 #define IMB_FEATURE_AVX_IFMA       (1ULL << 21)
-#define IMB_FEATURE_HYBRID         (1ULL << 22) /* Hybrid core */
+#define IMB_FEATURE_HYBRID         (1ULL << 22) /**< Hybrid core */
 #define IMB_FEATURE_SM3NI          (1ULL << 23)
 #define IMB_FEATURE_SM4NI          (1ULL << 24)
 #define IMB_FEATURE_SHA512NI       (1ULL << 25)
 #define IMB_FEATURE_XSAVE          (1ULL << 26)
-#define IMB_FEATURE_OSXSAVE        (1ULL << 27) /* OS-enabled XSAVE */
+#define IMB_FEATURE_OSXSAVE        (1ULL << 27) /**< OS-enabled XSAVE */
 #define IMB_FEATURE_APX            (1ULL << 28)
-#define IMB_FEATURE_AVX10_256      (1ULL << 29)
-#define IMB_FEATURE_AVX10_512      (1ULL << 30)
+#define IMB_FEATURE_AVX10_256      (1ULL << 29) /**< AVX10 with 256-bit vector length */
+#define IMB_FEATURE_AVX10_512      (1ULL << 30) /**< AVX10 with 512-bit vector length */
 #define IMB_FEATURE_AVX10_2        (1ULL << 31)
 #define IMB_FEATURE_MOVBE          (1ULL << 32)
 
@@ -1677,6 +1724,10 @@ typedef struct IMB_ML_DSA IMB_ML_DSA;
 
 /**
  * ML-DSA parameter set selector (FIPS 204).
+ *
+ * Selects the parameter set (security category) of an ML-DSA operation:
+ * #IMB_ML_DSA_44 (category 2), #IMB_ML_DSA_65 (category 3) or
+ * #IMB_ML_DSA_87 (category 5).
  */
 typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_DSA_ALG;
 
@@ -1694,17 +1745,19 @@ typedef enum { IMB_ML_DSA_44 = 1, IMB_ML_DSA_65 = 2, IMB_ML_DSA_87 = 3 } IMB_ML_
 #define IMB_ML_DSA_87_PRIVKEY_BYTES 4896
 #define IMB_ML_DSA_87_SIG_BYTES     4627
 
-/* Maximum context string length in bytes. See FIPS 204 Section 5.2. */
+/** Maximum context string length in bytes. See FIPS 204 Section 5.2. */
 #define IMB_ML_DSA_MAX_CTX_BYTES 255
 
-/* Size in bytes of the pre-computed message representative mu.
- * See FIPS 204 Algorithms 7 & 8. */
+/**
+ * Size in bytes of the pre-computed message representative mu.
+ * See FIPS 204 Algorithms 7 & 8.
+ */
 #define IMB_ML_DSA_MU_BYTES 64
 
-/* Key generation seed (FIPS 204 xi) size in bytes. */
+/** Key generation seed (FIPS 204 xi) size in bytes. */
 #define IMB_ML_DSA_KEYGEN_SEED_BYTES 32
 
-/* Signing randomizer (FIPS 204 rnd) size in bytes. */
+/** Signing randomizer (FIPS 204 rnd) size in bytes. */
 #define IMB_ML_DSA_SIGN_RND_BYTES 32
 
 /**
@@ -2158,14 +2211,16 @@ typedef struct IMB_ML_KEM IMB_ML_KEM;
 
 /**
  * ML-KEM parameter set selector (FIPS 203).
+ *
+ * Selects the parameter set (security category) of an ML-KEM operation:
+ * #IMB_ML_KEM_512 (category 1), #IMB_ML_KEM_768 (category 3) or
+ * #IMB_ML_KEM_1024 (category 5).
  */
 typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB_ML_KEM_ALG;
 
-/**
- * Encoded encapsulation (public) key, decapsulation (private) key and
+/* Encoded encapsulation (public) key, decapsulation (private) key and
  * ciphertext sizes in bytes, and the fixed shared-secret size. See FIPS 203
- * Section 8, Table 2.
- */
+ * Section 8, Table 2. */
 #define IMB_ML_KEM_512_PUBKEY_BYTES     800
 #define IMB_ML_KEM_512_PRIVKEY_BYTES    1632
 #define IMB_ML_KEM_512_CIPHERTEXT_BYTES 768
@@ -2178,13 +2233,13 @@ typedef enum { IMB_ML_KEM_512 = 1, IMB_ML_KEM_768 = 2, IMB_ML_KEM_1024 = 3 } IMB
 #define IMB_ML_KEM_1024_PRIVKEY_BYTES    3168
 #define IMB_ML_KEM_1024_CIPHERTEXT_BYTES 1568
 
-/* Shared secret size in bytes: fixed across all ML-KEM parameter sets */
+/** Shared secret size in bytes: fixed across all ML-KEM parameter sets */
 #define IMB_ML_KEM_SHARED_SECRET_BYTES 32
 
-/* Key generation seed (FIPS 203 "d" || "z") size in bytes. */
+/** Key generation seed (FIPS 203 "d" || "z") size in bytes. */
 #define IMB_ML_KEM_KEYGEN_SEED_BYTES 64
 
-/* Encapsulation randomness (FIPS 203 "m") size in bytes. */
+/** Encapsulation randomness (FIPS 203 "m") size in bytes. */
 #define IMB_ML_KEM_ENCAP_SEED_BYTES 32
 
 /**
@@ -3668,8 +3723,13 @@ imb_clear_mem(void *mem, const size_t size);
 #endif
 
 #ifndef NO_IPSECMB_V2_COMPATIBILITY
-/*
+/**
+ * @name v2 API compatibility macros
+ *
  * Wrapper macros to secure compatibility between v3 and v2 API.
+ * Each IMB_XXX() macro maps directly to the imb_xxx() function of the
+ * same name, which is documented above.
+ * @{
  */
 #define IMB_GET_NEXT_JOB(_mgr)       imb_get_next_job(_mgr)
 #define IMB_SUBMIT_JOB(_mgr)         imb_submit_job(_mgr)
@@ -3855,6 +3915,8 @@ imb_clear_mem(void *mem, const size_t size);
 
 #define IMB_SM4_KEYEXP(_mgr, _key, _exp_enc_key, _exp_dec_key)                                     \
         imb_sm4_keyexp(_key, _exp_enc_key, _exp_dec_key, _mgr)
+
+/** @} */
 
 #endif /* NO_IPSECMB_V2_COMPATIBILITY */
 
