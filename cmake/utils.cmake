@@ -63,6 +63,18 @@ macro(imb_set_proj_defaults)
   set(EXTRA_CFLAGS
       ""
       CACHE STRING "Extra compiler flags")
+  set(SANITIZERS
+      ""
+      CACHE
+        STRING
+        "Sanitizers to instrument the test applications with (list of: address, undefined, thread, memory, leak)"
+  )
+  option(SANITIZE_LIB
+         "Also instrument the library C sources with the selected sanitizers"
+         OFF)
+  set(SANITIZER_SUPPRESSIONS
+      ""
+      CACHE STRING "Path to a LeakSanitizer suppressions file")
 
   # disable all SAFE options when SAFE_OPTIONS false
   if(NOT SAFE_OPTIONS)
@@ -84,6 +96,9 @@ macro(imb_set_proj_defaults)
       BUILD_SHARED_LIBS
       CMAKE_VERBOSE_MAKEFILE
       CONSTANT_TIME_VALIDATION
+      SANITIZERS
+      SANITIZE_LIB
+      SANITIZER_SUPPRESSIONS
       EXTRA_CFLAGS)
 
   # clear default release build C Compiler Flags
@@ -126,6 +141,7 @@ macro(imb_set_proj_defaults)
   message(STATUS "BUILD_LIBRARY_ONLY...      ${BUILD_LIBRARY_ONLY}")
   message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
   message(STATUS "CONSTANT_TIME_VALIDATION... ${CONSTANT_TIME_VALIDATION}")
+  message(STATUS "SANITIZERS...              ${SANITIZERS}")
   message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
   if(${CMAKE_GENERATOR_PLATFORM})
     message(STATUS "GENERATOR PLATFORM...      ${CMAKE_GENERATOR_PLATFORM}")

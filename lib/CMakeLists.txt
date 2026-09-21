@@ -317,6 +317,14 @@ endif()
 # add user defined cflags
 string(APPEND CMAKE_C_FLAGS " ${EXTRA_CFLAGS}")
 
+# ##############################################################################
+# optional sanitizer instrumentation of the library C sources
+# ##############################################################################
+if(SANITIZE_LIB)
+  imb_san_strip_incompatible_flags()
+  imb_target_add_sanitizers(${LIB})
+endif()
+
 # add library definitions to all C source files
 foreach(FILE ${SRC_FILES_C})
   set_source_files_properties(${FILE} PROPERTIES COMPILE_DEFINITIONS

@@ -145,6 +145,76 @@ ctest -T memcheck
   by Valgrind in this mode should be treated as a potential constant-time violation
   (or a real uninitialised-memory bug) and investigated.
 
+- To build the KAT test application with sanitizer instrumentation:
+```
+cmake -DSANITIZERS="address;undefined" ..
+```
+  Note that only `imb-kat` is instrumented at the moment. The other test and
+  example applications are built as usual, so the option has no effect on
+  them. With `SANITIZE_LIB` enabled they do link the sanitizer runtime,
+  because they consume the instrumented library.
+
+  Supported sanitizers are `address`, `undefined`, `thread`, `memory` and
+  `leak`. `address`, `thread` and `memory` are mutually exclusive and have to
+  be used in separate builds. `leak` is implied by `address` and is dropped
+  when both are given. Each requested sanitizer is probed at configure time,
+  so a missing runtime library (e.g. `libasan` / `compiler-rt`) is reported
+  immediately.
+
+  Recommended combination, and the one the KAT suite is verified against:
+```
+cmake -DSANITIZERS="address;undefined" -DSANITIZE_LIB=ON ..
+```
+
+  Per-sanitizer notes:
+
+  | Sanitizer   | Status                                                     |
+  |-------------|------------------------------------------------------------|
+  | `address`   | works, recommended                                          |
+  | `undefined` | works, recommended                                          |
+  | `leak`      | works; the KAT suite is leak free                           |
+  | `thread`    | works, but the run-time aborts with `unexpected memory mapping` when the kernel uses more than 28 bits of mmap randomisation. Run the tests under `setarch -R`, or `sysctl -w vm.mmap_rnd_bits=28`. |
+  | `memory`    | **not usable with this library** (clang only feature). MemorySanitizer needs every memory write to be instrumented, but the hand-written NASM/GAS code cannot be and their results are always reported as uninitialised. |
+
+  Platform support:
+
+  | Platform         | Support                                                |
+  |------------------|--------------------------------------------------------|
+  | Linux (gcc)      | `address`, `undefined`, `leak`, `thread`. GCC has no MemorySanitizer, so `memory` fails the configure-time probe |
+  | Linux (clang)    | `address`, `undefined`, `leak`, `thread`. `memory` builds but is not usable, see above |
+  | FreeBSD (clang)  | `address`, `undefined`, `thread`. No LeakSanitizer, so `leak` is dropped and leak detection is disabled in `ASAN_OPTIONS`. `memory` builds but is not usable, see above |
+  | Windows (MSVC)   | `address` only (`/fsanitize=address`, Visual Studio 2019 16.9 or newer); the others are ignored with a warning |
+  | Windows (MinGW)  | none - the option is ignored with a warning             |
+
+  On Windows the AddressSanitizer runtime DLL is located next to `cl.exe` and
+  is added to `PATH` automatically when the tests are run through CTest.
+
+  Only the KAT application is instrumented by default.
+  The AddressSanitizer allocator interceptors are process wide, so heap errors
+  triggered through the library are still caught, but red zones and undefined
+  behavior sanitizer checks inside the library itself require the library to
+  be instrumented too:
+```
+cmake -DSANITIZERS="address;undefined" -DSANITIZE_LIB=ON ..
+```
+  Only the C sources of the library are instrumented and the hand-written assembly is
+  never touched. Which can result in false positives (typically `stack-buffer-overflow`
+  reports on the register spill areas of the assembly code). For this reason
+  the option is off by default.
+
+  Run the instrumented tests as usual; the sanitizer runtime options are set on
+  the CTest tests, so that a report fails the test instead of only being
+  printed:
+```
+cmake --build . --target imb-kat
+ctest -R KAT
+```
+
+  A LeakSanitizer suppressions file can be supplied with:
+```
+cmake -DSANITIZERS=address -DSANITIZER_SUPPRESSIONS=/path/to/lsan.supp ..
+```
+
 ## Creating Installation Packages
 
 ### Linux Packages (DEB and RPM)

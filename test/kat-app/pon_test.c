@@ -454,8 +454,14 @@ pon_job_validate(struct IMB_JOB *job, const void *ctx_in)
                         ((((uint16_t) ctx->in_text[0]) << 8) | ((uint16_t) ctx->in_text[1])) >> 2;
 
                 if (pli > 4) {
-                        const uint32_t crc_in_msg =
-                                *((const uint32_t *) &ctx->in_text[8 + pli - 4]);
+                        /* The CRC sits at an arbitrary offset in the message.
+                         * x86 loads it misaligned without trouble, but a
+                         * misaligned uint32_t dereference is undefined
+                         * behaviour in C and is reported by UBSan, so use
+                         * memcpy() to express the same load. */
+                        uint32_t crc_in_msg;
+
+                        memcpy(&crc_in_msg, &ctx->in_text[8 + pli - 4], sizeof(crc_in_msg));
                         if (crc_in_msg != crc_output) {
                                 printf("CRC mismatch on decrypt! "
                                        "expected 0x%08x, received 0x%08x\n",

@@ -37,6 +37,9 @@ else()
   include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
 endif()
 
+# drop toolchain flags that are incompatible with the sanitizer runtime
+imb_san_strip_incompatible_flags()
+
 # ##############################################################################
 # add targets
 # ##############################################################################
@@ -57,6 +60,14 @@ target_compile_definitions(
   ${TEST_APP} PRIVATE ${APP_DEFINES}
                       KAT_APP_VECTOR_DIR="${CMAKE_CURRENT_SOURCE_DIR}/vectors")
 
+# apply sanitizer instrumentation when requested (see cmake/sanitizers.cmake).
+# This application is always instrumented. The library is instrumented only
+# when SANITIZE_LIB is enabled: the ASan allocator interceptors are process
+# wide, so heap errors triggered through the library are still caught, but
+# redzones and UBSan checks inside the library itself require the library to
+# be built with SANITIZE_LIB=ON.
+imb_target_add_sanitizers(${TEST_APP})
+
 # ##############################################################################
 # include tests
 # ##############################################################################
@@ -75,4 +86,35 @@ if(WINDOWS AND BUILD_SHARED_LIBS AND TARGET ${IPSEC_MB_LIB})
     APPEND
     PROPERTY ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:${IPSEC_MB_LIB}>")
+endif()
+
+# ##############################################################################
+# sanitizer runtime configuration for the tests
+# ##############################################################################
+if(IMB_SAN_ENABLED)
+  get_property(_kat_tests DIRECTORY PROPERTY TESTS)
+
+  # without these the sanitizers only print a report and the test still passes
+  if(IMB_SAN_TEST_ENV)
+    set_property(
+      TEST ${_kat_tests}
+      APPEND
+      PROPERTY ENVIRONMENT ${IMB_SAN_TEST_ENV})
+  endif()
+
+  # the MSVC AddressSanitizer runtime DLL is not in the default search path
+  if(IMB_SAN_RUNTIME_DIR)
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+      set_property(
+        TEST ${_kat_tests}
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION
+                 "PATH=path_list_prepend:${IMB_SAN_RUNTIME_DIR}")
+    else()
+      message(
+        WARNING
+          "CMake 3.22 or newer is required to extend PATH for the tests. "
+          "Add ${IMB_SAN_RUNTIME_DIR} to PATH manually before running ctest.")
+    endif()
+  endif()
 endif()
