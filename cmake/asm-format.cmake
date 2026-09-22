@@ -1,5 +1,5 @@
 # cmake-format: off
-# Copyright (c) 2025, Intel Corporation
+# Copyright (c) 2025-2026, Intel Corporation
 #
 # SPDX-License-Identifier: BSD-3-Clause
 # cmake-format: on

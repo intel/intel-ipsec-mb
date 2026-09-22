@@ -2,7 +2,7 @@
 
 """
 **********************************************************************
-  Copyright(c) 2021-2024, Intel Corporation All rights reserved.
+  Copyright(c) 2021-2026, Intel Corporation All rights reserved.
 
   SPDX-License-Identifier: BSD-3-Clause
 **********************************************************************

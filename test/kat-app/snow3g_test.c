@@ -1,5 +1,5 @@
 /*****************************************************************************
- Copyright (c) 2009-2024, Intel Corporation
+ Copyright (c) 2009-2026, Intel Corporation
  Copyright (c) 2022, Nokia
 
  SPDX-License-Identifier: BSD-3-Clause
