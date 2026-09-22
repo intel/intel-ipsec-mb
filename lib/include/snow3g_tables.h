@@ -8,13 +8,6 @@
 #define _SNOW3G_TABLES_H_
 
 #include <stdint.h>
-#include "constant_lookup.h"
-
-#if defined(AVX) || defined(AVX2)
-#define SNOW3G_SAFE_LUT8(table, idx, size) LOOKUP8_AVX(table, idx, size)
-#else /* SSE */
-#define SNOW3G_SAFE_LUT8(table, idx, size) LOOKUP8_SSE(table, idx, size)
-#endif /* AVX || AVX2 */
 
 extern const int snow3g_table_A_mul[256];
 extern const int snow3g_table_A_div[256];

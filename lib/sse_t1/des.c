@@ -13,7 +13,6 @@
 #include "include/des.h"
 #include "include/des_utils.h"
 #include "include/clear_regs_mem.h"
-#include "include/constant_lookup.h"
 #include "include/memcpy.h"
 #include "include/arch_sse_type1.h"
 

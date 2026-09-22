@@ -13,7 +13,6 @@
 
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
-%include "include/constant_lookup.inc"
 %include "include/align_avx.inc"
 
 mksection .rodata
