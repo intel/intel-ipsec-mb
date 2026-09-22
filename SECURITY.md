@@ -12,10 +12,11 @@ Versions of the library that are currently being supported with security updates
 
 | Version | Supported          | Frameworks using this version             |
 | ------- | ------------------ | ----------------------------------------- |
+| 3.0     | :white_check_mark: | -                                         |
 | 2.0     | :white_check_mark: | DPDK 24.11, OpenSSL QAT Engine, VPP, SPDK |
-| 1.5     | :white_check_mark: | DPDK 23.11, OpenSSL QAT Engine, VPP, SPDK |
+| 1.5     | :x:                | DPDK 23.11, OpenSSL QAT Engine, VPP, SPDK |
 | 1.4     | :x:                | DPDK 23.07                                |
-| 1.3     | :white_check_mark: | DPDK 22.11, OpenSSL QAT Engine, VPP, SPDK |
+| 1.3     | :x:                | DPDK 22.11, OpenSSL QAT Engine, VPP, SPDK |
 | 1.2     | :x:                | -                                         |
 | 1.1     | :x:                | -                                         |
 | 1.0     | :x:                | DPDK 21.11                                |
@@ -90,14 +91,15 @@ incorrect input length.
 Lookups which depend on sensitive information are implemented with constant
 time functions.
 
-Algorithms where these constant time functions are used are the following:  
-- DES: SSE, AVX and AVX2 implementations  
-- KASUMI: all architectures  
-- SNOW3G: all architectures  
+Algorithms where the SAFE_LOOKUP build option selects constant time lookups are
+the following:
+- SNOW3G (UEA2 and UIA2): single buffer and 2 buffer S2 box paths and the
+  MULa/DIVa alpha table paths, in the SSE, AVX2 and AVX512 Type 1 (non-VAES)
+  implementations
 
 If SAFE_LOOKUP is not enabled in the build (e.g. `cmake -DSAFE_LOOKUP=OFF ..`) then the
-algorithms listed above may be susceptible to timing attacks which could expose
-the cryptographic key.
+code paths listed above fall back to direct table indexing and may be
+susceptible to timing attacks which could expose the cryptographic key.
 
 ### SAFE_OPTIONS
 
