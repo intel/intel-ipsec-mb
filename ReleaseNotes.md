@@ -6,6 +6,10 @@ General
 - Removed support for legacy Makefile-based builds and legacy Windows `.mak` build scripts.
 - Updated CI workflows, project documentation, and RPM packaging instructions to use CMake-only build flows.
 - Updated GCC and Clang builds to use the C11 standard, aligning them with the MSVC builds.
+- Replaced full BSD-3-Clause license text in source files with SPDX license identifiers.
+- Added `imb-provider`, an OpenSSL 3.x test provider built on top of the library, supporting
+  AES, SM4, ChaCha20, Poly1305, ChaCha20-Poly1305, SHA, HMAC-SHA, ML-DSA and ML-KEM
+  operations, including asynchronous operation support.
 
 Library
 - Changed library initialization to fail closed on self-test failure: all job, burst, direct and
@@ -24,11 +28,13 @@ Library
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Removed ZUC-EEA3-256 and ZUC-EIA3-256 algorithms.
 - Added SHA3-224, SHA3-256, SHA3-384 and SHA3-512 base implementations.
+- Added HMAC-SHA3-224, HMAC-SHA3-256, HMAC-SHA3-384 and HMAC-SHA3-512 support
+  with base and AVX512 implementations.
 - Added SHAKE128 and SHAKE256 base implementations.
 - Added AVX2 Type 1 4-lane multi-buffer implementations of SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128 and SHAKE256.
 - Removed KASUMI bit-length support and corresponding API.
 - Removed non-byte-aligned message length/offset support from wireless job APIs and direct APIs (AES-CMAC, ZUC-EIA3, SNOW3G-UIA2/UEA2, KASUMI-UEA1).
-- Added support for zero-length messages in HMAC-SHA, HMAC-MD5 and HMAC-SM3 algorithms.
+- Added support for zero-length messages in HMAC-SHA, HMAC-SHA3, HMAC-MD5 and HMAC-SM3 algorithms.
 - Added ZUC-NEA6 SSE, AVX2 and AVX512 implementations.
 - Added SNOW5G-NEA4 SSE type 1 and AVX512 type 2 implementations.
 - Added AES-NIA5 SSE type 1 and AVX512 type 2 implementations.
@@ -40,14 +46,20 @@ Library
 - Added SNOW5G-NCA4 SSE type 1 and AVX512 type 2 implementations.
 - Added new SSE type 1 implementation of DES block encryption that is used in
   DES, DOCSIS-DES and 3DES/TDES algorithms across SSE and AVX2 architecture types.
-- Removed ZUC-EEA3 and ZUC-EIA3 direct API support.
-- Removed SNOW3G-UEA2 and SNOW3G-UIA2 direct API support.
-- Removed KASUMI-F8 and KASUMI-F9 direct API support.
+- Removed ZUC-EEA3 and ZUC-EIA3 direct API support. The algorithms remain available
+  through the job API.
+- Removed SNOW3G-UEA2 and SNOW3G-UIA2 direct API support. The algorithms remain
+  available through the job API.
+- Removed KASUMI-F8 and KASUMI-F9 direct API support. The algorithms remain available
+  through the job API.
+- Removed CRC direct API support. All CRC types remain available through the job API.
 - Added ML-DSA (FIPS 204) support for ML-DSA-44, ML-DSA-65 and ML-DSA-87.
 - Added ML-KEM (FIPS 203) support for ML-KEM-512, ML-KEM-768 and ML-KEM-1024.
 - Added AVX2 NTT optimization for ML-KEM (FIPS 203).
 - Added AVX2 Type 2 CRC implementations using VPCLMULQDQ 256-bit polynomial folding for all CRC types.
-- Added constant time library build based on Valgrind memory check.
+- Added `CONSTANT_TIME_VALIDATION` build option that marks secret data for Valgrind
+  memcheck, so that secret dependent branches and memory accesses in the ML-DSA,
+  ML-KEM and job APIs are reported at run time.
 - Removed QUIC API support.
 - Removed custom cipher mode support (`IMB_CIPHER_CUSTOM` and `IMB_JOB::cipher_func`).
 - Removed custom hash algorithm support (`IMB_AUTH_CUSTOM` and `IMB_JOB::hash_func`).
@@ -73,7 +85,7 @@ Test Applications
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Removed custom cipher mode test coverage.
 - Removed custom hash algorithm test coverage.
-- Added SHA3 and SHAKE support to imb-kat, imb-xvalid and imb-acvp applications.
+- Added SHA3, SHAKE and HMAC-SHA3 support to imb-kat, imb-xvalid and imb-acvp applications.
 - Added mixed SHA3/SHAKE algorithm batch test to imb-kat application.
 - Added new zero length message test application.
 - Added zero-length message HMAC-SHA and HMAC-MD5 test vectors.
@@ -86,6 +98,13 @@ Test Applications
 - Updated the Project Wycheproof test vectors to the upstream v1 vector set,
   adding 154 new test cases.
 - Added ABI check application to verify callee-saved registers are correctly preserved.
+- Added new `imb-oob` application that detects out-of-bounds reads and writes past
+  declared message boundaries by placing guard pages next to job buffers. It covers
+  single job, type-specific burst and generic burst submit paths, as well as the
+  direct ML-DSA and ML-KEM APIs.
+- Added ML-DSA and ML-KEM API fuzz tests to the fuzz application.
+- Added functional tests for the `imb-provider` OpenSSL provider, covering supported
+  cipher, hash, HMAC and PQC operations as well as asynchronous operation.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
@@ -104,6 +123,8 @@ Performance Applications
 Tools
 - Added asm-format.py tool that formats assembly source files.
 - Added asm-cov.py tool that produces x86 assembly line and branch coverage reports.
+- Added special-chars.py tool, with `special-chars` and `special-chars-fix` build
+  targets, that detects and replaces non-ASCII characters in source files.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
