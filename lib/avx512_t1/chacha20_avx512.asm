@@ -1777,8 +1777,9 @@ align_label
 exit_gen_keystr:
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
-%endif
+%else
         vzeroupper
+%endif
 %ifndef LINUX
 %assign i 0
 %assign j 6

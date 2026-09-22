@@ -81,7 +81,9 @@ ghash_pre_vaes_avx2:
         PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
 %ifdef SAFE_DATA
-        clear_scratch_xmms_avx_asm
+        clear_scratch_ymms_asm
+%else
+        vzeroupper
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm6, [rsp + 0*16]

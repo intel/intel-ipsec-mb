@@ -352,7 +352,7 @@ align_label
 %ifdef SAFE_DATA
         ;; clear register contents
         ;; no temporary LFSR or keystream data is kept on the stack
-        clear_scratch_ymms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif

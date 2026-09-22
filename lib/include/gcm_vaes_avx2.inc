@@ -2201,7 +2201,9 @@ align_label
 %macro FUNC_RESTORE 0
 
 %ifdef SAFE_DATA
-        clear_scratch_xmms_avx_asm
+        clear_scratch_ymms_asm
+%else
+        vzeroupper
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm15, [rsp + LOCAL_STORAGE + 9*16]

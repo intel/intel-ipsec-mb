@@ -1215,8 +1215,9 @@ align_label
 
 %ifdef SAFE_DATA
         clear_scratch_xmms_avx_asm
-%endif ;; SAFE_DATA
+%else
         vzeroupper
+%endif ;; SAFE_DATA
 
 %endmacro                       ; AES128_CTR_PON
 

@@ -1149,7 +1149,7 @@ kf1600_x4_avx2_loop:
 ; This wrapper makes it safe to call from C:
 ;   Linux: just calls the inner function and issues vzeroupper
 ;   Win64: also translates arg1 rcx->rdi and saves/restores
-;          rsi and ymm6-ymm15 (callee-saved on Windows)
+;          rsi and xmm6-xmm15 (callee-saved on Windows)
 ; ============================================================
 align_function
 MKGLOBAL(keccak_f1600_x4_avx2_ossl,function,internal)
@@ -1157,32 +1157,32 @@ keccak_f1600_x4_avx2_ossl:
 %ifndef LINUX
         push    rdi
         push    rsi
-        sub     rsp, 10*32 + 8  ; 10 ymm regs + 8B alignment pad
-        vmovdqu [rsp + 0*32], ymm6
-        vmovdqu [rsp + 1*32], ymm7
-        vmovdqu [rsp + 2*32], ymm8
-        vmovdqu [rsp + 3*32], ymm9
-        vmovdqu [rsp + 4*32], ymm10
-        vmovdqu [rsp + 5*32], ymm11
-        vmovdqu [rsp + 6*32], ymm12
-        vmovdqu [rsp + 7*32], ymm13
-        vmovdqu [rsp + 8*32], ymm14
-        vmovdqu [rsp + 9*32], ymm15
+        sub     rsp, 10*16 + 8  ; 10 xmm regs + 8B alignment pad
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
+        vmovdqu [rsp + 3*16], xmm9
+        vmovdqu [rsp + 4*16], xmm10
+        vmovdqu [rsp + 5*16], xmm11
+        vmovdqu [rsp + 6*16], xmm12
+        vmovdqu [rsp + 7*16], xmm13
+        vmovdqu [rsp + 8*16], xmm14
+        vmovdqu [rsp + 9*16], xmm15
         mov     rdi, rcx        ; translate Windows arg1 -> Linux arg1
 %endif
         call    keccak_f1600_x4_avx2
 %ifndef LINUX
-        vmovdqu ymm6,  [rsp + 0*32]
-        vmovdqu ymm7,  [rsp + 1*32]
-        vmovdqu ymm8,  [rsp + 2*32]
-        vmovdqu ymm9,  [rsp + 3*32]
-        vmovdqu ymm10, [rsp + 4*32]
-        vmovdqu ymm11, [rsp + 5*32]
-        vmovdqu ymm12, [rsp + 6*32]
-        vmovdqu ymm13, [rsp + 7*32]
-        vmovdqu ymm14, [rsp + 8*32]
-        vmovdqu ymm15, [rsp + 9*32]
-        add     rsp, 10*32 + 8
+        vmovdqu xmm6,  [rsp + 0*16]
+        vmovdqu xmm7,  [rsp + 1*16]
+        vmovdqu xmm8,  [rsp + 2*16]
+        vmovdqu xmm9,  [rsp + 3*16]
+        vmovdqu xmm10, [rsp + 4*16]
+        vmovdqu xmm11, [rsp + 5*16]
+        vmovdqu xmm12, [rsp + 6*16]
+        vmovdqu xmm13, [rsp + 7*16]
+        vmovdqu xmm14, [rsp + 8*16]
+        vmovdqu xmm15, [rsp + 9*16]
+        add     rsp, 10*16 + 8
         pop     rsi
         pop     rdi
 %endif

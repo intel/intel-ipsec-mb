@@ -376,6 +376,10 @@ align_label
         ;; XMM-form vpxorq + vzeroupper is faster than ZMM-form and
         ;; clears all 512 bits (upper 256 bits zeroed by vzeroupper).
         clear_scratch_zmms_asm
+%else
+        ;; avoid AVX-SSE transition penalty (clear_scratch_zmms_asm
+        ;; issues vzeroupper in the SAFE_DATA case)
+        vzeroupper
 %endif
 
         or              dword [job + _status], IMB_STATUS_COMPLETED_AUTH

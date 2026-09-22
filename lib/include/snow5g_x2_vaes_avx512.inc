@@ -149,7 +149,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_FUNC_END 0
 %ifdef SAFE_DATA
-        clear_scratch_ymms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif

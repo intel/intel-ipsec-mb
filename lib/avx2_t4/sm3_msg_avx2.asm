@@ -270,6 +270,9 @@ align_label
 
         vmovdqu [rsp + _B + 0*16], ymm0
         vmovdqu [rsp + _B + 2*16], ymm0
+
+        ;; 256-bit stores above dirty the upper YMM state
+        vzeroupper
 %endif
         FUNC_END
         ret
