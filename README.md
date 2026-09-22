@@ -107,7 +107,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | SM4-GCM        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(7)   | [S1]   | [S1]     | [A2-4] |
 | AES-NEA5       | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  | [A2-1] | [A2-2]   |  <---  |
 | AES-NCA5       | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  | [A2-1] | [A2-2]   |  <---  |
-| ZUC-NCA6       | Y   x4 |  <---  | Y(5)x4 |  <---  |  <---  |  <---  |  <---  |  <---  | Y    x16 |  <---  |
+| ZUC-NCA6       | Y   x4 |  <---  | Y(4)x4 |  <---  |  <---  |  <---  |  <---  |  <---  | Y    x16 |  <---  |
 | SNOW5G-NCA4    | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y     x2 |  <---  |
 +------------------------------------------------------------------------------------------------------------+
 
@@ -178,13 +178,12 @@ Table 2. List of supported integrity algorithms and their implementations.
 | HMAC-SHA3-512     | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y      |  <---   |  <---  |
 | SHAKE128          | Y      |  <---  |  <---  | Y   x4 |  <---  |  <---  |  <---  | Y   x4 |  <---   |  <---  |
 | SHAKE256          | Y      |  <---  |  <---  | Y   x4 |  <---  |  <---  |  <---  | Y   x4 |  <---   |  <---  |
-| AES-NIA5          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---   |  <---  |
-| AES-NIA5          | Y  by8 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  by32 |  <---  |
-| AES-NCA5          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---   |  <---  |
-| ZUC-NIA6          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y by32  |  <---  |
-| ZUC-NCA6          | Y   x4 |  <---  | Y(3)x4 |  <---  |  <---  |  <---  |  <---  |  <---  | Y by32  |  <---  |
-| SNOW5G-NIA4       | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y    x2 |  <---  |
-| SNOW5G-NCA4       | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y    x2 |  <---  |
+| AES-NIA5          | Y  by4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y   by4 |  <---  |
+| AES-NCA5          | Y  by4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y   by4 |  <---  |
+| ZUC-NIA6          | Y  by4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y   by4 |  <---  |
+| ZUC-NCA6          | Y  by4 |  <---  | Y(3)by4|  <---  |  <---  |  <---  |  <---  |  <---  | Y   by4 |  <---  |
+| SNOW5G-NIA4       | Y  by4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y   by4 |  <---  |
+| SNOW5G-NCA4       | Y  by4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y   by4 |  <---  |
 +--------------------------------------------------------------------------------------------------------------+
 ```
 Notes:  
@@ -278,7 +277,7 @@ Notes:
 
 ## 2. Processor Extensions and Architecture Types
 
-Table 4. Processor extensions used in the library
+Table 5. Processor extensions used in the library
 ```
 +---------------------------------------------------------------------------------------+
 | Architecture  | Instruction Extensions                 | Example Products             |
@@ -346,11 +345,14 @@ security updates.
 
 - test - Library test applications
 - perf - Library performance application
+- examples - Library usage examples
+- tools - Development and code analysis tools
 - lib - Library source files
 - lib/x86_64 - Non-SIMD routines
 - lib/sse_* - Intel(R) SSE optimized routines
 - lib/avx2_* - Intel(R) AVX2 optimized routines
 - lib/avx512_* - Intel(R) AVX512 optimized routines
+- lib/avx10_* - Intel(R) AVX10 optimized routines
 
 **Note:**   
 There is just one branch used in the project. All development is done on the main branch.  
@@ -439,6 +441,18 @@ See [INSTALL](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md) for
 how to enable the build and run the checks.
 
 ## 9. Backwards compatibility
+
+In version 3.0, the following interfaces have been removed:
+- direct API for wireless algorithms (ZUC-EEA3/EIA3, SNOW3G-UEA2/UIA2 and
+  KASUMI-F8/F9) and the CRC direct API - these algorithms remain available
+  through the job API;
+- custom cipher mode (`IMB_CIPHER_CUSTOM`) and custom hash algorithm
+  (`IMB_AUTH_CUSTOM`) support;
+- QUIC API;
+- SNOW-V cipher and SNOW-V AEAD, AES-CBCS 1:9 cipher, AES-CTR bit-length
+  variant, ZUC-EEA3-256 and ZUC-EIA3-256 algorithms;
+- non-byte-aligned message length and offset support in wireless algorithms,
+  including the KASUMI bit-length API.
 
 In version 1.4, backward compile time symbol compatibility with
 library version 0.53 has been removed.
@@ -680,6 +694,18 @@ The self-test consists of Cryptographic algorithm test (known answer test) on fo
   - SHA3-512  
   - SHAKE-128  
   - SHAKE-256  
+  - HMAC-SHA3-224  
+  - HMAC-SHA3-256  
+  - HMAC-SHA3-384  
+  - HMAC-SHA3-512  
+- KAT_Signature:
+  - ML-DSA-44  
+  - ML-DSA-65  
+  - ML-DSA-87  
+- KAT_KEM:
+  - ML-KEM-512  
+  - ML-KEM-768  
+  - ML-KEM-1024  
 
 KAT_Cipher and KAT_AEAD types conduct tests in encrypt and decrypt cipher directions. However, the corrupt callback is made only for the encrypt direction. No callback is made for the decrypt direction at the moment.
 
