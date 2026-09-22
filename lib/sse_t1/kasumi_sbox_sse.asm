@@ -26,19 +26,35 @@
 %include "include/align_sse.inc"
 %include "include/clear_regs.inc"
 
-;; Borrow the shared boolean-equation mask constants from kasumi_sbox_avx2.asm.
-;; These 32-byte (256-bit) tables are accessed in two 16-byte halves:
-;;   pass A uses [rel sbox_mask_x(i)]      (offset +0,  first  16 bytes)
-;;   pass B uses [rel sbox_mask_x(i) + 16] (offset +16, second 16 bytes)
-extern sbox_mask_x0, sbox_mask_x1, sbox_mask_x2, sbox_mask_x3
-extern sbox_mask_x4, sbox_mask_x5, sbox_mask_x6, sbox_mask_x7
-extern sbox_mask_x8, sbox_mask_last
-extern isolate_input_bits_0, isolate_input_bits_1, isolate_input_bits_2
-extern isolate_input_bits_3, isolate_input_bits_4, isolate_input_bits_5
-extern isolate_input_bits_6, isolate_input_bits_7, isolate_input_bits_8
-
 mksection .rodata
 default rel
+
+;; Each 32-byte entry is layout-sensitive: bytes [0:15] are SSE Pass A
+;; and bytes [16:31] are SSE Pass B.
+align 32
+;; Boolean-equation masks for the stitched S(7/9) S-box.
+sbox_mask_x0     dq  0xB3FF347F3AFFDEFF, 0x77FF9DBF93DF756F, 0x6BFF5B7FAFEFABFF, 0x7FFF37FF7FFFEFFF
+sbox_mask_x1     dq  0x1ABFEB7F77FF5F6F, 0xFBFF2D7FEF3FC6BF, 0x3EFFBDBF7FFF377F, 0x55FF5FFFDFBFB7FF
+sbox_mask_x2     dq  0xBD7FCDBFD6FFF7DF, 0x5DFF7EFF25B77BFF, 0xFF7FAFFFF7FFDFBF, 0x9BBF9ABFAFFF7FFF
+sbox_mask_x3     dq  0xEDBF97FFFB7F7BBF, 0xBFFFB6FFCFCF9ACF, 0xB7BFDFFF9BFFDDFF, 0xEFDFE37FBBDFFBFF
+sbox_mask_x4     dq  0xCEFFE7DF9FBF9BD7, 0xFEFFDF7FF6EFE37F, 0xDFFFEEFFDEFFE7FF, 0xEEFFFDFFF5FF9DFF
+sbox_mask_x5     dq  0xF0FFF9FFE3BFE3E7, 0xCF7FE7BFF8F7FC77, 0xEFFFF7FFED7FF9DF, 0xF3FFFDDFC6EFDF7F
+sbox_mask_x6     dq  0xFF3FFE1FFC3FFC07, 0xEFFFF83FFF07FF87, 0xF5FFF9FFF1BFFEFF, 0xFCFFFE7FF8FFE6BF
+sbox_mask_x7     dq  0xffffffffffffffff, 0xF1BFffffffffffff, 0xF9FFFEDFFE3FFF3F, 0xFF7FFF9FFF77F8DF
+sbox_mask_x8     dq  0xffffffffffffffff, 0xFE3Fffffffffffff, 0xFE3FFF1FFFCFFFDF, 0xFF9FFFEFFF87FF1F
+sbox_mask_last   dq  0xFFC0FFF0FFE0FFF8, 0xFFE0FFC0FFFCFFFC, 0xFFC0FFE0FFF8FFF0, 0xFFE0FFF8FFF8FFF0
+
+align 32
+;; Input-isolation masks for the nine bits used by the stitched S-box.
+isolate_input_bits_0    dq  0x0001000100010001, 0x0080000100010001, 0x0080008000800080, 0x0080008000800080
+isolate_input_bits_1    dq  0x0002000200020002, 0x0100000200020002, 0x0100010001000100, 0x0100010001000100
+isolate_input_bits_2    dq  0x0004000400040004, 0x0200000400040004, 0x0200020002000200, 0x0200020002000200
+isolate_input_bits_3    dq  0x0008000800080008, 0x0400000800080008, 0x0400040004000400, 0x0400040004000400
+isolate_input_bits_4    dq  0x0010001000100010, 0x0800001000100010, 0x0800080008000800, 0x0800080008000800
+isolate_input_bits_5    dq  0x0020002000200020, 0x1000002000200020, 0x1000100010001000, 0x1000100010001000
+isolate_input_bits_6    dq  0x0040004000400040, 0x2000004000400040, 0x2000200020002000, 0x2000200020002000
+isolate_input_bits_7    dq  0x0000000000000000, 0x4000000000000000, 0x4000400040004000, 0x4000400040004000
+isolate_input_bits_8    dq  0x0000000000000000, 0x8000000000000000, 0x8000800080008000, 0x8000800080008000
 
 align 16
 ;; Nibble mask: 0x0F per byte, used to isolate the 4-bit nibbles in the

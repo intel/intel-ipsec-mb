@@ -19,30 +19,8 @@
 mksection .rodata
 default rel
 
-MKGLOBAL(sbox_mask_x0,data,internal)
-MKGLOBAL(sbox_mask_x1,data,internal)
-MKGLOBAL(sbox_mask_x2,data,internal)
-MKGLOBAL(sbox_mask_x3,data,internal)
-MKGLOBAL(sbox_mask_x4,data,internal)
-MKGLOBAL(sbox_mask_x5,data,internal)
-MKGLOBAL(sbox_mask_x6,data,internal)
-MKGLOBAL(sbox_mask_x7,data,internal)
-MKGLOBAL(sbox_mask_x8,data,internal)
-MKGLOBAL(sbox_mask_last,data,internal)
-MKGLOBAL(high_7,data,internal)
-MKGLOBAL(isolate_input_bits_0,data,internal)
-MKGLOBAL(isolate_input_bits_1,data,internal)
-MKGLOBAL(isolate_input_bits_2,data,internal)
-MKGLOBAL(isolate_input_bits_3,data,internal)
-MKGLOBAL(isolate_input_bits_4,data,internal)
-MKGLOBAL(isolate_input_bits_5,data,internal)
-MKGLOBAL(isolate_input_bits_6,data,internal)
-MKGLOBAL(isolate_input_bits_7,data,internal)
-MKGLOBAL(isolate_input_bits_8,data,internal)
-
 align 32
-;; Masks representing the (stitched) S(7/9)-box Boolean equations
-;; Mask bits in positions where corresponding input bit is not a part of the y-equation
+;; Boolean-equation masks for the stitched S(7/9) S-box.
 sbox_mask_x0     dq  0xB3FF347F3AFFDEFF, 0x77FF9DBF93DF756F, 0x6BFF5B7FAFEFABFF, 0x7FFF37FF7FFFEFFF
 sbox_mask_x1     dq  0x1ABFEB7F77FF5F6F, 0xFBFF2D7FEF3FC6BF, 0x3EFFBDBF7FFF377F, 0x55FF5FFFDFBFB7FF
 sbox_mask_x2     dq  0xBD7FCDBFD6FFF7DF, 0x5DFF7EFF25B77BFF, 0xFF7FAFFFF7FFDFBF, 0x9BBF9ABFAFFF7FFF
@@ -55,11 +33,7 @@ sbox_mask_x8     dq  0xffffffffffffffff, 0xFE3Fffffffffffff, 0xFE3FFF1FFFCFFFDF,
 sbox_mask_last   dq  0xFFC0FFF0FFE0FFF8, 0xFFE0FFC0FFFCFFFC, 0xFFC0FFE0FFF8FFF0, 0xFFE0FFF8FFF8FFF0
 
 align 32
-;; Masks which isolate the relevant input bits in each word
-;; e.g. ith iteration isolates ith bit in each of the low 7 words and the (i+7)th bit
-;; in each of the high 9 words.
-;; Therefore in isolate_input_bits_i, the ith bit in each of low 7 words is set, and
-;; the (i+7)th bit in each of the high 9 words is set.
+;; Input-isolation masks for the nine bits used by the stitched S-box.
 isolate_input_bits_0    dq  0x0001000100010001, 0x0080000100010001, 0x0080008000800080, 0x0080008000800080
 isolate_input_bits_1    dq  0x0002000200020002, 0x0100000200020002, 0x0100010001000100, 0x0100010001000100
 isolate_input_bits_2    dq  0x0004000400040004, 0x0200000400040004, 0x0200020002000200, 0x0200020002000200
