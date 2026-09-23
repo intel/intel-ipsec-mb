@@ -112,13 +112,27 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb.7
               ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb-dev.7
         DESTINATION ${MAN_INSTALL_DIR})
 
-# Some distributions (e.g. Fedora/RHEL) do not search LIB_INSTALL_DIR by
-# default, so register it with the dynamic linker.
-option(INSTALL_LDCONFIG_FILE
-       "Install /etc/ld.so.conf.d entry for LIB_INSTALL_DIR" ON)
-if(INSTALL_LDCONFIG_FILE)
-  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
-       "${LIB_INSTALL_DIR}\n")
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
-          DESTINATION /etc/ld.so.conf.d)
+# Some Linux distributions (e.g. Fedora/RHEL) do not search LIB_INSTALL_DIR by
+# default, so register it with the dynamic linker. /etc/ld.so.conf.d is
+# Linux-specific and is not consumed by the FreeBSD loader.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  option(INSTALL_LDCONFIG_FILE
+         "Install /etc/ld.so.conf.d entry for LIB_INSTALL_DIR" ON)
+  if(INSTALL_LDCONFIG_FILE)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
+         "${LIB_INSTALL_DIR}\n")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
+            DESTINATION /etc/ld.so.conf.d)
+  endif()
+
+  # Refresh the linker cache on source installs. Skipped when staging into
+  # DESTDIR (e.g. during package creation), where the packaging scriptlets take
+  # care of it on the target system instead.
+  install(
+    CODE "if(NOT DEFINED ENV{DESTDIR})
+            execute_process(COMMAND ldconfig ERROR_QUIET RESULT_VARIABLE rc)
+            if(NOT rc EQUAL 0)
+              message(WARNING \"ldconfig failed, run it manually\")
+            endif()
+          endif()")
 endif()

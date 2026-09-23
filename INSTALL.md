@@ -325,6 +325,10 @@ cmake --build .
 sudo cmake --install .
 ```
 
+On Linux the install registers the library directory with the dynamic linker
+and refreshes the linker cache, so no manual `ldconfig` call is needed. Set
+`-DINSTALL_LDCONFIG_FILE=OFF` at configuration time to skip this.
+
 To uninstall the library run:   
 `sudo cmake --build . --target uninstall`
 
