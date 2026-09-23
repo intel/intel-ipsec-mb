@@ -111,3 +111,17 @@ install(FILES ${IMB_HDR} DESTINATION ${INCLUDE_INSTALL_DIR})
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb.7
               ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb-dev.7
         DESTINATION ${MAN_INSTALL_DIR})
+
+# Some Linux distributions (e.g. Fedora/RHEL) do not search LIB_INSTALL_DIR by
+# default, so register it with the dynamic linker. /etc/ld.so.conf.d is
+# Linux-specific and is not consumed by the FreeBSD loader.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  option(INSTALL_LDCONFIG_FILE
+         "Install /etc/ld.so.conf.d entry for LIB_INSTALL_DIR" ON)
+  if(INSTALL_LDCONFIG_FILE)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
+         "${LIB_INSTALL_DIR}\n")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
+            DESTINATION /etc/ld.so.conf.d)
+  endif()
+endif()

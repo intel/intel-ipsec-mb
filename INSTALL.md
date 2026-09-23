@@ -263,18 +263,10 @@ To install from a .deb package:
 sudo dpkg -i intel-ipsec-mb_<version>_amd64.deb
 ```
 
-After installation, the library files are installed to `/usr/local/lib`.  
-To ensure the dynamic linker can find the library, you may need to update the linker cache:
-
-```bash
-sudo ldconfig
-```
-
-If the library path is not in the default linker search path, create a configuration file:
-```bash
-echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/intel-ipsec-mb.conf
-sudo ldconfig
-```
+After installation, the library files are installed to `/usr/local/lib`.
+This path is already in the default linker search path on Debian/Ubuntu, and
+the package refreshes the linker cache automatically, so no manual steps are
+required.
 
 To verify the library is found by the linker:
 ```bash
@@ -300,16 +292,11 @@ sudo yum install intel-ipsec-mb-<version>-1.x86_64.rpm
 sudo dnf install intel-ipsec-mb-<version>-1.x86_64.rpm
 ```
 
-After installation, update the linker cache:
-```bash
-sudo ldconfig
-```
-
-If the library path is not in the default linker search path, create a configuration file:
-```bash
-echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/intel-ipsec-mb.conf
-sudo ldconfig
-```
+After installation, the library files are installed to `/usr/local/lib`.
+This path is not searched by the dynamic linker by default on these
+distributions, so the package registers it via
+`/etc/ld.so.conf.d/intel-ipsec-mb.conf` and refreshes the linker cache
+automatically. No manual steps are required.
 
 To verify the library is found by the linker:
 ```bash
@@ -337,6 +324,15 @@ First compile the library and then install:
 cmake --build .
 sudo cmake --install .
 ```
+
+On Linux the install also registers the library directory with the dynamic
+linker (`/etc/ld.so.conf.d/intel-ipsec-mb.conf`). Refresh the linker cache
+afterwards, and again after uninstalling:
+```
+sudo ldconfig
+```
+Set `-DINSTALL_LDCONFIG_FILE=OFF` at configuration time to skip installing
+this file.
 
 To uninstall the library run:   
 `sudo cmake --build . --target uninstall`

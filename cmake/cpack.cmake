@@ -45,6 +45,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
   set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${CPACK_PACKAGE_HOMEPAGE_URL}")
   set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+  # Refresh the dynamic linker cache on install/remove. CPack does not generate
+  # the ldconfig trigger that dh_makeshlibs would normally add.
+  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+      "${CMAKE_CURRENT_LIST_DIR}/packaging/deb/triggers")
 
   # RPM package configuration
   set(CPACK_RPM_PACKAGE_LICENSE "BSD-3-Clause AND Apache-2.0")
@@ -53,6 +57,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
   set(CPACK_RPM_PACKAGE_URL "${CPACK_PACKAGE_HOMEPAGE_URL}")
   set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+  # Refresh the dynamic linker cache on install/remove
+  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE
+      "${CMAKE_CURRENT_LIST_DIR}/packaging/rpm-ldconfig.sh")
+  set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE
+      "${CMAKE_CURRENT_LIST_DIR}/packaging/rpm-ldconfig.sh")
   # Disable debuginfo package
   set(CPACK_RPM_DEBUGINFO_PACKAGE OFF)
   set(CPACK_RPM_PACKAGE_DEBUG OFF)
