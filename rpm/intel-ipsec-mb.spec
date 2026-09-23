@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Versions numbers
-%global major        2
+%global major        3
 %global minor        0
 %global patch        0
 %global fullversion  %{major}.%{minor}.%{patch}
@@ -90,6 +90,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Wed Sep 23 2026 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 3.0.0-1
+- Update for release package v3.0
+
 * Tue Nov 29 2024 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 2.0.0-1
 - Update for release package v2.0
 

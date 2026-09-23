@@ -1,6 +1,6 @@
 # Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v3.0 September 2026
 ======================================================================
 General
 - Removed support for legacy Makefile-based builds and legacy Windows `.mak` build scripts.

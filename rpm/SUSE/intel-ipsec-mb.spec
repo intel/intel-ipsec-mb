@@ -17,7 +17,7 @@
 #
 
 # Versions numbers
-%global major        2
+%global major        3
 %global minor        0
 %global patch        0
 
