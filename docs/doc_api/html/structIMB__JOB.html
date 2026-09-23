@@ -227,7 +227,7 @@ Data Fields</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Authentication tag output </p>
+<p>Authentication tag output. For AEAD and MAC algorithms in decrypt/verify direction the library only computes the tag; the application must compare it against the received tag in constant time and reject the message on mismatch </p>
 
 </div>
 </div>

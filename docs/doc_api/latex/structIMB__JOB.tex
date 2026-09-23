@@ -127,7 +127,7 @@ union \doxymbox{\hyperlink{unionIMB__JOB_1_1_0funion_0e_8____unnamed1____}{IMB\+
 {\footnotesize\ttfamily \label{structIMB__JOB_ac37080ddb0baf56c9589e65960430b32} 
 uint8\+\_\+t\texorpdfstring{$\ast$}{*} IMB\+\_\+\+JOB::\+auth\+\_\+tag\+\_\+output}
 
-Authentication tag output \Hypertarget{structIMB__JOB_a750df4fa7330e2387138409d0eb50e0f}\index{IMB\_JOB@{IMB\_JOB}!auth\_tag\_output\_len\_in\_bytes@{auth\_tag\_output\_len\_in\_bytes}}
+Authentication tag output. For AEAD and MAC algorithms in decrypt/\+verify direction the library only computes the tag; the application must compare it against the received tag in constant time and reject the message on mismatch \Hypertarget{structIMB__JOB_a750df4fa7330e2387138409d0eb50e0f}\index{IMB\_JOB@{IMB\_JOB}!auth\_tag\_output\_len\_in\_bytes@{auth\_tag\_output\_len\_in\_bytes}}
 \index{auth\_tag\_output\_len\_in\_bytes@{auth\_tag\_output\_len\_in\_bytes}!IMB\_JOB@{IMB\_JOB}}
 \doxysubsubsection{\texorpdfstring{auth\_tag\_output\_len\_in\_bytes}{auth\_tag\_output\_len\_in\_bytes}}
 {\footnotesize\ttfamily \label{structIMB__JOB_a750df4fa7330e2387138409d0eb50e0f} 

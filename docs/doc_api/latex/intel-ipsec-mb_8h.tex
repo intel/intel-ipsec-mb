@@ -969,9 +969,9 @@ enum \doxymbox{\hyperlink{intel-ipsec-mb_8h_a27844273454eb2324d9943e9b9cb913a}{I
 \begin{DoxyCompactList}\small\item\em Validate an encoded ML-\/\+KEM decapsulation (private) key (decodes and checks consistency). \end{DoxyCompactList}\item 
 \doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void \doxymbox{\hyperlink{intel-ipsec-mb_8h_aa17620db0ed3edeaed3ecfd08dbc8b5d}{imb\+\_\+md5\+\_\+one\+\_\+block}} (const void \texorpdfstring{$\ast$}{*}src, void \texorpdfstring{$\ast$}{*}digest, \doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}state)
 \item 
-\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void \doxymbox{\hyperlink{intel-ipsec-mb_8h_abd210e5cc9e6a770cfff247d238df17f}{imb\+\_\+aes128\+\_\+cfb\+\_\+one}} (void \texorpdfstring{$\ast$}{*}dst, const void \texorpdfstring{$\ast$}{*}src, const void \texorpdfstring{$\ast$}{*}iv, const void \texorpdfstring{$\ast$}{*}exp\+\_\+key, uint64\+\_\+t len, \doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}state)
+\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} int \doxymbox{\hyperlink{intel-ipsec-mb_8h_a196bc273287bdb0f04acee42bf7ece4a}{imb\+\_\+aes128\+\_\+cfb\+\_\+one}} (void \texorpdfstring{$\ast$}{*}dst, const void \texorpdfstring{$\ast$}{*}src, const void \texorpdfstring{$\ast$}{*}iv, const void \texorpdfstring{$\ast$}{*}exp\+\_\+key, uint64\+\_\+t len, \doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}state)
 \begin{DoxyCompactList}\small\item\em AES-\/\+CFB-\/128 Encrypt/\+\+Decrypt up to one block. \end{DoxyCompactList}\item 
-\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void \doxymbox{\hyperlink{intel-ipsec-mb_8h_a24fee1a85d5375a3e15211bd8b37668f}{imb\+\_\+aes256\+\_\+cfb\+\_\+one}} (void \texorpdfstring{$\ast$}{*}dst, const void \texorpdfstring{$\ast$}{*}src, const void \texorpdfstring{$\ast$}{*}iv, const void \texorpdfstring{$\ast$}{*}exp\+\_\+key, uint64\+\_\+t len, \doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}state)
+\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} int \doxymbox{\hyperlink{intel-ipsec-mb_8h_aa1df077e3afa41ebb8f7972a3f81856e}{imb\+\_\+aes256\+\_\+cfb\+\_\+one}} (void \texorpdfstring{$\ast$}{*}dst, const void \texorpdfstring{$\ast$}{*}src, const void \texorpdfstring{$\ast$}{*}iv, const void \texorpdfstring{$\ast$}{*}exp\+\_\+key, uint64\+\_\+t len, \doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}state)
 \begin{DoxyCompactList}\small\item\em AES-\/\+CFB-\/256 Encrypt/\+\+Decrypt up to one block. \end{DoxyCompactList}\item 
 \doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void \doxymbox{\hyperlink{intel-ipsec-mb_8h_a3c44af29bbd1c45de724ebfee594b9fe}{imb\+\_\+chacha20\+\_\+poly1305\+\_\+init}} (const void \texorpdfstring{$\ast$}{*}key, struct \doxymbox{\hyperlink{structchacha20__poly1305__context__data}{chacha20\+\_\+poly1305\+\_\+context\+\_\+data}} \texorpdfstring{$\ast$}{*}ctx, const void \texorpdfstring{$\ast$}{*}iv, const void \texorpdfstring{$\ast$}{*}aad, const uint64\+\_\+t aadl, \doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}state)
 \begin{DoxyCompactList}\small\item\em Initialize a \doxylink{structchacha20__poly1305__context__data}{chacha20\+\_\+poly1305\+\_\+context\+\_\+data} structure to prepare for Cha\+Cha20-\/\+Poly1305 Encryption or Decryption. \end{DoxyCompactList}\item 
@@ -995,8 +995,8 @@ enum \doxymbox{\hyperlink{intel-ipsec-mb_8h_a27844273454eb2324d9943e9b9cb913a}{I
 \item 
 \doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} int \doxymbox{\hyperlink{intel-ipsec-mb_8h_a9911462fe4689c7420b827bb13fc3440}{des\+\_\+key\+\_\+schedule}} (uint64\+\_\+t \texorpdfstring{$\ast$}{*}ks, const void \texorpdfstring{$\ast$}{*}key)
 \begin{DoxyCompactList}\small\item\em DES key schedule set up. \end{DoxyCompactList}\item 
-\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void \doxymbox{\hyperlink{intel-ipsec-mb_8h_a71a0353411f5307a2177ae9b2814f522}{des\+\_\+cfb\+\_\+one}} (void \texorpdfstring{$\ast$}{*}out, const void \texorpdfstring{$\ast$}{*}in, const uint64\+\_\+t \texorpdfstring{$\ast$}{*}iv, const uint64\+\_\+t \texorpdfstring{$\ast$}{*}ks, const int len)
-\begin{DoxyCompactList}\small\item\em DES-\/\+CFB Encrypt/\+\+Decrypt up to one block. \end{DoxyCompactList}\item 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} int \doxymbox{\hyperlink{intel-ipsec-mb_8h_a189e7a2174fc137286073ad2d23d5884}{des\+\_\+cfb\+\_\+one}} (void \texorpdfstring{$\ast$}{*}out, const void \texorpdfstring{$\ast$}{*}in, const uint64\+\_\+t \texorpdfstring{$\ast$}{*}iv, const uint64\+\_\+t \texorpdfstring{$\ast$}{*}ks, const int len)
+\begin{DoxyCompactList}\small\item\em DES-\/\+CFB Encrypt/\+\+Decrypt a partial block (less than one block). \end{DoxyCompactList}\item 
 \doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void \doxymbox{\hyperlink{intel-ipsec-mb_8h_a3c94d3ccb379f131a14d8eba3715e368}{imb\+\_\+hmac\+\_\+ipad\+\_\+opad}} (\doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}mb\+\_\+mgr, const \doxymbox{\hyperlink{intel-ipsec-mb_8h_a83132be2c4a6bf0453550bd1ae720006}{IMB\+\_\+\+HASH\+\_\+\+ALG}} sha\+\_\+type, const void \texorpdfstring{$\ast$}{*}pkey, const size\+\_\+t key\+\_\+len, void \texorpdfstring{$\ast$}{*}ipad\+\_\+hash, void \texorpdfstring{$\ast$}{*}opad\+\_\+hash)
 \begin{DoxyCompactList}\small\item\em Ipad Opad padding for HMAC. \end{DoxyCompactList}\item 
 \doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void \doxymbox{\hyperlink{intel-ipsec-mb_8h_a540c7a5e0be61094ad17ae983974292a}{imb\+\_\+aes128\+\_\+gcm\+\_\+enc}} (const struct \doxymbox{\hyperlink{structgcm__key__data}{gcm\+\_\+key\+\_\+data}} \texorpdfstring{$\ast$}{*}key\+\_\+data, struct \doxymbox{\hyperlink{structgcm__context__data}{gcm\+\_\+context\+\_\+data}} \texorpdfstring{$\ast$}{*}context\+\_\+data, void \texorpdfstring{$\ast$}{*}out, const void \texorpdfstring{$\ast$}{*}in, uint64\+\_\+t len, const void \texorpdfstring{$\ast$}{*}iv, const void \texorpdfstring{$\ast$}{*}aad, uint64\+\_\+t aad\+\_\+len, void \texorpdfstring{$\ast$}{*}auth\+\_\+tag, uint64\+\_\+t auth\+\_\+tag\+\_\+len, \doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}state)
@@ -1135,7 +1135,7 @@ Macros for aligning data structures and function inlines \Hypertarget{intel-ipse
 
 {\bfseries Value:}
 \begin{DoxyCode}{0}
-\DoxyCodeLine{\doxymbox{\hyperlink{intel-ipsec-mb_8h_abd210e5cc9e6a770cfff247d238df17f}{imb\_aes128\_cfb\_one}}(\_dst,\ \_src,\ \_iv,\ \_exp\_key,\ \_len,\ \_mgr)}
+\DoxyCodeLine{\doxymbox{\hyperlink{intel-ipsec-mb_8h_a196bc273287bdb0f04acee42bf7ece4a}{imb\_aes128\_cfb\_one}}(\_dst,\ \_src,\ \_iv,\ \_exp\_key,\ \_len,\ \_mgr)}
 
 \end{DoxyCode}
 \Hypertarget{intel-ipsec-mb_8h_a2b026b2a901c76a1512eb9c8c80f9709}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!IMB\_AES128\_GCM\_DEC@{IMB\_AES128\_GCM\_DEC}}
@@ -1432,7 +1432,7 @@ Macros for aligning data structures and function inlines \Hypertarget{intel-ipse
 
 {\bfseries Value:}
 \begin{DoxyCode}{0}
-\DoxyCodeLine{\doxymbox{\hyperlink{intel-ipsec-mb_8h_a24fee1a85d5375a3e15211bd8b37668f}{imb\_aes256\_cfb\_one}}(\_dst,\ \_src,\ \_iv,\ \_exp\_key,\ \_len,\ \_mgr)}
+\DoxyCodeLine{\doxymbox{\hyperlink{intel-ipsec-mb_8h_aa1df077e3afa41ebb8f7972a3f81856e}{imb\_aes256\_cfb\_one}}(\_dst,\ \_src,\ \_iv,\ \_exp\_key,\ \_len,\ \_mgr)}
 
 \end{DoxyCode}
 \Hypertarget{intel-ipsec-mb_8h_a1eb77771626f83eba8482473d29ffbb1}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!IMB\_AES256\_GCM\_DEC@{IMB\_AES256\_GCM\_DEC}}
@@ -3337,7 +3337,12 @@ IMB\+\_\+\+DIR\+\_\+\+DECRYPT&\\
 {\footnotesize\ttfamily \label{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334c} 
 enum \doxymbox{\hyperlink{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334c}{IMB\+\_\+\+CIPHER\+\_\+\+MODE}}}
 
-IMB\+\_\+\+ERR\+\_\+\+MIN should be higher than \+\_\+\+\_\+\+ELASTERROR to avoid overlap with standard error values Cipher mode definitions \begin{DoxyEnumFields}[2]{Enumerator}
+IMB\+\_\+\+ERR\+\_\+\+MIN should be higher than \+\_\+\+\_\+\+ELASTERROR to avoid overlap with standard error values Cipher mode definitions
+
+\begin{DoxyNote}{Note}
+The library does not track key/\+\+IV (nonce) usage. For counter based and AEAD modes (CTR, GCM, CCM, Cha\+Cha20, Cha\+Cha20-\/\+Poly1305, SM4-\/\+CTR, SM4-\/\+GCM and the 3GPP algorithms) reusing an IV with the same key is a critical security failure and the application is responsible for guaranteeing uniqueness. See SECURITY.\+md "{}\+Key/\+\+IV (\+Nonce) Pair       Uniqueness"{}. 
+\end{DoxyNote}
+\begin{DoxyEnumFields}[2]{Enumerator}
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_CIPHER\_CBC@{IMB\_CIPHER\_CBC}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!IMB\_CIPHER\_CBC@{IMB\_CIPHER\_CBC}}
 }\Hypertarget{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca0e2ebfcfd101ab4a39129082b2de517f}\label{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca0e2ebfcfd101ab4a39129082b2de517f} 
@@ -3347,7 +3352,7 @@ IMB\+\_\+\+CIPHER\+\_\+\+CBC&AES-\/\+CBC \\
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_CIPHER\_CNTR@{IMB\_CIPHER\_CNTR}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!IMB\_CIPHER\_CNTR@{IMB\_CIPHER\_CNTR}}
 }\Hypertarget{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca5b4126e439eaff0975846425594201ea}\label{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca5b4126e439eaff0975846425594201ea} 
-IMB\+\_\+\+CIPHER\+\_\+\+CNTR&AES-\/\+CTR \\
+IMB\+\_\+\+CIPHER\+\_\+\+CNTR&AES-\/\+CTR: key/\+\+IV pair must be unique \\
 \hline
 
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_CIPHER\_CTR@{IMB\_CIPHER\_CTR}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
@@ -3371,7 +3376,7 @@ IMB\+\_\+\+CIPHER\+\_\+\+DOCSIS\+\_\+\+SEC\+\_\+\+BPI&DOCSIS (AES-\/\+CBC + AES-
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_CIPHER\_GCM@{IMB\_CIPHER\_GCM}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!IMB\_CIPHER\_GCM@{IMB\_CIPHER\_GCM}}
 }\Hypertarget{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca0f97344e525fef167a92d1a59a0492aa}\label{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca0f97344e525fef167a92d1a59a0492aa} 
-IMB\+\_\+\+CIPHER\+\_\+\+GCM&AEAD AES-\/\+GCM \\
+IMB\+\_\+\+CIPHER\+\_\+\+GCM&AEAD AES-\/\+GCM: key/\+\+IV pair must be unique \\
 \hline
 
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_CIPHER\_DES@{IMB\_CIPHER\_DES}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
@@ -3389,7 +3394,7 @@ IMB\+\_\+\+CIPHER\+\_\+\+DOCSIS\+\_\+\+DES&DOCSIS (DES-\/\+CBC + DES-\/\+CFB) \\
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_CIPHER\_CCM@{IMB\_CIPHER\_CCM}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!IMB\_CIPHER\_CCM@{IMB\_CIPHER\_CCM}}
 }\Hypertarget{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca7d3946d77e4364bc45a9e72499bf817f}\label{intel-ipsec-mb_8h_a3be1dfb4cbd4bd13dfdb2cf881f8334ca7d3946d77e4364bc45a9e72499bf817f} 
-IMB\+\_\+\+CIPHER\+\_\+\+CCM&AEAD AES-\/\+CCM \\
+IMB\+\_\+\+CIPHER\+\_\+\+CCM&AEAD AES-\/\+CCM: key/\+nonce pair must be unique \\
 \hline
 
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_CIPHER\_DES3@{IMB\_CIPHER\_DES3}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
@@ -3853,7 +3858,7 @@ IMB\+\_\+\+ERR\+\_\+\+BURST\+\_\+\+OOO&\\
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_ERR\_SELFTEST@{IMB\_ERR\_SELFTEST}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!IMB\_ERR\_SELFTEST@{IMB\_ERR\_SELFTEST}}
 }\Hypertarget{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1873d38b8aaf5ebcd3f542b15c418829}\label{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1873d38b8aaf5ebcd3f542b15c418829} 
-IMB\+\_\+\+ERR\+\_\+\+SELFTEST&\\
+IMB\+\_\+\+ERR\+\_\+\+SELFTEST&self-\/test failed, manager is fail-\/closed \\
 \hline
 
 \raisebox{\heightof{T}}[0pt][0pt]{\index{IMB\_ERR\_BURST\_SUITE\_ID@{IMB\_ERR\_BURST\_SUITE\_ID}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
@@ -4521,15 +4526,15 @@ Pointer to allocated memory for \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9b
 {\em NULL} & on allocation error \\
 \hline
 \end{DoxyRetVals}
-\Hypertarget{intel-ipsec-mb_8h_a71a0353411f5307a2177ae9b2814f522}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!des\_cfb\_one@{des\_cfb\_one}}
+\Hypertarget{intel-ipsec-mb_8h_a189e7a2174fc137286073ad2d23d5884}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!des\_cfb\_one@{des\_cfb\_one}}
 \index{des\_cfb\_one@{des\_cfb\_one}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{des\_cfb\_one()}{des\_cfb\_one()}}
-{\footnotesize\ttfamily \label{intel-ipsec-mb_8h_a71a0353411f5307a2177ae9b2814f522} 
-\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void des\+\_\+cfb\+\_\+one (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{out}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{in}{, }\item[{const uint64\+\_\+t \texorpdfstring{$\ast$}{*}}]{iv}{, }\item[{const uint64\+\_\+t \texorpdfstring{$\ast$}{*}}]{ks}{, }\item[{const int}]{len}{}\end{DoxyParamCaption})}
+{\footnotesize\ttfamily \label{intel-ipsec-mb_8h_a189e7a2174fc137286073ad2d23d5884} 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} int des\+\_\+cfb\+\_\+one (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{out}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{in}{, }\item[{const uint64\+\_\+t \texorpdfstring{$\ast$}{*}}]{iv}{, }\item[{const uint64\+\_\+t \texorpdfstring{$\ast$}{*}}]{ks}{, }\item[{const int}]{len}{}\end{DoxyParamCaption})}
 
 
 
-DES-\/\+CFB Encrypt/\+\+Decrypt up to one block. 
+DES-\/\+CFB Encrypt/\+\+Decrypt a partial block (less than one block). 
 
 Processes only one buffer at a time. Designed to manage partial blocks of DOCSIS 3.\+1 SEC BPI.
 
@@ -4543,9 +4548,27 @@ Processes only one buffer at a time. Designed to manage partial blocks of DOCSIS
 \hline
 \doxymbox{\texttt{in}}  & {\em ks} & Pointer to DES key schedule \\
 \hline
-\doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes \\
+\doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes, valid range is 0 to 7 (inclusive).\\
 \hline
 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Operation status 
+\end{DoxyReturn}
+
+\begin{DoxyRetVals}{Return values}
+{\em 0} & success \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1a61dcc99a1a9725c89076dec3c02e02}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+DST}} & {\itshape out} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba308819b7cbdadfd6bbee290408880302}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+SRC}} & {\itshape in} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0bafcfe882ee9730fd1724b587106f2f419}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+IV}} & {\itshape iv} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba3b60a570372529486da69c6d2b7be382}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+EXP\+\_\+\+KEY}} & {\itshape ks} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0bab5a2b4c1df7778c3efc236976062ed94}{IMB\+\_\+\+ERR\+\_\+\+CIPH\+\_\+\+LEN}} & {\itshape len} is out of range \\
+\hline
+\end{DoxyRetVals}
 \Hypertarget{intel-ipsec-mb_8h_a9911462fe4689c7420b827bb13fc3440}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!des\_key\_schedule@{des\_key\_schedule}}
 \index{des\_key\_schedule@{des\_key\_schedule}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{des\_key\_schedule()}{des\_key\_schedule()}}
@@ -4625,11 +4648,11 @@ operation status.
 {\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba99d845a176cd571dd6f99b0a430291c6}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+BURST}} & invalid {\itshape out\+\_\+burst\+\_\+size} pointer \\
 \hline
 \end{DoxyRetVals}
-\Hypertarget{intel-ipsec-mb_8h_abd210e5cc9e6a770cfff247d238df17f}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!imb\_aes128\_cfb\_one@{imb\_aes128\_cfb\_one}}
+\Hypertarget{intel-ipsec-mb_8h_a196bc273287bdb0f04acee42bf7ece4a}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!imb\_aes128\_cfb\_one@{imb\_aes128\_cfb\_one}}
 \index{imb\_aes128\_cfb\_one@{imb\_aes128\_cfb\_one}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{imb\_aes128\_cfb\_one()}{imb\_aes128\_cfb\_one()}}
-{\footnotesize\ttfamily \label{intel-ipsec-mb_8h_abd210e5cc9e6a770cfff247d238df17f} 
-\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void imb\+\_\+aes128\+\_\+cfb\+\_\+one (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{dst}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{src}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{iv}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{exp\+\_\+key}{, }\item[{uint64\+\_\+t}]{len}{, }\item[{\doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}}]{state}{}\end{DoxyParamCaption})}
+{\footnotesize\ttfamily \label{intel-ipsec-mb_8h_a196bc273287bdb0f04acee42bf7ece4a} 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} int imb\+\_\+aes128\+\_\+cfb\+\_\+one (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{dst}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{src}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{iv}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{exp\+\_\+key}{, }\item[{uint64\+\_\+t}]{len}{, }\item[{\doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}}]{state}{}\end{DoxyParamCaption})}
 
 
 
@@ -4647,11 +4670,31 @@ Processes only one buffer at a time. Designed to manage partial blocks of DOCSIS
 \hline
 \doxymbox{\texttt{in}}  & {\em exp\+\_\+key} & Pointer to expanded AES keys \\
 \hline
-\doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes \\
+\doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes, valid range is 0 to 16 (inclusive). \\
 \hline
-\doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
+\doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure\\
 \hline
 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Operation status 
+\end{DoxyReturn}
+
+\begin{DoxyRetVals}{Return values}
+{\em 0} & success \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba9ba69cc32a2d17e3e7b4d4c982f26abd}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+MBMGR}} & {\itshape state} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1a61dcc99a1a9725c89076dec3c02e02}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+DST}} & {\itshape dst} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba308819b7cbdadfd6bbee290408880302}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+SRC}} & {\itshape src} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0bafcfe882ee9730fd1724b587106f2f419}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+IV}} & {\itshape iv} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba3b60a570372529486da69c6d2b7be382}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+EXP\+\_\+\+KEY}} & {\itshape exp\+\_\+key} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0bab5a2b4c1df7778c3efc236976062ed94}{IMB\+\_\+\+ERR\+\_\+\+CIPH\+\_\+\+LEN}} & {\itshape len} is out of range \\
+\hline
+\end{DoxyRetVals}
 \Hypertarget{intel-ipsec-mb_8h_ada8095e8ded80cb4884fd5c1db304ce9}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!imb\_aes128\_gcm\_dec@{imb\_aes128\_gcm\_dec}}
 \index{imb\_aes128\_gcm\_dec@{imb\_aes128\_gcm\_dec}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{imb\_aes128\_gcm\_dec()}{imb\_aes128\_gcm\_dec()}}
@@ -4674,7 +4717,7 @@ AES-\/\+GCM-\/128 Decryption.
 \hline
 \doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes for decryption \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authentication Data (AAD) \\
 \hline
@@ -4682,8 +4725,14 @@ AES-\/\+GCM-\/128 Decryption.
 \hline
 \doxymbox{\texttt{out}}  & {\em auth\+\_\+tag} & Authenticated Tag output \\
 \hline
-\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8 \\
+\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8\\
 \hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+The library computes the authentication tag but does NOT verify it. The caller MUST compare {\itshape auth\+\_\+tag} against the tag received with the message using a constant-\/time comparison (not memcmp()) and MUST discard the plaintext if they differ. 
+\end{DoxyNote}
+
+\begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
@@ -4705,8 +4754,14 @@ End decryption of a AES-\/\+GCM-\/128 encryption message.
 \hline
 \doxymbox{\texttt{out}}  & {\em auth\+\_\+tag} & Authenticated Tag output \\
 \hline
-\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8. \\
+\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8.\\
 \hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+The library computes the authentication tag but does NOT verify it. The caller MUST compare {\itshape auth\+\_\+tag} against the tag received with the message using a constant-\/time comparison (not memcmp()) and MUST discard the plaintext if they differ. 
+\end{DoxyNote}
+
+\begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
@@ -4757,7 +4812,7 @@ AES-\/\+GCM-\/128 Encryption.
 \hline
 \doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes for encryption \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authentication Data (AAD) \\
 \hline
@@ -4834,7 +4889,7 @@ Initialize a \doxylink{structgcm__context__data}{gcm\+\_\+context\+\_\+data} str
 \hline
 \doxymbox{\texttt{in,out}}  & {\em context\+\_\+data} & GCM operation context data \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authenticated Data (AAD) \\
 \hline
@@ -5001,7 +5056,7 @@ AES-\/\+GCM-\/192 Decryption.
 \hline
 \doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes for decryption \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authentication Data (AAD) \\
 \hline
@@ -5009,8 +5064,14 @@ AES-\/\+GCM-\/192 Decryption.
 \hline
 \doxymbox{\texttt{out}}  & {\em auth\+\_\+tag} & Authenticated Tag output \\
 \hline
-\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8 \\
+\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8\\
 \hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+The library computes the authentication tag but does NOT verify it. The caller MUST compare {\itshape auth\+\_\+tag} against the tag received with the message using a constant-\/time comparison (not memcmp()) and MUST discard the plaintext if they differ. 
+\end{DoxyNote}
+
+\begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
@@ -5032,8 +5093,14 @@ End decryption of a AES-\/\+GCM-\/192 encryption message.
 \hline
 \doxymbox{\texttt{out}}  & {\em auth\+\_\+tag} & Authenticated Tag output \\
 \hline
-\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8. \\
+\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8.\\
 \hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+The library computes the authentication tag but does NOT verify it. The caller MUST compare {\itshape auth\+\_\+tag} against the tag received with the message using a constant-\/time comparison (not memcmp()) and MUST discard the plaintext if they differ. 
+\end{DoxyNote}
+
+\begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
@@ -5084,7 +5151,7 @@ AES-\/\+GCM-\/192 Encryption.
 \hline
 \doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes for encryption \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authentication Data (AAD) \\
 \hline
@@ -5161,7 +5228,7 @@ Initialize a \doxylink{structgcm__context__data}{gcm\+\_\+context\+\_\+data} str
 \hline
 \doxymbox{\texttt{in,out}}  & {\em context\+\_\+data} & GCM operation context data \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authenticated Data (AAD) \\
 \hline
@@ -5306,11 +5373,11 @@ Process data for AES-\/\+GMAC-\/192 tag computation.
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
-\Hypertarget{intel-ipsec-mb_8h_a24fee1a85d5375a3e15211bd8b37668f}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!imb\_aes256\_cfb\_one@{imb\_aes256\_cfb\_one}}
+\Hypertarget{intel-ipsec-mb_8h_aa1df077e3afa41ebb8f7972a3f81856e}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!imb\_aes256\_cfb\_one@{imb\_aes256\_cfb\_one}}
 \index{imb\_aes256\_cfb\_one@{imb\_aes256\_cfb\_one}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{imb\_aes256\_cfb\_one()}{imb\_aes256\_cfb\_one()}}
-{\footnotesize\ttfamily \label{intel-ipsec-mb_8h_a24fee1a85d5375a3e15211bd8b37668f} 
-\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} void imb\+\_\+aes256\+\_\+cfb\+\_\+one (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{dst}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{src}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{iv}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{exp\+\_\+key}{, }\item[{uint64\+\_\+t}]{len}{, }\item[{\doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}}]{state}{}\end{DoxyParamCaption})}
+{\footnotesize\ttfamily \label{intel-ipsec-mb_8h_aa1df077e3afa41ebb8f7972a3f81856e} 
+\doxymbox{\hyperlink{intel-ipsec-mb_8h_a986643689f56109161597f67eb9d7b40}{IMB\+\_\+\+DLL\+\_\+\+EXPORT}} int imb\+\_\+aes256\+\_\+cfb\+\_\+one (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{dst}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{src}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{iv}{, }\item[{const void \texorpdfstring{$\ast$}{*}}]{exp\+\_\+key}{, }\item[{uint64\+\_\+t}]{len}{, }\item[{\doxymbox{\hyperlink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}} \texorpdfstring{$\ast$}{*}}]{state}{}\end{DoxyParamCaption})}
 
 
 
@@ -5328,11 +5395,31 @@ Processes only one buffer at a time. Designed to manage partial blocks of DOCSIS
 \hline
 \doxymbox{\texttt{in}}  & {\em exp\+\_\+key} & Pointer to expanded AES keys \\
 \hline
-\doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes \\
+\doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes, valid range is 0 to 16 (inclusive). \\
 \hline
-\doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
+\doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure\\
 \hline
 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Operation status 
+\end{DoxyReturn}
+
+\begin{DoxyRetVals}{Return values}
+{\em 0} & success \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba9ba69cc32a2d17e3e7b4d4c982f26abd}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+MBMGR}} & {\itshape state} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1a61dcc99a1a9725c89076dec3c02e02}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+DST}} & {\itshape dst} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba308819b7cbdadfd6bbee290408880302}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+SRC}} & {\itshape src} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0bafcfe882ee9730fd1724b587106f2f419}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+IV}} & {\itshape iv} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba3b60a570372529486da69c6d2b7be382}{IMB\+\_\+\+ERR\+\_\+\+NULL\+\_\+\+EXP\+\_\+\+KEY}} & {\itshape exp\+\_\+key} is NULL \\
+\hline
+{\em \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0bab5a2b4c1df7778c3efc236976062ed94}{IMB\+\_\+\+ERR\+\_\+\+CIPH\+\_\+\+LEN}} & {\itshape len} is out of range \\
+\hline
+\end{DoxyRetVals}
 \Hypertarget{intel-ipsec-mb_8h_ad2e771996ff2df85221f7036ea52590c}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!imb\_aes256\_gcm\_dec@{imb\_aes256\_gcm\_dec}}
 \index{imb\_aes256\_gcm\_dec@{imb\_aes256\_gcm\_dec}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{imb\_aes256\_gcm\_dec()}{imb\_aes256\_gcm\_dec()}}
@@ -5355,7 +5442,7 @@ AES-\/\+GCM-\/256 Decryption.
 \hline
 \doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes for decryption \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authentication Data (AAD) \\
 \hline
@@ -5363,8 +5450,14 @@ AES-\/\+GCM-\/256 Decryption.
 \hline
 \doxymbox{\texttt{out}}  & {\em auth\+\_\+tag} & Authenticated Tag output \\
 \hline
-\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8 \\
+\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8\\
 \hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+The library computes the authentication tag but does NOT verify it. The caller MUST compare {\itshape auth\+\_\+tag} against the tag received with the message using a constant-\/time comparison (not memcmp()) and MUST discard the plaintext if they differ. 
+\end{DoxyNote}
+
+\begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
@@ -5386,8 +5479,14 @@ End decryption of a AES-\/\+GCM-\/256 encryption message.
 \hline
 \doxymbox{\texttt{out}}  & {\em auth\+\_\+tag} & Authenticated Tag output \\
 \hline
-\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8. \\
+\doxymbox{\texttt{in}}  & {\em auth\+\_\+tag\+\_\+len} & Authenticated Tag Length in bytes (must be a multiple of 4 bytes). Valid values are 16 (most likely), 12 or 8.\\
 \hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+The library computes the authentication tag but does NOT verify it. The caller MUST compare {\itshape auth\+\_\+tag} against the tag received with the message using a constant-\/time comparison (not memcmp()) and MUST discard the plaintext if they differ. 
+\end{DoxyNote}
+
+\begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
@@ -5438,7 +5537,7 @@ AES-\/\+GCM-\/256 Encryption.
 \hline
 \doxymbox{\texttt{in}}  & {\em len} & Length of data in bytes for encryption \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authentication Data (AAD) \\
 \hline
@@ -5515,7 +5614,7 @@ Initialize a \doxylink{structgcm__context__data}{gcm\+\_\+context\+\_\+data} str
 \hline
 \doxymbox{\texttt{in,out}}  & {\em context\+\_\+data} & GCM operation context data \\
 \hline
-\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV \\
+\doxymbox{\texttt{in}}  & {\em iv} & Pointer to 12 byte IV structure Internally, the library concatenates 0x00000001 to the IV. Must be unique for every message encrypted with the same key (SP 800-\/38D section 8); uniqueness is not checked \\
 \hline
 \doxymbox{\texttt{in}}  & {\em aad} & Additional Authenticated Data (AAD) \\
 \hline
@@ -5792,8 +5891,14 @@ Finalize Cha\+Cha20-\/\+Poly1305 Decryption and output the authentication tag.
 \hline
 \doxymbox{\texttt{out}}  & {\em tag} & Authenticated Tag output \\
 \hline
-\doxymbox{\texttt{in}}  & {\em tagl} & Authenticated Tag Length in bytes (must be 16) \\
+\doxymbox{\texttt{in}}  & {\em tagl} & Authenticated Tag Length in bytes (must be 16)\\
 \hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+The library computes the authentication tag but does NOT verify it. The caller MUST compare {\itshape tag} against the tag received with the message using a constant-\/time comparison (not memcmp()) and MUST discard the plaintext if they differ. 
+\end{DoxyNote}
+
+\begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
 \hline
 \end{DoxyParams}
@@ -6076,9 +6181,11 @@ Bit mask containing CPU feature flags
 
 API to get error status. 
 
+Error status is kept per \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR}; when {\itshape mb\+\_\+mgr} is not NULL and its status is set, that value is returned. Since an \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} is owned by a single thread this makes the status thread specific. When {\itshape mb\+\_\+mgr} is NULL, or the manager has no error recorded, a process wide status is returned instead. That fallback is shared by all threads and can be overwritten by another thread\textquotesingle{}s API call, so it is only reliable for APIs that do not take an \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} (e.\+g. \doxylink{intel-ipsec-mb_8h_ab8dc617feb010b0f4cd74fd9e1eabb5e}{alloc\+\_\+mb\+\_\+mgr()}). Always pass the manager used for the failing call when one exists.
+
 
 \begin{DoxyParams}{Parameters}
-{\em mb\+\_\+mgr} & Pointer to multi-\/buffer manager\\
+{\em mb\+\_\+mgr} & Pointer to multi-\/buffer manager (may be NULL)\\
 \hline
 \end{DoxyParams}
 
@@ -6559,6 +6666,9 @@ Operation status
 
 Allocate and initialize an ML-\/\+DSA context for a given parameter set. 
 
+\begin{DoxyNote}{Note}
+The context keeps a reference to {\itshape mgr} and checks its self-\/test state on every operation, so {\itshape mgr} must remain valid (not freed) until the context is released with \doxylink{intel-ipsec-mb_8h_ae125d85a0e86ef21f114ce042b53b913}{imb\+\_\+ml\+\_\+dsa\+\_\+free()}.
+\end{DoxyNote}
 
 \begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em mgr} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
@@ -7025,6 +7135,9 @@ Operation status
 
 Allocate and initialize an ML-\/\+KEM context for a parameter set. 
 
+\begin{DoxyNote}{Note}
+The context keeps a reference to {\itshape mgr} and checks its self-\/test state on every operation, so {\itshape mgr} must remain valid (not freed) until the context is released with \doxylink{intel-ipsec-mb_8h_ac4bfccdf0f4c78e73f56176fcec9ff3e}{imb\+\_\+ml\+\_\+kem\+\_\+free()}.
+\end{DoxyNote}
 
 \begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em mgr} & Pointer to initialized \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} structure \\
@@ -7280,6 +7393,9 @@ Initializes \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+
 
 init\+\_\+mb\+\_\+mgr\+\_\+\+XXX() must be called after this function call, whereas XXX is the desired architecture.
 
+\begin{DoxyNote}{Note}
+If the manager is in the fail-\/closed self-\/test error state (see \doxylink{intel-ipsec-mb_8h_a2cbbd032835837fd0aa83b04f5337638}{init\+\_\+mb\+\_\+mgr\+\_\+auto()}) and {\itshape reset\+\_\+mgr} is 0, that state is preserved: the API\textquotesingle{}s remain disabled until a subsequent successful init\+\_\+mb\+\_\+mgr\+\_\+\+XXX() call.
+\end{DoxyNote}
 
 \begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em ptr} & a pointer to allocated memory \\
@@ -7858,13 +7974,26 @@ Pointer to completed \doxylink{structIMB__JOB}{IMB\+\_\+\+JOB} or NULL if no job
 
 Automatically initialize most performant Multi-\/buffer manager based on CPU features. 
 
+Manager initialization and the power-\/up self-\/test.
+
+Every init\+\_\+mb\+\_\+mgr\+\_\+\texorpdfstring{$\ast$}{*}() call runs the library self-\/test (see IMB\+\_\+\+FEATURE\+\_\+\+SELF\+\_\+\+TEST and IMB\+\_\+\+FEATURE\+\_\+\+SELF\+\_\+\+TEST\+\_\+\+PASS). If the test fails the manager enters a fail-\/closed error state:
+\begin{DoxyItemize}
+\item \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()} returns IMB\+\_\+\+ERR\+\_\+\+SELFTEST and IMB\+\_\+\+FEATURE\+\_\+\+SELF\+\_\+\+TEST\+\_\+\+PASS is cleared in the feature flags;
+\item every job, burst and direct API on that manager is disabled: calls return NULL / 0 / -\/1 as appropriate, do not write to any output buffer and set IMB\+\_\+\+ERR\+\_\+\+SELFTEST;
+\item \doxylink{intel-ipsec-mb_8h_ad3fdcf3dd90efcc85c4222f5ff58c48e}{imb\+\_\+ml\+\_\+kem\+\_\+new()} and \doxylink{intel-ipsec-mb_8h_a3a2c42ec0cc48d52fdc32d36d937bbe6}{imb\+\_\+ml\+\_\+dsa\+\_\+new()} return IMB\+\_\+\+ERR\+\_\+\+SELFTEST, and every operation on ML-\/\+KEM/\+\+ML-\/\+DSA contexts created earlier with that manager (other than \doxylink{intel-ipsec-mb_8h_ac4bfccdf0f4c78e73f56176fcec9ff3e}{imb\+\_\+ml\+\_\+kem\+\_\+free()}/\+imb\+\_\+ml\+\_\+dsa\+\_\+free()) returns IMB\+\_\+\+ERR\+\_\+\+SELFTEST;
+\item \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()}, \doxylink{intel-ipsec-mb_8h_a61f664448a862fbb02e728ce518ff8e4}{imb\+\_\+get\+\_\+strerror()}, \doxylink{intel-ipsec-mb_8h_ae817018bc0c7bbd3cad0147952c8576e}{imb\+\_\+get\+\_\+features()}, \doxylink{intel-ipsec-mb_8h_a8bf5a6c43278a8ed16850a46707db863}{imb\+\_\+get\+\_\+flags()}, \doxylink{intel-ipsec-mb_8h_a474ce25401eac36333b69f27c669849c}{imb\+\_\+self\+\_\+test\+\_\+set\+\_\+cb()}/\+imb\+\_\+self\+\_\+test\+\_\+get\+\_\+cb() and \doxylink{intel-ipsec-mb_8h_a238b96cc36c0dc64798a1244b94add8b}{free\+\_\+mb\+\_\+mgr()} remain functional. The application should check \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()} after initialization. A subsequent successful init\+\_\+mb\+\_\+mgr\+\_\+\texorpdfstring{$\ast$}{*}() call on the same manager restores normal operation. 
+\end{DoxyItemize}
+
 
 \begin{DoxyParams}[1]{Parameters}
 \doxymbox{\texttt{in}}  & {\em state} & Pointer to MB\+\_\+\+MGR struct \\
 \hline
-\doxymbox{\texttt{out}}  & {\em arch} & Pointer to arch enum to be set (can be NULL) \\
+\doxymbox{\texttt{out}}  & {\em arch} & Pointer to arch enum to be set (can be NULL)\\
 \hline
 \end{DoxyParams}
+\begin{DoxyNote}{Note}
+On self-\/test failure the manager is left in the fail-\/closed state described above and \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()} returns IMB\+\_\+\+ERR\+\_\+\+SELFTEST. 
+\end{DoxyNote}
 \Hypertarget{intel-ipsec-mb_8h_af5addfb55988f7883657fcf2a9aedd6c}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!init\_mb\_mgr\_avx10@{init\_mb\_mgr\_avx10}}
 \index{init\_mb\_mgr\_avx10@{init\_mb\_mgr\_avx10}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{init\_mb\_mgr\_avx10()}{init\_mb\_mgr\_avx10()}}
@@ -7877,9 +8006,12 @@ Initialize multi-\/buffer manager for AVX10 architecture.
 
 
 \begin{DoxyParams}[1]{Parameters}
-\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct \\
+\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct\\
 \hline
 \end{DoxyParams}
+\begin{DoxyNote}{Note}
+On self-\/test failure the manager is left in the fail-\/closed state (see \doxylink{intel-ipsec-mb_8h_a2cbbd032835837fd0aa83b04f5337638}{init\+\_\+mb\+\_\+mgr\+\_\+auto()}) and \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()} returns IMB\+\_\+\+ERR\+\_\+\+SELFTEST. 
+\end{DoxyNote}
 \Hypertarget{intel-ipsec-mb_8h_a71b6563b6b4c0c504cd9b8302a242cfa}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!init\_mb\_mgr\_avx2@{init\_mb\_mgr\_avx2}}
 \index{init\_mb\_mgr\_avx2@{init\_mb\_mgr\_avx2}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{init\_mb\_mgr\_avx2()}{init\_mb\_mgr\_avx2()}}
@@ -7892,9 +8024,12 @@ Initialize multi-\/buffer manager for AVX2 architecture.
 
 
 \begin{DoxyParams}[1]{Parameters}
-\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct \\
+\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct\\
 \hline
 \end{DoxyParams}
+\begin{DoxyNote}{Note}
+On self-\/test failure the manager is left in the fail-\/closed state (see \doxylink{intel-ipsec-mb_8h_a2cbbd032835837fd0aa83b04f5337638}{init\+\_\+mb\+\_\+mgr\+\_\+auto()}) and \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()} returns IMB\+\_\+\+ERR\+\_\+\+SELFTEST. 
+\end{DoxyNote}
 \Hypertarget{intel-ipsec-mb_8h_a98932a3c61d798b0c8a560dcc3dce16f}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!init\_mb\_mgr\_avx512@{init\_mb\_mgr\_avx512}}
 \index{init\_mb\_mgr\_avx512@{init\_mb\_mgr\_avx512}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{init\_mb\_mgr\_avx512()}{init\_mb\_mgr\_avx512()}}
@@ -7907,9 +8042,12 @@ Initialize multi-\/buffer manager for AVX512 architecture.
 
 
 \begin{DoxyParams}[1]{Parameters}
-\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct \\
+\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct\\
 \hline
 \end{DoxyParams}
+\begin{DoxyNote}{Note}
+On self-\/test failure the manager is left in the fail-\/closed state (see \doxylink{intel-ipsec-mb_8h_a2cbbd032835837fd0aa83b04f5337638}{init\+\_\+mb\+\_\+mgr\+\_\+auto()}) and \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()} returns IMB\+\_\+\+ERR\+\_\+\+SELFTEST. 
+\end{DoxyNote}
 \Hypertarget{intel-ipsec-mb_8h_a2ad1941fe5d77b8bb2d6445679e3b0c5}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!init\_mb\_mgr\_sse@{init\_mb\_mgr\_sse}}
 \index{init\_mb\_mgr\_sse@{init\_mb\_mgr\_sse}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{init\_mb\_mgr\_sse()}{init\_mb\_mgr\_sse()}}
@@ -7922,9 +8060,12 @@ Initialize multi-\/buffer manager for SSE architecture.
 
 
 \begin{DoxyParams}[1]{Parameters}
-\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct \\
+\doxymbox{\texttt{in,out}}  & {\em state} & Pointer to \doxylink{intel-ipsec-mb_8h_a6d466496b4adfea3f9bc0881f11fe551}{IMB\+\_\+\+MGR} struct\\
 \hline
 \end{DoxyParams}
+\begin{DoxyNote}{Note}
+On self-\/test failure the manager is left in the fail-\/closed state (see \doxylink{intel-ipsec-mb_8h_a2cbbd032835837fd0aa83b04f5337638}{init\+\_\+mb\+\_\+mgr\+\_\+auto()}) and \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()} returns IMB\+\_\+\+ERR\+\_\+\+SELFTEST. 
+\end{DoxyNote}
 \Hypertarget{intel-ipsec-mb_8h_a3876dca52c5c210dd0827b2a472e6d0b}\index{intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}!kasumi\_f8\_iv\_gen@{kasumi\_f8\_iv\_gen}}
 \index{kasumi\_f8\_iv\_gen@{kasumi\_f8\_iv\_gen}!intel-\/ipsec-\/mb.h@{intel-\/ipsec-\/mb.h}}
 \doxysubsubsection{\texorpdfstring{kasumi\_f8\_iv\_gen()}{kasumi\_f8\_iv\_gen()}}

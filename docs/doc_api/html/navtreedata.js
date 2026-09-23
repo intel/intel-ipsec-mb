@@ -76,8 +76,8 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"intel-ipsec-mb_8h.html#a56eff8ebd7eb32505e331982bc208a81",
-"intel-ipsec-mb_8h.html#aaa424eeb4c5ad46e0aeb50ddaea47ec0",
+"intel-ipsec-mb_8h.html#a56bd44d01c91469b57efa36f360a83bf",
+"intel-ipsec-mb_8h.html#aa92e2b2a6d775d034021c948c38bdb6a",
 "structchacha20__poly1305__context__data.html#a674f6c26aae1076e938726f18401bf6d"
 ];
 

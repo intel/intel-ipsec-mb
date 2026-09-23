@@ -1,9 +1,9 @@
 \chapter{intel-\/ipsec-\/mb }
 \hypertarget{index}{}\label{index}\index{intel-\/ipsec-\/mb@{intel-\/ipsec-\/mb}}
-\label{index_md__2home_2mdcornu_2innersource_2libraries_8performance_8ipsec-mb_2README}%
-\Hypertarget{index_md__2home_2mdcornu_2innersource_2libraries_8performance_8ipsec-mb_2README}%
+\label{index_md__2mnt_2sw__qat__share_2tkanteck_2views_2libraries_8performance_8ipsec-mb2_2README}%
+\Hypertarget{index_md__2mnt_2sw__qat__share_2tkanteck_2views_2libraries_8performance_8ipsec-mb2_2README}%
     \href{https://scan.coverity.com/projects/intel-ipsec-mb}{\texttt{}} \href{https://securityscorecards.dev/viewer/?uri=github.com/intel/intel-ipsec-mb}{\texttt{}}\hypertarget{index_autotoc_md0}{}\doxysection{\texorpdfstring{Intel(\+R) Multi-\/\+Buffer Crypto for IPsec Library}{Intel(\+R) Multi-\/\+Buffer Crypto for IPsec Library}}\label{index_autotoc_md0}
-The library provides software crypto acceleration primarily targeting packet processing applications. It can be used for application such as: IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.
+The library provides software crypto acceleration primarily targeting packet processing applications. It can be used for applications such as: IPsec, TLS, Wireless (RAN) and Cable. It also provides post-\/quantum cryptography (PQC) algorithms for applications migrating to quantum-\/resistant key establishment and digital signatures.
 
 The library is hosted on \href{https://github.com/intel/intel-ipsec-mb}{\texttt{Git\+Hub}} and is used as software crypto provider in \href{https://www.dpdk.org/}{\texttt{DPDK}}, \href{https://github.com/intel/QAT_Engine}{\texttt{Intel(\+R) QAT Engine}} and \href{https://fd.io/}{\texttt{FD.\+io}}.
 
@@ -20,6 +20,7 @@ Key differentiating features:
 \item API hides underlying implementation details from an application
 \end{DoxyItemize}
 \item multi-\/buffer and function stitching innovations
+\item post-\/quantum cryptography (ML-\/\+KEM and ML-\/\+DSA) support
 \item low level implementations using latest instruction extensions
 \end{DoxyItemize}\hypertarget{index_autotoc_md1}{}\doxysubsection{\texorpdfstring{Contents}{Contents}}\label{index_autotoc_md1}
 
@@ -75,7 +76,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 \DoxyCodeLine{|\ DES-\/DOCSIS\ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ x16\ |\ \ <-\/-\/-\/\ \ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ 3DES/TDES\ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ x16\ |\ \ <-\/-\/-\/\ \ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ DES\ \ \ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ x16\ |\ \ <-\/-\/-\/\ \ \ \ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ KASUMI-\/F8\ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ \ \ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ KASUMI-\/F8\ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ ZUC-\/EEA3\ \ \ \ \ \ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ Y(4)x4\ |\ Y\ \ x8\ \ |\ Y(4)x8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ x16\ |\ Y(4)\ x16\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ ZUC-\/NEA6\ \ \ \ \ \ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ Y(4)x4\ |\ Y\ \ x8\ \ |\ Y(4)x8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ x16\ |\ Y(4)\ x16\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ SNOW3G-\/UEA2\ \ \ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ x16\ |\ Y\ \ \ \ x16\ |\ \ <-\/-\/-\/\ \ |}
@@ -89,7 +90,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 \DoxyCodeLine{|\ SM4-\/GCM\ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y(7)\ \ \ |\ [S1]\ \ \ |\ [S1]\ \ \ \ \ |\ [A2-\/4]\ |}
 \DoxyCodeLine{|\ AES-\/NEA5\ \ \ \ \ \ \ |\ Y\ \ by8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ by8\ |\ Y\ by16\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ [A2-\/1]\ |\ [A2-\/2]\ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ AES-\/NCA5\ \ \ \ \ \ \ |\ Y\ \ by8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ by8\ |\ Y\ by16\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ [A2-\/1]\ |\ [A2-\/2]\ \ \ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ ZUC-\/NCA6\ \ \ \ \ \ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ Y(5)x4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ x16\ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ ZUC-\/NCA6\ \ \ \ \ \ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ Y(4)x4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ x16\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ SNOW5G-\/NCA4\ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ x2\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+}
 
@@ -139,7 +140,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 \DoxyCodeLine{|\ AES256-\/CCM\ \ \ \ \ \ \ \ |\ Y\ \ \ x8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x8\ |\ Y\ \ x16\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x16\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ AES128-\/CMAC-\/96\ \ \ \ |\ Y\ \ \ x8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x8\ |\ Y\ \ x16\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x16\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ AES256-\/CMAC-\/96\ \ \ \ |\ Y\ \ \ x8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x8\ |\ Y\ \ x16\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x16\ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ KASUMI-\/F9\ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ \ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ KASUMI-\/F9\ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ ZUC-\/EIA3\ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ Y(3)x4\ |\ Y\ \ \ x8\ |\ Y(3)x8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ x16\ |\ Y(3)x16\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ SNOW3G-\/UIA2\ \ \ \ \ \ \ |\ Y(10)\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y(10)\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y(11)\ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ DOCSIS-\/CRC32(8)\ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |}
@@ -162,13 +163,12 @@ Table 2. List of supported integrity algorithms and their implementations.
 \DoxyCodeLine{|\ HMAC-\/SHA3-\/512\ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ SHAKE128\ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ \ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{|\ SHAKE256\ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ \ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ AES-\/NIA5\ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ \ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ AES-\/NIA5\ \ \ \ \ \ \ \ \ \ |\ Y\ \ by8\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ by32\ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ AES-\/NCA5\ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ \ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ ZUC-\/NIA6\ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ by32\ \ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ ZUC-\/NCA6\ \ \ \ \ \ \ \ \ \ |\ Y\ \ \ x4\ |\ \ <-\/-\/-\/\ \ |\ Y(3)x4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ by32\ \ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ SNOW5G-\/NIA4\ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ x2\ |\ \ <-\/-\/-\/\ \ |}
-\DoxyCodeLine{|\ SNOW5G-\/NCA4\ \ \ \ \ \ \ |\ Y\ \ \ \ \ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ \ x2\ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ AES-\/NIA5\ \ \ \ \ \ \ \ \ \ |\ Y\ \ by4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ by4\ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ AES-\/NCA5\ \ \ \ \ \ \ \ \ \ |\ Y\ \ by4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ by4\ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ ZUC-\/NIA6\ \ \ \ \ \ \ \ \ \ |\ Y\ \ by4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ by4\ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ ZUC-\/NCA6\ \ \ \ \ \ \ \ \ \ |\ Y\ \ by4\ |\ \ <-\/-\/-\/\ \ |\ Y(3)by4|\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ by4\ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ SNOW5G-\/NIA4\ \ \ \ \ \ \ |\ Y\ \ by4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ by4\ |\ \ <-\/-\/-\/\ \ |}
+\DoxyCodeLine{|\ SNOW5G-\/NCA4\ \ \ \ \ \ \ |\ Y\ \ by4\ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ \ <-\/-\/-\/\ \ |\ Y\ \ \ by4\ |\ \ <-\/-\/-\/\ \ |}
 \DoxyCodeLine{+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+}
 
 \end{DoxyCode}
@@ -277,7 +277,7 @@ Table 4. List of supported digital signature and key encapsulation Post-\/\+Quan
  (2) -\/ AVX512\+VL optimized Keccak1600 (x4 multi-\/buffer shake; single buffer shake and sha3). ~\newline
  (3) -\/ AVX2 optimized ML-\/\+KEM NTT. ~\newline
 \hypertarget{index_autotoc_md3}{}\doxysubsection{\texorpdfstring{2. Processor Extensions and Architecture Types}{2. Processor Extensions and Architecture Types}}\label{index_autotoc_md3}
-Table 4. Processor extensions used in the library 
+Table 5. Processor extensions used in the library 
 \begin{DoxyCode}{0}
 \DoxyCodeLine{+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+}
 \DoxyCodeLine{|\ Architecture\ \ |\ Instruction\ Extensions\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ Example\ Products\ \ \ \ \ \ \ \ \ \ \ \ \ |}
@@ -314,19 +314,21 @@ Table 4. Processor extensions used in the library
 \hypertarget{index_autotoc_md4}{}\doxysubsection{\texorpdfstring{3. Recommendations}{3. Recommendations}}\label{index_autotoc_md4}
 Legacy or to be avoided algorithms listed in the table below are implemented in the library in order to support legacy applications. Please use corresponding alternative algorithms instead. 
 \begin{DoxyCode}{0}
-\DoxyCodeLine{+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+}
-\DoxyCodeLine{|\ \#\ |\ Algorithm\ \ \ \ \ \ \ \ \ \ \ |\ Recommendation\ |\ Alternative\ \ \ \ \ \ \ |}
-\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
-\DoxyCodeLine{|\ 1\ |\ DES\ encryption\ \ \ \ \ \ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ AES\ encryption\ \ \ \ |}
-\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
-\DoxyCodeLine{|\ 2\ |\ 3DES\ encryption\ \ \ \ \ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ AES\ encryption\ \ \ \ |}
-\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
-\DoxyCodeLine{|\ 3\ |\ HMAC-\/MD5\ integrity\ \ |\ Legacy\ \ \ \ \ \ \ \ \ |\ HMAC-\/SHA256\ \ \ \ \ \ \ |}
-\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
-\DoxyCodeLine{|\ 4\ |\ AES-\/ECB\ encryption\ \ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ AES-\/CBC,\ AES-\/CNTR\ |}
-\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
-\DoxyCodeLine{|\ 3\ |\ HMAC-\/SHA1\ integrity\ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ HMAC-\/SHA256\ \ \ \ \ \ \ |}
-\DoxyCodeLine{+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+}
+\DoxyCodeLine{+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+}
+\DoxyCodeLine{|\ \#\ |\ Algorithm\ \ \ \ \ \ \ \ \ \ \ |\ Recommendation\ |\ Alternative\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |}
+\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
+\DoxyCodeLine{|\ 1\ |\ DES\ encryption\ \ \ \ \ \ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ AES\ encryption\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |}
+\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
+\DoxyCodeLine{|\ 2\ |\ 3DES\ encryption\ \ \ \ \ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ AES\ encryption\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |}
+\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
+\DoxyCodeLine{|\ 3\ |\ HMAC-\/MD5\ integrity\ \ |\ Legacy\ \ \ \ \ \ \ \ \ |\ HMAC-\/SHA256\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |}
+\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
+\DoxyCodeLine{|\ 4\ |\ AES-\/ECB\ encryption\ \ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ AES-\/GCM\ (AEAD);\ AES-\/CBC/AES-\/CTR\ \ \ |}
+\DoxyCodeLine{|\ \ \ |\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ only\ together\ with\ an\ integrity\ \ \ |}
+\DoxyCodeLine{|\ \ \ |\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ algorithm\ (e.g.\ HMAC-\/SHA256)\ \ \ \ \ \ |}
+\DoxyCodeLine{|-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/|}
+\DoxyCodeLine{|\ 5\ |\ HMAC-\/SHA1\ integrity\ |\ Avoid\ \ \ \ \ \ \ \ \ \ |\ HMAC-\/SHA256\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |}
+\DoxyCodeLine{+-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/+}
 
 \end{DoxyCode}
  Intel(\+R) Multi-\/\+Buffer Crypto for IPsec Library depends on C library and it is recommended to use its latest version.
@@ -336,11 +338,14 @@ Applications using the Intel(\+R) Multi-\/\+Buffer Crypto for IPsec Library rely
 \begin{DoxyItemize}
 \item test -\/ Library test applications
 \item perf -\/ Library performance application
+\item examples -\/ Library usage examples
+\item tools -\/ Development and code analysis tools
 \item lib -\/ Library source files
 \item lib/\+x86\+\_\+64 -\/ Non-\/\+SIMD routines
 \item lib/\+sse\+\_\+\texorpdfstring{$\ast$}{*} -\/ Intel(\+R) SSE optimized routines
 \item lib/\+avx2\+\_\+\texorpdfstring{$\ast$}{*} -\/ Intel(\+R) AVX2 optimized routines
 \item lib/\+avx512\+\_\+\texorpdfstring{$\ast$}{*} -\/ Intel(\+R) AVX512 optimized routines
+\item lib/\+avx10\+\_\+\texorpdfstring{$\ast$}{*} -\/ Intel(\+R) AVX10 optimized routines
 \end{DoxyItemize}
 
 {\bfseries{Note:}} ~\newline
@@ -392,6 +397,15 @@ IVs, nonces, AAD, message lengths and offsets are treated as public, which match
 The option is off by default and generates no code when disabled, so normal builds are unaffected. Enabling it requires the Valgrind development headers, and execution under Valgrind is considerably slower than a native run.
 
 See \href{https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md}{\texttt{INSTALL}} for how to enable the build and run the checks.\hypertarget{index_autotoc_md11}{}\doxysubsection{\texorpdfstring{9. Backwards compatibility}{9. Backwards compatibility}}\label{index_autotoc_md11}
+In version 3.\+0, the following interfaces have been removed:
+\begin{DoxyItemize}
+\item direct API for wireless algorithms (ZUC-\/\+EEA3/\+\+EIA3, SNOW3\+G-\/\+UEA2/\+\+UIA2 and KASUMI-\/\+F8/\+\+F9) and the CRC direct API -\/ these algorithms remain available through the job API;
+\item custom cipher mode ({\ttfamily IMB\+\_\+\+CIPHER\+\_\+\+CUSTOM}) and custom hash algorithm ({\ttfamily IMB\+\_\+\+AUTH\+\_\+\+CUSTOM}) support;
+\item QUIC API;
+\item SNOW-\/V cipher and SNOW-\/V AEAD, AES-\/\+CBCS 1:9 cipher, AES-\/\+CTR bit-\/length variant, ZUC-\/\+EEA3-\/256 and ZUC-\/\+EIA3-\/256 algorithms;
+\item non-\/byte-\/aligned message length and offset support in wireless algorithms, including the KASUMI bit-\/length API.
+\end{DoxyItemize}
+
 In version 1.\+4, backward compile time symbol compatibility with library version 0.\+53 has been removed.
 
 Applications are encouraged to use new symbol names introduced in version 0.\+54.
@@ -603,6 +617,8 @@ Note: the acvp-\/app requires libacvp 2.\+0+ to be built.\hypertarget{index_auto
  \hypertarget{index_autotoc_md17}{}\doxysubsubsection{\texorpdfstring{Self-\/\+Test}{Self-\/\+Test}}\label{index_autotoc_md17}
 In order to support CMVP, the library implements Self-\/\+Test functionality that is available with all compilation options. The test is always performed as part of library initialization (power-\/up). There is no conditional self-\/test functionality as none of such conditions occur (i.\+e. pair-\/wise consistency test, software/\+firmware load test, manual key entry test, continuous random number generator test, and bypass test).
 
+If the self-\/test fails the manager enters a {\bfseries{fail-\/closed}} error state: {\ttfamily \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()}} returns {\ttfamily \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1873d38b8aaf5ebcd3f542b15c418829}{IMB\+\_\+\+ERR\+\_\+\+SELFTEST}}, the {\ttfamily \doxylink{intel-ipsec-mb_8h_a673b969c5f01579f6ca0a6b003cf1197}{IMB\+\_\+\+FEATURE\+\_\+\+SELF\+\_\+\+TEST\+\_\+\+PASS}} feature flag is cleared and all job, burst and direct APIs on that manager are disabled -\/ they return {\ttfamily NULL}/{\ttfamily 0}/{\ttfamily -\/1}, do not produce any output and report {\ttfamily \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1873d38b8aaf5ebcd3f542b15c418829}{IMB\+\_\+\+ERR\+\_\+\+SELFTEST}}. {\ttfamily \doxylink{intel-ipsec-mb_8h_ad3fdcf3dd90efcc85c4222f5ff58c48e}{imb\+\_\+ml\+\_\+kem\+\_\+new()}} and {\ttfamily \doxylink{intel-ipsec-mb_8h_a3a2c42ec0cc48d52fdc32d36d937bbe6}{imb\+\_\+ml\+\_\+dsa\+\_\+new()}} return {\ttfamily \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1873d38b8aaf5ebcd3f542b15c418829}{IMB\+\_\+\+ERR\+\_\+\+SELFTEST}}, and all operations on ML-\/\+KEM/\+\+ML-\/\+DSA contexts created earlier with that manager (except {\ttfamily \doxylink{intel-ipsec-mb_8h_ac4bfccdf0f4c78e73f56176fcec9ff3e}{imb\+\_\+ml\+\_\+kem\+\_\+free()}}/{\ttfamily \doxylink{intel-ipsec-mb_8h_ae125d85a0e86ef21f114ce042b53b913}{imb\+\_\+ml\+\_\+dsa\+\_\+free()}}) return {\ttfamily \doxylink{intel-ipsec-mb_8h_aa12c6dbc4b212887ef528c215f513e0ba1873d38b8aaf5ebcd3f542b15c418829}{IMB\+\_\+\+ERR\+\_\+\+SELFTEST}} as well. Status/\+query APIs ({\ttfamily \doxylink{intel-ipsec-mb_8h_a79f60b2bffbe91dac3e4f8b486e7ab10}{imb\+\_\+get\+\_\+errno()}}, {\ttfamily \doxylink{intel-ipsec-mb_8h_a61f664448a862fbb02e728ce518ff8e4}{imb\+\_\+get\+\_\+strerror()}}, {\ttfamily \doxylink{intel-ipsec-mb_8h_ae817018bc0c7bbd3cad0147952c8576e}{imb\+\_\+get\+\_\+features()}}, {\ttfamily \doxylink{intel-ipsec-mb_8h_a8bf5a6c43278a8ed16850a46707db863}{imb\+\_\+get\+\_\+flags()}}, self-\/test callback APIs) and {\ttfamily \doxylink{intel-ipsec-mb_8h_a238b96cc36c0dc64798a1244b94add8b}{free\+\_\+mb\+\_\+mgr()}} remain functional. A subsequent successful {\ttfamily init\+\_\+mb\+\_\+mgr\+\_\+\texorpdfstring{$\ast$}{*}()} call on the same manager restores normal operation.
+
 Application can register self-\/test callback function to track test progress. Optionally application can corrupt input message for selected tests and observe change in the test result.
 
 Example sequence of callbacks received by an application is:
@@ -678,6 +694,32 @@ The self-\/test consists of Cryptographic algorithm test (known answer test) on 
 
 \item SHAKE-\/256 ~\newline
 
+\item HMAC-\/\+SHA3-\/224 ~\newline
+
+\item HMAC-\/\+SHA3-\/256 ~\newline
+
+\item HMAC-\/\+SHA3-\/384 ~\newline
+
+\item HMAC-\/\+SHA3-\/512 ~\newline
+
+\end{DoxyItemize}
+\item KAT\+\_\+\+Signature:
+\begin{DoxyItemize}
+\item ML-\/\+DSA-\/44 ~\newline
+
+\item ML-\/\+DSA-\/65 ~\newline
+
+\item ML-\/\+DSA-\/87 ~\newline
+
+\end{DoxyItemize}
+\item KAT\+\_\+\+KEM:
+\begin{DoxyItemize}
+\item ML-\/\+KEM-\/512 ~\newline
+
+\item ML-\/\+KEM-\/768 ~\newline
+
+\item ML-\/\+KEM-\/1024 ~\newline
+
 \end{DoxyItemize}
 \end{DoxyItemize}
 
@@ -705,9 +747,14 @@ Example detection of library self-\/test completion \& error in the application:
 \DoxyCodeLine{\ \ \ \ \ \ \ \ printf("{}SELF-\/TEST:\ N/A\ (requires\ library\ >=\ v1.3)\(\backslash\)n"{});}
 \DoxyCodeLine{\}}
 \DoxyCodeLine{}
-\DoxyCodeLine{/*\ check\ for\ initialization\ self-\/test\ error\ */}
+\DoxyCodeLine{/*}
+\DoxyCodeLine{\ *\ check\ for\ initialization\ self-\/test\ error}
+\DoxyCodeLine{\ *\ -\/\ on\ failure\ the\ manager\ is\ fail-\/closed\ and\ all\ crypto\ APIs}
+\DoxyCodeLine{\ *\ \ \ are\ disabled;\ free\ it\ or\ re-\/initialize\ it}
+\DoxyCodeLine{\ */}
 \DoxyCodeLine{if\ (imb\_get\_errno(p\_mgr)\ ==\ IMB\_ERR\_SELFTEST)\ \{}
 \DoxyCodeLine{\ \ \ \ \ \ \ \ /*\ self-\/test\ error\ */}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ free\_mb\_mgr(p\_mgr);}
 \DoxyCodeLine{\ \ \ \ \ \ \ \ exit(EXIT\_FAILURE);}
 \DoxyCodeLine{\}}
 
