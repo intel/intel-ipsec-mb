@@ -7,7 +7,9 @@
 # Intel(R) Multi-Buffer Crypto for IPsec Library
 
 The library provides software crypto acceleration primarily targeting packet processing
-applications. It can be used for application such as: IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.
+applications. It can be used for applications such as: IPsec, TLS, Wireless (RAN) and Cable.
+It also provides post-quantum cryptography (PQC) algorithms for applications migrating to
+quantum-resistant key establishment and digital signatures.
 
 The library is hosted on [GitHub](https://github.com/intel/intel-ipsec-mb) and is used as software crypto
 provider in [DPDK](https://www.dpdk.org/), [Intel(R) QAT Engine](https://github.com/intel/QAT_Engine)
@@ -24,6 +26,7 @@ Key differentiating features:
   - job manager with scheduling and dispatching functions
   - API hides underlying implementation details from an application
 - multi-buffer and function stitching innovations
+- post-quantum cryptography (ML-KEM and ML-DSA) support
 - low level implementations using latest instruction extensions
 
 ## Contents
