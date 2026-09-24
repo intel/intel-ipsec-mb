@@ -27,7 +27,7 @@ jobs:
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config Release --parallel
+      run: cmake --build ${{github.workspace}}/build --config Release --parallel 4
 
     - name: Create DEB package
       working-directory: ${{github.workspace}}/build
@@ -87,7 +87,7 @@ jobs:
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config Release --parallel
+      run: cmake --build ${{github.workspace}}/build --config Release --parallel 4
 
     - name: Create RPM package
       working-directory: ${{github.workspace}}/build

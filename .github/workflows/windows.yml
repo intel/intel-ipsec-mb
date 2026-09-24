@@ -38,10 +38,10 @@ jobs:
       run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
 
     - name: Build
-      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel 4
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 4 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
 
   # CMake debug build with shared library (msbuild)
   debug-cmake-msvc-msbuild:
@@ -71,10 +71,10 @@ jobs:
       run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
 
     - name: Build
-      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel 4
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 4 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
 
   # CMake release build with shared library (msbuild) on VS2022
   release-cmake-msvc-msbuild-vs2022:
@@ -104,10 +104,10 @@ jobs:
       run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
 
     - name: Build
-      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel 4
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 4 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
 
   # CMake debug build with shared library (msbuild) on VS2022
   debug-cmake-msvc-msbuild-vs2022:
@@ -137,10 +137,10 @@ jobs:
       run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
 
     - name: Build
-      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel 4
 
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 4 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
 
   # CMake release build with shared library (ninja) on VS2022
   release-cmake-ninja-vs2022:
@@ -170,7 +170,7 @@ jobs:
       run: cmake -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
 
     - name: Build
-      run: cmake --build ${{env.BUILD_DIR}}
+      run: cmake --build ${{env.BUILD_DIR}} --parallel 4
 
     - name: Test
-      run: ctest -j 5 --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 4 --test-dir ${{env.BUILD_DIR}}
