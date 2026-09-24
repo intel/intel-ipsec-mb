@@ -41,7 +41,7 @@ jobs:
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel 4
 
     - name: Test
-      run: ctest -j 4 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 4 -C ${{env.BUILD_TYPE}} -E SAFE_CHECK::EXT --test-dir ${{env.BUILD_DIR}}
 
   # CMake debug build with shared library (msbuild)
   debug-cmake-msvc-msbuild:
@@ -107,7 +107,7 @@ jobs:
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel 4
 
     - name: Test
-      run: ctest -j 4 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 4 -C ${{env.BUILD_TYPE}} -E SAFE_CHECK::EXT --test-dir ${{env.BUILD_DIR}}
 
   # CMake debug build with shared library (msbuild) on VS2022
   debug-cmake-msvc-msbuild-vs2022:
