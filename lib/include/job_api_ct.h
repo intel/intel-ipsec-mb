@@ -138,6 +138,24 @@ imb_ct_hmac_state_size(const IMB_HASH_ALG hash_alg)
 }
 
 /**
+ * @brief Returns the cipher key schedule used by the job for its direction
+ *
+ * Modes that keep a separate encrypt and decrypt key schedule only require the
+ * field matching the cipher direction to be set (see the job argument checks).
+ * The other field is left untouched by the application, so it may hold stale or
+ * uninitialized data and must not be read or marked.
+ *
+ * @param job pointer to job
+ *
+ * @return pointer to the key schedule in use, may be NULL
+ */
+static inline const void *
+imb_ct_job_dir_keys(const IMB_JOB *job)
+{
+        return (job->cipher_direction == IMB_DIR_ENCRYPT) ? job->enc_keys : job->dec_keys;
+}
+
+/**
  * @brief Applies the requested marking to every piece of key material
  *
  * The same set of regions has to be marked secret on submission and released
@@ -153,6 +171,8 @@ imb_ct_job_mark_keys(const IMB_JOB *job, const int secret)
         if (job == NULL)
                 return;
 
+        const void *const dir_keys = imb_ct_job_dir_keys(job);
+
         /* cipher key schedule */
         switch (job->cipher_mode) {
         case IMB_CIPHER_GCM:
@@ -163,10 +183,9 @@ imb_ct_job_mark_keys(const IMB_JOB *job, const int secret)
                  * which holds the round keys and the pre-computed GHASH
                  * sub-key powers.  Fixed size, so no per-architecture logic.
                  * Encrypt jobs use enc_keys and decrypt jobs use dec_keys,
-                 * so mark whichever of the two is provided.
+                 * so mark whichever of the two the direction selects.
                  */
-                imb_ct_secret(job->enc_keys, sizeof(struct gcm_key_data), secret);
-                imb_ct_secret(job->dec_keys, sizeof(struct gcm_key_data), secret);
+                imb_ct_secret(dir_keys, sizeof(struct gcm_key_data), secret);
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
@@ -176,11 +195,16 @@ imb_ct_job_mark_keys(const IMB_JOB *job, const int secret)
                 break;
         case IMB_CIPHER_CCM:
         case IMB_CIPHER_CNTR:
-        case IMB_CIPHER_ECB:
-        case IMB_CIPHER_CFB:
-                /* CTR/ECB/CCM/CFB only ever use the encrypt key schedule */
+        case IMB_CIPHER_AES_NEA5:
+        case IMB_CIPHER_AES_NCA5:
+                /* counter based modes only ever use the encrypt key schedule */
                 imb_ct_secret(job->enc_keys, imb_ct_aes_exp_key_size(job->key_len_in_bytes),
                               secret);
+                break;
+        case IMB_CIPHER_ECB:
+        case IMB_CIPHER_CFB:
+        case IMB_CIPHER_CBC:
+                imb_ct_secret(dir_keys, imb_ct_aes_exp_key_size(job->key_len_in_bytes), secret);
                 break;
         case IMB_CIPHER_PON_AES_CNTR:
                 if (job->msg_len_to_cipher_in_bytes > 0) {
@@ -189,14 +213,16 @@ imb_ct_job_mark_keys(const IMB_JOB *job, const int secret)
                                       secret);
                 }
                 break;
-        case IMB_CIPHER_CBC:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
-        case IMB_CIPHER_AES_NEA5:
-        case IMB_CIPHER_AES_NCA5:
+                /*
+                 * DOCSIS-SEC BPI always needs the encrypt key schedule, the
+                 * decrypt one is only required by decrypt jobs.
+                 */
                 imb_ct_secret(job->enc_keys, imb_ct_aes_exp_key_size(job->key_len_in_bytes),
                               secret);
-                imb_ct_secret(job->dec_keys, imb_ct_aes_exp_key_size(job->key_len_in_bytes),
-                              secret);
+                if (job->cipher_direction == IMB_DIR_DECRYPT)
+                        imb_ct_secret(job->dec_keys, imb_ct_aes_exp_key_size(job->key_len_in_bytes),
+                                      secret);
                 break;
         case IMB_CIPHER_SNOW3G_UEA2:
                 imb_ct_secret(job->enc_keys, sizeof(snow3g_key_schedule_t), secret);
@@ -213,19 +239,16 @@ imb_ct_job_mark_keys(const IMB_JOB *job, const int secret)
                 break;
         case IMB_CIPHER_DES:
         case IMB_CIPHER_DOCSIS_DES:
-                imb_ct_secret(job->enc_keys, IMB_DES_KEY_SCHED_SIZE, secret);
-                imb_ct_secret(job->dec_keys, IMB_DES_KEY_SCHED_SIZE, secret);
+                imb_ct_secret(dir_keys, IMB_DES_KEY_SCHED_SIZE, secret);
                 break;
         case IMB_CIPHER_DES3:
-                if (job->enc_keys != NULL) {
-                        const void *const *ks = (const void *const *) job->enc_keys;
-
-                        imb_ct_secret(ks[0], IMB_DES_KEY_SCHED_SIZE, secret);
-                        imb_ct_secret(ks[1], IMB_DES_KEY_SCHED_SIZE, secret);
-                        imb_ct_secret(ks[2], IMB_DES_KEY_SCHED_SIZE, secret);
-                }
-                if (job->dec_keys != NULL) {
-                        const void *const *ks = (const void *const *) job->dec_keys;
+                /*
+                 * 3DES passes an array of three pointers to the per-key
+                 * schedules.  Only the array matching the cipher direction is
+                 * set by the application, so only that one may be walked.
+                 */
+                if (dir_keys != NULL) {
+                        const void *const *ks = (const void *const *) dir_keys;
 
                         imb_ct_secret(ks[0], IMB_DES_KEY_SCHED_SIZE, secret);
                         imb_ct_secret(ks[1], IMB_DES_KEY_SCHED_SIZE, secret);
@@ -234,10 +257,11 @@ imb_ct_job_mark_keys(const IMB_JOB *job, const int secret)
                 break;
         case IMB_CIPHER_SM4_ECB:
         case IMB_CIPHER_SM4_CBC:
-        case IMB_CIPHER_SM4_CTR:
+                imb_ct_secret(dir_keys, IMB_SM4_KEY_SCHEDULE_ROUNDS * sizeof(uint32_t), secret);
+                break;
+        case IMB_CIPHER_SM4_CNTR:
+                /* SM4-CTR only ever uses the encrypt key schedule */
                 imb_ct_secret(job->enc_keys, IMB_SM4_KEY_SCHEDULE_ROUNDS * sizeof(uint32_t),
-                              secret);
-                imb_ct_secret(job->dec_keys, IMB_SM4_KEY_SCHEDULE_ROUNDS * sizeof(uint32_t),
                               secret);
                 break;
         default:
