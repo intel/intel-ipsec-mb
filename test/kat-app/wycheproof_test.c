@@ -448,7 +448,6 @@ test_gmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_cont
  * @param [in] full_tag     when set, the full digest size is requested from
  *                          the library instead of the (possibly truncated)
  *                          vector tag size
- * @param [in] zero_msg_note note printed when zero length messages are skipped
  *
  * @return Test result
  * @retval 1 all vectors behaved as expected
@@ -456,8 +455,7 @@ test_gmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_cont
  */
 static void
 test_hmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_context *ts,
-          const IMB_HASH_ALG hash_alg, const size_t digest_size, const int full_tag,
-          const char *zero_msg_note)
+          const IMB_HASH_ALG hash_alg, const size_t digest_size, const int full_tag)
 {
         const struct mac_test *v;
         /* imb_hmac_ipad_opad() writes up to one hash block, SHA3 being the largest */
@@ -475,11 +473,6 @@ test_hmac(IMB_MGR *p_mgr, const struct mac_test *vectors, struct test_suite_cont
                 if (v->tagSize > (sizeof(tag) * 8)) {
                         print_mac_test(v);
                         test_suite_update(ts, 0, 1);
-                        continue;
-                }
-
-                if (v->msgSize == 0) {
-                        skip_note_add(zero_msg_note);
                         continue;
                 }
 
@@ -1079,36 +1072,31 @@ struct wycheproof_suite {
 static void
 test_hmac_sha1(IMB_MGR *p_mgr, const struct mac_test *v, struct test_suite_context *ts)
 {
-        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_1, IMB_SHA1_DIGEST_SIZE_IN_BYTES, 1,
-                  "HMAC-SHA1 msgSize=0 not supported");
+        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_1, IMB_SHA1_DIGEST_SIZE_IN_BYTES, 1);
 }
 
 static void
 test_hmac_sha224(IMB_MGR *p_mgr, const struct mac_test *v, struct test_suite_context *ts)
 {
-        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_224, IMB_SHA224_DIGEST_SIZE_IN_BYTES, 0,
-                  "HMAC-SHA224 msgSize=0 not supported");
+        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_224, IMB_SHA224_DIGEST_SIZE_IN_BYTES, 0);
 }
 
 static void
 test_hmac_sha256(IMB_MGR *p_mgr, const struct mac_test *v, struct test_suite_context *ts)
 {
-        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_256, IMB_SHA256_DIGEST_SIZE_IN_BYTES, 0,
-                  "HMAC-SHA256 msgSize=0 not supported");
+        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_256, IMB_SHA256_DIGEST_SIZE_IN_BYTES, 0);
 }
 
 static void
 test_hmac_sha384(IMB_MGR *p_mgr, const struct mac_test *v, struct test_suite_context *ts)
 {
-        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_384, IMB_SHA384_DIGEST_SIZE_IN_BYTES, 0,
-                  "HMAC-SHA384 msgSize=0 not supported");
+        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_384, IMB_SHA384_DIGEST_SIZE_IN_BYTES, 0);
 }
 
 static void
 test_hmac_sha512(IMB_MGR *p_mgr, const struct mac_test *v, struct test_suite_context *ts)
 {
-        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_512, IMB_SHA512_DIGEST_SIZE_IN_BYTES, 0,
-                  "HMAC-SHA512 msgSize=0 not supported");
+        test_hmac(p_mgr, v, ts, IMB_AUTH_HMAC_SHA_512, IMB_SHA512_DIGEST_SIZE_IN_BYTES, 0);
 }
 
 static int
