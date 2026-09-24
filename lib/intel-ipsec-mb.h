@@ -1138,7 +1138,10 @@ imb_get_next_job(IMB_MGR *state);
  *   functional.
  * The application should check imb_get_errno() after initialization.
  * A subsequent successful init_mb_mgr_*() call on the same manager restores
- * normal operation.
+ * normal operation. An init_mb_mgr_*() call that cannot complete (for example
+ * IMB_ERR_MISSING_CPUFLAGS_INIT_MGR on a CPU that does not support the
+ * selected architecture) does not re-run the self-test and leaves the existing
+ * self-test state, including a fail-closed one, in place.
  */
 
 /**

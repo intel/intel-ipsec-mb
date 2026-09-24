@@ -3161,6 +3161,65 @@ test_self_test_fail_closed(void)
         }
         print_progress();
 
+        /*
+         * No init_mb_mgr_*() call may lift the fail-closed state unless it
+         * completes AND the self-test passes. The corrupting callback is
+         * still installed here, so on every machine each entry point takes
+         * one of two paths, both of which must leave the manager locked:
+         * - the CPU supports the architecture: the init completes, the
+         *   self-test runs and fails again -> IMB_ERR_SELFTEST;
+         * - the CPU does not support it: the init returns early and must
+         *   leave the existing fail-closed state untouched
+         *   -> IMB_ERR_MISSING_CPUFLAGS_INIT_MGR.
+         * This matters most for the ML-KEM/ML-DSA API's, which are not
+         * covered by the manager function pointer stubs.
+         */
+        static const struct {
+                void (*init_fn)(IMB_MGR *);
+                uint64_t cpuflags;
+                const char *name;
+        } init_tab[] = {
+                { .init_fn = init_mb_mgr_sse, .cpuflags = IMB_CPUFLAGS_SSE, .name = "sse" },
+                { .init_fn = init_mb_mgr_avx2, .cpuflags = IMB_CPUFLAGS_AVX2, .name = "avx2" },
+                { .init_fn = init_mb_mgr_avx512,
+                  .cpuflags = IMB_CPUFLAGS_AVX512,
+                  .name = "avx512" },
+                { .init_fn = init_mb_mgr_avx10, .cpuflags = IMB_CPUFLAGS_AVX10, .name = "avx10" },
+        };
+
+        for (size_t i = 0; i < IMB_DIM(init_tab); i++) {
+                if (imb_get_features(t_mgr, &features) != 0)
+                        goto exit;
+
+                const int exp_errno = ((features & init_tab[i].cpuflags) == init_tab[i].cpuflags)
+                                              ? IMB_ERR_SELFTEST
+                                              : IMB_ERR_MISSING_CPUFLAGS_INIT_MGR;
+
+                /* re-arm the corrupting callback for architectures that run the test */
+                test_ctx.corrupted_counter = 0;
+
+                init_tab[i].init_fn(t_mgr);
+
+                if (imb_get_errno(t_mgr) != exp_errno || imb_get_features(t_mgr, &features) != 0 ||
+                    (features & IMB_FEATURE_SELF_TEST) == 0 ||
+                    (features & IMB_FEATURE_SELF_TEST_PASS) != 0) {
+                        printf("%s: init_mb_mgr_%s() cleared the fail-closed state\n", __func__,
+                               init_tab[i].name);
+                        goto exit;
+                }
+
+                /* PQC API's are not covered by the function pointer stubs */
+                IMB_ML_DSA *new_dsa = NULL;
+
+                if (imb_ml_dsa_new(t_mgr, IMB_ML_DSA_87, &new_dsa) != IMB_ERR_SELFTEST) {
+                        printf("%s: init_mb_mgr_%s() re-enabled the ML-DSA API\n", __func__,
+                               init_tab[i].name);
+                        imb_ml_dsa_free(new_dsa);
+                        goto exit;
+                }
+                print_progress();
+        }
+
         /* clean re-initialization must restore the manager */
         if (imb_self_test_set_cb(t_mgr, NULL, NULL) != 0)
                 goto exit;

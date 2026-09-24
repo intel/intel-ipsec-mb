@@ -49,7 +49,25 @@ init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs)
 void
 init_mb_mgr_avx2(IMB_MGR *state)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+#endif
+
+        /* reset error status */
+        imb_set_errno(state, 0);
+
         init_mb_mgr_avx2_internal(state, 1);
+
+        /*
+         * Skip the self-test if the manager could not be initialized
+         * (e.g. missing CPU features). The previous self-test state,
+         * including a fail-closed one, is left untouched.
+         */
+        if (state->imb_errno != 0)
+                return;
 
         if (!self_test(state))
                 self_test_fail_closed(state);

@@ -293,18 +293,28 @@ struct IMB_MGR {
  *
  * @param p_mgr MB manager structure
  *
- * @retval 1 self-test feature is present and the test did not pass
- * @retval 0 otherwise (test passed, in progress or self-test compiled out)
+ * @retval 1 the self-test did not pass or has not been run yet
+ * @retval 0 test passed, test in progress or self-test compiled out
  */
 __forceinline int
 self_test_failed(const IMB_MGR *p_mgr)
 {
+#ifdef NO_SELF_TEST_DEV
+        (void) p_mgr;
+        return 0;
+#else
         /* API's used by the self-test itself are allowed while it executes */
         if (p_mgr->self_test_in_progress)
                 return 0;
 
-        return ((p_mgr->features & (IMB_FEATURE_SELF_TEST | IMB_FEATURE_SELF_TEST_PASS)) ==
-                IMB_FEATURE_SELF_TEST);
+        /*
+         * Fail closed: only a completed and passed self-test unlocks the
+         * crypto API's. Absence of IMB_FEATURE_SELF_TEST_PASS is treated as
+         * a failure, so clearing the feature flags (e.g. an initialization
+         * that re-detects CPU features) cannot lift the lockout.
+         */
+        return ((p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) == 0);
+#endif
 }
 
 /*

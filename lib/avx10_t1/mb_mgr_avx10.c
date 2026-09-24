@@ -46,18 +46,18 @@ init_mb_mgr_avx10(IMB_MGR *state)
         }
 #endif
 
-        state->features = cpu_feature_adjust(state->flags, cpu_feature_detect());
-
-        /* Check minimum CPU flags needed for AVX10 interface */
-        if ((state->features & IMB_CPUFLAGS_AVX10) != IMB_CPUFLAGS_AVX10) {
-                imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
-                return;
-        }
-
         /* reset error status */
         imb_set_errno(state, 0);
 
         init_mb_mgr_avx10_internal(state, 1);
+
+        /*
+         * Skip the self-test if the manager could not be initialized
+         * (e.g. missing CPU features). The previous self-test state,
+         * including a fail-closed one, is left untouched.
+         */
+        if (state->imb_errno != 0)
+                return;
 
         if (!self_test(state))
                 self_test_fail_closed(state);

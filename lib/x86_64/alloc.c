@@ -177,7 +177,10 @@ imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags, const unsigned rese
         uint8_t *free_ptr = &ptr8[ALIGN(sizeof(IMB_MGR), ALIGNMENT)];
         const size_t mem_size = imb_get_mb_mgr_size();
 
-        /* a failed self-test state must survive a pointer reset */
+        /* the self-test status (pass or fail) must survive a pointer reset */
+        const uint64_t self_test_status =
+                reset_mgr ? 0
+                          : (ptr->features & (IMB_FEATURE_SELF_TEST | IMB_FEATURE_SELF_TEST_PASS));
         const int keep_fail_closed = (!reset_mgr) && self_test_failed(ptr);
 
         if (reset_mgr) {
@@ -187,7 +190,7 @@ imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags, const unsigned rese
 
         imb_set_errno(ptr, 0);
         ptr->flags = flags; /* save the flags for future use in init */
-        ptr->features = cpu_feature_adjust(flags, cpu_feature_detect());
+        ptr->features = cpu_feature_adjust(flags, cpu_feature_detect()) | self_test_status;
 
         if (!reset_mgr) {
                 const IMB_ARCH used_arch = (IMB_ARCH) ptr->used_arch;
