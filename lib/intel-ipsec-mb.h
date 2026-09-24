@@ -550,9 +550,19 @@ struct IMB_SGL_IOV {
  *
  * For AES, enc_keys and dec_keys are
  * expected to point to expanded keys structure.
- * - AES-CTR, AES-ECB and AES-CCM, only enc_keys is used
+ * Only the pointer matching the cipher direction is read, so the other one
+ * does not have to be set, unless stated otherwise below.
+ * - AES-CTR, AES-CCM, PON-AES-CTR, AES-NEA5 and AES-NCA5, only enc_keys is used
+ * - AES-CFB, the encrypt key schedule is used in both directions,
+ *   so dec_keys has to point to the expanded encryption keys
  * - DOCSIS (AES-CBC + AES-CFB), both pointers are used
  *   enc_keys has to be set always for the partial block
+ *
+ * For SM4, enc_keys and dec_keys are
+ * expected to point to the SM4 key schedule.
+ * - SM4-CTR, only enc_keys is used
+ * - SM4-ECB and SM4-CBC, enc_keys is used for encrypt direction
+ *   and dec_keys for decrypt direction
  *
  * For AES-GCM, AES-GCM-SGL and SM4-GCM, enc_keys and dec_keys are
  * expected to point to the same key structure.
@@ -560,12 +570,17 @@ struct IMB_SGL_IOV {
  *
  * For DES, enc_keys and dec_keys are
  * expected to point to DES key schedule.
- * - same key schedule used for enc and dec operations
+ * - same key schedule used for enc and dec operations but it has to be set
+ *   through the pointer matching the cipher direction
  *
  * For 3DES, enc_keys and dec_keys are
  * expected to point to an array of 3 pointers for
  * the corresponding 3 key schedules.
- * - same key schedule used for enc and dec operations
+ * - same key schedules used for enc and dec operations but they have to be set
+ *   through the pointer matching the cipher direction
+ *
+ * For ChaCha20, ChaCha20-Poly1305, ZUC, SNOW3G, SNOW5G and KASUMI,
+ * enc_keys points to the key material and it is used in both directions.
  *
  * Cipher offset only applies to src pointer, not dst pointer.
  * In case of an in-place operation, dst pointer needs to point
