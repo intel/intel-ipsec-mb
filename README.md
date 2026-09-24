@@ -301,7 +301,8 @@ Table 5. Processor extensions used in the library
 |---------------+----------------------------------------+------------------------------|
 | AVX2 Type 3   | [AVX2 Type 2] + AVX-IFMA               | Sierra Forest                |
 |---------------+----------------------------------------+------------------------------|
-| AVX2 Type 4   | [AVX2 Type 3] + SM3NI, SM4NI, SHA512NI | Lunar Lake                   |
+| AVX2 Type 4   | [AVX2 Type 3] + SM3NI, SM4NI, SHA512NI | Lunar Lake, Arrow Lake,      |
+|               |                                        | Clearwater Forest            |
 |---------------+----------------------------------------+------------------------------|
 | AVX512 Type 1 | [AVX2 Type 1] + AVX512F, AVX512DQ,     | Sky Lake, Cascade Lake       |
 |               | AVX512CD, AVX512BW, AVX512VL           |                              |
