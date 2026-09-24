@@ -155,6 +155,17 @@ init_ipsec_mb_mgr()
                 } else {
                         /* Initialize the manager to dispatch IPsec APIs */
                         init_mb_mgr_auto(ipsec_mgr, NULL);
+
+                        const int init_err = imb_get_errno(ipsec_mgr);
+
+                        if (init_err != 0) {
+                                fprintf(stderr, "Error initializing Intel IPsec MB_MGR: %s\n",
+                                        imb_get_strerror(init_err));
+                                free_mb_mgr(ipsec_mgr);
+                                ipsec_mgr = NULL;
+                                return 0;
+                        }
+
                         return 1;
                 }
         }

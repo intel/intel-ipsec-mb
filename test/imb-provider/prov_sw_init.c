@@ -50,6 +50,14 @@ initialize_global_tlv()
 
                 init_mb_mgr_auto(global_tlv->imb_mgr, NULL);
 
+                const int init_err = imb_get_errno(global_tlv->imb_mgr);
+
+                if (init_err != 0) {
+                        fprintf(stderr, "Error initializing Intel IPsec MB_MGR: %s\n",
+                                imb_get_strerror(init_err));
+                        goto err;
+                }
+
                 if (((global_tlv->jobs = queue_async_create()) == NULL) ||
                     ((global_tlv->freelist_jobs = flist_async_create()) == NULL)) {
                         fprintf(stderr, "Failure to allocate global freelists and queues.\n");
