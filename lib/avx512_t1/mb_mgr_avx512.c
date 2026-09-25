@@ -11,55 +11,6 @@
 #include "include/error.h"
 #include "include/arch_x86_64.h" /* self-test */
 
-IMB_DLL_LOCAL void
-init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
-{
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return;
-        }
-#endif
-
-        /* Check minimum CPU flags needed for AVX512 interface */
-        if ((state->features & IMB_CPUFLAGS_AVX512) != IMB_CPUFLAGS_AVX512) {
-                imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
-                return;
-        }
-
-        if ((state->features & IMB_CPUFLAGS_AVX512_T2) == IMB_CPUFLAGS_AVX512_T2)
-                init_mb_mgr_avx512_t2_internal(state, reset_mgrs);
-        else
-                init_mb_mgr_avx512_t1_internal(state, reset_mgrs);
-}
-
-void
-init_mb_mgr_avx512(IMB_MGR *state)
-{
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return;
-        }
-#endif
-
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-        init_mb_mgr_avx512_internal(state, 1);
-
-        /*
-         * Skip the self-test if the manager could not be initialized
-         * (e.g. missing CPU features). The previous self-test state,
-         * including a fail-closed one, is left untouched.
-         */
-        if (state->imb_errno != 0)
-                return;
-
-        if (!self_test(state))
-                self_test_fail_closed(state);
-}
-
 IMB_JOB *
 submit_job_avx512(IMB_MGR *state)
 {
