@@ -72,20 +72,20 @@
 
 /* AES-CBC */
 #define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_cbc_enc_vaes_avx2
-#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_cbc_dec_vaes_avx2
+#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_cbc_dec_avx
 #define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_cbc_enc_vaes_avx2
 
 #define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_cbc_enc_vaes_avx2
-#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_cbc_dec_vaes_avx2
+#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_cbc_dec_avx
 #define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_cbc_enc_vaes_avx2
 
 #define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_cbc_enc_vaes_avx2
-#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_cbc_dec_vaes_avx2
+#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_cbc_dec_avx
 #define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_cbc_enc_vaes_avx2
 
-#define AES_CBC_DEC_128 aes_cbc_dec_128_vaes_avx2
-#define AES_CBC_DEC_192 aes_cbc_dec_192_vaes_avx2
-#define AES_CBC_DEC_256 aes_cbc_dec_256_vaes_avx2
+#define AES_CBC_DEC_128 aes_cbc_dec_128_avx
+#define AES_CBC_DEC_192 aes_cbc_dec_192_avx
+#define AES_CBC_DEC_256 aes_cbc_dec_256_avx
 
 /* AES-ECB */
 #define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_vaes_avx2
@@ -115,9 +115,9 @@
 #define SUBMIT_JOB_AES_CFB_256_ENC submit_job_aes256_cfb_enc_vaes_avx2
 #define FLUSH_JOB_AES_CFB_256_ENC  flush_job_aes256_cfb_enc_vaes_avx2
 
-#define AES_CFB_128_DEC aes_cfb_dec_128_vaes_avx2
-#define AES_CFB_192_DEC aes_cfb_dec_192_vaes_avx2
-#define AES_CFB_256_DEC aes_cfb_dec_256_vaes_avx2
+#define AES_CFB_128_DEC aes_cfb_128_dec_sse
+#define AES_CFB_192_DEC aes_cfb_192_dec_sse
+#define AES_CFB_256_DEC aes_cfb_256_dec_sse
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx
@@ -427,18 +427,18 @@ init_mb_mgr_avx2_t3_internal(IMB_MGR *state, const int reset_mgrs)
         state->hec_32 = hec_32_avx;
         state->hec_64 = hec_64_avx;
 
-        state->crc32_ethernet_fcs = ethernet_fcs_avx2;
-        state->crc16_x25 = crc16_x25_avx2;
-        state->crc32_sctp = crc32_sctp_avx2;
-        state->crc24_lte_a = crc24_lte_a_avx2;
-        state->crc24_lte_b = crc24_lte_b_avx2;
-        state->crc16_fp_data = crc16_fp_data_avx2;
-        state->crc11_fp_header = crc11_fp_header_avx2;
-        state->crc7_fp_header = crc7_fp_header_avx2;
-        state->crc10_iuup_data = crc10_iuup_data_avx2;
-        state->crc6_iuup_header = crc6_iuup_header_avx2;
-        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx2;
-        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx2;
+        state->crc32_ethernet_fcs = ethernet_fcs_avx;
+        state->crc16_x25 = crc16_x25_avx;
+        state->crc32_sctp = crc32_sctp_avx;
+        state->crc24_lte_a = crc24_lte_a_avx;
+        state->crc24_lte_b = crc24_lte_b_avx;
+        state->crc16_fp_data = crc16_fp_data_avx;
+        state->crc11_fp_header = crc11_fp_header_avx;
+        state->crc7_fp_header = crc7_fp_header_avx;
+        state->crc10_iuup_data = crc10_iuup_data_avx;
+        state->crc6_iuup_header = crc6_iuup_header_avx;
+        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
+        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
 
 #ifdef AVX_IFMA
         state->chacha20_poly1305_init = init_chacha20_poly1305_fma_avx2;
