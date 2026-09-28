@@ -45,8 +45,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
   set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${CPACK_PACKAGE_HOMEPAGE_URL}")
   set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-  # Refresh the dynamic linker cache on install/remove. CPack does not generate
-  # the ldconfig trigger that dh_makeshlibs would normally add.
+  # Refresh the dynamic linker cache on install/remove, as dh_makeshlibs does
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
       "${CMAKE_CURRENT_LIST_DIR}/packaging/deb/triggers")
 
@@ -57,14 +56,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
   set(CPACK_RPM_PACKAGE_URL "${CPACK_PACKAGE_HOMEPAGE_URL}")
   set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
-  # Refresh the dynamic linker cache on install/remove
-  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE
-      "${CMAKE_CURRENT_LIST_DIR}/packaging/rpm-ldconfig.sh")
-  set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE
-      "${CMAKE_CURRENT_LIST_DIR}/packaging/rpm-ldconfig.sh")
   # Disable debuginfo package
   set(CPACK_RPM_DEBUGINFO_PACKAGE OFF)
   set(CPACK_RPM_PACKAGE_DEBUG OFF)
+  # ldconfig is handled by glibc's file trigger for /usr/lib64.
+  # Do not take ownership of man page directories (owned by filesystem package)
+  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+      /usr/share/man
+      /usr/share/man/man7)
 
   # Set generators for Linux
   set(CPACK_GENERATOR "DEB;RPM")

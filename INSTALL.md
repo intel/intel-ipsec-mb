@@ -263,10 +263,9 @@ To install from a .deb package:
 sudo dpkg -i intel-ipsec-mb_<version>_amd64.deb
 ```
 
-After installation, the library files are installed to `/usr/local/lib`.
-This path is already in the default linker search path on Debian/Ubuntu, and
-the package refreshes the linker cache automatically, so no manual steps are
-required.
+After installation, the library files are installed to `/usr/lib` and
+`/usr/include`. The package refreshes the linker cache automatically, so no
+manual steps are required.
 
 To verify the library is found by the linker:
 ```bash
@@ -292,11 +291,9 @@ sudo yum install intel-ipsec-mb-<version>-1.x86_64.rpm
 sudo dnf install intel-ipsec-mb-<version>-1.x86_64.rpm
 ```
 
-After installation, the library files are installed to `/usr/local/lib`.
-This path is not searched by the dynamic linker by default on these
-distributions, so the package registers it via
-`/etc/ld.so.conf.d/intel-ipsec-mb.conf` and refreshes the linker cache
-automatically. No manual steps are required.
+After installation, the library files are installed to `/usr/lib64` and
+`/usr/include`. The linker cache is refreshed automatically by the system's
+glibc package triggers, so no manual steps are required.
 
 To verify the library is found by the linker:
 ```bash
@@ -325,14 +322,19 @@ cmake --build .
 sudo cmake --install .
 ```
 
-On Linux the install also registers the library directory with the dynamic
-linker (`/etc/ld.so.conf.d/intel-ipsec-mb.conf`). Refresh the linker cache
-afterwards, and again after uninstalling:
+By default the library is installed under `/usr/local` (e.g.
+`/usr/local/lib64/libIPSec_MB.so` on RHEL/Fedora). After installing or
+uninstalling a shared library, refresh the dynamic linker cache:
 ```
 sudo ldconfig
 ```
-Set `-DINSTALL_LDCONFIG_FILE=OFF` at configuration time to skip installing
-this file.
+On distributions where the library directory is not searched by default (e.g.
+`/usr/local/lib64` on RHEL/Fedora), also register it with the dynamic linker:
+```
+echo "/usr/local/lib64" | sudo tee /etc/ld.so.conf.d/intel-ipsec-mb.conf
+sudo ldconfig
+```
+Alternatively, install to the system prefix instead (see below).
 
 To uninstall the library run:   
 `sudo cmake --build . --target uninstall`
@@ -342,6 +344,8 @@ If you want to change install location then define PREFIX:
 
 Or set install directory variables during configuration:
 ```
+cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+# or
 cmake -DLIB_INSTALL_DIR=/usr/lib64 -DINCLUDE_INSTALL_DIR=/usr/include ..
 cmake --build . --parallel
 sudo cmake --install .

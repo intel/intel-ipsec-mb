@@ -87,24 +87,31 @@ set_target_properties(${LIB} PROPERTIES VERSION ${IPSEC_MB_VERSION_FULL}
                                         SOVERSION ${SO_MAJOR_VER})
 
 # set install rules
-if(NOT CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX
-      "/usr"
-      CACHE STRING "Set default installation directory" FORCE)
-endif()
+# Relative install dirs so CPack can apply its own packaging prefix (/usr).
 if(NOT LIB_INSTALL_DIR)
-  set(LIB_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBDIR}")
+  set(LIB_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}")
 endif()
 if(NOT INCLUDE_INSTALL_DIR)
-  set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
+  set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}")
 endif()
 if(NOT MAN_INSTALL_DIR)
-  set(MAN_INSTALL_DIR "${CMAKE_INSTALL_FULL_MANDIR}/man7")
+  set(MAN_INSTALL_DIR "${CMAKE_INSTALL_MANDIR}/man7")
 endif()
 
-message(STATUS "LIB_INSTALL_DIR...         ${LIB_INSTALL_DIR}")
-message(STATUS "INCLUDE_INSTALL_DIR...     ${INCLUDE_INSTALL_DIR}")
-message(STATUS "MAN_INSTALL_DIR...         ${MAN_INSTALL_DIR}")
+foreach(_dir LIB INCLUDE MAN)
+  if(IS_ABSOLUTE "${${_dir}_INSTALL_DIR}")
+    set(${_dir}_INSTALL_FULL_DIR "${${_dir}_INSTALL_DIR}")
+  else()
+    set(${_dir}_INSTALL_FULL_DIR
+        "${CMAKE_INSTALL_PREFIX}/${${_dir}_INSTALL_DIR}")
+  endif()
+endforeach()
+unset(_dir)
+
+message(STATUS "CMAKE_INSTALL_PREFIX...    ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "LIB_INSTALL_DIR...         ${LIB_INSTALL_FULL_DIR}")
+message(STATUS "INCLUDE_INSTALL_DIR...     ${INCLUDE_INSTALL_FULL_DIR}")
+message(STATUS "MAN_INSTALL_DIR...         ${MAN_INSTALL_FULL_DIR}")
 
 install(TARGETS ${LIB} DESTINATION ${LIB_INSTALL_DIR})
 install(FILES ${IMB_HDR} DESTINATION ${INCLUDE_INSTALL_DIR})
@@ -112,16 +119,20 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb.7
               ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb-dev.7
         DESTINATION ${MAN_INSTALL_DIR})
 
-# Some Linux distributions (e.g. Fedora/RHEL) do not search LIB_INSTALL_DIR by
-# default, so register it with the dynamic linker. /etc/ld.so.conf.d is
-# Linux-specific and is not consumed by the FreeBSD loader.
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  option(INSTALL_LDCONFIG_FILE
-         "Install /etc/ld.so.conf.d entry for LIB_INSTALL_DIR" ON)
-  if(INSTALL_LDCONFIG_FILE)
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
-         "${LIB_INSTALL_DIR}\n")
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/intel-ipsec-mb.conf"
-            DESTINATION /etc/ld.so.conf.d)
+# Never modify system loader configuration; remind the user to run ldconfig
+# instead. Skipped for staged (DESTDIR) installs.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND BUILD_SHARED_LIBS)
+  # Resolve at install time to reflect `cmake --install --prefix` overrides
+  if(IS_ABSOLUTE "${LIB_INSTALL_DIR}")
+    set(_lib_dir_expr "${LIB_INSTALL_DIR}")
+  else()
+    set(_lib_dir_expr "\${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
   endif()
+  install(
+    CODE "if(NOT DEFINED ENV{DESTDIR})
+  message(STATUS \"intel-ipsec-mb: run 'ldconfig' to refresh the linker cache. \"
+                 \"If ${_lib_dir_expr} is not searched by the dynamic linker, \"
+                 \"register it in /etc/ld.so.conf.d or set LD_LIBRARY_PATH.\")
+endif()")
+  unset(_lib_dir_expr)
 endif()
