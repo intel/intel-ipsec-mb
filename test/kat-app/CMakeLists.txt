@@ -28,7 +28,7 @@ list(APPEND TEST_APP_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../common/vector_util
 # ##############################################################################
 # add OS specific options
 if(WINDOWS)
-  if(CMAKE_GENERATOR MATCHES "MinGW Makefiles")
+  if(MINGW)
     include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows-mingw.cmake)
   else()
     include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows.cmake)
