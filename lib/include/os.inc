@@ -55,23 +55,38 @@
 %endif
 %endmacro
 
+;; Macro to compute number of bytes to reserve on the stack for function
+;; call arguments (stack arguments and Windows shadow space) into
+;; STACK_ARGS_SIZE. Rounded up to a multiple of 16 bytes so that
+;; a 16-byte aligned RSP stays aligned at the call site, as required by the ABI.
+%macro CALC_STACK_ARGS_SIZE 1
+%define %%N_ARGS        %1 ; [immediate] Number of arguments
+
+%ifdef LINUX
+%if %%N_ARGS > 6
+%assign STACK_ARGS_SIZE ((8*(%%N_ARGS - 6) + 15) & ~15)
+%else
+%assign STACK_ARGS_SIZE 0
+%endif
+%else ; Windows
+%if %%N_ARGS <= 4
+        ; Reserve 32 bytes if number of arguments is <= 4
+%assign STACK_ARGS_SIZE 8*4
+%else
+%assign STACK_ARGS_SIZE ((8*%%N_ARGS + 15) & ~15)
+%endif
+%endif ; LINUX
+%endmacro
+
 ;; Macro to reserve stack space before function call,
 ;; based on number of arguments
 %macro RESERVE_STACK_SPACE 1
 %define %%N_ARGS        %1 ; [immediate] Number of arguments
 
-%ifdef LINUX
-%if %%N_ARGS > 6
-        sub     rsp, 8*(%%N_ARGS - 6)
+        CALC_STACK_ARGS_SIZE %%N_ARGS
+%if STACK_ARGS_SIZE > 0
+        sub     rsp, STACK_ARGS_SIZE
 %endif
-%else ; Windows
-%if %%N_ARGS <= 4
-        ; Reserve 32 bytes if number of arguments is <= 4
-        sub     rsp, 8*4
-%else
-        sub     rsp, 8*%%N_ARGS
-%endif
-%endif ; LINUX
 %endmacro
 
 ;; Macro to restore stack pointer after function call,
@@ -79,18 +94,10 @@
 %macro RESTORE_STACK_SPACE 1
 %define %%N_ARGS        %1 ; [immediate] Number of arguments
 
-%ifdef LINUX
-%if %%N_ARGS > 6
-        add     rsp, 8*(%%N_ARGS - 6)
+        CALC_STACK_ARGS_SIZE %%N_ARGS
+%if STACK_ARGS_SIZE > 0
+        add     rsp, STACK_ARGS_SIZE
 %endif
-%else ; Windows
-%if %%N_ARGS <= 4
-        ; Reserve 32 bytes if number of arguments is <= 4
-        add     rsp, 8*4
-%else
-        add     rsp, 8*%%N_ARGS
-%endif
-%endif ; LINUX
 %endmacro
 
 %endif                          ; OS_INC_FILE
