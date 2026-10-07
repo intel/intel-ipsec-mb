@@ -28,8 +28,16 @@ if(NOT DEBUG_OPT)
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG ${DEBUG_OPT}")
-set(CMAKE_C_FLAGS_RELEASE "-O2")
-set(CMAKE_SHARED_LINKER_FLAGS "-s")
+set(CMAKE_C_FLAGS_RELEASE "-D_FORTIFY_SOURCE=2 -O2")
+set(CMAKE_SHARED_LINKER_FLAGS
+    "-s -Wl,--nxcompat -Wl,--dynamicbase -Wl,--high-entropy-va")
+
+# mingw-w64 v11+ provides the stack protector runtime in libmingwex, avoiding a
+# dependency on the non-system libssp-0.dll; fall back to libssp on older
+# runtimes.
+include(CheckCSourceCompiles)
+check_c_source_compiles("extern void __stack_chk_fail(void);
+int main(void) { __stack_chk_fail(); return 0; }" MINGWEX_HAS_SSP)
 
 # -fno-strict-overflow is not supported by clang
 if(CMAKE_COMPILER_IS_GNUCC)
@@ -83,6 +91,16 @@ target_link_libraries(${LIB} PRIVATE bcrypt)
 # Exports are controlled via ${LIB}.def, so the ${LIB}_EXPORTS macro CMake
 # adds by default for shared libraries is unused; disable it.
 set_target_properties(${LIB} PROPERTIES DEFINE_SYMBOL "")
+
+# -fstack-protector is a compile option only so the GCC driver does not add
+# libssp at link time; PRIVATE link deps of a static library propagate to its
+# consumers.
+target_compile_options(
+  ${LIB}
+  PRIVATE $<$<COMPILE_LANGUAGE:C>:$<$<CONFIG:Release>:-fstack-protector>>)
+if(NOT MINGWEX_HAS_SSP)
+  target_link_libraries(${LIB} PRIVATE $<$<CONFIG:Release>:ssp>)
+endif()
 
 # ##############################################################################
 # library install rules
