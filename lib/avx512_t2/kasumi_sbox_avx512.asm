@@ -86,11 +86,13 @@ mksection .text
         %define arg2    rsi
         %define arg3    rdx
         %define arg4    rcx
+        %define arg5    r8
 %else
         %define arg1    rcx
         %define arg2    rdx
         %define arg3    r8
         %define arg4    r9
+        %define arg5    [rsp + 5*8]
 %endif
 
 %define     y0    ymm2
@@ -142,6 +144,83 @@ mksection .text
 %ifndef LINUX
 %define BLK_STACK_SIZE  (10 * 16)       ; 10 non-volatile XMM registers x 16 bytes
 %endif
+%define BLK_CNT rbp
+
+%ifdef LINUX
+%define UP_KEY_REG r8
+%define UP_STATE_REG r9
+%define UP_INPUT_REG r9
+%define UP_CHAIN_REG rsi
+%define UP_OUT 0
+%else
+%define UP_KEY_REG rsi
+%define UP_STATE_REG rdi
+%define UP_INPUT_REG rdi
+%define UP_CHAIN_REG rdx
+%define UP_OUT 32
+%endif
+
+;; Save block-clobbered registers once per batch; also preserve Windows XMM state.
+%macro KASUMI_UPDATE_START 0
+        push    rbx
+        push    rbp
+        push    r12
+        push    r13
+        push    r14
+        push    r15
+%ifndef LINUX
+        push    rsi
+        push    rdi
+        ;; 72 = 32-byte shadow space + 32 bytes before XMM saves at +64 + 8-byte alignment tail.
+        sub     rsp, BLK_STACK_SIZE + 72
+        vmovdqu [rsp + 64 + 0*16], xmm6
+        vmovdqu [rsp + 64 + 1*16], xmm7
+        vmovdqu [rsp + 64 + 2*16], xmm8
+        vmovdqu [rsp + 64 + 3*16], xmm9
+        vmovdqu [rsp + 64 + 4*16], xmm10
+        vmovdqu [rsp + 64 + 5*16], xmm11
+        vmovdqu [rsp + 64 + 6*16], xmm12
+        vmovdqu [rsp + 64 + 7*16], xmm13
+        vmovdqu [rsp + 64 + 8*16], xmm14
+        vmovdqu [rsp + 64 + 9*16], xmm15
+%else
+        ;; 40 = 8-byte UP_OUT slot + 32-byte padding; aligns RSP after six GP saves.
+        sub     rsp, 40
+%endif
+%endmacro
+
+;; Clear SIMD scratch and restore the registers saved by KASUMI_UPDATE_START.
+%macro KASUMI_UPDATE_END 0
+        vzeroall
+%ifdef SAFE_DATA
+        kxord       k1, k1, k1
+        kxord       k2, k2, k2
+        kxord       k6, k6, k6
+%endif
+%ifndef LINUX
+        vmovdqu xmm6,  [rsp + 64 + 0*16]
+        vmovdqu xmm7,  [rsp + 64 + 1*16]
+        vmovdqu xmm8,  [rsp + 64 + 2*16]
+        vmovdqu xmm9,  [rsp + 64 + 3*16]
+        vmovdqu xmm10, [rsp + 64 + 4*16]
+        vmovdqu xmm11, [rsp + 64 + 5*16]
+        vmovdqu xmm12, [rsp + 64 + 6*16]
+        vmovdqu xmm13, [rsp + 64 + 7*16]
+        vmovdqu xmm14, [rsp + 64 + 8*16]
+        vmovdqu xmm15, [rsp + 64 + 9*16]
+        add     rsp, BLK_STACK_SIZE + 72
+        pop     rdi
+        pop     rsi
+%else
+        add     rsp, 40
+%endif
+        pop     r15
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rbp
+        pop     rbx
+%endmacro
 
 ;; KASUMI_SBOX_AVX512a
 ;; Computes the combined Kasumi S7/S9 S-box substitution using AVX-512
@@ -364,45 +443,14 @@ mksection .text
 align_function
 MKGLOBAL(kasumi_1_block_avx512, function, internal)
 kasumi_1_block_avx512:
-        ;; Save callee-saved GPRs
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-
-%ifndef LINUX
-        sub     rsp, BLK_STACK_SIZE
-
-        ;; Save non-volatile XMM registers (Windows)
-        vmovdqu [rsp + 0*16], xmm6
-        vmovdqu [rsp + 1*16], xmm7
-        vmovdqu [rsp + 2*16], xmm8
-        vmovdqu [rsp + 3*16], xmm9
-        vmovdqu [rsp + 4*16], xmm10
-        vmovdqu [rsp + 5*16], xmm11
-        vmovdqu [rsp + 6*16], xmm12
-        vmovdqu [rsp + 7*16], xmm13
-        vmovdqu [rsp + 8*16], xmm14
-        vmovdqu [rsp + 9*16], xmm15
-%endif
-
         ;; KS = arg1 = key schedule pointer (advances each round)
         ;; DPTR = arg2 = data pointer (constant)
-
-        ;; Preload constants that survive across all sbox evaluations
-        kmovd       KMASK7, [rel kmask_s7]               ; S7 isolation mask (low 7 bits)
-        vmovdqa     YPERMB, [rel vpermb_mask]             ; byte permutation for 1st sbox
-        vmovdqa     YPERMW, [rel vpermw_mask]             ; word permutation for 2nd sbox
-        vmovdqa     YLSB, [rel least_sig_bit_word]       ; LSB-per-word test mask
-
 
         ;; Load 64-bit data block as four 16-bit words: D[0..3]
         movzx   DWORD(DPTR0), word [DPTR + 0]   ; D[0]
         movzx   DWORD(DPTR2), word [DPTR + 2]   ; D[1]
         movzx   DWORD(DPTR4), word [DPTR + 4]   ; D[2]
         movzx   DWORD(DPTR6), word [DPTR + 6]   ; D[3]
-
 
         ;; =============================================================
         ;; Round 1 (odd): D[0]||D[1] ^= FO_1(FL_1(D[2]||D[3]))
@@ -514,36 +562,118 @@ kasumi_1_block_avx512:
         mov   [DPTR + 4], WORD(DPTR4)
         mov   [DPTR + 6], WORD(DPTR6)
 
-        vzeroall                                 ; single vzeroall at the end
+        ret
 
-%ifdef SAFE_DATA
-        kxord       k1, k1, k1
-        kxord       k2, k2, k2
-        kxord       k6, k6, k6
-%endif
+;; void kasumi_update_avx512(const uint16_t *key_sched, void *data, uint64_t num_blocks)
+align_function
+MKGLOBAL(kasumi_update_avx512, function, internal)
+kasumi_update_avx512:
+        KASUMI_UPDATE_START
+        ;; Keep the key and current block pointer live across block calls.
+        mov     UP_KEY_REG, arg1
+        mov     UP_STATE_REG, arg2
+        mov     BLK_CNT, arg3
+        test    BLK_CNT, BLK_CNT
+        jz      .update_done
+        ;; Load AVX512 S-box controls once for the whole batch.
+        kmovd       KMASK7, [rel kmask_s7]
+        vmovdqa     YPERMB, [rel vpermb_mask]
+        vmovdqa     YPERMW, [rel vpermw_mask]
+        vmovdqa     YLSB, [rel least_sig_bit_word]
+align_loop
+.update_loop:
+        ;; Encrypt one 8-byte block in place, then advance to the next block.
+        mov     arg1, UP_KEY_REG
+        mov     arg2, UP_STATE_REG
+        call    kasumi_1_block_avx512
+        add     UP_STATE_REG, 8
+        dec     BLK_CNT
+        jnz     .update_loop
+.update_done:
+        KASUMI_UPDATE_END
+        ret
 
-%ifndef LINUX
-        ;; Restore non-volatile XMM registers (Windows)
-        vmovdqu xmm6,  [rsp + 0*16]
-        vmovdqu xmm7,  [rsp + 1*16]
-        vmovdqu xmm8,  [rsp + 2*16]
-        vmovdqu xmm9,  [rsp + 3*16]
-        vmovdqu xmm10, [rsp + 4*16]
-        vmovdqu xmm11, [rsp + 5*16]
-        vmovdqu xmm12, [rsp + 6*16]
-        vmovdqu xmm13, [rsp + 7*16]
-        vmovdqu xmm14, [rsp + 8*16]
-        vmovdqu xmm15, [rsp + 9*16]
+;; void kasumi_f8_update_avx512(const uint16_t *key_sched, uint64_t state[3],
+;;                              const void *in, void *out, uint64_t num_blocks)
+align_function
+MKGLOBAL(kasumi_f8_update_avx512, function, internal)
+kasumi_f8_update_avx512:
+        mov     rax, arg5
+        KASUMI_UPDATE_START
 
-        add     rsp, BLK_STACK_SIZE
-%endif
+        ;; Cache pointers; UP_CHAIN_REG points to B, with A at -8 and count at +8.
+        mov     UP_KEY_REG, arg1
+        mov     UP_INPUT_REG, arg3
+        add     UP_CHAIN_REG, 8
+        mov     qword [rsp + UP_OUT], arg4
+        mov     BLK_CNT, rax
+        ;; Load AVX512 S-box controls once for the whole batch.
+        kmovd       KMASK7, [rel kmask_s7]
+        vmovdqa     YPERMB, [rel vpermb_mask]
+        vmovdqa     YPERMW, [rel vpermw_mask]
+        vmovdqa     YLSB, [rel least_sig_bit_word]
+align_loop
+.f8_loop:
+        ;; Encrypt B and XOR its byte-swapped value with the input block.
+        mov     arg1, UP_KEY_REG
+        call    kasumi_1_block_avx512
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+        movbe   rax, [UP_CHAIN_REG]
+        xor     rax, [UP_INPUT_REG]
+        mov     rcx, [rsp + UP_OUT]
+        mov     [rcx], rax
 
+        ;; Increment count, then prepare B for the next block: E(B) ^ A ^ count.
+        inc     word [UP_CHAIN_REG + 8]
+        movzx   DWORD(TMP1), word [UP_CHAIN_REG + 8]
+        mov     rax, [UP_CHAIN_REG - 8]
+        xor     rax, TMP1
+        xor     [UP_CHAIN_REG], rax
+
+        ;; Advance the input and output pointers.
+        add     UP_INPUT_REG, 8
+        add     qword [rsp + UP_OUT], 8
+        dec     BLK_CNT
+        jnz     .f8_loop
+
+        KASUMI_UPDATE_END
+        ret
+
+;; void kasumi_f9_update_avx512(const uint16_t *key_sched, uint64_t state[2],
+;;                              const void *in, uint64_t num_blocks)
+align_function
+MKGLOBAL(kasumi_f9_update_avx512, function, internal)
+kasumi_f9_update_avx512:
+        KASUMI_UPDATE_START
+
+        ;; Keep key, input, and A/B state pointers live across block calls.
+        mov     UP_KEY_REG, arg1
+        mov     UP_INPUT_REG, arg3
+        mov     BLK_CNT, arg4
+        ;; Load AVX512 S-box controls once for the whole batch.
+        kmovd       KMASK7, [rel kmask_s7]
+        vmovdqa     YPERMB, [rel vpermb_mask]
+        vmovdqa     YPERMW, [rel vpermw_mask]
+        vmovdqa     YLSB, [rel least_sig_bit_word]
+align_loop
+.f9_loop:
+        ;; XOR the byte-swapped input block into accumulator A.
+        movbe   rax, [UP_INPUT_REG]
+        xor     [UP_CHAIN_REG], rax
+
+        ;; Encrypt A, then accumulate the encrypted value into B.
+        mov     arg1, UP_KEY_REG
+        call    kasumi_1_block_avx512
+
+        mov     rax, [UP_CHAIN_REG]
+        xor     [UP_CHAIN_REG + 8], rax
+
+        ;; Advance to the next input block.
+        add     UP_INPUT_REG, 8
+        dec     BLK_CNT
+        jnz     .f9_loop
+
+        KASUMI_UPDATE_END
         ret
 
 mksection stack-noexec

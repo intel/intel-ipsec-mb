@@ -270,6 +270,12 @@ kasumi_f9_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
                           const uint32_t lengthInBytes, void *pDigest);
 
 IMB_DLL_LOCAL void
-kasumi_1_block_avx512(const uint16_t *key_sched, uint16_t *data);
+kasumi_update_avx512(const uint16_t *key_sched, void *data, uint64_t num_blocks);
+IMB_DLL_LOCAL void
+kasumi_f8_update_avx512(const uint16_t *key_sched, uint64_t state[3], const void *in, void *out,
+                        uint64_t num_blocks);
+IMB_DLL_LOCAL void
+kasumi_f9_update_avx512(const uint16_t *key_sched, uint64_t state[2], const void *in,
+                        uint64_t num_blocks);
 
 #endif /* IMB_ASM_AVX512_T2_H */
