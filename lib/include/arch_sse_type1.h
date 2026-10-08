@@ -399,7 +399,13 @@ set_suite_id_sse_t1(IMB_MGR *state, IMB_JOB *job);
 
 /* KASUMI bitsliced SSE S-box */
 IMB_DLL_LOCAL void
-kasumi_1_block_sse(const uint16_t *key_sched, uint16_t *data);
+kasumi_update_sse(const uint16_t *key_sched, void *data, uint64_t num_blocks);
+IMB_DLL_LOCAL void
+kasumi_f8_update_sse(const uint16_t *key_sched, uint64_t state[3], const void *in, void *out,
+                     uint64_t num_blocks);
+IMB_DLL_LOCAL void
+kasumi_f9_update_sse(const uint16_t *key_sched, uint64_t state[2], const void *in,
+                     uint64_t num_blocks);
 
 /* ========================================================================= */
 /* DES/3DES SSE implementation                                               */

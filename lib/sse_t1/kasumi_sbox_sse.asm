@@ -74,11 +74,13 @@ mksection .text
         %define arg2    rsi
         %define arg3    rdx
         %define arg4    rcx
+        %define arg5    r8
 %else
         %define arg1    rcx
         %define arg2    rdx
         %define arg3    r8
         %define arg4    r9
+        %define arg5    [rsp + 5*8]
 %endif
 
 ;; SSE working registers (xmm2-xmm9 for s0-s7, skip xmm10=parity_lut, xmm11=s8)
@@ -119,10 +121,82 @@ mksection .text
 %define TMP1     r10            ; S-box input / general scratch
 %define TMP2     r15            ; FL scratch
 
-;; Stack frame for kasumi_1_block_sse (Windows only: 10 non-volatile XMM saves)
+;; Windows update entries save the 10 non-volatile XMM registers.
 %ifndef LINUX
 %define BLK_STACK_SIZE  (10 * 16)
 %endif
+%define BLK_CNT    rbp
+
+%ifdef LINUX
+%define UP_OUT     0
+%define UP_KEY_REG r8
+%define UP_STATE_REG r9
+%define UP_INPUT_REG r9
+%define UP_CHAIN_REG rsi
+%else
+%define UP_OUT     32
+%define UP_KEY_REG rsi
+%define UP_STATE_REG rdi
+%define UP_INPUT_REG rdi
+%define UP_CHAIN_REG rdx
+%endif
+
+%macro KASUMI_UPDATE_START 0
+        push    rbx
+        push    rbp
+        push    r12
+        push    r13
+        push    r14
+        push    r15
+%ifndef LINUX
+        push    rsi
+        push    rdi
+        ;; 72 = 32-byte shadow space + 32 bytes before XMM saves at +64 + 8-byte alignment tail.
+        sub     rsp, BLK_STACK_SIZE + 72
+        movdqu  [rsp + 64 + 0*16], xmm6
+        movdqu  [rsp + 64 + 1*16], xmm7
+        movdqu  [rsp + 64 + 2*16], xmm8
+        movdqu  [rsp + 64 + 3*16], xmm9
+        movdqu  [rsp + 64 + 4*16], xmm10
+        movdqu  [rsp + 64 + 5*16], xmm11
+        movdqu  [rsp + 64 + 6*16], xmm12
+        movdqu  [rsp + 64 + 7*16], xmm13
+        movdqu  [rsp + 64 + 8*16], xmm14
+        movdqu  [rsp + 64 + 9*16], xmm15
+%else
+        ;; 40 = 8-byte UP_OUT slot + 32-byte padding; aligns RSP after six GP saves.
+        sub     rsp, 40
+%endif
+%endmacro
+
+%macro KASUMI_UPDATE_END 0
+%ifdef SAFE_DATA
+        clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13
+%endif
+%ifndef LINUX
+        movdqu  xmm6,  [rsp + 64 + 0*16]
+        movdqu  xmm7,  [rsp + 64 + 1*16]
+        movdqu  xmm8,  [rsp + 64 + 2*16]
+        movdqu  xmm9,  [rsp + 64 + 3*16]
+        movdqu  xmm10, [rsp + 64 + 4*16]
+        movdqu  xmm11, [rsp + 64 + 5*16]
+        movdqu  xmm12, [rsp + 64 + 6*16]
+        movdqu  xmm13, [rsp + 64 + 7*16]
+        movdqu  xmm14, [rsp + 64 + 8*16]
+        movdqu  xmm15, [rsp + 64 + 9*16]
+        add     rsp, BLK_STACK_SIZE + 72
+        pop     rdi
+        pop     rsi
+%else
+        add     rsp, 40
+%endif
+        pop     r15
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rbp
+        pop     rbx
+%endmacro
 
 ;; ============================================================================
 ;; KASUMI_SBOX_PARITY_REDUCE_SSE
@@ -419,30 +493,7 @@ mksection .text
 align_function
 MKGLOBAL(kasumi_1_block_sse, function, internal)
 kasumi_1_block_sse:
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-
-%ifndef LINUX
-        sub     rsp, BLK_STACK_SIZE
-
-        movdqu  [rsp + 0*16], xmm6
-        movdqu  [rsp + 1*16], xmm7
-        movdqu  [rsp + 2*16], xmm8
-        movdqu  [rsp + 3*16], xmm9
-        movdqu  [rsp + 4*16], xmm10
-        movdqu  [rsp + 5*16], xmm11
-        movdqu  [rsp + 6*16], xmm12
-        movdqu  [rsp + 7*16], xmm13
-        movdqu  [rsp + 8*16], xmm14
-        movdqu  [rsp + 9*16], xmm15
-%endif
-
-        ;; Preload constants that persist across all S-box calls.
-        movdqa      xmm10, [rel parity_nibble_lut_sse]   ; nibble parity LUT
-        movdqa      xmm12, [rel nibble_mask_sse]         ; 0x0F per byte, used in parity reduce
+        ;; xmm10 and xmm12 are preloaded once by the batch update entry.
 
         ;; Load the 64-bit data block as four 16-bit words: D[0..3].
         movzx   DWORD(DPTR0), word [DPTR + 0]    ; D[0]
@@ -565,33 +616,118 @@ kasumi_1_block_sse:
         mov     [DPTR + 2], WORD(DPTR2)
         mov     [DPTR + 4], WORD(DPTR4)
         mov     [DPTR + 6], WORD(DPTR6)
+        ret
 
-%ifdef SAFE_DATA
-        ;; Zero all XMM registers used during computation to clear sensitive data.
-        clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13
-%endif
+align_function
+MKGLOBAL(kasumi_update_sse, function, internal)
+kasumi_update_sse:
+        KASUMI_UPDATE_START
+        ;; Keep the key and current data pointer live across block calls.
+        mov     UP_KEY_REG, arg1
+        mov     UP_STATE_REG, arg2
+        mov     BLK_CNT, arg3
+        test    BLK_CNT, BLK_CNT
+        jz      .update_done
 
-%ifndef LINUX
-        movdqu  xmm6,  [rsp + 0*16]
-        movdqu  xmm7,  [rsp + 1*16]
-        movdqu  xmm8,  [rsp + 2*16]
-        movdqu  xmm9,  [rsp + 3*16]
-        movdqu  xmm10, [rsp + 4*16]
-        movdqu  xmm11, [rsp + 5*16]
-        movdqu  xmm12, [rsp + 6*16]
-        movdqu  xmm13, [rsp + 7*16]
-        movdqu  xmm14, [rsp + 8*16]
-        movdqu  xmm15, [rsp + 9*16]
+        ;; Load S-box constants once for all blocks in this update.
+        movdqa  xmm10, [rel parity_nibble_lut_sse]
+        movdqa  xmm12, [rel nibble_mask_sse]
+align_loop
+.update_loop:
+        ;; Encrypt one 8-byte block in place, then advance to the next block.
+        mov     arg1, UP_KEY_REG
+        mov     arg2, UP_STATE_REG
+        call    kasumi_1_block_sse
+        add     UP_STATE_REG, 8
+        dec     BLK_CNT
+        jnz     .update_loop
+.update_done:
+        KASUMI_UPDATE_END
+        ret
 
-        add     rsp, BLK_STACK_SIZE
-%endif
+;; void kasumi_f8_update_sse(const uint16_t *key_sched, uint64_t state[3],
+;;                           const void *in, void *out, uint64_t num_blocks)
+align_function
+MKGLOBAL(kasumi_f8_update_sse, function, internal)
+kasumi_f8_update_sse:
+        mov     rax, arg5
+        KASUMI_UPDATE_START
+        ;; Save loop pointers; UP_CHAIN_REG points to B in the A/B/count state.
+        mov     UP_KEY_REG, arg1
+        mov     UP_INPUT_REG, arg3
+        add     UP_CHAIN_REG, 8
+        mov     qword [rsp + UP_OUT], arg4
+        mov     BLK_CNT, rax
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+        ;; Load S-box constants once for all blocks in this update.
+        movdqa  xmm10, [rel parity_nibble_lut_sse]
+        movdqa  xmm12, [rel nibble_mask_sse]
 
+align_loop
+.f8_loop:
+        ;; Encrypt B and XOR its byte-swapped value with the input block.
+        mov     arg1, UP_KEY_REG
+        mov     arg2, UP_CHAIN_REG
+        call    kasumi_1_block_sse
+
+        mov     rax, [UP_CHAIN_REG]
+        bswap   rax
+        xor     rax, [UP_INPUT_REG]
+        mov     rcx, [rsp + UP_OUT]
+        mov     [rcx], rax
+
+        ;; Increment count, then prepare B for the next block: E(B) ^ A ^ count.
+        inc     word [UP_CHAIN_REG + 8]
+        movzx   DWORD(TMP1), word [UP_CHAIN_REG + 8]
+        mov     rax, [UP_CHAIN_REG - 8]
+        xor     rax, TMP1
+        xor     [UP_CHAIN_REG], rax
+
+        ;; Advance the input and output pointers.
+        add     UP_INPUT_REG, 8
+        add     qword [rsp + UP_OUT], 8
+        dec     BLK_CNT
+        jnz     .f8_loop
+
+        KASUMI_UPDATE_END
+        ret
+
+;; void kasumi_f9_update_sse(const uint16_t *key_sched, uint64_t state[2],
+;;                           const void *in, uint64_t num_blocks)
+align_function
+MKGLOBAL(kasumi_f9_update_sse, function, internal)
+kasumi_f9_update_sse:
+        KASUMI_UPDATE_START
+        ;; Keep key, input, and A/B state pointers live across block calls.
+        mov     UP_KEY_REG, arg1
+        mov     UP_INPUT_REG, arg3
+        mov     BLK_CNT, arg4
+
+        ;; Load S-box constants once for all blocks in this update.
+        movdqa  xmm10, [rel parity_nibble_lut_sse]
+        movdqa  xmm12, [rel nibble_mask_sse]
+
+align_loop
+.f9_loop:
+        ;; XOR the byte-swapped input block into accumulator A.
+        mov     rax, [UP_INPUT_REG]
+        bswap   rax
+        xor     [UP_CHAIN_REG], rax
+
+        ;; Encrypt A, then accumulate the encrypted value into B.
+        mov     arg1, UP_KEY_REG
+        mov     arg2, UP_CHAIN_REG
+        call    kasumi_1_block_sse
+
+        mov     rax, [UP_CHAIN_REG]
+        xor     [UP_CHAIN_REG + 8], rax
+
+        ;; Advance to the next input block.
+        add     UP_INPUT_REG, 8
+        dec     BLK_CNT
+        jnz     .f9_loop
+
+        KASUMI_UPDATE_END
         ret
 
 mksection stack-noexec
