@@ -61,19 +61,21 @@ typedef union SafeBuffer {
  * @param[in/out]   pData        Block to be enc/dec
  *
  ******************************************************************************/
-#if defined(AVX2) || defined(AVX512) || defined(AVX10)
+#if defined(AVX512) || defined(AVX10)
 static void
 kasumi_1_block(const uint16_t *context, uint16_t *data)
 {
-#ifdef AVX2
-        kasumi_1_block_avx2(context, data);
-#else
         kasumi_1_block_avx512(context, data);
-#endif
 }
 #endif
 
-#if !defined(AVX2) && !defined(AVX512) && !defined(AVX10)
+#if defined(AVX2)
+static void
+kasumi_update(const uint16_t *context, void *data, const uint64_t num_blocks)
+{
+        kasumi_update_avx2(context, data, num_blocks);
+}
+#elif !defined(AVX512) && !defined(AVX10)
 static void
 kasumi_update(const uint16_t *context, void *data, const uint64_t num_blocks)
 {
@@ -214,7 +216,7 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-#if defined(AVX2) || defined(AVX512) || defined(AVX10)
+#if defined(AVX512) || defined(AVX10)
         uint32_t blkcnt;
         kasumi_union_t a, b; /* the modifier */
         const uint8_t *pBufferIn = (const uint8_t *) pIn;
@@ -267,6 +269,46 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void
         /* Clear sensitive data in stack */
         clear_mem(&a, sizeof(a));
         clear_mem(&b, sizeof(b));
+#endif
+#elif defined(AVX2)
+        if (length == 0)
+                return;
+
+        kasumi_union_t state[3]; /* modifier A, keystream block B, block count */
+        const uint8_t *pBufferIn = (const uint8_t *) pIn;
+        uint8_t *pBufferOut = (uint8_t *) pOut;
+        const uint32_t num_blocks = (length - 1) / IMB_KASUMI_BLOCK_SIZE;
+        const uint32_t lengthInBytes = length - num_blocks * IMB_KASUMI_BLOCK_SIZE;
+
+        /* Initialize the modifier and seed the F8 chaining state. */
+        state[0].b64[0] = BSWAP64(IV);
+        kasumi_update(pCtx->msk16, state[0].b16, 1);
+        state[1].b64[0] = state[0].b64[0];
+        state[2].b64[0] = 0;
+
+        /* Process preceding full blocks; leave the last block for common tail handling. */
+        if (num_blocks != 0) {
+                kasumi_f8_update_avx2(pCtx->sk16, state[0].b64, pBufferIn, pBufferOut, num_blocks);
+                pBufferIn += num_blocks * IMB_KASUMI_BLOCK_SIZE;
+                pBufferOut += num_blocks * IMB_KASUMI_BLOCK_SIZE;
+        }
+
+        /* Generate the final keystream block, including any partial input bytes. */
+        kasumi_update(pCtx->sk16, state[1].b16, 1);
+        if (lengthInBytes < IMB_KASUMI_BLOCK_SIZE) {
+                SafeBuf safeInBuf = { 0 };
+
+                memcpy_keystrm(safeInBuf.b8, pBufferIn, lengthInBytes);
+                xor_keystrm_rev(state[1].b8, safeInBuf.b8, state[1].b64[0]);
+                memcpy_keystrm(pBufferOut, state[1].b8, lengthInBytes);
+#ifdef SAFE_DATA
+                clear_mem(&safeInBuf, sizeof(safeInBuf));
+#endif
+        } else {
+                xor_keystrm_rev(pBufferOut, pBufferIn, state[1].b64[0]);
+        }
+#ifdef SAFE_DATA
+        clear_mem(state, sizeof(state));
 #endif
 #else
         if (length == 0)
@@ -324,7 +366,7 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn, const uin
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-#if defined(AVX2) || defined(AVX512) || defined(AVX10)
+#if defined(AVX512) || defined(AVX10)
         kasumi_union_t a, b, mask;
         const uint64_t *pIn = (const uint64_t *) dataIn;
         uint32_t lengthInBytes = length;
@@ -362,6 +404,44 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn, const uin
 #ifdef SAFE_DATA
         clear_mem(&a, sizeof(a));
         clear_mem(&b, sizeof(b));
+        clear_mem(&mask, sizeof(mask));
+#endif
+#elif defined(AVX2)
+        kasumi_union_t state[2], mask;
+        const uint64_t *pIn = (const uint64_t *) dataIn;
+        const uint32_t num_blocks = length / IMB_KASUMI_BLOCK_SIZE;
+        const uint32_t lengthInBytes = length % IMB_KASUMI_BLOCK_SIZE;
+
+        state[0].b64[0] = 0;
+        state[1].b64[0] = 0;
+        mask.b64[0] = -1;
+
+        /* Update A for each complete input block and accumulate into B. */
+        if (num_blocks != 0) {
+                kasumi_f9_update_avx2(pCtx->sk16, state[0].b64, pIn, num_blocks);
+                pIn += num_blocks;
+        }
+
+        /* Mask and process any remaining bytes as the final padded block. */
+        if (lengthInBytes) {
+                SafeBuf safeBuf = { 0 };
+
+                mask.b64[0] = ~(mask.b64[0] >> (BYTESIZE * lengthInBytes));
+                safe_memcpy(&safeBuf.b64, pIn, lengthInBytes);
+                mask.b64[0] &= BSWAP64(safeBuf.b64);
+                state[0].b64[0] ^= mask.b64[0];
+                kasumi_update(pCtx->sk16, state[0].b16, 1);
+                state[1].b64[0] ^= state[0].b64[0];
+#ifdef SAFE_DATA
+                clear_mem(&safeBuf, sizeof(safeBuf));
+#endif
+        }
+
+        /* Finalize the accumulated value with the modified key. */
+        kasumi_update(pCtx->msk16, state[1].b16, 1);
+        *(uint32_t *) pDigest = bswap4(state[1].b32[1]);
+#ifdef SAFE_DATA
+        clear_mem(state, sizeof(state));
         clear_mem(&mask, sizeof(mask));
 #endif
 #else
