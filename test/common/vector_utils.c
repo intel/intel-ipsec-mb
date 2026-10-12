@@ -2418,6 +2418,295 @@ err_no_report:
         return -1;
 }
 
+/**
+ * @brief Decode a hex field of a chained test and validate its group-level
+ *        size field.
+ *
+ * @param [in] json JSON document text
+ * @param [in] tokens Token array
+ * @param [in] token_cnt Number of tokens
+ * @param [in] tg_pos Test group object token index
+ * @param [in] tc_pos Test case object token index
+ * @param [in] name Test-level hex field name
+ * @param [in] size_name Group-level size field name (bits)
+ * @param [in] required Non-zero if the hex field is mandatory
+ * @param [in,out] ctx Allocation context owning decoded buffer
+ * @param [out] out_buf Decoded buffer (NULL if optional field is absent)
+ * @param [out] out_size Field size in bits (0 if optional field is absent)
+ * @param [out] err_reason Error description on failure
+ *
+ * @return Operation status.
+ * @retval 0 Field decoded successfully.
+ * @retval -1 Missing field, invalid format, size mismatch or allocation
+ *            failure.
+ */
+static int
+json_chained_hex_field(const char *json, const json_tok *tokens, const int token_cnt,
+                       const int tg_pos, const int tc_pos, const char *name, const char *size_name,
+                       const int required, struct test_json_alloc_ctx *ctx, const char **out_buf,
+                       size_t *out_size, const char **err_reason)
+{
+        const int idx = json_object_get(json, tokens, token_cnt, tc_pos, name);
+        const int size_idx = json_object_get(json, tokens, token_cnt, tg_pos, size_name);
+        size_t len = 0;
+
+        *out_buf = NULL;
+        *out_size = 0;
+
+        if (idx < 0) {
+                if (required) {
+                        *err_reason = "missing required hex field";
+                        return -1;
+                }
+                if (size_idx >= 0) {
+                        *err_reason = "size field declared for absent hex field";
+                        return -1;
+                }
+                return 0;
+        }
+
+        if (json_hex_token_len_bytes(&tokens[idx], &len) < 0 ||
+            json_decode_hex_token(json, &tokens[idx], ctx, out_buf) < 0) {
+                *err_reason = "invalid hex field";
+                return -1;
+        }
+
+        if (size_idx >= 0) {
+                if (json_parse_size_t(json, &tokens[size_idx], out_size) < 0) {
+                        *err_reason = "invalid group-level size field";
+                        return -1;
+                }
+                if (*out_size != len * 8) {
+                        *err_reason = "group-level size field does not match hex field length";
+                        return -1;
+                }
+        } else {
+                *out_size = len * 8;
+        }
+
+        return 0;
+}
+
+/**
+ * @brief Parse chained cipher + MAC vectors from a JSON file into a
+ *        sentinel-terminated struct chained_test array.
+ *
+ * @param [in] path JSON file path
+ * @param [out] out_vectors Parsed chained vector array
+ * @param [out] out_ctx Allocation context for json_free_test_ctx()
+ *
+ * @return Operation status.
+ * @retval 0 Vectors parsed successfully.
+ * @retval -1 Invalid input, parse failure, or allocation failure.
+ */
+int
+json_load_chained_test(const char *path, struct chained_test **out_vectors,
+                       struct test_json_alloc_ctx **out_ctx)
+{
+        struct test_json_alloc_ctx *ctx;
+        char *json = NULL;
+        json_tok *tokens = NULL;
+        int token_cnt = 0;
+        int test_groups_idx;
+        int tg_pos;
+        size_t test_cnt = 0;
+        struct chained_test *vectors;
+        size_t rec = 0;
+        const char *err_reason = NULL;
+        int errnum = 0;
+        int tg_idx = -1;
+        int test_idx = -1;
+        size_t tcid = 0;
+        int have_tcid = 0;
+
+        if (path == NULL || out_vectors == NULL || out_ctx == NULL) {
+                json_report_parse_error(path, "json_load_chained_test",
+                                        "invalid function arguments", 0, 0, -1, -1, NULL);
+                return -1;
+        }
+
+        *out_vectors = NULL;
+        *out_ctx = NULL;
+
+        ctx = calloc(1, sizeof(*ctx));
+        if (ctx == NULL) {
+                json_report_parse_error(path, "json_load_chained_test",
+                                        "unable to allocate JSON allocation context", ENOMEM, 0, -1,
+                                        -1, NULL);
+                return -1;
+        }
+
+        if (json_load_doc(path, ctx, &json, &tokens, &token_cnt) < 0)
+                goto err_no_report;
+
+        PARSE_FAIL_IF(token_cnt <= 0 || tokens[0].type != JSON_TOK_OBJECT,
+                      "top-level JSON token must be an object");
+
+        test_groups_idx = json_object_get(json, tokens, token_cnt, 0, "testGroups");
+        PARSE_FAIL_IF(test_groups_idx < 0 || tokens[test_groups_idx].type != JSON_TOK_ARRAY,
+                      "missing or invalid top-level testGroups array");
+
+        /* First pass: count all tests to size the output vector array. */
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+
+                test_cnt += (size_t) tokens[tests_idx].size;
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        vectors = alloc_ctx_alloc(ctx, (test_cnt + 1) * sizeof(*vectors));
+        if (vectors == NULL) {
+                err_reason = "unable to allocate chained vector array";
+                errnum = ENOMEM;
+                goto err;
+        }
+        memset(vectors, 0, (test_cnt + 1) * sizeof(*vectors));
+
+        /* Second pass: decode group-level strings, test fields and payload buffers. */
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+                const int cipher_alg_idx =
+                        json_object_get(json, tokens, token_cnt, tg_pos, "cipherAlg");
+                const int mac_alg_idx = json_object_get(json, tokens, token_cnt, tg_pos, "macAlg");
+                const int order_idx = json_object_get(json, tokens, token_cnt, tg_pos, "order");
+                const int tag_size_idx =
+                        json_object_get(json, tokens, token_cnt, tg_pos, "tagSize");
+                const char *cipher_alg = NULL;
+                const char *mac_alg = NULL;
+                const char *order = NULL;
+                size_t tag_size = 0;
+                int tc_pos;
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                PARSE_FAIL_IF(tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY,
+                              "missing or invalid tests array in testGroup");
+                PARSE_FAIL_IF(cipher_alg_idx < 0 ||
+                                      json_copy_string_token(json, &tokens[cipher_alg_idx], ctx,
+                                                             &cipher_alg) < 0,
+                              "missing or invalid cipherAlg field");
+                PARSE_FAIL_IF(mac_alg_idx < 0 || json_copy_string_token(json, &tokens[mac_alg_idx],
+                                                                        ctx, &mac_alg) < 0,
+                              "missing or invalid macAlg field");
+                PARSE_FAIL_IF(
+                        order_idx < 0 ||
+                                (!json_token_eq(json, &tokens[order_idx], "hash_cipher") &&
+                                 !json_token_eq(json, &tokens[order_idx], "cipher_hash")) ||
+                                json_copy_string_token(json, &tokens[order_idx], ctx, &order) < 0,
+                        "missing or invalid order field");
+                PARSE_FAIL_IF(tag_size_idx < 0 ||
+                                      json_parse_size_t(json, &tokens[tag_size_idx], &tag_size) < 0,
+                              "missing or invalid tagSize field");
+
+                tc_pos = tests_idx + 1;
+
+                for (int j = 0; j < tokens[tests_idx].size; j++) {
+                        const int msg_idx = json_object_get(json, tokens, token_cnt, tc_pos, "msg");
+                        const int ct_idx = json_object_get(json, tokens, token_cnt, tc_pos, "ct");
+                        const int tag_idx = json_object_get(json, tokens, token_cnt, tc_pos, "tag");
+                        const int tcid_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "tcId");
+                        const int result_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "result");
+                        struct chained_test *v = &vectors[rec];
+                        size_t msg_len = 0;
+                        size_t ct_len = 0;
+                        size_t tag_len = 0;
+
+                        test_idx = j;
+                        have_tcid = 0;
+
+                        if (tcid_idx >= 0) {
+                                PARSE_FAIL_IF(json_parse_size_t(json, &tokens[tcid_idx], &v->tcId) <
+                                                      0,
+                                              "invalid tcId value");
+                                tcid = v->tcId;
+                                have_tcid = 1;
+                        }
+
+                        v->cipherAlg = cipher_alg;
+                        v->macAlg = mac_alg;
+                        v->order = order;
+                        v->tagSize = tag_size;
+
+                        if (json_chained_hex_field(json, tokens, token_cnt, tg_pos, tc_pos,
+                                                   "cipherKey", "cipherKeySize", 1, ctx,
+                                                   &v->cipherKey, &v->cipherKeySize,
+                                                   &err_reason) < 0)
+                                goto err;
+                        if (json_chained_hex_field(json, tokens, token_cnt, tg_pos, tc_pos,
+                                                   "cipherIv", "cipherIvSize", 0, ctx, &v->cipherIv,
+                                                   &v->cipherIvSize, &err_reason) < 0)
+                                goto err;
+                        if (json_chained_hex_field(json, tokens, token_cnt, tg_pos, tc_pos,
+                                                   "macKey", "macKeySize", 0, ctx, &v->macKey,
+                                                   &v->macKeySize, &err_reason) < 0)
+                                goto err;
+                        if (json_chained_hex_field(json, tokens, token_cnt, tg_pos, tc_pos, "macIv",
+                                                   "macIvSize", 0, ctx, &v->macIv, &v->macIvSize,
+                                                   &err_reason) < 0)
+                                goto err;
+
+                        PARSE_FAIL_IF(msg_idx < 0, "missing msg field");
+                        PARSE_FAIL_IF(ct_idx < 0, "missing ct field");
+                        PARSE_FAIL_IF(tag_idx < 0, "missing tag field");
+
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[msg_idx], &msg_len) < 0,
+                                      "invalid msg hex string");
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[ct_idx], &ct_len) < 0,
+                                      "invalid ct hex string");
+                        PARSE_FAIL_IF(json_hex_token_len_bytes(&tokens[tag_idx], &tag_len) < 0,
+                                      "invalid tag hex string");
+                        PARSE_FAIL_IF(msg_len != ct_len, "ct length does not match msg length");
+                        PARSE_FAIL_IF(json_validate_declared_size(tag_size, tag_len) < 0,
+                                      "declared tagSize exceeds decoded tag length");
+
+                        /* bytes * 8 bits/byte = msgSize in bits */
+                        v->msgSize = msg_len * 8;
+
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[msg_idx], ctx, &v->msg) <
+                                              0,
+                                      "unable to decode msg hex string");
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[ct_idx], ctx, &v->ct) < 0,
+                                      "unable to decode ct hex string");
+                        PARSE_FAIL_IF(json_decode_hex_token(json, &tokens[tag_idx], ctx, &v->tag) <
+                                              0,
+                                      "unable to decode tag hex string");
+
+                        PARSE_FAIL_IF(result_idx < 0 ||
+                                              json_result_to_valid(json, &tokens[result_idx],
+                                                                   &v->resultValid) < 0,
+                                      "missing or invalid result field");
+
+                        rec++;
+                        tc_pos = json_token_skip(tokens, tc_pos);
+                }
+
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        *out_vectors = vectors;
+        *out_ctx = ctx;
+
+        return 0;
+
+err:
+        json_report_parse_error(path, "json_load_chained_test", err_reason, errnum, 0, tg_idx,
+                                test_idx, have_tcid ? &tcid : NULL);
+err_no_report:
+        json_free_test_ctx(ctx);
+        return -1;
+}
+
 static int
 build_vector_path(const char *vector_dir, const char *file_name, char *buf, size_t buf_size)
 {
@@ -2535,4 +2824,15 @@ load_kem_vectors(const char *vector_dir, const char *file_name, struct kem_test 
         if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
                 return -1;
         return json_load_kem_test(path, out_vectors, out_ctx);
+}
+
+int
+load_chained_vectors(const char *vector_dir, const char *file_name,
+                     struct chained_test **out_vectors, struct test_json_alloc_ctx **out_ctx)
+{
+        char path[1024] = { 0 };
+
+        if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
+                return -1;
+        return json_load_chained_test(path, out_vectors, out_ctx);
 }

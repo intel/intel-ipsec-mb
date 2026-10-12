@@ -31,15 +31,16 @@ header `test/include/vector_utils.h`. It has **no external library
 dependencies** - tokenisation and decoding are implemented from scratch using
 only the C standard library.
 
-Three high-level entry points are provided:
+The symmetric-algorithm entry points are:
 
 | Function | Fills struct |
 |---|---|
 | `json_load_mac_test()` | `struct mac_test` array |
 | `json_load_cipher_test()` | `struct cipher_test` array |
 | `json_load_aead_test()` | `struct aead_test` array |
+| `json_load_chained_test()` | `struct chained_test` array |
 
-All three functions share identical calling conventions and return a
+All of these functions share identical calling conventions and return a
 sentinel-terminated array plus an opaque allocation context. All memory is
 released in a single call to `json_free_test_ctx()`.
 
@@ -63,6 +64,7 @@ field:
 | `mac_with_iv_test_schema_v1.json` | `MacWithIvTest` | GMAC, ZUC-EIA3-128, ZUC-NIA6, SNOW3G-UIA2, KASUMI-UIA1, SNOW5G-NIA4, AES-NIA5 |
 | `ind_cpa_test_schema_v1.json` | `IndCpaTest` | AES-CBC/CTR/ECB/CFB, DES/3DES/DES-CFB/DES-DOCSIS, ChaCha20, KASUMI-UEA1, SNOW3G-UEA2, ZUC-EEA3-128, ZUC-NEA6, SM4-CBC/CTR/ECB, SNOW5G-NEA4, AES-NEA5 |
 | `aead_test_schema_v1.json` | `AeadTest` | AES-GCM, AES-CCM-128/256, ChaCha20-Poly1305, SM4-GCM, ZUC-NCA6, SNOW5G-NCA4, AES-NCA5 |
+| `chained_cipher_mac_test_schema_v1.json` | `ChainedCipherMacTest` | SNOW5G-NEA4/AES-NEA5/ZUC-NEA6 chained with SNOW5G-NIA4/AES-NIA5/ZUC-NIA6 |
 
 ### Negative test vectors
 
@@ -206,6 +208,43 @@ Fields belong to one of two scopes within the JSON:
 > For cipher and AEAD vectors, plaintext and AAD sizes
 > are always derived from the hex field length and are not present in the JSON.
 >
+#### Chained cipher + MAC test fields (`struct chained_test`)
+
+This is a local extension (not part of upstream Wycheproof) for a cipher and
+a MAC chained in a single job. Unlike the other schemas, the group level also
+carries string fields that select the algorithms and the chain order.
+
+**Group-level** (`testGroups[]` object):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `cipherAlg` | string | **required** | Cipher algorithm name (e.g. `"AES-NEA5"`) |
+| `macAlg` | string | **required** | MAC algorithm name (e.g. `"ZUC-NIA6"`) |
+| `order` | `"hash_cipher"` or `"cipher_hash"` | **required** | `"hash_cipher"`: MAC over the plaintext; `"cipher_hash"`: MAC over the ciphertext |
+| `tagSize` | number (bits) | **required** | Tag size in bits |
+| `cipherKeySize` | number (bits) | optional* | Cipher key size in bits |
+| `cipherIvSize` | number (bits) | optional* | Cipher IV size in bits |
+| `macKeySize` | number (bits) | optional* | MAC key size in bits |
+| `macIvSize` | number (bits) | optional* | MAC IV size in bits |
+
+**Test-level** (`tests[]` object):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `tcId` | number | optional | Numeric test-case identifier |
+| `cipherKey` | hex string | **required** | Cipher key |
+| `cipherIv` | hex string | optional | Cipher IV |
+| `macKey` | hex string | optional | MAC key |
+| `macIv` | hex string | optional | MAC IV |
+| `msg` | hex string | **required** | Plaintext |
+| `ct` | hex string | **required** | Ciphertext |
+| `tag` | hex string | **required** | Expected authentication tag |
+| `result` | `"valid"` or `"invalid"` | **required** | Expected outcome |
+
+Optional hex fields that are absent are returned as `NULL` with a size of `0`.
+A group-level size field declared for an absent hex field is a parse error.
+All four key/IV size fields must exactly match the hex-string length.
+
 > **AEAD fields are always explicit.** The `aad`, `ct`, and `tag` fields in
 > AEAD test vectors each carry only their own data. In particular, `aad` is
 > never embedded in `msg`, and `tag` is never appended to `ct`. An absent
@@ -213,7 +252,9 @@ Fields belong to one of two scopes within the JSON:
 
 ### Field inheritance
 
-Size fields (`keySize`, `ivSize`, `tagSize`) are read exclusively from the
+Size fields (`keySize`, `ivSize`, `tagSize`, and the chained `cipherKeySize`,
+`cipherIvSize`, `macKeySize`, `macIvSize`) and the chained `cipherAlg`,
+`macAlg` and `order` strings are read exclusively from the
 **`testGroups` level** and apply to every test case in that group. Binary
 payload fields (`key`, `iv`, `msg`, `ct`, `tag`, `aad`) must be specified at
 the **test-case level**. Size fields at the test-case level are not read by the
@@ -408,6 +449,27 @@ for (size_t i = 0; vectors[i].msg != NULL; i++) {
 json_free_test_ctx(ctx);
 ```
 
+### Load chained cipher + MAC vectors
+
+```c
+#include "vector_utils.h"
+
+struct chained_test *vectors;
+struct test_json_alloc_ctx *ctx;
+
+if (json_load_chained_test("path/to/vectors.json", &vectors, &ctx) != 0) {
+    /* handle error */
+}
+
+for (size_t i = 0; vectors[i].msg != NULL; i++) {
+    /* use vectors[i].cipherAlg, vectors[i].macAlg, vectors[i].order,
+     * vectors[i].cipherKey, vectors[i].cipherIv, vectors[i].macKey,
+     * vectors[i].macIv, vectors[i].msg, vectors[i].ct, vectors[i].tag, ... */
+}
+
+json_free_test_ctx(ctx);
+```
+
 ### Return values
 
 | Return | Meaning |
@@ -418,7 +480,7 @@ json_free_test_ctx(ctx);
 ### Sentinel detection
 
 The output array has one extra zero-initialised element appended. For MAC,
-cipher, and AEAD vectors the sentinel is detected by `msg == NULL`. Do **not**
+cipher, AEAD, and chained vectors the sentinel is detected by `msg == NULL`. Do **not**
 use `tcId` or size fields for sentinel detection - they are `0` in the
 sentinel but could also be `0` in a real vector.
 
@@ -479,6 +541,33 @@ struct aead_test {
 };
 ```
 
+### `struct chained_test`
+
+Declared in `test/include/vector_utils.h`.
+
+```c
+struct chained_test {
+    size_t       cipherKeySize; /* cipher key size in bits */
+    size_t       cipherIvSize;  /* cipher IV size in bits (0 if absent) */
+    size_t       macKeySize;    /* MAC key size in bits (0 if absent) */
+    size_t       macIvSize;     /* MAC IV size in bits (0 if absent) */
+    size_t       tagSize;       /* tag size in bits */
+    size_t       msgSize;       /* plaintext size in bits */
+    size_t       tcId;          /* test-case identifier */
+    const char  *cipherAlg;     /* group-level cipher algorithm name */
+    const char  *macAlg;        /* group-level MAC algorithm name */
+    const char  *order;         /* "hash_cipher" or "cipher_hash" */
+    const char  *cipherKey;     /* decoded cipher key bytes */
+    const char  *cipherIv;      /* decoded cipher IV bytes (optional) */
+    const char  *macKey;        /* decoded MAC key bytes (optional) */
+    const char  *macIv;         /* decoded MAC IV bytes (optional) */
+    const char  *msg;           /* decoded plaintext (NULL in sentinel) */
+    const char  *ct;            /* decoded ciphertext */
+    const char  *tag;           /* decoded authentication tag */
+    int          resultValid;   /* 1 = "valid", 0 = "invalid" */
+};
+```
+
 > All `const char *` payload pointers point into buffers owned by the
 > `test_json_alloc_ctx`. They become dangling after `json_free_test_ctx()`.
 
@@ -516,10 +605,14 @@ The `-1` return value also signals failure to callers that redirect stderr
 | Size value overflows `size_t` | load function |
 | Declared bit size exceeds decoded buffer | load function |
 | Declared size does not match hex field length | load function |
-| Cipher or AEAD `ct` length does not match `msg` length | load function |
+| Cipher, AEAD or chained `ct` length does not match `msg` length | load function |
 | Required field (`key`, `msg`, `tag`) missing from MAC test case | load function |
 | Required field (`key`, `iv`, `msg`, `ct`) missing from cipher test case | load function |
 | Required field (`key`, `iv`, `aad`, `msg`, `ct`, `tag`) missing from AEAD test case | load function |
+| Required group field (`cipherAlg`, `macAlg`, `order`, `tagSize`) missing from chained test group | load function |
+| Chained `order` is not `"hash_cipher"` or `"cipher_hash"` | load function |
+| Required field (`cipherKey`, `msg`, `ct`, `tag`) missing from chained test case | load function |
+| Chained size field declared for an absent optional hex field | load function |
 | Memory allocation failure | any stage |
 
 ---
@@ -593,6 +686,7 @@ system beyond temporary files:
 | P5 | Single cipher vector with `iv` and `ct` fields |
 | P6 | Size fields absent - derived from hex length |
 | P7 | Valid AEAD vectors including empty `msg` and empty `tag` |
+| P8 | Valid chained vectors with and without optional `cipherIv`/`macKey`/`macIv` |
 | N1 | Empty file -> `-1` |
 | N2 | Empty JSON object `{}` -> `-1` |
 | N3 | Root is array `[]` -> `-1` |
@@ -608,3 +702,6 @@ system beyond temporary files:
 | N13 | AEAD `tagSize` exceeds decoded `tag` length -> `-1` |
 | N14 | Cipher `ct` length does not match `msg` length -> `-1` |
 | N15 | AEAD `ct` length does not match `msg` length -> `-1` |
+| N16 | Chained `order` is not `"hash_cipher"` or `"cipher_hash"` -> `-1` |
+| N17 | Chained `cipherKeySize` does not match `cipherKey` length -> `-1` |
+| N18 | Chained `macIvSize` declared but `macIv` absent -> `-1` |

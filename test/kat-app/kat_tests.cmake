@@ -69,6 +69,7 @@ set(TEST_TYPES
     ZUC_NCA6
     SNOW5G_NIA4
     SNOW5G_NCA4
+    NXA_CHAINED
     ML_DSA
     ML_KEM)
 

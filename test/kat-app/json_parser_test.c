@@ -48,6 +48,41 @@ remove_tmp_file(const char *path)
                 fprintf(stderr, "WARNING: failed to remove temp file '%s'\n", path);
 }
 
+/* Expect json_load_chained_test() to reject content; returns number of errors */
+static int
+chained_negative_test(const char *path, const char *content, const char *label)
+{
+        struct chained_test *v = NULL;
+        struct test_json_alloc_ctx *ctx = NULL;
+        int saved_stderr;
+        int ret;
+
+        if (write_tmp_file(path, content) != 0) {
+                fprintf(stderr, "FAIL: %s - could not create temp file\n", label);
+                return 1;
+        }
+
+        saved_stderr = suppress_stderr();
+        ret = json_load_chained_test(path, &v, &ctx);
+        restore_stderr(saved_stderr);
+        remove_tmp_file(path);
+
+        if (ret != -1) {
+                fprintf(stderr, "FAIL: %s - expected -1, got %d\n", label, ret);
+                json_free_test_ctx(ctx);
+                return 1;
+        }
+
+        if (!quiet_mode) {
+#ifdef DEBUG
+                printf("PASS: %s\n", label);
+#else
+                printf(".");
+#endif
+        }
+        return 0;
+}
+
 int
 json_parser_test(struct IMB_MGR *mb_mgr)
 {
@@ -1050,6 +1085,125 @@ p7_done:
                 }
                 remove_tmp_file(path);
         }
+
+        /* P8 - valid chained vectors with and without optional fields */
+        snprintf(path, sizeof(path), "imb_json_test_p8_%d.json", pid);
+        ret = write_tmp_file(path, "{\n"
+                                   "  \"testGroups\": [\n"
+                                   "    {\n"
+                                   "      \"cipherAlg\": \"AES-NEA5\",\n"
+                                   "      \"macAlg\": \"ZUC-NIA6\",\n"
+                                   "      \"cipherKeySize\": 64,\n"
+                                   "      \"cipherIvSize\": 32,\n"
+                                   "      \"macKeySize\": 64,\n"
+                                   "      \"macIvSize\": 32,\n"
+                                   "      \"tagSize\": 32,\n"
+                                   "      \"order\": \"cipher_hash\",\n"
+                                   "      \"tests\": [\n"
+                                   "        {\n"
+                                   "          \"tcId\": 1,\n"
+                                   "          \"cipherKey\": \"0001020304050607\",\n"
+                                   "          \"cipherIv\": \"10111213\",\n"
+                                   "          \"macKey\": \"2021222324252627\",\n"
+                                   "          \"macIv\": \"30313233\",\n"
+                                   "          \"msg\": \"4041\",\n"
+                                   "          \"ct\": \"5051\",\n"
+                                   "          \"tag\": \"60616263\",\n"
+                                   "          \"result\": \"valid\"\n"
+                                   "        }\n"
+                                   "      ]\n"
+                                   "    },\n"
+                                   "    {\n"
+                                   "      \"cipherAlg\": \"AES-CBC\",\n"
+                                   "      \"macAlg\": \"HMAC-SHA1\",\n"
+                                   "      \"tagSize\": 32,\n"
+                                   "      \"order\": \"hash_cipher\",\n"
+                                   "      \"tests\": [\n"
+                                   "        {\n"
+                                   "          \"tcId\": 2,\n"
+                                   "          \"cipherKey\": \"0001\",\n"
+                                   "          \"msg\": \"40\",\n"
+                                   "          \"ct\": \"50\",\n"
+                                   "          \"tag\": \"6061626364\",\n"
+                                   "          \"result\": \"invalid\"\n"
+                                   "        }\n"
+                                   "      ]\n"
+                                   "    }\n"
+                                   "  ]\n"
+                                   "}\n");
+        if (ret != 0) {
+                fprintf(stderr, "FAIL: P8 - could not write temp file\n");
+                errors++;
+        } else {
+                struct chained_test *chained_v = NULL;
+
+                ret = json_load_chained_test(path, &chained_v, &ctx);
+                if (ret != 0) {
+                        fprintf(stderr, "FAIL: P8 - json_load_chained_test returned %d\n", ret);
+                        errors++;
+                } else if (chained_v[2].msg != NULL || chained_v[0].tcId != 1 ||
+                           strcmp(chained_v[0].cipherAlg, "AES-NEA5") != 0 ||
+                           strcmp(chained_v[0].macAlg, "ZUC-NIA6") != 0 ||
+                           strcmp(chained_v[0].order, "cipher_hash") != 0 ||
+                           chained_v[0].cipherKeySize != 64 || chained_v[0].cipherIvSize != 32 ||
+                           chained_v[0].macKeySize != 64 || chained_v[0].macIvSize != 32 ||
+                           chained_v[0].tagSize != 32 || chained_v[0].msgSize != 16 ||
+                           chained_v[0].resultValid != 1 ||
+                           (unsigned char) chained_v[0].macIv[3] != 0x33 ||
+                           (unsigned char) chained_v[0].ct[1] != 0x51 || chained_v[1].tcId != 2 ||
+                           strcmp(chained_v[1].order, "hash_cipher") != 0 ||
+                           chained_v[1].cipherKeySize != 16 || chained_v[1].cipherIv != NULL ||
+                           chained_v[1].cipherIvSize != 0 || chained_v[1].macKey != NULL ||
+                           chained_v[1].macKeySize != 0 || chained_v[1].macIv != NULL ||
+                           chained_v[1].macIvSize != 0 || chained_v[1].msgSize != 8 ||
+                           chained_v[1].resultValid != 0) {
+                        fprintf(stderr, "FAIL: P8 - unexpected field values\n");
+                        errors++;
+                } else {
+                        if (!quiet_mode) {
+#ifdef DEBUG
+                                printf("PASS: P8 - valid chained vectors with sentinel\n");
+#else
+                                printf(".");
+#endif
+                        }
+                }
+                json_free_test_ctx(ctx);
+                ctx = NULL;
+                remove_tmp_file(path);
+        }
+
+        /* N16 - chained order is not hash_cipher or cipher_hash */
+        snprintf(path, sizeof(path), "imb_json_test_n16_%d.json", pid);
+        errors +=
+                chained_negative_test(path,
+                                      "{\"testGroups\": [{\"cipherAlg\": \"A\", \"macAlg\": \"B\", "
+                                      "\"tagSize\": 8, \"order\": \"hash_only\", \"tests\": "
+                                      "[{\"cipherKey\": \"00\", \"msg\": \"00\", \"ct\": \"00\", "
+                                      "\"tag\": \"00\", \"result\": \"valid\"}]}]}\n",
+                                      "N16 - chained invalid order");
+
+        /* N17 - chained cipherKeySize does not match cipherKey length */
+        snprintf(path, sizeof(path), "imb_json_test_n17_%d.json", pid);
+        errors +=
+                chained_negative_test(path,
+                                      "{\"testGroups\": [{\"cipherAlg\": \"A\", \"macAlg\": \"B\", "
+                                      "\"cipherKeySize\": 16, \"tagSize\": 8, \"order\": "
+                                      "\"cipher_hash\", \"tests\": [{\"cipherKey\": \"00\", "
+                                      "\"msg\": \"00\", \"ct\": \"00\", \"tag\": \"00\", "
+                                      "\"result\": \"valid\"}]}]}\n",
+                                      "N17 - chained cipherKeySize mismatch");
+
+        /* N18 - chained macIvSize declared but macIv absent */
+        snprintf(path, sizeof(path), "imb_json_test_n18_%d.json", pid);
+        errors +=
+                chained_negative_test(path,
+                                      "{\"testGroups\": [{\"cipherAlg\": \"A\", \"macAlg\": \"B\", "
+                                      "\"macIvSize\": 128, \"tagSize\": 8, \"order\": "
+                                      "\"cipher_hash\", \"tests\": [{\"cipherKey\": \"00\", "
+                                      "\"msg\": \"00\", \"ct\": \"00\", \"tag\": \"00\", "
+                                      "\"result\": \"valid\"}]}]}\n",
+                                      "N18 - chained size field for absent macIv");
 
         if (!quiet_mode) {
                 printf("\n");
