@@ -244,7 +244,7 @@ Table 3. Encryption and integrity algorithm combinations
 | KASUMI-F8, SNOW3G-UEA2,             | KASUMI-F9, AES-NIA5, ZUC-NIA6,        |
 | ZUC-EEA3, ZUC-NEA6,                 | SNOW5G-NIA4                           |
 | SM4-ECB, SM4-CBC, SM4-CTR,          |                                       |
-| SNOW5G-NEA4                         |                                       |
+| SNOW5G-NEA4, AES-NEA5               |                                       |
 |-------------------------------------+---------------------------------------|
 | AES128-DOCSIS, AES256-DOCSIS        | DOCSIS-CRC32                          |
 |-------------------------------------+---------------------------------------|

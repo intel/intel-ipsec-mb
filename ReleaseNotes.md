@@ -7,6 +7,9 @@ Fixes
 - Fixes stack misalignment when calling C functions with more than 4 arguments
   from assembly, causing ZUC-NCA6 crashes on Windows with GCC/MinGW builds.
 
+Test Applications
+- Added chained NEA4/5/6 + NIA4/5/6 KAT test to imb-kat application.
+
 
 v3.0 September 2026
 ======================================================================
