@@ -14,9 +14,9 @@
  *
  * NIA4/5/6 always read the message from job->src +
  * hash_start_src_offset_in_bytes. With IMB_ORDER_CIPHER_HASH the MAC has to
- * cover the cipher output, which is only found at job->src when the operation
- * is in-place. All jobs are therefore tested in-place, and out-of-place jobs
- * are only tested when the job chain order is IMB_ORDER_HASH_CIPHER.
+ * cover the cipher output written to job->dst, so for out-of-place jobs
+ * hash_start_src_offset_in_bytes is set to the distance from job->src to the
+ * output in job->dst. All jobs are tested both in-place and out-of-place.
  */
 
 #include <stdint.h>
@@ -77,12 +77,6 @@ nxa_chain_order(const struct nxa_vec_ctx *vc, const IMB_CIPHER_DIRECTION dir)
                 return (dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
 
         return (dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_HASH_CIPHER : IMB_ORDER_CIPHER_HASH;
-}
-
-static int
-nxa_oop_allowed(const struct nxa_vec_ctx *vc, const IMB_CIPHER_DIRECTION dir)
-{
-        return nxa_chain_order(vc, dir) == IMB_ORDER_HASH_CIPHER;
 }
 
 static int
@@ -220,7 +214,12 @@ nxa_job_fill(struct IMB_MGR *mb_mgr, IMB_JOB *job, struct nxa_job_buf *b, const 
         job->dst = dst;
         job->cipher_start_src_offset_in_bytes = b->offset;
         job->msg_len_to_cipher_in_bytes = len;
-        job->hash_start_src_offset_in_bytes = b->offset;
+        /* hash the cipher output in dst (offset arithmetic wraps modulo 2^64) */
+        if (!b->in_place && job->chain_order == IMB_ORDER_CIPHER_HASH)
+                job->hash_start_src_offset_in_bytes =
+                        (uint64_t) ((uintptr_t) dst - (uintptr_t) job->src);
+        else
+                job->hash_start_src_offset_in_bytes = b->offset;
         job->msg_len_to_hash_in_bytes = len;
 
         job->u.NIA._key = vc->mac_key;
@@ -386,9 +385,6 @@ nxa_test_vectors_job_api(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 
                 for (size_t d = 0; d < DIM(dirs); d++) {
                         for (int in_place = 1; in_place >= 0; in_place--) {
-                                if (!in_place && !nxa_oop_allowed(vc, dirs[d]))
-                                        continue;
-
                                 if (nxa_test_job_api(mb_mgr, vc, dirs[d], in_place, 0, num_jobs))
                                         test_suite_update(ctx, 0, 1);
                                 else
@@ -498,7 +494,7 @@ nxa_test_vectors_burst_api(struct IMB_MGR *mb_mgr, struct test_suite_context *ct
                         const struct nxa_vec_ctx *vc = &vcs[(j * stride) % num_vecs];
                         const IMB_CIPHER_DIRECTION dir =
                                 ((j + k / num_vecs) & 1) ? IMB_DIR_DECRYPT : IMB_DIR_ENCRYPT;
-                        const int in_place = (k % 3) != 0 || !nxa_oop_allowed(vc, dir);
+                        const int in_place = (k % 3) != 0;
 
                         if (nxa_buf_init(&bufs[n], vc, dir, in_place, 0, 1 + (k % NXA_MAX_OFFSET)) <
                             0)
