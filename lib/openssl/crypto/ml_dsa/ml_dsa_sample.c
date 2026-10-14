@@ -251,13 +251,14 @@ ossl_ml_dsa_poly_sample_in_ball(POLY *out_c, const uint8_t *seed, int seed_len, 
         uint64_t signs;
         int offset = 8;
         size_t end;
+        int ret = 0;
 
         /*
          * Rather than squeeze 8 bytes followed by lots of 1 byte squeezes
          * the SHAKE blocksize is squeezed each time and buffered into 'block'.
          */
         if (!shake_xof(h_ctx, md, seed, seed_len, block, sizeof(block)))
-                return 0;
+                goto err;
 
         /*
          * grab the first 64 bits - since tau < 64
@@ -293,7 +294,7 @@ ossl_ml_dsa_poly_sample_in_ball(POLY *out_c, const uint8_t *seed, int seed_len, 
                         if (offset == sizeof(block)) {
                                 /* squeeze another block if the bytes from block have been used */
                                 if (!EVP_DigestSqueeze(h_ctx, block, sizeof(block)))
-                                        return 0;
+                                        goto err;
                                 /* See comment above for why the block is declassified. */
                                 CONSTTIME_DECLASSIFY(block, sizeof(block));
                                 offset = 0;
@@ -313,7 +314,10 @@ ossl_ml_dsa_poly_sample_in_ball(POLY *out_c, const uint8_t *seed, int seed_len, 
                 out_c->coeff[index] = mod_sub(1, 2 * (signs & 1));
                 signs >>= 1; /* grab the next random bit */
         }
-        return 1;
+        ret = 1;
+err:
+        OPENSSL_cleanse(block, sizeof(block));
+        return ret;
 }
 
 static void
