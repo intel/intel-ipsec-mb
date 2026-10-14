@@ -25,15 +25,16 @@ ossl_ml_dsa_matrix_mult_vector(const IMB_ML_DSA *self, const MATRIX *a, const VE
 {
         size_t i, j;
         POLY *poly = a->m_poly;
+        POLY product;
 
         vector_zero(t);
 
         for (i = 0; i < a->k; i++) {
                 for (j = 0; j < a->l; j++) {
-                        POLY product;
-
                         self->poly_ntt_mult(poly++, &s->poly[j], &product);
                         poly_add(&product, &t->poly[i], &t->poly[i]);
                 }
         }
+
+        OPENSSL_cleanse(&product, sizeof(product));
 }
