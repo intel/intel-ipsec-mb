@@ -6,7 +6,11 @@
 #include "intel-ipsec-mb.h"
 
 /* Set library version */
+#ifdef IMB_GIT_COMMIT
+const char *imb_version_str = IMB_VERSION_STR " (" IMB_GIT_COMMIT ")";
+#else
 const char *imb_version_str = IMB_VERSION_STR;
+#endif
 const unsigned imb_version = IMB_VERSION_NUM;
 
 const char *

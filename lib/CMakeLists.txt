@@ -331,6 +331,18 @@ foreach(FILE ${SRC_FILES_C})
                                                  "${LIB_DEFINES}")
 endforeach()
 
+# embed git commit ID into the library version string
+#
+# appended after the loop above, which overwrites COMPILE_DEFINITIONS, and
+# scoped to version.c only, so that a new commit does not trigger a rebuild of
+# the whole library
+if(IPSEC_MB_GIT_COMMIT)
+  set_property(
+    SOURCE "${DIR_X86_64}/version.c"
+    APPEND
+    PROPERTY COMPILE_DEFINITIONS IMB_GIT_COMMIT="${IPSEC_MB_GIT_COMMIT}")
+endif()
+
 # add include directories
 target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})
 
