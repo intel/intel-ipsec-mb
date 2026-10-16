@@ -18,7 +18,14 @@ set(CPACK_PACKAGE_DESCRIPTION
 software implementations of the core cryptographic processing for IPsec, \
 which provides industry-leading performance on a range of Intel(R) Processors.")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/intel/intel-ipsec-mb")
-set(CPACK_PACKAGE_VERSION ${IPSEC_MB_VERSION_FULL})
+# Convert any pre-release suffix (e.g. "3.1.0-dev") into the tilde form used by
+# DEB and RPM (e.g. "3.1.0~dev").
+#
+# A tilde sorts before an empty string in both package managers, so a
+# pre-release package is correctly considered older than the final release.
+# Without it, "3.1.0-dev" sorts newer than "3.1.0" and the release would never
+# upgrade a pre-release install. RPM also forbids "-" in the Version field.
+string(REPLACE "-" "~" CPACK_PACKAGE_VERSION "${IPSEC_MB_VERSION_FULL}")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
