@@ -124,8 +124,14 @@ typedef struct ossl_param_st {
 #define OPENSSL_secure_malloc_array(num, size) OPENSSL_malloc_array(num, size)
 #define OPENSSL_secure_free(addr)              OPENSSL_free(addr)
 
-/* Cleanse / clear-free route through the constant-time IMB memory wipe. */
-#define OPENSSL_cleanse(addr, num) clear_mem((addr), (num))
+/*
+ * OpenSSL's cleanse helper is kept as an indirect memset call so the compiler
+ * cannot fold it into a plain memset builtin or optimize it away as dead
+ * stores.
+ */
+static void *(*volatile OPENSSL_cleanse_memset)(void *, int, size_t) = memset;
+
+#define OPENSSL_cleanse(addr, num) OPENSSL_cleanse_memset((addr), 0, (num))
 
 static ossl_inline ossl_unused void
 OPENSSL_clear_free(void *addr, size_t num)

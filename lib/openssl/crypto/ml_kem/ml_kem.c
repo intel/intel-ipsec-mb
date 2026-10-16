@@ -1605,7 +1605,7 @@ add_storage(scalar *pub, scalar *priv, const int private, const int dup, ML_KEM_
          * rho_pkhash buffer.  Zero the key hash when creating fresh keys.
          */
         if (dup == 0)
-                memset(key->rho_pkhash, 0, sizeof(key->rho_pkhash));
+                OPENSSL_cleanse(key->rho_pkhash, sizeof(key->rho_pkhash));
         key->rho = key->rho_pkhash;
         key->pkhash = key->rho_pkhash + ML_KEM_RANDOM_BYTES;
         key->d = key->z = NULL;
