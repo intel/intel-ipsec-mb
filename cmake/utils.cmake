@@ -18,6 +18,34 @@ macro(imb_get_version IMB_HDR_FILE)
                ${IPSEC_MB_VERSION_FULL})
 endmacro()
 
+# extract short git commit ID from the source tree
+#
+# Sets IPSEC_MB_GIT_COMMIT when the source tree is a git repository and the
+# commit ID can be read. Leaves it unset otherwise (e.g. git not installed or
+# building from a released source archive).
+macro(imb_get_git_commit IMB_SRC_DIR)
+  # drop any previously cached value, so that it is always up to date
+  unset(IPSEC_MB_GIT_COMMIT CACHE)
+  find_package(Git QUIET)
+  # check for .git explicitly, otherwise git would report the commit ID of an
+  # enclosing repository when building an archive unpacked inside one
+  #
+  # note: .git is a file (not a directory) in worktrees and submodules
+  if(GIT_FOUND AND EXISTS "${IMB_SRC_DIR}/.git")
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} rev-parse --short=12 HEAD
+      WORKING_DIRECTORY "${IMB_SRC_DIR}"
+      OUTPUT_VARIABLE IMB_GIT_COMMIT_OUT
+      RESULT_VARIABLE IMB_GIT_COMMIT_RES
+      OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(IMB_GIT_COMMIT_RES EQUAL 0 AND IMB_GIT_COMMIT_OUT)
+      set(IPSEC_MB_GIT_COMMIT
+          "${IMB_GIT_COMMIT_OUT}"
+          CACHE INTERNAL "Git commit ID of the source tree")
+    endif()
+  endif()
+endmacro()
+
 macro(imb_detect_os)
   message(STATUS "OPERATING SYSTEM...        ${CMAKE_HOST_SYSTEM_NAME}")
   if(CMAKE_HOST_UNIX)

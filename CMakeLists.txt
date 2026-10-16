@@ -15,6 +15,12 @@ set(IMB_HDR "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
 imb_get_version(${IMB_HDR})
 message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
 
+# get git commit ID, if the source tree is a git repository
+imb_get_git_commit("${CMAKE_CURRENT_SOURCE_DIR}")
+if(IPSEC_MB_GIT_COMMIT)
+  message(STATUS "Git Commit ID: ${IPSEC_MB_GIT_COMMIT}")
+endif()
+
 # set default project values
 imb_set_proj_defaults()
 
