@@ -6,7 +6,7 @@ Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).
 - Fixes stack misalignment when calling C functions with more than 4 arguments
   from assembly, causing ZUC-NCA6 crashes on Windows with GCC/MinGW builds.
-
+- Fix auto-detection of AVX10 architecture
 
 v3.0 September 2026
 ======================================================================
