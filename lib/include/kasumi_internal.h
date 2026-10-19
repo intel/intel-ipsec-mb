@@ -45,14 +45,14 @@ typedef union _ku64 {
 #define ROL16(a, b) (uint16_t)((a << b) | (a >> (16 - b)))
 
 static inline void
-kasumi_update(const uint16_t *context, void *data, const uint64_t num_blocks)
+kasumi_update(const uint16_t *context, void *data)
 {
 #ifdef AVX2
-        kasumi_update_avx2(context, data, num_blocks);
+        kasumi_update_avx2(context, data);
 #elif defined(AVX512) || defined(AVX10)
-        kasumi_update_avx512(context, data, num_blocks);
+        kasumi_update_avx512(context, data);
 #else
-        kasumi_update_sse(context, data, num_blocks);
+        kasumi_update_sse(context, data);
 #endif
 }
 
@@ -222,7 +222,7 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void
 
         /* Initialize the modifier and seed the F8 chaining state. */
         state[0].b64[0] = BSWAP64(IV);
-        kasumi_update(pCtx->msk16, state[0].b16, 1);
+        kasumi_update(pCtx->msk16, state[0].b16);
         state[1].b64[0] = state[0].b64[0];
         state[2].b64[0] = 0;
 
@@ -250,7 +250,7 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn, const uin
                 kasumi_f9_update(pCtx->sk16, state[0].b64, dataIn, length);
 
         /* Finalize the accumulated value with the modified key. */
-        kasumi_update(pCtx->msk16, state[1].b16, 1);
+        kasumi_update(pCtx->msk16, state[1].b16);
         *(uint32_t *) pDigest = bswap4(state[1].b32[1]);
 #ifdef SAFE_DATA
         clear_mem(state, sizeof(state));

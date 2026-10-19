@@ -14,6 +14,7 @@
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/align_avx512.inc"
+%include "include/kasumi_common.inc"
 
 mksection .rodata
 default rel
@@ -81,20 +82,6 @@ kmask_s7      dq  0x7F
 
 mksection .text
 
-%ifdef LINUX
-        %define arg1    rdi
-        %define arg2    rsi
-        %define arg3    rdx
-        %define arg4    rcx
-        %define arg5    r8
-%else
-        %define arg1    rcx
-        %define arg2    rdx
-        %define arg3    r8
-        %define arg4    r9
-        %define arg5    [rsp + 5*8]
-%endif
-
 %define     y0    ymm2
 %define     y1    ymm3
 %define     y2    ymm4
@@ -139,20 +126,6 @@ mksection .text
 %define YPERMB  ymm1       ; vpermb_mask   (byte permutation indices for 1st sbox pass)
 %define YLSB    ymm12      ; least_sig_bit_word (LSB-per-word test mask)
 %define KMASK7  k4         ; kmask_s7      (low 7 bits mask for S7 isolation)
-
-%define BLK_CNT rbp
-
-%ifdef LINUX
-%define UP_KEY_REG r8
-%define UP_STATE_REG r9
-%define UP_INPUT_REG r9
-%define UP_CHAIN_REG rsi
-%else
-%define UP_KEY_REG rsi
-%define UP_STATE_REG rdi
-%define UP_INPUT_REG rdi
-%define UP_CHAIN_REG rdx
-%endif
 
 ;; Save the pre-alignment RSP so the epilogue can restore it before popping GPRs.
 struc STACK
@@ -569,32 +542,18 @@ kasumi_1_block_avx512:
 
         ret
 
-;; void kasumi_update_avx512(const uint16_t *key_sched, void *data, uint64_t num_blocks)
+;; void kasumi_update_avx512(const uint16_t *key_sched, void *data)
 align_function
 MKGLOBAL(kasumi_update_avx512, function, internal)
 kasumi_update_avx512:
         KASUMI_UPDATE_START
-        ;; Keep the key and current block pointer live across block calls.
-        mov     UP_KEY_REG, arg1
-        mov     UP_STATE_REG, arg2
-        mov     BLK_CNT, arg3
-        test    BLK_CNT, BLK_CNT
-        jz      .update_done
-        ;; Load AVX512 S-box controls once for the whole batch.
+        ;; Load AVX512 S-box controls for this block.
         kmovd       KMASK7, [rel kmask_s7]
         vmovdqa     YPERMB, [rel vpermb_mask]
         vmovdqa     YPERMW, [rel vpermw_mask]
         vmovdqa     YLSB, [rel least_sig_bit_word]
-align_loop
-.update_loop:
-        ;; Encrypt one 8-byte block in place, then advance to the next block.
-        mov     arg1, UP_KEY_REG
-        mov     arg2, UP_STATE_REG
+        ;; Encrypt one 8-byte block in place.
         call    kasumi_1_block_avx512
-        add     UP_STATE_REG, 8
-        dec     BLK_CNT
-        jnz     .update_loop
-.update_done:
         KASUMI_UPDATE_END
         ret
 
@@ -605,79 +564,12 @@ MKGLOBAL(kasumi_f8_update_avx512, function, internal)
 kasumi_f8_update_avx512:
         mov     rax, arg5
         KASUMI_UPDATE_START
-
-        ;; Cache pointers; UP_CHAIN_REG points to B, with A at -8 and count at +8.
-        mov     UP_KEY_REG, arg1
-        mov     UP_INPUT_REG, arg3
-        add     UP_CHAIN_REG, 8
-        mov     qword [rsp + _output], arg4
-        ;; Full blocks: length / 8; remaining bytes: length % 8.
-        mov     BLK_CNT, rax
-        shr     BLK_CNT, 3
-        and     eax, 7
-        mov     [rsp + _tail], rax
-
         ;; Load AVX512 S-box controls once for the whole batch.
         kmovd       KMASK7, [rel kmask_s7]
         vmovdqa     YPERMB, [rel vpermb_mask]
         vmovdqa     YPERMW, [rel vpermw_mask]
         vmovdqa     YLSB, [rel least_sig_bit_word]
-
-        ;; Check if there are any full 8-byte blocks to process.
-        test    BLK_CNT, BLK_CNT
-        jz      .f8_tail
-
-align_loop
-.f8_loop:
-        ;; Encrypt B and XOR its byte-swapped value with the input block.
-        mov     arg1, UP_KEY_REG
-        call    kasumi_1_block_avx512
-
-        movbe   rax, [UP_CHAIN_REG]
-        xor     rax, [UP_INPUT_REG]
-        mov     rcx, [rsp + _output]
-        mov     [rcx], rax
-
-        ;; Only prepare B if another full block or a partial tail follows.
-        dec     BLK_CNT
-        jnz     .f8_prepare
-        cmp     qword [rsp + _tail], 0
-        jz      .f8_done
-.f8_prepare:
-        movzx   DWORD(TMP1), word [UP_CHAIN_REG + 8]
-        inc     WORD(TMP1)
-        mov     [UP_CHAIN_REG + 8], WORD(TMP1)
-        mov     rax, [UP_CHAIN_REG - 8]
-        xor     rax, TMP1
-        xor     [UP_CHAIN_REG], rax
-
-        ;; Advance the input and output pointers.
-        add     UP_INPUT_REG, 8
-        add     qword [rsp + _output], 8
-        test    BLK_CNT, BLK_CNT
-        jnz     .f8_loop
-
-align_label
-.f8_tail:
-        mov     arg1, UP_KEY_REG
-        call    kasumi_1_block_avx512
-        movbe   rax, [UP_CHAIN_REG]
-        mov     rcx, [rsp + _output]
-        mov     r10, [rsp + _tail]
-
-align_label
-.f8_tail_byte:
-        ;; XOR one valid input byte with AL, then shift in the next keystream byte.
-        xor     al, [UP_INPUT_REG]
-        mov     [rcx], al
-        shr     rax, 8
-        inc     UP_INPUT_REG
-        inc     rcx
-        dec     r10
-        jnz     .f8_tail_byte
-
-align_label
-.f8_done:
+        KASUMI_F8_UPDATE_BODY kasumi_1_block_avx512, 1
         KASUMI_UPDATE_END
         ret
 
@@ -687,75 +579,12 @@ align_function
 MKGLOBAL(kasumi_f9_update_avx512, function, internal)
 kasumi_f9_update_avx512:
         KASUMI_UPDATE_START
-
-        ;; Keep key, input, and A/B state pointers live across block calls.
-        mov     UP_KEY_REG, arg1
-        mov     UP_INPUT_REG, arg3
-        mov     BLK_CNT, arg4
-        ;; Split byte length into full 8-byte blocks and a 0-7 byte remainder.
-        shr     BLK_CNT, 3
-        mov     rax, arg4
-        and     eax, 7
-        mov     [rsp + _tail], rax
-
         ;; Load AVX512 S-box controls once for the whole batch.
         kmovd       KMASK7, [rel kmask_s7]
         vmovdqa     YPERMB, [rel vpermb_mask]
         vmovdqa     YPERMW, [rel vpermw_mask]
         vmovdqa     YLSB, [rel least_sig_bit_word]
-
-        ;; Check if there are any full 8-byte blocks to process.
-        test    BLK_CNT, BLK_CNT
-        jz      .f9_tail
-
-align_loop
-.f9_loop:
-        ;; XOR the byte-swapped input block into accumulator A.
-        movbe   rax, [UP_INPUT_REG]
-        xor     [UP_CHAIN_REG], rax
-
-        ;; Encrypt A, then accumulate the encrypted value into B.
-        mov     arg1, UP_KEY_REG
-        call    kasumi_1_block_avx512
-
-        mov     rax, [UP_CHAIN_REG]
-        xor     [UP_CHAIN_REG + 8], rax
-
-        ;; Advance to the next input block.
-        add     UP_INPUT_REG, 8
-        dec     BLK_CNT
-        jnz     .f9_loop
-
-align_label
-.f9_tail:
-        mov     r10, [rsp + _tail]
-        test    r10, r10
-        jz      .f9_done
-        ;; Append each valid input byte to RAX in message order without overreading.
-        xor     eax, eax
-
-align_label
-.f9_tail_byte:
-        shl     rax, 8
-        movzx   ecx, byte [UP_INPUT_REG]
-        or      rax, rcx
-        inc     UP_INPUT_REG
-        dec     r10
-        jnz     .f9_tail_byte
-        ;; Shift the bytes to the high end of the block, leaving zero padding below.
-        mov     rcx, 8
-        sub     rcx, [rsp + _tail]
-        shl     rcx, 3
-        shl     rax, cl
-        ;; Mix the padded block into A, encrypt A, and accumulate it into B.
-        xor     [UP_CHAIN_REG], rax
-        mov     arg1, UP_KEY_REG
-        call    kasumi_1_block_avx512
-        mov     rax, [UP_CHAIN_REG]
-        xor     [UP_CHAIN_REG + 8], rax
-
-align_label
-.f9_done:
+        KASUMI_F9_UPDATE_BODY kasumi_1_block_avx512, 1
         KASUMI_UPDATE_END
         ret
 
