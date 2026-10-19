@@ -44,8 +44,14 @@
 #define ML_KEM_OP_ENCAPS  1
 #define ML_KEM_OP_DECAPS  2
 
+/* ML-KEM d || z; ML-DSA uses the first 32 bytes (xi) */
+#define KEY_SEED_MAX_BYTES IMB_ML_KEM_KEYGEN_SEED_BYTES
+
 /* Deterministic PRNG seed used to diversify benchmark inputs. */
 static const uint64_t prng_init = 0x123456789ABCDEF0ULL;
+
+/* Seed of the fixed key used by sign/verify and encaps/decaps. */
+static uint8_t key_seed[KEY_SEED_MAX_BYTES];
 
 /**
  * @brief Benchmark result for a single algorithm (one entry per algorithm × operation).
@@ -187,19 +193,35 @@ static const struct ml_dsa_variant ml_dsa_variants[] = {
  * @brief Per-call ML-DSA benchmark context (buffers, handle, PRNG state).
  */
 struct ml_dsa_ctx {
-        IMB_ML_DSA *handle;   /**< opaque library handle holding the active key pair */
-        uint8_t *pk;          /**< public key buffer */
-        size_t pk_cap;        /**< capacity of the pk buffer in bytes */
-        uint8_t *sk;          /**< private key buffer */
-        size_t sk_cap;        /**< capacity of the sk buffer in bytes */
-        uint8_t *sig;         /**< signature output buffer */
-        size_t sig_cap;       /**< capacity of the sig buffer in bytes */
-        size_t sig_len;       /**< length of last produced signature in bytes */
-        uint64_t prng;        /**< splitmix64 PRNG state for deterministic randomisation */
-        uint8_t seed_buf[32]; /**< keygen seed (xi), refreshed per call */
-        uint8_t rnd[32];      /**< per-signature randomizer, refreshed per call */
+        IMB_ML_DSA *handle;     /**< handle holding the fixed key used by sign/verify */
+        IMB_ML_DSA *gen_handle; /**< handle rebound by every keygen iteration */
+        uint8_t *pk;            /**< public key buffer of the fixed key */
+        size_t pk_cap;          /**< capacity of the pk buffer in bytes */
+        uint8_t *sk;            /**< private key buffer of the fixed key */
+        size_t sk_cap;          /**< capacity of the sk buffer in bytes */
+        uint8_t *gen_pk;        /**< public key buffer written by the keygen loop */
+        uint8_t *gen_sk;        /**< private key buffer written by the keygen loop */
+        uint8_t *sig;           /**< signature output buffer */
+        size_t sig_cap;         /**< capacity of the sig buffer in bytes */
+        size_t sig_len;         /**< length of last produced signature in bytes */
+        uint64_t prng;          /**< splitmix64 PRNG state for deterministic randomisation */
+        uint8_t seed_buf[IMB_ML_DSA_KEYGEN_SEED_BYTES]; /**< keygen seed (xi), refreshed per call */
+        uint8_t rnd[IMB_ML_DSA_SIGN_RND_BYTES]; /**< per-signature randomizer, refreshed per call */
 };
 
+/* Binds the fixed, seed-derived key used by every sign/verify iteration. */
+static int
+ml_dsa_setup_key(struct ml_dsa_ctx *c)
+{
+        IMB_ML_DSA_KEYGEN_PARAMS params;
+
+        IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
+        params.xi_32 = key_seed;
+        params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
+        return imb_ml_dsa_keypair(c->handle, c->pk, c->pk_cap, c->sk, c->sk_cap, &params);
+}
+
+/* One timed keygen on gen_handle with a per-call seed. */
 static int
 ml_dsa_op_keygen(void *arg)
 {
@@ -210,10 +232,12 @@ ml_dsa_op_keygen(void *arg)
         fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
         params.xi_32 = c->seed_buf;
         params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
-        /* Also binds the freshly generated key to c->handle. */
-        return imb_ml_dsa_keypair(c->handle, c->pk, c->pk_cap, c->sk, c->sk_cap, &params);
+        /* Rebinds gen_handle only: the sign/verify key on c->handle is untouched. */
+        return imb_ml_dsa_keypair(c->gen_handle, c->gen_pk, c->pk_cap, c->gen_sk, c->sk_cap,
+                                  &params);
 }
 
+/* One timed sign with the fixed key and per-call randomness. */
 static int
 ml_dsa_op_sign(void *arg)
 {
@@ -228,12 +252,13 @@ ml_dsa_op_sign(void *arg)
         params.ctx_len = 0;
         params.rnd_32 = c->rnd;
         params.rnd_len = sizeof(c->rnd);
-        /* Signs against the key bound to c->handle by ml_dsa_op_keygen(). */
+        /* Signs against the fixed key bound to c->handle by ml_dsa_setup_key(). */
         ret = imb_ml_dsa_sign(c->handle, c->sig, &sig_len, test_msg, MSG_LEN, &params);
         c->sig_len = sig_len;
         return ret;
 }
 
+/* One timed verify of the last signature with the fixed key. */
 static int
 ml_dsa_op_verify(void *arg)
 {
@@ -243,7 +268,7 @@ ml_dsa_op_verify(void *arg)
         IMB_ML_DSA_VERIFY_PARAMS_INIT(&params);
         params.ctx = NULL;
         params.ctx_len = 0;
-        /* Verifies against the key bound to c->handle by ml_dsa_op_keygen(). */
+        /* Verifies against the fixed key bound to c->handle by ml_dsa_setup_key(). */
         return imb_ml_dsa_verify(c->handle, test_msg, MSG_LEN, c->sig, c->sig_len, &params);
 }
 
@@ -262,9 +287,11 @@ measure_ml_dsa(struct IMB_MGR *mgr, const struct ml_dsa_variant *v, const double
         res->ops[ML_DSA_OP_SIGN].name = "sign";
         res->ops[ML_DSA_OP_VERIFY].name = "verify";
 
-        if (imb_ml_dsa_new(mgr, v->alg, &ctx.handle) != 0) {
+        if (imb_ml_dsa_new(mgr, v->alg, &ctx.handle) != 0 ||
+            imb_ml_dsa_new(mgr, v->alg, &ctx.gen_handle) != 0) {
                 fprintf(stderr, "%s: imb_ml_dsa_new failed (errno %d: %s)\n", v->name,
                         imb_get_errno(mgr), imb_get_strerror(imb_get_errno(mgr)));
+                imb_ml_dsa_free(ctx.handle);
                 return -1;
         }
 
@@ -272,18 +299,21 @@ measure_ml_dsa(struct IMB_MGR *mgr, const struct ml_dsa_variant *v, const double
         ctx.pk_cap = v->pubkey_bytes;
         ctx.sk = malloc(v->privkey_bytes);
         ctx.sk_cap = v->privkey_bytes;
+        ctx.gen_pk = malloc(v->pubkey_bytes);
+        ctx.gen_sk = malloc(v->privkey_bytes);
         ctx.sig = malloc(v->sig_bytes);
         ctx.sig_cap = v->sig_bytes;
         ctx.prng = prng_init;
 
-        if (ctx.pk == NULL || ctx.sk == NULL || ctx.sig == NULL) {
+        if (ctx.pk == NULL || ctx.sk == NULL || ctx.gen_pk == NULL || ctx.gen_sk == NULL ||
+            ctx.sig == NULL) {
                 fprintf(stderr, "%s: out of memory\n", v->name);
                 goto cleanup;
         }
 
         /* Functional self-check before measuring. */
-        if (ml_dsa_op_keygen(&ctx) != 0 || ml_dsa_op_sign(&ctx) != 0 ||
-            ml_dsa_op_verify(&ctx) != 0) {
+        if (ml_dsa_setup_key(&ctx) != 0 || ml_dsa_op_keygen(&ctx) != 0 ||
+            ml_dsa_op_sign(&ctx) != 0 || ml_dsa_op_verify(&ctx) != 0) {
                 fprintf(stderr, "%s: functional self-check failed\n", v->name);
                 goto cleanup;
         }
@@ -291,7 +321,7 @@ measure_ml_dsa(struct IMB_MGR *mgr, const struct ml_dsa_variant *v, const double
         res->ops[ML_DSA_OP_KEYGEN].secs = bench(ml_dsa_op_keygen, &ctx, v->name, "keygen", seconds,
                                                 &res->ops[ML_DSA_OP_KEYGEN].iter);
 
-        /* Produce one valid signature before benchmarking verify. */
+        /* Sign/verify use the fixed key; the keygen loop never touches it. */
         if (ml_dsa_op_sign(&ctx) != 0) {
                 fprintf(stderr, "%s: signing failed\n", v->name);
                 goto cleanup;
@@ -313,8 +343,11 @@ measure_ml_dsa(struct IMB_MGR *mgr, const struct ml_dsa_variant *v, const double
 cleanup:
         free(ctx.pk);
         free(ctx.sk);
+        free(ctx.gen_pk);
+        free(ctx.gen_sk);
         free(ctx.sig);
         imb_ml_dsa_free(ctx.handle);
+        imb_ml_dsa_free(ctx.gen_handle);
         return ret;
 }
 
@@ -362,20 +395,36 @@ static const struct ml_kem_variant ml_kem_variants[] = {
  * @brief Per-call ML-KEM benchmark context (buffers, handle, PRNG state).
  */
 struct ml_kem_ctx {
-        IMB_ML_KEM *handle; /**< opaque library handle holding the active key pair */
-        uint8_t *ek;        /**< encapsulation key buffer */
-        size_t ek_cap;      /**< capacity of the ek buffer in bytes */
-        uint8_t *dk;        /**< decapsulation key buffer */
-        size_t dk_cap;      /**< capacity of the dk buffer in bytes */
-        uint8_t *ct;        /**< ciphertext buffer */
-        size_t ct_len;      /**< ciphertext length in bytes */
+        IMB_ML_KEM *handle;     /**< handle holding the fixed key used by encaps/decaps */
+        IMB_ML_KEM *gen_handle; /**< handle rebound by every keypair iteration */
+        uint8_t *ek;            /**< encapsulation key buffer of the fixed key */
+        size_t ek_cap;          /**< capacity of the ek buffer in bytes */
+        uint8_t *dk;            /**< decapsulation key buffer of the fixed key */
+        size_t dk_cap;          /**< capacity of the dk buffer in bytes */
+        uint8_t *gen_ek;        /**< encapsulation key buffer written by the keypair loop */
+        uint8_t *gen_dk;        /**< decapsulation key buffer written by the keypair loop */
+        uint8_t *ct;            /**< ciphertext buffer */
+        size_t ct_len;          /**< ciphertext length in bytes */
         uint8_t ss_encap[IMB_ML_KEM_SHARED_SECRET_BYTES]; /**< shared secret produced by encaps */
         uint8_t ss_decap[IMB_ML_KEM_SHARED_SECRET_BYTES]; /**< shared secret produced by decaps */
-        uint64_t prng;        /**< splitmix64 PRNG state for deterministic randomisation */
-        uint8_t seed_buf[64]; /**< keypair seed: FIPS 203 "d" || "z", refreshed per call */
-        uint8_t m_buf[32];    /**< encaps randomizer: FIPS 203 "m", refreshed per call */
+        uint64_t prng; /**< splitmix64 PRNG state for deterministic randomisation */
+        uint8_t seed_buf[IMB_ML_KEM_KEYGEN_SEED_BYTES]; /**< keypair seed "d" || "z", per call */
+        uint8_t m_buf[IMB_ML_KEM_ENCAP_SEED_BYTES];     /**< encaps randomizer "m", per call */
 };
 
+/* Binds the fixed, seed-derived key used by every encaps/decaps iteration. */
+static int
+ml_kem_setup_key(struct ml_kem_ctx *c)
+{
+        IMB_ML_KEM_KEYGEN_PARAMS params;
+
+        IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
+        params.seed_d_z = key_seed;
+        params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
+        return imb_ml_kem_keypair(c->handle, c->ek, c->ek_cap, c->dk, c->dk_cap, &params);
+}
+
+/* One timed keypair on gen_handle with a per-call seed. */
 static int
 ml_kem_op_keygen(void *arg)
 {
@@ -386,10 +435,12 @@ ml_kem_op_keygen(void *arg)
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
         params.seed_d_z = c->seed_buf;
         params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
-        /* Also binds the freshly generated key to c->handle. */
-        return imb_ml_kem_keypair(c->handle, c->ek, c->ek_cap, c->dk, c->dk_cap, &params);
+        /* Rebinds gen_handle only: the encaps/decaps key on c->handle is untouched. */
+        return imb_ml_kem_keypair(c->gen_handle, c->gen_ek, c->ek_cap, c->gen_dk, c->dk_cap,
+                                  &params);
 }
 
+/* One timed encaps with the fixed key and a per-call "m". */
 static int
 ml_kem_op_encap(void *arg)
 {
@@ -400,17 +451,18 @@ ml_kem_op_encap(void *arg)
         IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
         params.m_32 = c->m_buf;
         params.m_len = sizeof(c->m_buf);
-        /* Encapsulates against the key bound to c->handle by ml_kem_op_keygen(). */
+        /* Encapsulates against the fixed key bound to c->handle by ml_kem_setup_key(). */
         return imb_ml_kem_encap(c->handle, c->ct, c->ct_len, c->ss_encap, sizeof(c->ss_encap),
                                 &params);
 }
 
+/* One timed decaps of the last ciphertext with the fixed key. */
 static int
 ml_kem_op_decap(void *arg)
 {
         struct ml_kem_ctx *c = (struct ml_kem_ctx *) arg;
 
-        /* Decapsulates against the key bound to c->handle by ml_kem_op_keygen(). */
+        /* Decapsulates against the fixed key bound to c->handle by ml_kem_setup_key(). */
         return imb_ml_kem_decap(c->handle, c->ss_decap, sizeof(c->ss_decap), c->ct, c->ct_len,
                                 NULL);
 }
@@ -430,9 +482,11 @@ measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double
         res->ops[ML_KEM_OP_ENCAPS].name = "encaps";
         res->ops[ML_KEM_OP_DECAPS].name = "decaps";
 
-        if (imb_ml_kem_new(mgr, v->alg, &ctx.handle) != 0) {
+        if (imb_ml_kem_new(mgr, v->alg, &ctx.handle) != 0 ||
+            imb_ml_kem_new(mgr, v->alg, &ctx.gen_handle) != 0) {
                 fprintf(stderr, "%s: imb_ml_kem_new failed (errno %d: %s)\n", v->name,
                         imb_get_errno(mgr), imb_get_strerror(imb_get_errno(mgr)));
+                imb_ml_kem_free(ctx.handle);
                 return -1;
         }
 
@@ -440,19 +494,22 @@ measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double
         ctx.ek_cap = v->pubkey_bytes;
         ctx.dk = malloc(v->privkey_bytes);
         ctx.dk_cap = v->privkey_bytes;
+        ctx.gen_ek = malloc(v->pubkey_bytes);
+        ctx.gen_dk = malloc(v->privkey_bytes);
         ctx.ct = malloc(v->ct_bytes);
         ctx.ct_len = v->ct_bytes;
         ctx.prng = prng_init;
 
-        if (ctx.ek == NULL || ctx.dk == NULL || ctx.ct == NULL) {
+        if (ctx.ek == NULL || ctx.dk == NULL || ctx.gen_ek == NULL || ctx.gen_dk == NULL ||
+            ctx.ct == NULL) {
                 fprintf(stderr, "%s: out of memory\n", v->name);
                 goto cleanup;
         }
 
         /* Functional self-check before measuring: keypair, encaps, decaps, and
          * confirm the shared secrets agree. */
-        if (ml_kem_op_keygen(&ctx) != 0 || ml_kem_op_encap(&ctx) != 0 ||
-            ml_kem_op_decap(&ctx) != 0 ||
+        if (ml_kem_setup_key(&ctx) != 0 || ml_kem_op_keygen(&ctx) != 0 ||
+            ml_kem_op_encap(&ctx) != 0 || ml_kem_op_decap(&ctx) != 0 ||
             memcmp(ctx.ss_encap, ctx.ss_decap, IMB_ML_KEM_SHARED_SECRET_BYTES) != 0) {
                 fprintf(stderr, "%s: functional self-check failed\n", v->name);
                 goto cleanup;
@@ -483,8 +540,11 @@ measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double
 cleanup:
         free(ctx.ek);
         free(ctx.dk);
+        free(ctx.gen_ek);
+        free(ctx.gen_dk);
         free(ctx.ct);
         imb_ml_kem_free(ctx.handle);
+        imb_ml_kem_free(ctx.gen_handle);
         return ret;
 }
 
@@ -689,6 +749,9 @@ usage(const char *prog)
                "  --csv, -c              emit results as CSV\n"
                "  --help, -h             show this help and exit\n"
                "\n"
+               "Sign/verify and encaps/decaps always use one fixed key for the whole run;\n"
+               "keygen runs on separate handles and never replaces it.\n"
+               "\n"
                "Architectures (default: AUTO):\n",
                prog, DEFAULT_SECONDS);
         for (size_t i = 0; i < NUM_KNOWN_ARCHS; i++)
@@ -758,6 +821,12 @@ main(int argc, char **argv)
                         usage(argv[0]);
                         return EXIT_FAILURE;
                 }
+        }
+
+        {
+                uint64_t seed_prng = prng_init;
+
+                fill_random_buf(&seed_prng, key_seed, sizeof(key_seed));
         }
 
         mgr = alloc_mb_mgr(0);
