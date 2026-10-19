@@ -28,6 +28,12 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
                 return;
         }
 #endif
+        if ((state->features & IMB_CPUFLAGS_AVX10) == IMB_CPUFLAGS_AVX10) {
+                init_mb_mgr_avx10(state);
+                arch_detected = IMB_ARCH_AVX10;
+                goto init_mb_mgr_auto_ret;
+        }
+
         if ((state->features & IMB_CPUFLAGS_AVX512) == IMB_CPUFLAGS_AVX512) {
                 init_mb_mgr_avx512(state);
                 arch_detected = IMB_ARCH_AVX512;
