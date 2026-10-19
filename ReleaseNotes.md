@@ -7,6 +7,7 @@ Fixes
 - Fixes stack misalignment when calling C functions with more than 4 arguments
   from assembly, causing ZUC-NCA6 crashes on Windows with GCC/MinGW builds.
 - Fix auto-detection of AVX10 architecture
+- Fixes out-of-bounds read in GHASH job API for tag lengths below 16 bytes.
 
 v3.0 September 2026
 ======================================================================
