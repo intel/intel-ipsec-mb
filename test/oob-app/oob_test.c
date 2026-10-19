@@ -639,8 +639,8 @@ static const struct hash_test_vec hash_tests[] = {
         { "AES-GMAC-128", IMB_AUTH_AES_GMAC_128, 16, 1, 16, 1, 12, HASH_GMAC, 1, 1, 1 },
         { "AES-GMAC-192", IMB_AUTH_AES_GMAC_192, 16, 1, 16, 1, 12, HASH_GMAC, 1, 1, 1 },
         { "AES-GMAC-256", IMB_AUTH_AES_GMAC_256, 16, 1, 16, 1, 12, HASH_GMAC, 1, 1, 1 },
-        /* GHASH -- fixed 16 only (implementation always writes 16 bytes) */
-        { "GHASH", IMB_AUTH_GHASH, 16, 0, 0, 0, 0, HASH_GHASH, 16, 16, 16 },
+        /* GHASH -- tag range 1..16, step 1 */
+        { "GHASH", IMB_AUTH_GHASH, 16, 1, 16, 1, 0, HASH_GHASH, 16, 16, 16 },
         /* POLY1305 -- fixed 16 only */
         { "POLY1305", IMB_AUTH_POLY1305, 16, 0, 0, 0, 0, HASH_POLY1305, 1, 1, 1 },
         /* CRC variants -- fixed 4 only */
