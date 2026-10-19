@@ -43,6 +43,11 @@ To benchmark all supported PQC algorithms:
 To benchmark specific algorithms:
 `imb-speed-pqc ML-DSA-44 ML-KEM-768`
 
+Sign/verify and encaps/decaps run against one fixed key for the whole run (derived from a built-in seed, or from `--key-seed <hex>`), so results are repeatable. Keygen runs on separate handles and never replaces that key.
+
+By default, the library generates fresh randomness on every call and there is no warm-up before each timed run. Use `--rnd prng` for randomness from the tool's internal PRNG and `--warmup-iter <n>` to run untimed calls before each timed run:
+`imb-speed-pqc --rnd prng --warmup-iter 1000 ML-DSA-65`
+
 For more options:
 `imb-speed-pqc --help`
 
