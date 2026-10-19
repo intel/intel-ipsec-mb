@@ -6,6 +6,7 @@ Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).
 - Fixes stack misalignment when calling C functions with more than 4 arguments
   from assembly, causing ZUC-NCA6 crashes on Windows with GCC/MinGW builds.
+- Fixes out-of-bounds read in GHASH job API for tag lengths below 16 bytes.
 
 Test Applications
 - Added chained NEA4/5/6 + NIA4/5/6 KAT test to imb-kat application.
