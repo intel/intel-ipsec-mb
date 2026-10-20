@@ -19,20 +19,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>
-#define strcasecmp _stricmp
+#define strcasecmp  _stricmp
+#define strncasecmp _strnicmp
+#else
+#include <strings.h>
 #endif
 
 #include <intel-ipsec-mb.h>
 
-#define WARMUP_SECONDS  0.5
-#define DEFAULT_SECONDS 10.0
-#define MSG_LEN         32
-#define MAX_OPS         8  /* max operations per algorithm (keygen/sign/verify/...) */
-#define MAX_RESULTS     64 /* max algorithms per run */
+#define DEFAULT_SECONDS  10.0
+#define MAX_WARMUP_ITERS 100000
+#define MSG_LEN          32
+#define MAX_OPS          8  /* max operations per algorithm (keygen/sign/verify/...) */
+#define MAX_RESULTS      64 /* max algorithms per run */
 
 /* ML-DSA ops[] indices */
 #define ML_DSA_OP_KEYGEN 0
@@ -50,8 +54,26 @@
 /* Deterministic PRNG seed used to diversify benchmark inputs. */
 static const uint64_t prng_init = 0x123456789ABCDEF0ULL;
 
-/* Seed of the fixed key used by sign/verify and encaps/decaps. */
-static uint8_t key_seed[KEY_SEED_MAX_BYTES];
+/**
+ * @brief Source of the per-call randomness (sign randomizer, encaps "m", keygen seed).
+ */
+enum rnd_mode {
+        RND_PRNG,     /**< varying value from the internal splitmix64 PRNG */
+        RND_INTERNAL, /**< NULL: library draws fresh random bytes on every call (default) */
+        RND_ZERO      /**< all-zero sign/encaps randomness; keygen seed still varies */
+};
+
+/**
+ * @brief Run-wide benchmark settings selected on the command line.
+ */
+struct bench_cfg {
+        enum rnd_mode rnd;                    /**< per-call randomness source */
+        unsigned long warmup_iters;           /**< untimed calls before each timed run */
+        uint8_t key_seed[KEY_SEED_MAX_BYTES]; /**< seed of the fixed sign/verify/encaps key */
+        size_t key_seed_len;                  /**< valid bytes in key_seed (32 or 64) */
+};
+
+static struct bench_cfg cfg = { RND_INTERNAL, 0, { 0 }, KEY_SEED_MAX_BYTES };
 
 /**
  * @brief Benchmark result for a single algorithm (one entry per algorithm × operation).
@@ -125,17 +147,51 @@ fill_random_buf(uint64_t *prng, uint8_t *buf, size_t n)
         }
 }
 
+/**
+ * @brief Prepare the randomness for one sign/encaps call according to cfg.rnd.
+ *
+ * @return buf when the caller must pass it to the library, or NULL when the
+ *         library should draw its own randomness (RND_INTERNAL).
+ */
+static const uint8_t *
+per_call_rnd(uint64_t *prng, uint8_t *buf, const size_t n)
+{
+        switch (cfg.rnd) {
+        case RND_INTERNAL:
+                return NULL;
+        case RND_ZERO:
+                memset(buf, 0, n);
+                return buf;
+        default:
+                fill_random_buf(prng, buf, n);
+                return buf;
+        }
+}
+
+/**
+ * @brief Prepare the seed for one keygen call. Unlike per_call_rnd(), RND_ZERO
+ *        keeps varying the seed so keygen is not timed on a single key.
+ */
+static const uint8_t *
+per_call_keygen_seed(uint64_t *prng, uint8_t *buf, const size_t n)
+{
+        if (cfg.rnd == RND_INTERNAL)
+                return NULL;
+        fill_random_buf(prng, buf, n);
+        return buf;
+}
+
 typedef int (*bench_fn)(void *ctx);
 
 /**
- * Run fn(ctx) repeatedly for the requested wall-clock window after a warm-up.
+ * Run fn(ctx) repeatedly for the requested wall-clock window after
+ * cfg.warmup_iters untimed warm-up calls.
  * Returns elapsed seconds and iteration count, or -1.0 on fn() failure.
  */
 static double
 bench(bench_fn fn, void *ctx, const char *algo, const char *op, const double seconds,
       uint64_t *iter_out)
 {
-        const double warm = seconds < WARMUP_SECONDS ? seconds : WARMUP_SECONDS;
         double t0, elapsed;
         uint64_t iter = 0;
 
@@ -143,11 +199,9 @@ bench(bench_fn fn, void *ctx, const char *algo, const char *op, const double sec
         fprintf(stderr, "Running %s %s for %gs...\n", algo, op, seconds);
         fflush(stderr);
 
-        t0 = now_sec();
-        while (now_sec() - t0 < warm) {
+        for (unsigned long w = 0; w < cfg.warmup_iters; w++)
                 if (fn(ctx) != 0)
                         return -1.0;
-        }
 
         t0 = now_sec();
         do {
@@ -216,7 +270,7 @@ ml_dsa_setup_key(struct ml_dsa_ctx *c)
         IMB_ML_DSA_KEYGEN_PARAMS params;
 
         IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
-        params.xi_32 = key_seed;
+        params.xi_32 = cfg.key_seed;
         params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
         return imb_ml_dsa_keypair(c->handle, c->pk, c->pk_cap, c->sk, c->sk_cap, &params);
 }
@@ -227,11 +281,11 @@ ml_dsa_op_keygen(void *arg)
 {
         struct ml_dsa_ctx *c = (struct ml_dsa_ctx *) arg;
         IMB_ML_DSA_KEYGEN_PARAMS params;
+        const uint8_t *xi = per_call_keygen_seed(&c->prng, c->seed_buf, sizeof(c->seed_buf));
 
         IMB_ML_DSA_KEYGEN_PARAMS_INIT(&params);
-        fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
-        params.xi_32 = c->seed_buf;
-        params.xi_len = IMB_ML_DSA_KEYGEN_SEED_BYTES;
+        params.xi_32 = xi;
+        params.xi_len = (xi != NULL) ? IMB_ML_DSA_KEYGEN_SEED_BYTES : 0;
         /* Rebinds gen_handle only: the sign/verify key on c->handle is untouched. */
         return imb_ml_dsa_keypair(c->gen_handle, c->gen_pk, c->pk_cap, c->gen_sk, c->sk_cap,
                                   &params);
@@ -246,12 +300,13 @@ ml_dsa_op_sign(void *arg)
         size_t sig_len = c->sig_cap;
         int ret;
 
+        const uint8_t *rnd = per_call_rnd(&c->prng, c->rnd, sizeof(c->rnd));
+
         IMB_ML_DSA_SIGN_PARAMS_INIT(&params);
-        fill_random_buf(&c->prng, c->rnd, sizeof(c->rnd));
         params.ctx = NULL;
         params.ctx_len = 0;
-        params.rnd_32 = c->rnd;
-        params.rnd_len = sizeof(c->rnd);
+        params.rnd_32 = rnd;
+        params.rnd_len = (rnd != NULL) ? sizeof(c->rnd) : 0;
         /* Signs against the fixed key bound to c->handle by ml_dsa_setup_key(). */
         ret = imb_ml_dsa_sign(c->handle, c->sig, &sig_len, test_msg, MSG_LEN, &params);
         c->sig_len = sig_len;
@@ -419,7 +474,7 @@ ml_kem_setup_key(struct ml_kem_ctx *c)
         IMB_ML_KEM_KEYGEN_PARAMS params;
 
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
-        params.seed_d_z = key_seed;
+        params.seed_d_z = cfg.key_seed;
         params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
         return imb_ml_kem_keypair(c->handle, c->ek, c->ek_cap, c->dk, c->dk_cap, &params);
 }
@@ -430,11 +485,11 @@ ml_kem_op_keygen(void *arg)
 {
         struct ml_kem_ctx *c = (struct ml_kem_ctx *) arg;
         IMB_ML_KEM_KEYGEN_PARAMS params;
+        const uint8_t *seed = per_call_keygen_seed(&c->prng, c->seed_buf, sizeof(c->seed_buf));
 
-        fill_random_buf(&c->prng, c->seed_buf, sizeof(c->seed_buf));
         IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
-        params.seed_d_z = c->seed_buf;
-        params.seed_d_z_len = IMB_ML_KEM_KEYGEN_SEED_BYTES;
+        params.seed_d_z = seed;
+        params.seed_d_z_len = (seed != NULL) ? IMB_ML_KEM_KEYGEN_SEED_BYTES : 0;
         /* Rebinds gen_handle only: the encaps/decaps key on c->handle is untouched. */
         return imb_ml_kem_keypair(c->gen_handle, c->gen_ek, c->ek_cap, c->gen_dk, c->dk_cap,
                                   &params);
@@ -446,11 +501,11 @@ ml_kem_op_encap(void *arg)
 {
         struct ml_kem_ctx *c = (struct ml_kem_ctx *) arg;
         IMB_ML_KEM_ENCAP_PARAMS params;
+        const uint8_t *m = per_call_rnd(&c->prng, c->m_buf, sizeof(c->m_buf));
 
-        fill_random_buf(&c->prng, c->m_buf, sizeof(c->m_buf));
         IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
-        params.m_32 = c->m_buf;
-        params.m_len = sizeof(c->m_buf);
+        params.m_32 = m;
+        params.m_len = (m != NULL) ? sizeof(c->m_buf) : 0;
         /* Encapsulates against the fixed key bound to c->handle by ml_kem_setup_key(). */
         return imb_ml_kem_encap(c->handle, c->ct, c->ct_len, c->ss_encap, sizeof(c->ss_encap),
                                 &params);
@@ -602,11 +657,20 @@ us_per_op(const uint64_t iter, const double secs)
 static void
 print_run_info(const char *requested_arch, const char *selected_arch)
 {
+        static const char *const rnd_names[] = { "prng", "internal", "zero" };
+        char seed_hex[2 * KEY_SEED_MAX_BYTES + 1];
+
+        for (size_t i = 0; i < cfg.key_seed_len; i++)
+                snprintf(&seed_hex[2 * i], 3, "%02x", cfg.key_seed[i]);
+
         fprintf(stderr,
                 "Library version: %s\n"
                 "Requested architecture: %s\n"
-                "Selected architecture: %s\n\n",
-                imb_get_version_str(), requested_arch, selected_arch);
+                "Selected architecture: %s\n"
+                "Randomness: %s, warm-up: %lu iterations\n"
+                "Key seed: %s\n\n",
+                imb_get_version_str(), requested_arch, selected_arch, rnd_names[cfg.rnd],
+                cfg.warmup_iters, seed_hex);
 }
 
 /**
@@ -738,6 +802,44 @@ lookup_arch(const char *name)
         return NULL;
 }
 
+/**
+ * @brief Decode a hex string into the benchmark key seed.
+ *
+ * @return 0 on success; -1 if the string is not valid hex or does not encode
+ *         exactly 32 (ML-DSA xi) or 64 (ML-KEM d || z) bytes.
+ */
+static int
+parse_key_seed(const char *hex)
+{
+        const size_t n = strlen(hex);
+
+        if ((n != 2 * IMB_ML_DSA_KEYGEN_SEED_BYTES && n != 2 * KEY_SEED_MAX_BYTES))
+                return -1;
+        for (size_t i = 0; i < n; i += 2) {
+                char pair[3] = { hex[i], hex[i + 1], '\0' };
+
+                if (!isxdigit((unsigned char) pair[0]) || !isxdigit((unsigned char) pair[1]))
+                        return -1;
+                cfg.key_seed[i / 2] = (uint8_t) strtoul(pair, NULL, 16);
+        }
+        cfg.key_seed_len = n / 2;
+        return 0;
+}
+
+static int
+parse_rnd_mode(const char *name)
+{
+        if (strcasecmp(name, "prng") == 0)
+                cfg.rnd = RND_PRNG;
+        else if (strcasecmp(name, "internal") == 0)
+                cfg.rnd = RND_INTERNAL;
+        else if (strcasecmp(name, "zero") == 0)
+                cfg.rnd = RND_ZERO;
+        else
+                return -1;
+        return 0;
+}
+
 static void
 usage(const char *prog)
 {
@@ -747,6 +849,17 @@ usage(const char *prog)
                "  --arch, -a <arch>      architecture to initialize the "
                "IMB_MGR with (default: AUTO)\n"
                "  --csv, -c              emit results as CSV\n"
+               "  --rnd <mode>           per-call randomness (default: internal)\n"
+               "                           prng:     varying values from an internal PRNG\n"
+               "                           internal: library draws its own random bytes\n"
+               "                                     on every call (hedged)\n"
+               "                           zero:     all-zero sign/encaps randomness\n"
+               "                                     (deterministic; keygen seeds still vary)\n"
+               "  --key-seed <hex>       seed of the fixed sign/verify/encaps key: 32 bytes\n"
+               "                         (ML-DSA xi) or 64 bytes (ML-KEM d||z; ML-DSA uses\n"
+               "                         the first 32). Default: fixed built-in seed\n"
+               "  --warmup-iter <n>      untimed calls before each timed run,\n"
+               "                         0-100000 (default: 0)\n"
                "  --help, -h             show this help and exit\n"
                "\n"
                "Sign/verify and encaps/decaps always use one fixed key for the whole run;\n"
@@ -772,6 +885,7 @@ main(int argc, char **argv)
         /* Algo names selected from the command line (positional args). */
         const char *selected[MAX_RESULTS];
         int num_selected = 0;
+        int key_seed_set = 0;
         const char *arch_name = "AUTO";
         const struct arch_entry *arch;
         const char *selected_arch = NULL;
@@ -789,6 +903,28 @@ main(int argc, char **argv)
                         arch_name = argv[++i];
                 } else if (strcmp(a, "--csv") == 0 || strcmp(a, "-c") == 0) {
                         csv = 1;
+                } else if (strcmp(a, "--rnd") == 0 && i + 1 < (size_t) argc) {
+                        if (parse_rnd_mode(argv[++i]) != 0) {
+                                fprintf(stderr, "--rnd must be prng, internal or zero\n");
+                                return EXIT_FAILURE;
+                        }
+                } else if (strcmp(a, "--key-seed") == 0 && i + 1 < (size_t) argc) {
+                        if (parse_key_seed(argv[++i]) != 0) {
+                                fprintf(stderr, "--key-seed must be 64 or 128 hex digits\n");
+                                return EXIT_FAILURE;
+                        }
+                        key_seed_set = 1;
+                } else if (strcmp(a, "--warmup-iter") == 0 && i + 1 < (size_t) argc) {
+                        const char *w = argv[++i];
+                        char *end;
+
+                        cfg.warmup_iters = strtoul(w, &end, 10);
+                        if (!isdigit((unsigned char) w[0]) || *end != '\0' ||
+                            cfg.warmup_iters > MAX_WARMUP_ITERS) {
+                                fprintf(stderr, "--warmup-iter must be between 0 and %d\n",
+                                        MAX_WARMUP_ITERS);
+                                return EXIT_FAILURE;
+                        }
                 } else if (strcmp(a, "--help") == 0 || strcmp(a, "-h") == 0) {
                         usage(argv[0]);
                         return EXIT_SUCCESS;
@@ -823,10 +959,23 @@ main(int argc, char **argv)
                 }
         }
 
-        {
+        if (!key_seed_set) {
                 uint64_t seed_prng = prng_init;
 
-                fill_random_buf(&seed_prng, key_seed, sizeof(key_seed));
+                fill_random_buf(&seed_prng, cfg.key_seed, KEY_SEED_MAX_BYTES);
+        }
+
+        /* ML-KEM needs a 64-byte seed (d || z); reject a 32-byte one up front. */
+        if (cfg.key_seed_len < KEY_SEED_MAX_BYTES) {
+                int kem_selected = (num_selected == 0);
+
+                for (i = 0; i < (size_t) num_selected; i++)
+                        if (strncasecmp(selected[i], "ML-KEM", 6) == 0)
+                                kem_selected = 1;
+                if (kem_selected) {
+                        fprintf(stderr, "ML-KEM requires a 64-byte --key-seed (d||z)\n");
+                        return EXIT_FAILURE;
+                }
         }
 
         mgr = alloc_mb_mgr(0);
