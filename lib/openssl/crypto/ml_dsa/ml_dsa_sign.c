@@ -266,7 +266,7 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                 VECTOR *y_ntt = &cs1;
                 VECTOR *r0 = &w1;
                 VECTOR *ct0 = &w1;
-                uint32_t z_max, r0_max, ct0_max, h_ones;
+                uint32_t z_bad, r0_bad, ct0_bad, h_ones;
 
                 self->vector_expand_mask(&y, rho_prime, (uint32_t) kappa, gamma1, md_ctx,
                                          priv->shake256_md);
@@ -276,8 +276,9 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                 matrix_mult_vector(self, &a_ntt, y_ntt, &w);
                 vector_ntt_inverse(self, &w);
 
-                vector_high_bits(&w, gamma2, &w1);
-                ossl_ml_dsa_w1_encode(&w1, gamma2, w1_encoded, w1_encoded_len);
+                vector_high_bits(self, &w, &w1);
+                if (!ossl_ml_dsa_w1_encode(self, &w1, gamma2, w1_encoded, w1_encoded_len))
+                        break;
 
                 if (!shake_xof_2(md_ctx, priv->shake256_md, mu, mu_len, w1_encoded, w1_encoded_len,
                                  c_tilde, c_tilde_len))
@@ -292,11 +293,11 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                 vector_mult_scalar(self, &s2_ntt, c_ntt, &cs2);
                 vector_ntt_inverse(self, &cs2);
 
-                vector_add(&y, &cs1, &sig.z);
+                vector_add(self, &y, &cs1, &sig.z);
 
                 /* r0 = lowbits(w - cs2) */
-                vector_sub(&w, &cs2, r0);
-                vector_low_bits(r0, gamma2, r0);
+                vector_sub(self, &w, &cs2, r0);
+                vector_low_bits(self, r0, r0);
 
                 /*
                  * Leaking that the signature is rejected is fine: the next attempt
@@ -306,21 +307,19 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                  * Declassify the bound-check output so that Valgrind does not flag
                  * these intentional leaks.
                  */
-                z_max = vector_max(&sig.z);
-                r0_max = vector_max_signed(r0);
-                if (constant_time_declassify_u32(constant_time_ge(z_max, gamma1 - params->beta) |
-                                                 constant_time_ge(r0_max, gamma2 - params->beta)))
+                z_bad = vector_chknorm(self, &sig.z, gamma1 - params->beta);
+                r0_bad = vector_chknorm_signed(self, r0, gamma2 - params->beta);
+                if (constant_time_declassify_u32(z_bad | r0_bad))
                         continue;
 
                 vector_mult_scalar(self, &t0_ntt, c_ntt, ct0);
                 vector_ntt_inverse(self, ct0);
-                vector_make_hint(ct0, &cs2, &w, gamma2, &sig.hint);
+                vector_make_hint(self, ct0, &cs2, &w, &sig.hint);
 
-                ct0_max = vector_max(ct0);
-                h_ones = (uint32_t) vector_count_ones(&sig.hint);
+                ct0_bad = vector_chknorm(self, ct0, gamma2);
+                h_ones = (uint32_t) vector_count_ones(self, &sig.hint);
                 /* Same reasoning applies to the leak as above */
-                if (constant_time_declassify_u32(constant_time_ge(ct0_max, gamma2) |
-                                                 constant_time_lt(params->omega, h_ones)))
+                if (constant_time_declassify_u32(ct0_bad | constant_time_lt(params->omega, h_ones)))
                         continue;
 
                 /*
@@ -344,7 +343,7 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                 CONSTTIME_DECLASSIFY_VECTOR(sig.z);
                 CONSTTIME_DECLASSIFY_VECTOR(sig.hint);
 
-                ret = ossl_ml_dsa_sig_encode(&sig, params, out_sig);
+                ret = ossl_ml_dsa_sig_encode(self, &sig, params, out_sig);
                 break;
         }
 err:
@@ -414,7 +413,7 @@ ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint
         uint8_t c_tilde_sig[ML_DSA_MAX_LAMBDA / 4];
         EVP_MD_CTX *md_ctx = NULL;
         size_t c_tilde_len = params->bit_strength >> 2;
-        uint32_t z_max;
+        uint32_t z_bad;
 
         /* FIPS 204 compliance: Also validate signature length before decoding */
         if (mu_len != ML_DSA_MU_BYTES || sig_enc_len != params->sig_len) {
@@ -465,28 +464,28 @@ ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint
         vector_scale_power2_round_ntt(self, &pub->t1, &ct1_ntt);
         vector_mult_scalar(self, &ct1_ntt, c_ntt, &ct1_ntt);
 
-        /* compute z_max early in order to reuse sig.z */
-        z_max = vector_max(&sig.z);
+        /* Check the bound before reusing sig.z for its NTT representation. */
+        z_bad = vector_chknorm(self, &sig.z, params->gamma1 - params->beta);
 
         /* w_approx = NTT_inverse(A * NTT(z) - ct1_ntt) */
         z_ntt = &sig.z;
         vector_ntt(self, z_ntt);
         matrix_mult_vector(self, &a_ntt, z_ntt, &az_ntt);
         w_approx = &az_ntt;
-        vector_sub(&az_ntt, &ct1_ntt, w_approx);
+        vector_sub(self, &az_ntt, &ct1_ntt, w_approx);
         vector_ntt_inverse(self, w_approx);
 
         /* compute w1_encoded */
         w1 = w_approx;
         vector_use_hint(&sig.hint, w_approx, gamma2, w1);
-        ossl_ml_dsa_w1_encode(w1, gamma2, w1_encoded, w1_encoded_len);
+        if (!ossl_ml_dsa_w1_encode(self, w1, gamma2, w1_encoded, w1_encoded_len))
+                goto err;
 
         if (!shake_xof_3(md_ctx, pub->shake256_md, mu, mu_len, w1_encoded, w1_encoded_len, NULL, 0,
                          c_tilde, c_tilde_len))
                 goto err;
 
-        ret = (z_max < (uint32_t) (params->gamma1 - params->beta)) &&
-              memcmp(c_tilde, sig.c_tilde, c_tilde_len) == 0;
+        ret = !z_bad && memcmp(c_tilde, sig.c_tilde, c_tilde_len) == 0;
 err:
         if (alloc_freeptr != NULL)
                 OPENSSL_free(alloc_freeptr);

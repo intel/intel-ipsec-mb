@@ -362,7 +362,7 @@ public_from_private(const IMB_ML_DSA *self, const ML_DSA_KEY *key, EVP_MD_CTX *m
 
         matrix_mult_vector(self, &a_ntt, &s1_ntt, &t);
         vector_ntt_inverse(self, &t);
-        vector_add(&t, &key->s2, &t);
+        vector_add(self, &t, &key->s2, &t);
 
         /* Compress t */
         vector_power2_round(&t, t1, t0);

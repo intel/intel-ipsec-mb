@@ -108,22 +108,22 @@ vector_equal(const VECTOR *a, const VECTOR *b)
 
 /* @brief add 2 vectors */
 static ossl_inline ossl_unused void
-vector_add(const VECTOR *lhs, const VECTOR *rhs, VECTOR *out)
+vector_add(const IMB_ML_DSA *self, const VECTOR *lhs, const VECTOR *rhs, VECTOR *out)
 {
         size_t i;
 
         for (i = 0; i < lhs->num_poly; i++)
-                poly_add(lhs->poly + i, rhs->poly + i, out->poly + i);
+                self->poly_add(lhs->poly + i, rhs->poly + i, out->poly + i);
 }
 
 /* @brief subtract 2 vectors */
 static ossl_inline ossl_unused void
-vector_sub(const VECTOR *lhs, const VECTOR *rhs, VECTOR *out)
+vector_sub(const IMB_ML_DSA *self, const VECTOR *lhs, const VECTOR *rhs, VECTOR *out)
 {
         size_t i;
 
         for (i = 0; i < lhs->num_poly; i++)
-                poly_sub(lhs->poly + i, rhs->poly + i, out->poly + i);
+                self->poly_sub(lhs->poly + i, rhs->poly + i, out->poly + i);
 }
 
 /* @brief convert a vector in place into NTT form */
@@ -182,65 +182,64 @@ vector_power2_round(const VECTOR *t, VECTOR *t1, VECTOR *t0)
 }
 
 static ossl_inline ossl_unused void
-vector_high_bits(const VECTOR *in, uint32_t gamma2, VECTOR *out)
+vector_high_bits(const IMB_ML_DSA *self, const VECTOR *in, VECTOR *out)
 {
         size_t i;
 
         for (i = 0; i < out->num_poly; i++)
-                poly_high_bits(in->poly + i, gamma2, out->poly + i);
+                self->poly_high_bits(in->poly + i, out->poly + i);
 }
 
 static ossl_inline ossl_unused void
-vector_low_bits(const VECTOR *in, uint32_t gamma2, VECTOR *out)
+vector_low_bits(const IMB_ML_DSA *self, const VECTOR *in, VECTOR *out)
 {
         size_t i;
 
         for (i = 0; i < out->num_poly; i++)
-                poly_low_bits(in->poly + i, gamma2, out->poly + i);
+                self->poly_low_bits(in->poly + i, out->poly + i);
 }
 
 static ossl_inline ossl_unused uint32_t
-vector_max(const VECTOR *v)
+vector_chknorm(const IMB_ML_DSA *self, const VECTOR *v, uint32_t bound)
 {
         size_t i;
-        uint32_t mx = 0;
+        uint32_t bad = 0;
 
+        /* Preserve whole-vector rejection: do not short-circuit this reduction. */
         for (i = 0; i < v->num_poly; i++)
-                poly_max(v->poly + i, &mx);
-        return mx;
+                bad |= self->poly_chknorm(v->poly + i, bound);
+        return bad;
 }
 
 static ossl_inline ossl_unused uint32_t
-vector_max_signed(const VECTOR *v)
+vector_chknorm_signed(const IMB_ML_DSA *self, const VECTOR *v, uint32_t bound)
 {
         size_t i;
-        uint32_t mx = 0;
+        uint32_t bad = 0;
 
         for (i = 0; i < v->num_poly; i++)
-                poly_max_signed(v->poly + i, &mx);
-        return mx;
+                bad |= self->poly_chknorm_signed(v->poly + i, bound);
+        return bad;
 }
 
 static ossl_inline ossl_unused size_t
-vector_count_ones(const VECTOR *v)
+vector_count_ones(const IMB_ML_DSA *self, const VECTOR *v)
 {
-        int j;
         size_t i, count = 0;
 
         for (i = 0; i < v->num_poly; i++)
-                for (j = 0; j < ML_DSA_NUM_POLY_COEFFICIENTS; j++)
-                        count += v->poly[i].coeff[j];
+                count += self->poly_count_ones(v->poly + i);
         return count;
 }
 
 static ossl_inline ossl_unused void
-vector_make_hint(const VECTOR *ct0, const VECTOR *cs2, const VECTOR *w, uint32_t gamma2,
+vector_make_hint(const IMB_ML_DSA *self, const VECTOR *ct0, const VECTOR *cs2, const VECTOR *w,
                  VECTOR *out)
 {
         size_t i;
 
         for (i = 0; i < out->num_poly; i++)
-                poly_make_hint(ct0->poly + i, cs2->poly + i, w->poly + i, gamma2, out->poly + i);
+                self->poly_make_hint(ct0->poly + i, cs2->poly + i, w->poly + i, out->poly + i);
 }
 
 static ossl_inline ossl_unused void

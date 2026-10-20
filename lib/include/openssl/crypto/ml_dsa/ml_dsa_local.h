@@ -61,7 +61,7 @@ typedef struct matrix_st MATRIX;
 typedef struct ml_dsa_sig_st ML_DSA_SIG;
 
 /*
- * ISA specific sampling and NTT primitives are held as function pointers in
+ * ISA specific sampling, NTT and polynomial primitives are held as function pointers in
  * IMB_ML_DSA (see ml_dsa_internal.h) and are assigned by the init functions
  * below, which the ipsec-mb glue calls once, at context creation.
  */
@@ -75,6 +75,8 @@ void
 ossl_ml_dsa_ntt_init_base(IMB_ML_DSA *self);
 void
 ossl_ml_dsa_ntt_init_avx2(IMB_ML_DSA *self);
+void
+ossl_ml_dsa_poly_init_base(IMB_ML_DSA *self);
 
 void
 ossl_ml_dsa_matrix_mult_vector(const IMB_ML_DSA *self, const MATRIX *matrix_kl, const VECTOR *vl,
@@ -105,12 +107,14 @@ int
 ossl_ml_dsa_sk_encode(ML_DSA_KEY *key);
 
 int
-ossl_ml_dsa_sig_encode(const ML_DSA_SIG *sig, const ML_DSA_PARAMS *params, uint8_t *out);
+ossl_ml_dsa_sig_encode(const IMB_ML_DSA *self, const ML_DSA_SIG *sig, const ML_DSA_PARAMS *params,
+                       uint8_t *out);
 int
 ossl_ml_dsa_sig_decode(ML_DSA_SIG *sig, const uint8_t *in, size_t in_len,
                        const ML_DSA_PARAMS *params);
 int
-ossl_ml_dsa_w1_encode(const VECTOR *w1, uint32_t gamma2, uint8_t *out, size_t out_len);
+ossl_ml_dsa_w1_encode(const IMB_ML_DSA *self, const VECTOR *w1, uint32_t gamma2, uint8_t *out,
+                      size_t out_len);
 int
 ossl_ml_dsa_poly_decode_expand_mask(POLY *out, const uint8_t *in, size_t in_len, uint32_t gamma1);
 

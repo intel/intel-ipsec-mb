@@ -32,7 +32,7 @@ ossl_ml_dsa_matrix_mult_vector(const IMB_ML_DSA *self, const MATRIX *a, const VE
         for (i = 0; i < a->k; i++) {
                 for (j = 0; j < a->l; j++) {
                         self->poly_ntt_mult(poly++, &s->poly[j], &product);
-                        poly_add(&product, &t->poly[i], &t->poly[i]);
+                        self->poly_add(&product, &t->poly[i], &t->poly[i]);
                 }
         }
 

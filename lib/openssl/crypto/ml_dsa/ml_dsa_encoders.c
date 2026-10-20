@@ -24,7 +24,6 @@ typedef int(DECODE_FN)(POLY *s, PACKET *pkt);
 static ENCODE_FN poly_encode_signed_2;
 static ENCODE_FN poly_encode_signed_4;
 static ENCODE_FN poly_encode_signed_two_to_power_17;
-static ENCODE_FN poly_encode_signed_two_to_power_19;
 static DECODE_FN poly_decode_signed_2;
 static DECODE_FN poly_decode_signed_4;
 static DECODE_FN poly_decode_signed_two_to_power_17;
@@ -49,20 +48,14 @@ static DECODE_FN poly_decode_signed_two_to_power_19;
  * @returns 1 on success, or 0 on error.
  */
 static int
-poly_encode_4_bits(const POLY *p, WPACKET *pkt)
+poly_encode_4_bits(const IMB_ML_DSA *self, const POLY *p, WPACKET *pkt)
 {
         uint8_t *out;
-        const uint32_t *in = p->coeff, *end = in + ML_DSA_NUM_POLY_COEFFICIENTS;
 
         if (!WPACKET_allocate_bytes(pkt, POLY_COEFF_NUM_BYTES(4), &out))
                 return 0;
 
-        do {
-                uint32_t z0 = *in++;
-                uint32_t z1 = *in++;
-
-                *out++ = z0 | (z1 << 4);
-        } while (in < end);
+        self->poly_pack_w1_4(p, out);
         return 1;
 }
 
@@ -481,27 +474,13 @@ err:
  * @returns 1 on success, or 0 on error.
  */
 static int
-poly_encode_signed_two_to_power_19(const POLY *p, WPACKET *pkt)
+poly_encode_signed_two_to_power_19(const IMB_ML_DSA *self, const POLY *p, WPACKET *pkt)
 {
-        static const uint32_t range = 1u << 19;
-        const uint32_t *in = p->coeff, *end = in + ML_DSA_NUM_POLY_COEFFICIENTS;
+        uint8_t *out;
 
-        do {
-                uint32_t z0, z1, z2;
-                uint8_t *out;
-
-                if (!WPACKET_allocate_bytes(pkt, 10, &out))
-                        return 0;
-
-                z0 = mod_sub(range, *in++);
-                z0 |= (z1 = mod_sub(range, *in++)) << 20;
-                z1 = (z1 >> 12) | (mod_sub(range, *in++) << 8);
-                z1 |= (z2 = mod_sub(range, *in++)) << 28;
-
-                out = OPENSSL_store_u32_le(out, z0);
-                out = OPENSSL_store_u32_le(out, z1);
-                out = OPENSSL_store_u16_le(out, (uint16_t) (z2 >> 4));
-        } while (in < end);
+        if (!WPACKET_allocate_bytes(pkt, POLY_COEFF_NUM_BYTES(20), &out))
+                return 0;
+        self->poly_pack_z_20(p, out);
         return 1;
 }
 
@@ -924,28 +903,29 @@ hint_bits_decode(VECTOR *hint, PACKET *pkt, uint32_t omega)
  * @returns 1 if the signature was encoded successfully or 0 otherwise.
  */
 int
-ossl_ml_dsa_sig_encode(const ML_DSA_SIG *sig, const ML_DSA_PARAMS *params, uint8_t *out)
+ossl_ml_dsa_sig_encode(const IMB_ML_DSA *self, const ML_DSA_SIG *sig, const ML_DSA_PARAMS *params,
+                       uint8_t *out)
 {
         int ret = 0;
         size_t i;
-        ENCODE_FN *encode_fn;
         WPACKET pkt;
 
         if (out == NULL)
                 return 0;
 
-        if (params->gamma1 == ML_DSA_GAMMA1_TWO_POWER_19)
-                encode_fn = poly_encode_signed_two_to_power_19;
-        else
-                encode_fn = poly_encode_signed_two_to_power_17;
-
         if (!WPACKET_init_static_len(&pkt, out, params->sig_len, 0) ||
             !WPACKET_memcpy(&pkt, sig->c_tilde, sig->c_tilde_len))
                 goto err;
 
-        for (i = 0; i < sig->z.num_poly; ++i)
-                if (!encode_fn(sig->z.poly + i, &pkt))
+        for (i = 0; i < sig->z.num_poly; ++i) {
+                const int ok =
+                        params->gamma1 == ML_DSA_GAMMA1_TWO_POWER_19
+                                ? poly_encode_signed_two_to_power_19(self, sig->z.poly + i, &pkt)
+                                : poly_encode_signed_two_to_power_17(sig->z.poly + i, &pkt);
+
+                if (!ok)
                         goto err;
+        }
         if (!hint_bits_encode(&sig->hint, &pkt, params->omega))
                 goto err;
         ret = 1;
@@ -1014,22 +994,23 @@ ossl_ml_dsa_poly_decode_expand_mask(POLY *out, const uint8_t *in, size_t in_len,
  * @returns 1 if the signature was encoded successfully or 0 otherwise.
  */
 int
-ossl_ml_dsa_w1_encode(const VECTOR *w1, uint32_t gamma2, uint8_t *out, size_t out_len)
+ossl_ml_dsa_w1_encode(const IMB_ML_DSA *self, const VECTOR *w1, uint32_t gamma2, uint8_t *out,
+                      size_t out_len)
 {
         WPACKET pkt;
-        ENCODE_FN *encode_fn;
         int ret = 0;
         size_t i;
 
         if (!WPACKET_init_static_len(&pkt, out, out_len, 0))
                 return 0;
-        if (gamma2 == ML_DSA_GAMMA2_Q_MINUS1_DIV32)
-                encode_fn = poly_encode_4_bits;
-        else
-                encode_fn = poly_encode_6_bits;
-        for (i = 0; i < w1->num_poly; ++i)
-                if (!encode_fn(w1->poly + i, &pkt))
+        for (i = 0; i < w1->num_poly; ++i) {
+                const int ok = gamma2 == ML_DSA_GAMMA2_Q_MINUS1_DIV32
+                                       ? poly_encode_4_bits(self, w1->poly + i, &pkt)
+                                       : poly_encode_6_bits(w1->poly + i, &pkt);
+
+                if (!ok)
                         goto err;
+        }
         ret = 1;
 err:
         WPACKET_finish(&pkt);

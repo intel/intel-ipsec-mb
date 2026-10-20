@@ -79,6 +79,22 @@ typedef void(ML_DSA_POLY_NTT_FN)(struct poly_st *p);
 typedef void(ML_DSA_POLY_NTT_INVERSE_FN)(struct poly_st *p);
 typedef void(ML_DSA_POLY_NTT_MULT_FN)(const struct poly_st *lhs, const struct poly_st *rhs,
                                       struct poly_st *out);
+/*
+ * Polynomial kernels process exactly 256 coefficients, with uint32_t alignment.
+ * Arithmetic inputs/outputs are canonical [0,q); LowBits/Decompose store signed
+ * low parts as uint32_t bit patterns. In-place output is supported; Decompose's
+ * two outputs must be distinct. Norm checks return 0/1 after scanning the entire
+ * polynomial (canonical or signed coefficients, respectively). Count expects
+ * 0/1 hints. Packers write exactly 128 (4-bit w1) or 640 (20-bit z) bytes.
+ */
+typedef void(ML_DSA_POLY_MAP_FN)(const struct poly_st *in, struct poly_st *out);
+typedef void(ML_DSA_POLY_DECOMPOSE_FN)(const struct poly_st *in, struct poly_st *high,
+                                       struct poly_st *low);
+typedef void(ML_DSA_POLY_HINT_FN)(const struct poly_st *ct0, const struct poly_st *cs2,
+                                  const struct poly_st *w, struct poly_st *out);
+typedef uint32_t(ML_DSA_POLY_CHKNORM_FN)(const struct poly_st *p, uint32_t bound);
+typedef uint32_t(ML_DSA_POLY_COUNT_FN)(const struct poly_st *p);
+typedef void(ML_DSA_POLY_PACK_FN)(const struct poly_st *p, uint8_t *out);
 
 struct IMB_ML_DSA {
         IMB_MGR *mgr;
@@ -104,6 +120,17 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_NTT_FN *poly_ntt;
         ML_DSA_POLY_NTT_INVERSE_FN *poly_ntt_inverse;
         ML_DSA_POLY_NTT_MULT_FN *poly_ntt_mult;
+        ML_DSA_POLY_MAP_FN *poly_high_bits;
+        ML_DSA_POLY_MAP_FN *poly_low_bits;
+        ML_DSA_POLY_DECOMPOSE_FN *poly_decompose;
+        ML_DSA_POLY_HINT_FN *poly_make_hint;
+        ML_DSA_POLY_NTT_MULT_FN *poly_add;
+        ML_DSA_POLY_NTT_MULT_FN *poly_sub;
+        ML_DSA_POLY_CHKNORM_FN *poly_chknorm;
+        ML_DSA_POLY_CHKNORM_FN *poly_chknorm_signed;
+        ML_DSA_POLY_COUNT_FN *poly_count_ones;
+        ML_DSA_POLY_PACK_FN *poly_pack_w1_4;
+        ML_DSA_POLY_PACK_FN *poly_pack_z_20;
 
         /**
          * Backend dispatch table. All ops return 0 on success, <0 on error,
