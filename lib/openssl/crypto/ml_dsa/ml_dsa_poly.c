@@ -6,11 +6,21 @@
 
 #include "ml_dsa_poly.h"
 
+IMB_DLL_LOCAL ML_DSA_POLY_MAP_FN ml_dsa_poly_high_bits_32_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_MAP_FN ml_dsa_poly_low_bits_32_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_DECOMPOSE_FN ml_dsa_poly_decompose_32_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_HINT_FN ml_dsa_poly_make_hint_32_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_MAP_FN ml_dsa_poly_high_bits_88_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_MAP_FN ml_dsa_poly_low_bits_88_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_DECOMPOSE_FN ml_dsa_poly_decompose_88_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_HINT_FN ml_dsa_poly_make_hint_88_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_NTT_MULT_FN ml_dsa_poly_add_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_NTT_MULT_FN ml_dsa_poly_sub_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_CHKNORM_FN ml_dsa_poly_chknorm_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_CHKNORM_FN ml_dsa_poly_chknorm_signed_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_COUNT_FN ml_dsa_poly_count_ones_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_w1_4_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_z_20_avx2;
 
 static inline void
 ml_dsa_poly_high_bits_32_base(const POLY *in, POLY *out)
@@ -149,10 +159,22 @@ ossl_ml_dsa_poly_init_base(IMB_ML_DSA *self)
 void
 ossl_ml_dsa_poly_init_avx2(IMB_ML_DSA *self)
 {
-        ossl_ml_dsa_poly_init_base(self);
+        if (self->alg == IMB_ML_DSA_44) {
+                self->poly_high_bits = ml_dsa_poly_high_bits_88_avx2;
+                self->poly_low_bits = ml_dsa_poly_low_bits_88_avx2;
+                self->poly_decompose = ml_dsa_poly_decompose_88_avx2;
+                self->poly_make_hint = ml_dsa_poly_make_hint_88_avx2;
+        } else {
+                self->poly_high_bits = ml_dsa_poly_high_bits_32_avx2;
+                self->poly_low_bits = ml_dsa_poly_low_bits_32_avx2;
+                self->poly_decompose = ml_dsa_poly_decompose_32_avx2;
+                self->poly_make_hint = ml_dsa_poly_make_hint_32_avx2;
+        }
         self->poly_chknorm = ml_dsa_poly_chknorm_avx2;
         self->poly_chknorm_signed = ml_dsa_poly_chknorm_signed_avx2;
         self->poly_count_ones = ml_dsa_poly_count_ones_avx2;
+        self->poly_pack_w1_4 = ml_dsa_poly_pack_w1_4_avx2;
+        self->poly_pack_z_20 = ml_dsa_poly_pack_z_20_avx2;
         self->poly_add = ml_dsa_poly_add_avx2;
         self->poly_sub = ml_dsa_poly_sub_avx2;
 }

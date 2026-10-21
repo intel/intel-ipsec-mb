@@ -2,6 +2,11 @@
 
 Unreleased
 ======================================================================
+Library
+- Added AVX2 implementations of ML-DSA polynomial rounding (HighBits, LowBits,
+  Decompose, MakeHint), modular addition/subtraction, norm checks, hint counting
+  and w1/z packing.
+
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).
 - Fixes stack misalignment when calling C functions with more than 4 arguments
