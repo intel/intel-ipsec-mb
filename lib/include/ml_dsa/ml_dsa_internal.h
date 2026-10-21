@@ -86,6 +86,9 @@ typedef void(ML_DSA_POLY_NTT_MULT_FN)(const struct poly_st *lhs, const struct po
  * two outputs must be distinct. Norm checks return 0/1 after scanning the entire
  * polynomial (canonical or signed coefficients, respectively). Count expects
  * 0/1 hints. Packers write exactly 128 (4-bit w1) or 640 (20-bit z) bytes.
+ * Rounding kernels (HighBits/LowBits/Decompose/MakeHint) take no gamma2
+ * argument: the init function selects the gamma2 specialization from the
+ * parameter set.
  */
 typedef void(ML_DSA_POLY_MAP_FN)(const struct poly_st *in, struct poly_st *out);
 typedef void(ML_DSA_POLY_DECOMPOSE_FN)(const struct poly_st *in, struct poly_st *high,

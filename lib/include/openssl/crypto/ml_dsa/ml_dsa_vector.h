@@ -181,6 +181,7 @@ vector_power2_round(const VECTOR *t, VECTOR *t1, VECTOR *t0)
                 poly_power2_round(t->poly + i, t1->poly + i, t0->poly + i);
 }
 
+/* @brief HighBits of each coefficient, gamma2 is fixed by the context */
 static ossl_inline ossl_unused void
 vector_high_bits(const IMB_ML_DSA *self, const VECTOR *in, VECTOR *out)
 {
@@ -190,6 +191,7 @@ vector_high_bits(const IMB_ML_DSA *self, const VECTOR *in, VECTOR *out)
                 self->poly_high_bits(in->poly + i, out->poly + i);
 }
 
+/* @brief LowBits of each coefficient, gamma2 is fixed by the context */
 static ossl_inline ossl_unused void
 vector_low_bits(const IMB_ML_DSA *self, const VECTOR *in, VECTOR *out)
 {
@@ -199,6 +201,10 @@ vector_low_bits(const IMB_ML_DSA *self, const VECTOR *in, VECTOR *out)
                 self->poly_low_bits(in->poly + i, out->poly + i);
 }
 
+/*
+ * @brief return 1 if any canonical coefficient has |x| >= bound, or 0 otherwise.
+ *        Replaces computing the vector maximum and comparing it with the bound.
+ */
 static ossl_inline ossl_unused uint32_t
 vector_chknorm(const IMB_ML_DSA *self, const VECTOR *v, uint32_t bound)
 {
@@ -211,6 +217,7 @@ vector_chknorm(const IMB_ML_DSA *self, const VECTOR *v, uint32_t bound)
         return bad;
 }
 
+/* @brief as vector_chknorm(), for signed coefficients */
 static ossl_inline ossl_unused uint32_t
 vector_chknorm_signed(const IMB_ML_DSA *self, const VECTOR *v, uint32_t bound)
 {
@@ -232,6 +239,7 @@ vector_count_ones(const IMB_ML_DSA *self, const VECTOR *v)
         return count;
 }
 
+/* @brief MakeHint for each coefficient, gamma2 is fixed by the context */
 static ossl_inline ossl_unused void
 vector_make_hint(const IMB_ML_DSA *self, const VECTOR *ct0, const VECTOR *cs2, const VECTOR *w,
                  VECTOR *out)

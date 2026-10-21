@@ -266,7 +266,6 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                 VECTOR *y_ntt = &cs1;
                 VECTOR *r0 = &w1;
                 VECTOR *ct0 = &w1;
-                uint32_t z_bad, r0_bad, ct0_bad, h_ones;
 
                 self->vector_expand_mask(&y, rho_prime, (uint32_t) kappa, gamma1, md_ctx,
                                          priv->shake256_md);
@@ -307,8 +306,9 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                  * Declassify the bound-check output so that Valgrind does not flag
                  * these intentional leaks.
                  */
-                z_bad = vector_chknorm(self, &sig.z, gamma1 - params->beta);
-                r0_bad = vector_chknorm_signed(self, r0, gamma2 - params->beta);
+                const uint32_t z_bad = vector_chknorm(self, &sig.z, gamma1 - params->beta);
+                const uint32_t r0_bad = vector_chknorm_signed(self, r0, gamma2 - params->beta);
+
                 if (constant_time_declassify_u32(z_bad | r0_bad))
                         continue;
 
@@ -316,8 +316,9 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                 vector_ntt_inverse(self, ct0);
                 vector_make_hint(self, ct0, &cs2, &w, &sig.hint);
 
-                ct0_bad = vector_chknorm(self, ct0, gamma2);
-                h_ones = (uint32_t) vector_count_ones(self, &sig.hint);
+                const uint32_t ct0_bad = vector_chknorm(self, ct0, gamma2);
+                const uint32_t h_ones = (uint32_t) vector_count_ones(self, &sig.hint);
+
                 /* Same reasoning applies to the leak as above */
                 if (constant_time_declassify_u32(ct0_bad | constant_time_lt(params->omega, h_ones)))
                         continue;
@@ -413,7 +414,6 @@ ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint
         uint8_t c_tilde_sig[ML_DSA_MAX_LAMBDA / 4];
         EVP_MD_CTX *md_ctx = NULL;
         size_t c_tilde_len = params->bit_strength >> 2;
-        uint32_t z_bad;
 
         /* FIPS 204 compliance: Also validate signature length before decoding */
         if (mu_len != ML_DSA_MU_BYTES || sig_enc_len != params->sig_len) {
@@ -465,7 +465,7 @@ ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint
         vector_mult_scalar(self, &ct1_ntt, c_ntt, &ct1_ntt);
 
         /* Check the bound before reusing sig.z for its NTT representation. */
-        z_bad = vector_chknorm(self, &sig.z, params->gamma1 - params->beta);
+        const uint32_t z_bad = vector_chknorm(self, &sig.z, params->gamma1 - params->beta);
 
         /* w_approx = NTT_inverse(A * NTT(z) - ct1_ntt) */
         z_ntt = &sig.z;
