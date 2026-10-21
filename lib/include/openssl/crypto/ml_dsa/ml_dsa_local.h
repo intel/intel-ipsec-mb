@@ -77,6 +77,8 @@ void
 ossl_ml_dsa_ntt_init_avx2(IMB_ML_DSA *self);
 void
 ossl_ml_dsa_poly_init_base(IMB_ML_DSA *self);
+void
+ossl_ml_dsa_poly_init_avx2(IMB_ML_DSA *self);
 
 void
 ossl_ml_dsa_matrix_mult_vector(const IMB_ML_DSA *self, const MATRIX *matrix_kl, const VECTOR *vl,
