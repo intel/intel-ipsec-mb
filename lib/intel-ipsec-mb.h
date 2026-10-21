@@ -67,8 +67,8 @@ typedef struct {
 /**
  * Library version
  */
-#define IMB_VERSION_STR      "3.0.0"
-#define IMB_VERSION_NUM      0x30000
+#define IMB_VERSION_STR      "3.0.1"
+#define IMB_VERSION_NUM      0x30001
 #define IMB_VERSION(a, b, c) (((a) << 16) + ((b) << 8) + (c))
 
 /**

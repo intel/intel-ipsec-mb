@@ -1,6 +1,6 @@
 # Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v3.0.1 October 2026
 ======================================================================
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).
