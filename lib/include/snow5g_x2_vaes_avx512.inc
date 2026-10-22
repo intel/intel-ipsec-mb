@@ -72,8 +72,6 @@ _gpr_save:      resq    8
 _xmm_save:      resb    (16 * 10)       ; XMM6-15 save area (Windows only)
 %endif
 _rsp_save:      resq    1
-_offset0_inc:   resq    1               ; offset increment for lane 0 (16 or 0)
-_offset1_inc:   resq    1               ; offset increment for lane 1 (16 or 0)
 endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -354,7 +352,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Optimized enc/dec for 2-lane (uses pre-loaded pointers and masks)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW5G_ENC_DEC_LANE_PAIR_X2 22
+%macro SNOW5G_ENC_DEC_LANE_PAIR_X2 21
 %define %%FSM_R1               %1  ;; [in/out] FSM R1 register
 %define %%FSM_R2               %2  ;; [in/out] FSM R2 register
 %define %%FSM_R3               %3  ;; [in/out] FSM R3 register
@@ -371,12 +369,11 @@ endstruc
 %define %%SRC_PTR1             %14 ;; [in] pre-loaded src pointer lane 1
 %define %%DST_PTR0             %15 ;; [in] pre-loaded dst pointer lane 0
 %define %%DST_PTR1             %16 ;; [in] pre-loaded dst pointer lane 1
-%define %%OFFSET0              %17 ;; [in] current offset to src/dst lane 0
-%define %%OFFSET1              %18 ;; [in] current offset to src/dst lane 1
-%define %%CONST_SIGMA          %19 ;; [in] ymm with sigma shuffle constant
-%define %%CONST_ALPHA          %20 ;; [in] ymm with alpha polynomial constant
-%define %%CONST_BETA           %21 ;; [in] ymm with beta polynomial constant
-%define %%CONST_ZERO           %22 ;; [in] ymm with zero (AES round key)
+%define %%OFFSET               %17 ;; [in] current offset to src/dst
+%define %%CONST_SIGMA          %18 ;; [in] ymm with sigma shuffle constant
+%define %%CONST_ALPHA          %19 ;; [in] ymm with alpha polynomial constant
+%define %%CONST_BETA           %20 ;; [in] ymm with beta polynomial constant
+%define %%CONST_ZERO           %21 ;; [in] ymm with zero (AES round key)
 
         vpaddw          %%KEYSTREAM_SAVE_REG, %%LFSR_B_HDQ, %%FSM_R1
         vpxorq          %%KEYSTREAM_SAVE_REG, %%FSM_R2, %%KEYSTREAM_SAVE_REG
@@ -394,13 +391,13 @@ endstruc
         vpshufb         %%FSM_R1, %%TEMP1, %%CONST_SIGMA
 
         ;; Enc/dec output
-        vmovdqu8        XWORD(%%LFSR_A_NEW){k2}{z}, [%%SRC_PTR0 + %%OFFSET0]
+        vmovdqu8        XWORD(%%LFSR_A_NEW){k2}{z}, [%%SRC_PTR0 + %%OFFSET]
         vpxorq          XWORD(%%TEMP1), XWORD(%%KEYSTREAM_SAVE_REG), XWORD(%%LFSR_A_NEW)
-        vmovdqu8        [%%DST_PTR0 + %%OFFSET0]{k2}, XWORD(%%TEMP1)
+        vmovdqu8        [%%DST_PTR0 + %%OFFSET]{k2}, XWORD(%%TEMP1)
         vextracti32x4   XWORD(%%TEMP2), %%KEYSTREAM_SAVE_REG, 1
-        vmovdqu8        XWORD(%%LFSR_A_NEW){k3}{z}, [%%SRC_PTR1 + %%OFFSET1]
+        vmovdqu8        XWORD(%%LFSR_A_NEW){k3}{z}, [%%SRC_PTR1 + %%OFFSET]
         vpxorq          XWORD(%%TEMP2), XWORD(%%TEMP2), XWORD(%%LFSR_A_NEW)
-        vmovdqu8        [%%DST_PTR1 + %%OFFSET1]{k3}, XWORD(%%TEMP2)
+        vmovdqu8        [%%DST_PTR1 + %%OFFSET]{k3}, XWORD(%%TEMP2)
 
         ;; LFSR B update
         vpaddw          %%TEMP1, %%LFSR_B_LDQ, %%LFSR_B_LDQ
@@ -420,38 +417,36 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SNOW5G cipher - generates keystream blocks for lane pair 0 (2 buffers)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW5G_KEYSTREAM_X2 25
+%macro SNOW5G_KEYSTREAM_X2 24
 %xdefine %%STATE_PTR            %1  ;; [in] FSM_LFSR state structure pointer
 %xdefine %%COUNT                %2  ;; [in/clobbered] number of 16-byte blocks
 %xdefine %%SRC_PTRS             %3  ;; [in] address of array of pointers to src
 %xdefine %%DST_PTRS             %4  ;; [in] address of array of pointers to dst
-%xdefine %%OFFSET0              %5  ;; [out] 64bit register with current offset for lane 0
-%xdefine %%OFFSET1              %6  ;; [out] 64bit register with current offset for lane 1
-%xdefine %%TGP0                 %7  ;; [clobbered] temporary 64bit register
-%xdefine %%TGP1                 %8  ;; [clobbered] temporary 64bit register
-%xdefine %%KREG1                %9  ;; [in] k-register with LP_INIT_MASK for pair 0
-%xdefine %%FSM_R1               %10 ;; [in/out] ymm: lane-pair-0 FSM_R1 (state)
-%xdefine %%FSM_R2               %11 ;; [in/out] ymm: lane-pair-0 FSM_R2 (state)
-%xdefine %%FSM_R3               %12 ;; [in/out] ymm: lane-pair-0 FSM_R3 (state)
-%xdefine %%LFSR_A_LDQ           %13 ;; [in/out] ymm: lane-pair-0 LFSR_A_LDQ (state)
-%xdefine %%LFSR_A_HDQ           %14 ;; [in/out] ymm: lane-pair-0 LFSR_A_HDQ (state)
-%xdefine %%LFSR_B_LDQ           %15 ;; [in/out] ymm: lane-pair-0 LFSR_B_LDQ (state)
-%xdefine %%LFSR_B_HDQ           %16 ;; [in/out] ymm: lane-pair-0 LFSR_B_HDQ (state)
-%xdefine %%LFSR_A_NEW_SCR       %17 ;; [clobbered] ymm scratch (LFSR_UPDATE new-A)
-%xdefine %%LFSR_B_NEW_SCR       %18 ;; [clobbered] ymm scratch (LFSR_UPDATE new-B)
-%xdefine %%KEYSTREAM_SCR        %19 ;; [clobbered] ymm scratch (keystream save)
-%xdefine %%TEMP1_SCR            %20 ;; [clobbered] ymm scratch
-%xdefine %%TEMP2_SCR            %21 ;; [clobbered] ymm scratch
-%xdefine %%CONST_SIGMA_REG      %22 ;; [clobbered] ymm: loaded with sigma constant
-%xdefine %%CONST_ALPHA_REG      %23 ;; [clobbered] ymm: loaded with alpha constant
-%xdefine %%CONST_BETA_REG       %24 ;; [clobbered] ymm: loaded with beta constant
-%xdefine %%CONST_ZERO_REG       %25 ;; [clobbered] ymm: zeroed (AES round key)
+%xdefine %%OFFSET               %5  ;; [out] 64bit register with current offset
+%xdefine %%TGP0                 %6  ;; [clobbered] temporary 64bit register
+%xdefine %%TGP1                 %7  ;; [clobbered] temporary 64bit register
+%xdefine %%KREG1                %8  ;; [in] k-register with LP_INIT_MASK for pair 0
+%xdefine %%FSM_R1               %9  ;; [in/out] ymm: lane-pair-0 FSM_R1 (state)
+%xdefine %%FSM_R2               %10 ;; [in/out] ymm: lane-pair-0 FSM_R2 (state)
+%xdefine %%FSM_R3               %11 ;; [in/out] ymm: lane-pair-0 FSM_R3 (state)
+%xdefine %%LFSR_A_LDQ           %12 ;; [in/out] ymm: lane-pair-0 LFSR_A_LDQ (state)
+%xdefine %%LFSR_A_HDQ           %13 ;; [in/out] ymm: lane-pair-0 LFSR_A_HDQ (state)
+%xdefine %%LFSR_B_LDQ           %14 ;; [in/out] ymm: lane-pair-0 LFSR_B_LDQ (state)
+%xdefine %%LFSR_B_HDQ           %15 ;; [in/out] ymm: lane-pair-0 LFSR_B_HDQ (state)
+%xdefine %%LFSR_A_NEW_SCR       %16 ;; [clobbered] ymm scratch (LFSR_UPDATE new-A)
+%xdefine %%LFSR_B_NEW_SCR       %17 ;; [clobbered] ymm scratch (LFSR_UPDATE new-B)
+%xdefine %%KEYSTREAM_SCR        %18 ;; [clobbered] ymm scratch (keystream save)
+%xdefine %%TEMP1_SCR            %19 ;; [clobbered] ymm scratch
+%xdefine %%TEMP2_SCR            %20 ;; [clobbered] ymm scratch
+%xdefine %%CONST_SIGMA_REG      %21 ;; [clobbered] ymm: loaded with sigma constant
+%xdefine %%CONST_ALPHA_REG      %22 ;; [clobbered] ymm: loaded with alpha constant
+%xdefine %%CONST_BETA_REG       %23 ;; [clobbered] ymm: loaded with beta constant
+%xdefine %%CONST_ZERO_REG       %24 ;; [clobbered] ymm: zeroed (AES round key)
 
         test            DWORD(%%COUNT), DWORD(%%COUNT)
         jz              %%end_key_stream_x2
 
-        xor             %%OFFSET0, %%OFFSET0
-        xor             %%OFFSET1, %%OFFSET1
+        xor             %%OFFSET, %%OFFSET
         LFSR_FSM_STATE_X2 %%STATE_PTR, LOAD, %%FSM_R1, %%FSM_R2, %%FSM_R3, \
                 %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ
 
@@ -465,19 +460,6 @@ endstruc
         vmovdqa64       %%CONST_BETA_REG, [rel beta]
         vpxorq          %%CONST_ZERO_REG, %%CONST_ZERO_REG, %%CONST_ZERO_REG
 
-        ;; Compute offset increment values: 16 if lane in WORK mode (mask != 0), else 0
-        xor             DWORD(%%TGP0), DWORD(%%TGP0)
-        ktestw          k2, k2
-        setne           BYTE(%%TGP0)
-        shl             %%TGP0, 4                   ; %%TGP0 = 16 or 0
-        mov             [rsp + _offset0_inc], %%TGP0
-        xor             DWORD(%%TGP1), DWORD(%%TGP1)
-        ktestw          k3, k3
-        setne           BYTE(%%TGP1)
-        shl             %%TGP1, 4                   ; %%TGP1 = 16 or 0
-        mov             [rsp + _offset1_inc], %%TGP1
-
-        ;; Load source pointers after increment values are saved
         mov             %%TGP0, [%%SRC_PTRS + 0]
         mov             %%TGP1, [%%SRC_PTRS + 8]
 align_loop
@@ -485,12 +467,11 @@ align_loop
         SNOW5G_ENC_DEC_LANE_PAIR_X2 %%FSM_R1, %%FSM_R2, %%FSM_R3, \
                 %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, \
                 %%LFSR_A_NEW_SCR, %%LFSR_B_NEW_SCR, %%KEYSTREAM_SCR, %%TEMP1_SCR, %%TEMP2_SCR, \
-                %%TGP0, %%TGP1, r12, r13, %%OFFSET0, %%OFFSET1, \
+                %%TGP0, %%TGP1, r12, r13, %%OFFSET, \
                 %%CONST_SIGMA_REG, %%CONST_ALPHA_REG, %%CONST_BETA_REG, %%CONST_ZERO_REG
 
-        ;; Add 16 bytes to offsets only in working mode (where k2/k3 are non zero)
-        add             %%OFFSET0, [rsp + _offset0_inc]
-        add             %%OFFSET1, [rsp + _offset1_inc]
+        ;; lanes with zero k2/k3 do no memory access, so one shared offset is safe
+        add             %%OFFSET, 16
         dec             %%COUNT
         jnz             %%next_keyword_x2
 

@@ -72,7 +72,7 @@ mksection .text
 %endmacro
 
 
-%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 29
+%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 28
 %define %%SUBMIT_FLUSH    %1  ;; [in] submit/flush selector
 %define %%UNUSED_LANES    %2  ;; [clobbered] GP register
 %define %%LANE            %3  ;; [clobbered] GP register
@@ -82,7 +82,7 @@ mksection .text
 %define %%LANE_PAIR       %7  ;; [clobbered] GP register
 %define %%INIT_TMP_GP     %8  ;; [clobbered] GP register: scratch for SNOW_5G_LFSR_FSM_INIT_SUBMIT
 %define %%MIN_COMMON_LEN  %9  ;; [clobbered] GP register
-%define %%OFFSET0         %10 ;; [clobbered] GP register
+%define %%OFFSET          %10 ;; [clobbered] GP register
 %define %%LP_INIT_KMASK   %11 ;; [clobbered] k register: LP_INIT_MASK mask
 %define %%YMM0            %12 ;; [clobbered] ymm/xmm: key/IV scratch (submit init), FSM_R1 state (KEYSTREAM_X2), zero scratch (SAFE_DATA)
 %define %%YMM1            %13 ;; [clobbered] ymm/xmm: key/IV scratch (submit init), FSM_R2 state (KEYSTREAM_X2)
@@ -101,7 +101,6 @@ mksection .text
 %define %%CONST_BETA      %26 ;; [clobbered] ymm loaded with beta constant (KEYSTREAM_X2 only)
 %define %%CONST_ZERO      %27 ;; [clobbered] ymm zeroed (KEYSTREAM_X2 only)
 %define %%GEN             %28 ;; [in] avx512_gen1/avx512_gen2
-%define %%OFFSET1         %29 ;; [clobbered] GP register
 
         xor     job_rax, job_rax        ;; assume NULL return job
 
@@ -196,7 +195,7 @@ align_loop
         kmovb           %%LP_INIT_KMASK, byte [state + _snow5g_arg_LP_INIT_MASK]
 
         SNOW5G_KEYSTREAM_X2 state, %%MIN_COMMON_LEN, {state + _snow5g_args_in}, \
-                        {state + _snow5g_args_out}, %%OFFSET0, %%OFFSET1, %%TGP0, %%TGP1, %%LP_INIT_KMASK, \
+                        {state + _snow5g_args_out}, %%OFFSET, %%TGP0, %%TGP1, %%LP_INIT_KMASK, \
                         %%YMM0, %%YMM1, %%FSM_R3, %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, \
                         %%LFSR_A_NEW_SCR, %%LFSR_B_NEW_SCR, %%KEYSTREAM_SCR, %%TEMP1_SCR, %%TEMP2_SCR, \
                         %%CONST_SIGMA, %%CONST_ALPHA, %%CONST_BETA, %%CONST_ZERO
@@ -205,13 +204,13 @@ align_loop
         mov             BYTE(%%TGP0), [state + _snow5g_arg_LP_INIT_MASK]
         test            BYTE(%%TGP0), 0x3
         jnz             %%_skip_ptr_0
-        add             [state + _snow5g_args_in], %%OFFSET0
-        add             [state + _snow5g_args_out], %%OFFSET0
+        add             [state + _snow5g_args_in], %%OFFSET
+        add             [state + _snow5g_args_out], %%OFFSET
 %%_skip_ptr_0:
         test            BYTE(%%TGP0), 0xC
         jnz             %%_skip_ptr_1
-        add             [state + _snow5g_args_in + 8], %%OFFSET1
-        add             [state + _snow5g_args_out + 8], %%OFFSET1
+        add             [state + _snow5g_args_in + 8], %%OFFSET
+        add             [state + _snow5g_args_out + 8], %%OFFSET
 %%_skip_ptr_1:
 
 align_label
@@ -375,7 +374,7 @@ SUBMIT_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW5G_NEA4 submit, arg3, rbx, rbp, r9, r10, r11, r13, r14, r15, k1, \
                 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9, ymm10, ymm11, \
-                ymm12, ymm13, ymm14, ymm15, avx512_gen2, rax
+                ymm12, ymm13, ymm14, ymm15, avx512_gen2
         SNOW5G_FUNC_END
         ret
 
@@ -387,7 +386,7 @@ FLUSH_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW5G_NEA4 flush, arg3, rbx, rbp, r9, r10, r11, r13, r14, r15, k1, \
                 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9, ymm10, ymm11, \
-                ymm12, ymm13, ymm14, ymm15, avx512_gen2, rax
+                ymm12, ymm13, ymm14, ymm15, avx512_gen2
         SNOW5G_FUNC_END
         ret
 
