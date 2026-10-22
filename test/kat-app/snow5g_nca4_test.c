@@ -165,8 +165,6 @@ test_snow5g_nca4_std_vectors(IMB_MGR *p_mgr, struct test_suite_context *ts,
                 printf("\n");
 }
 
-#define NCA4_MAX_BUF 128
-
 static void
 test_snow5g_nca4_submit_flush(IMB_MGR *mb_mgr, struct test_suite_context *ts,
                               const struct aead_test *v)
@@ -179,8 +177,8 @@ test_snow5g_nca4_submit_flush(IMB_MGR *mb_mgr, struct test_suite_context *ts,
         int i, completed = 0, err;
 
         for (i = 0; i < 2; i++) {
-                out[i] = malloc(NCA4_MAX_BUF);
-                tag[i] = malloc(16);
+                out[i] = malloc(msg_len == 0 ? 1 : msg_len);
+                tag[i] = malloc(tag_len);
                 if (!out[i] || !tag[i]) {
                         fprintf(stderr, "failed to allocate memory\n");
                         test_suite_update(ts, 0, 1);
@@ -189,8 +187,8 @@ test_snow5g_nca4_submit_flush(IMB_MGR *mb_mgr, struct test_suite_context *ts,
         }
 
         for (i = 0; i < 2; i++) {
-                memset(out[i], 0, NCA4_MAX_BUF);
-                memset(tag[i], 0, 16);
+                memset(out[i], 0, msg_len == 0 ? 1 : msg_len);
+                memset(tag[i], 0, tag_len);
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 if (!job) {
                         fprintf(stderr, "failed to get job\n");
