@@ -267,6 +267,7 @@ struct seq_job_ctx {
         const struct aead_test *v;
         uint8_t *out;
         uint8_t *tag;
+        IMB_CIPHER_DIRECTION direction;
 };
 
 static void
@@ -276,6 +277,8 @@ verify_seq_job(IMB_JOB *job, struct test_suite_context *ts)
         const struct aead_test *v = ctx->v;
         const uint64_t msg_len = v->msgSize / 8;
         const uint64_t tag_len = v->tagSize / 8;
+        const uint8_t *expected = ctx->direction == IMB_DIR_ENCRYPT ? (const uint8_t *) v->ct
+                                                                    : (const uint8_t *) v->msg;
         int err = 0;
 
         if (job->status != IMB_STATUS_COMPLETED) {
@@ -285,7 +288,7 @@ verify_seq_job(IMB_JOB *job, struct test_suite_context *ts)
         }
 
         if (msg_len > 0)
-                err |= check_data(ctx->out, (const uint8_t *) v->ct, msg_len, "sequential out");
+                err |= check_data(ctx->out, expected, msg_len, "sequential out");
         err |= check_data(ctx->tag, (const uint8_t *) v->tag, tag_len, "sequential tag");
         test_suite_update(ts, err == 0, err != 0);
 }
@@ -294,7 +297,8 @@ verify_seq_job(IMB_JOB *job, struct test_suite_context *ts)
  * verifying the jobs as the complete */
 static void
 test_snow5g_nca4_submit_all_vectors(IMB_MGR *mb_mgr, struct test_suite_context *ts,
-                                    const struct aead_test *vectors)
+                                    const struct aead_test *vectors,
+                                    const IMB_CIPHER_DIRECTION direction, const int in_place)
 {
         /* Count vectors */
         size_t n_vec = 0;
@@ -312,7 +316,9 @@ test_snow5g_nca4_submit_all_vectors(IMB_MGR *mb_mgr, struct test_suite_context *
         }
 
         if (!quiet_mode)
-                printf("SNOW5G-NCA4 sequential all-vectors test:\n");
+                printf("SNOW5G-NCA4 sequential all-vectors %s%s test:\n",
+                       direction == IMB_DIR_ENCRYPT ? "encrypt" : "decrypt",
+                       in_place ? " in-place" : "");
 
         /* Submit all vectors without flushing between them */
         for (size_t idx = 0; idx < n_vec; idx++) {
@@ -335,6 +341,7 @@ test_snow5g_nca4_submit_all_vectors(IMB_MGR *mb_mgr, struct test_suite_context *
                 }
 
                 ctx->v = v;
+                ctx->direction = direction;
                 ctx->out = malloc(msg_len > 0 ? msg_len : 1);
                 ctx->tag = malloc(tag_len);
                 if (!ctx->out || !ctx->tag) {
@@ -344,6 +351,12 @@ test_snow5g_nca4_submit_all_vectors(IMB_MGR *mb_mgr, struct test_suite_context *
                 }
                 memset(ctx->out, 0, msg_len > 0 ? msg_len : 1);
                 memset(ctx->tag, 0, tag_len);
+                const uint8_t *src = direction == IMB_DIR_ENCRYPT ? (const uint8_t *) v->msg
+                                                                  : (const uint8_t *) v->ct;
+                if (in_place && msg_len > 0) {
+                        memcpy(ctx->out, src, msg_len);
+                        src = ctx->out;
+                }
 
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 if (!job) {
@@ -352,8 +365,7 @@ test_snow5g_nca4_submit_all_vectors(IMB_MGR *mb_mgr, struct test_suite_context *
                         goto done;
                 }
 
-                fill_nca4_job(job, v, IMB_DIR_ENCRYPT, (const uint8_t *) v->msg, ctx->out,
-                              ctx->tag);
+                fill_nca4_job(job, v, direction, src, ctx->out, ctx->tag);
                 job->user_data = ctx;
                 job = IMB_SUBMIT_JOB(mb_mgr);
 
@@ -400,7 +412,8 @@ snow5g_nca4_test(IMB_MGR *p_mgr)
                         test_snow5g_nca4_mixed_submit_flush(p_mgr, &ts, v);
                 }
 
-        test_snow5g_nca4_submit_all_vectors(p_mgr, &ts, snow5g_nca4_vectors);
+        test_snow5g_nca4_submit_all_vectors(p_mgr, &ts, snow5g_nca4_vectors, IMB_DIR_ENCRYPT, 0);
+        test_snow5g_nca4_submit_all_vectors(p_mgr, &ts, snow5g_nca4_vectors, IMB_DIR_DECRYPT, 1);
 
         errors += test_suite_end(&ts);
 
