@@ -637,6 +637,91 @@ exit:
         return ret;
 }
 
+/*
+ * Signing regression test for rejection loop changes. FIPS 204 Algorithm 7 is
+ * deterministic for a fixed key, message and randomizer, so changing when
+ * candidates are rejected must not change the accepted signature. Verification
+ * alone would not detect a valid candidate being skipped.
+ *
+ * For each parameter set, sign 16 messages with each of 4 seeded keys (fixed
+ * context, alternating zero/nonzero randomizer), verify each signature and
+ * chain digest = SHA256(digest || signature). Expected digests were recorded
+ * before the rejection loop optimization; they are not NIST vectors.
+ */
+static int
+ml_dsa_rejection_regression(struct IMB_MGR *mb_mgr, const unsigned variant)
+{
+        static const uint8_t expected[3][32] = {
+                { 0x6f, 0x99, 0xc6, 0x92, 0x33, 0xbb, 0x35, 0x0b, 0x17, 0xea, 0x9d,
+                  0x92, 0xfa, 0x54, 0x91, 0xf8, 0xf2, 0x8d, 0xfd, 0x85, 0x3e, 0xef,
+                  0xc4, 0x45, 0xbe, 0xba, 0x0f, 0xf0, 0x5d, 0xb7, 0x2d, 0xa7 },
+                { 0x4b, 0x77, 0xe0, 0x16, 0x56, 0x4f, 0x98, 0xe4, 0xba, 0x9c, 0xe8,
+                  0x57, 0xc3, 0xcf, 0x2e, 0x59, 0x22, 0xd4, 0x64, 0xac, 0xdf, 0x3c,
+                  0x17, 0x3b, 0x11, 0xab, 0x9b, 0xe5, 0x38, 0x76, 0xfa, 0x9d },
+                { 0xb9, 0x1c, 0x74, 0xc1, 0x4c, 0x4f, 0x79, 0xcd, 0xfd, 0x4b, 0xce,
+                  0x72, 0xfc, 0x7a, 0x5f, 0x2e, 0xb0, 0xdf, 0x64, 0xa9, 0x9e, 0x28,
+                  0xca, 0xf9, 0x39, 0x51, 0x67, 0x7a, 0x08, 0x41, 0x64, 0x63 },
+        };
+        static const uint8_t context[] = { 0x50, 0x32 };
+        const IMB_ML_DSA_ALG alg = variants[variant].alg;
+        uint8_t chain[32 + ML_DSA_MAX_SIG] = { 0 };
+        uint8_t seed[32], msg[32], rnd[32], digest[32];
+        size_t pk_bytes = 0, sk_bytes = 0, sig_bytes = 0;
+        IMB_ML_DSA *self = NULL;
+        int ret = 1;
+
+        if (ml_dsa_alg_sizes(alg, &pk_bytes, &sk_bytes, &sig_bytes) < 0)
+                goto exit;
+        if (imb_ml_dsa_new(mb_mgr, alg, &self) != 0)
+                goto exit;
+        for (unsigned key = 0; key < 4; key++) {
+                IMB_ML_DSA_KEYGEN_PARAMS kp;
+
+                for (unsigned j = 0; j < sizeof(seed); j++)
+                        seed[j] = (uint8_t) (31 * key + j);
+                IMB_ML_DSA_KEYGEN_PARAMS_INIT(&kp);
+                kp.xi_32 = seed;
+                kp.xi_len = sizeof(seed);
+                if (imb_ml_dsa_keypair(self, buf_pk, pk_bytes, buf_sk, sk_bytes, &kp) != 0)
+                        goto exit;
+                for (unsigned i = 0; i < 16; i++) {
+                        IMB_ML_DSA_SIGN_PARAMS sp;
+                        IMB_ML_DSA_VERIFY_PARAMS vp;
+                        size_t sig_len = sizeof(chain) - sizeof(digest);
+
+                        for (unsigned j = 0; j < sizeof(msg); j++) {
+                                msg[j] = (uint8_t) (17 * i + j);
+                                rnd[j] = (uint8_t) (key + i + 3 * j);
+                        }
+                        if ((i & 1) == 0)
+                                memset(rnd, 0, sizeof(rnd));
+                        IMB_ML_DSA_SIGN_PARAMS_INIT(&sp);
+                        sp.rnd_32 = rnd;
+                        sp.rnd_len = sizeof(rnd);
+                        sp.ctx = context;
+                        sp.ctx_len = sizeof(context);
+                        if (imb_ml_dsa_sign(self, chain + sizeof(digest), &sig_len, msg,
+                                            sizeof(msg), &sp) != 0 ||
+                            sig_len != sig_bytes)
+                                goto exit;
+                        IMB_ML_DSA_VERIFY_PARAMS_INIT(&vp);
+                        vp.ctx = context;
+                        vp.ctx_len = sizeof(context);
+                        if (imb_ml_dsa_verify(self, msg, sizeof(msg), chain + sizeof(digest),
+                                              sig_len, &vp) != 0)
+                                goto exit;
+                        IMB_SHA256(mb_mgr, chain, sizeof(digest) + sig_len, digest);
+                        memcpy(chain, digest, sizeof(digest));
+                }
+        }
+        ret = memcmp(chain, expected[variant], sizeof(digest)) != 0;
+exit:
+        if (ret)
+                printf("ML-DSA rejection-loop regression failed (%s)\n", ml_dsa_alg_name(alg));
+        imb_ml_dsa_free(self);
+        return ret;
+}
+
 /* Random key-generation, signing and verification round-trip including
  * tamper detection and key-derivation/validation helpers. */
 static int
@@ -1149,6 +1234,10 @@ ml_dsa_test(struct IMB_MGR *mb_mgr)
                 if (ml_dsa_run_verify_vectors(mb_mgr, &variants[i], ctx) < 0)
                         test_suite_update(ctx, 0, 1);
                 if (ml_dsa_roundtrip(mb_mgr, variants[i].alg) != 0)
+                        test_suite_update(ctx, 0, 1);
+                else
+                        test_suite_update(ctx, 1, 0);
+                if (ml_dsa_rejection_regression(mb_mgr, i) != 0)
                         test_suite_update(ctx, 0, 1);
                 else
                         test_suite_update(ctx, 1, 0);
