@@ -210,18 +210,23 @@ endstruc
 %define %%LFSR_B_HDQ        %4 ;; [in/out] ymm with LFSR B high DQW
 %define %%LFSR_A_NEW        %5 ;; [clobbered] ymm register for new LFSR_A_HDQ
 %define %%LFSR_B_NEW        %6 ;; [clobbered] ymm register for new LFSR_B_HDQ
-%define %%KEYSTREAM_MEM     %7 ;; [in] memory reference to keystream (for INIT phase XOR)
-%define %%KREG              %8 ;; [in] k-register mask for INIT phase (0 if not in INIT)
+%define %%KEYSTREAM         %7 ;; [in] keystream (ymm or memory) XORed into new LFSR_A_HDQ under %%KREG; 'none' skips the XOR (cipher phase)
+%define %%KREG              %8 ;; [in] k-register mask for INIT phase (ignored when %%KEYSTREAM is 'none')
 %define %%TEMP1             %9 ;; [clobbered] temporary ymm register
-%define %%TEMP2             %10 ;; [clobbered] temporary ymm register
+%define %%TEMP2             %10 ;; [clobbered] temporary ymm register; may alias %%KEYSTREAM (first written after the XOR)
 
         vpalignr %%TEMP1, %%LFSR_A_HDQ, %%LFSR_A_LDQ, 14    ; lfsrA [14:7]
-        ;; calculate alpha(lfsrA [7:0])
-        vpsraw %%TEMP2, %%LFSR_A_LDQ, 15                       ; 16-bit mask with sign bits preserved
+        ;; calculate alpha(lfsrA [7:0]); LFSR_B_NEW is free scratch until the B update
+        vpsraw %%LFSR_B_NEW, %%LFSR_A_LDQ, 15                  ; 16-bit mask with sign bits preserved
         vpaddw %%LFSR_A_NEW, %%LFSR_A_LDQ, %%LFSR_A_LDQ       ; (a_i << 1)
-        vpternlogq %%LFSR_A_NEW, %%TEMP2, [rel alpha], 0x78    ; (a_i << 1) XOR (sign_mask AND alpha)
+        vpternlogq %%LFSR_A_NEW, %%LFSR_B_NEW, [rel alpha], 0x78 ; (a_i << 1) XOR (sign_mask AND alpha)
         ;; new LFSR_A_HDQ = alpha(lfsrA[7:0]) XOR lfsrA[14:7] XOR LFSR_B_LDQ
         vpternlogq  %%LFSR_A_NEW, %%TEMP1, %%LFSR_B_LDQ, 0x96
+
+%ifnidn %%KEYSTREAM, none
+        ;; XOR with keystream - only during INIT1/INIT2 phases (mask is 0 otherwise)
+        vpxorq          %%LFSR_A_NEW{%%KREG}, %%LFSR_A_NEW, %%KEYSTREAM
+%endif
 
         vmovdqa32 %%LFSR_B_NEW, %%LFSR_A_LDQ                  ; lfsrA [7:0]
         vpaddw %%TEMP1, %%LFSR_B_LDQ, %%LFSR_B_LDQ             ; (b_i << 1)
@@ -229,9 +234,6 @@ endstruc
         vpternlogq %%TEMP1, %%TEMP2, [rel beta], 0x78           ; (b_i << 1) XOR (sign_mask AND beta)
         ;; new LFSR_B_HDQ = beta(lfsrB[7:0]) XOR lfsrA[7:0] XOR LFSR_B_HDQ
         vpternlogq  %%LFSR_B_NEW, %%TEMP1, %%LFSR_B_HDQ, 0x96
-
-        ;; XOR with keystream - only during INIT1/INIT2 phases (mask is 0 otherwise)
-        vpxorq          %%LFSR_A_NEW{%%KREG}, %%LFSR_A_NEW, %%KEYSTREAM_MEM
 
         ;; shift LFSR state: LDQ <- HDQ, HDQ <- NEW
         vmovdqa32         %%LFSR_A_LDQ, %%LFSR_A_HDQ
@@ -344,8 +346,14 @@ endstruc
                                 %%OFFSET, %%TGP0, %%TGP1, %%KREG_LDST
 %endif
 
-        SNOW5G_FSM_CLOCK_2 %%FSM_R1, %%FSM_R2, %%FSM_R3, %%LFSR_A_HDQ, %%TEMP1, %%TEMP2
+        SNOW5G_FSM_CLOCK_2 %%FSM_R1, %%FSM_R2, %%FSM_R3, %%LFSR_A_HDQ, %%TEMP2, %%LFSR_A_SAVE_REG
+%if (%%SKIP_XOR == 0)
         SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_SAVE_REG, %%LFSR_B_SAVE_REG, {[rsp + %%KEYSTREAM_SAVE]}, %%KREG_INIT, %%TEMP1, %%TEMP2
+%else
+        ;; keystream still live in TEMP1: feed the init XOR from the register
+        ;; (keeps the store->load round trip off the LFSR critical path)
+        SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_SAVE_REG, %%LFSR_B_SAVE_REG, %%TEMP1, %%KREG_INIT, %%TEMP2, %%TEMP1
+%endif
 
 %endmacro
 
@@ -518,7 +526,7 @@ align_loop
 ;; NCA4 cipher: encrypt/decrypt 16 bytes per lane, clock FSM and update LFSR
 ;; %%LANE_MASK: BOTH_LANES, LANE0_ONLY, or LANE1_ONLY
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro NCA4_CIPHER_LANE_PAIR 19
+%macro NCA4_CIPHER_LANE_PAIR 18
 %define %%FSM_R1               %1   ;; [in/out] FSM R1 register
 %define %%FSM_R2               %2   ;; [in/out] FSM R2 register
 %define %%FSM_R3               %3   ;; [in/out] FSM R3 register
@@ -526,22 +534,20 @@ align_loop
 %define %%LFSR_A_HDQ           %5   ;; [in/out] LFSR A high DQW
 %define %%LFSR_B_LDQ           %6   ;; [in/out] LFSR B low DQW
 %define %%LFSR_B_HDQ           %7   ;; [in/out] LFSR B high DQW
-%define %%KEYSTREAM_SAVE       %8   ;; [in] stack offset for keystream save
-%define %%TEMP1                %9   ;; [clobbered] temporary ymm register
-%define %%TEMP2                %10  ;; [clobbered] temporary ymm register
-%define %%SRC0                 %11  ;; [in] lane 0 src pointer (pre-loaded)
-%define %%DST0                 %12  ;; [in] lane 0 dst pointer (pre-loaded)
-%define %%SRC1                 %13  ;; [in] lane 1 src pointer (pre-loaded)
-%define %%DST1                 %14  ;; [in] lane 1 dst pointer (pre-loaded)
-%define %%OFFSET               %15  ;; [in] current byte offset into src/dst buffers
-%define %%KREG_INIT            %16  ;; [in] k-register mask for INIT phase
-%define %%LANE_MASK            %17  ;; [in] BOTH_LANES, LANE0_ONLY, or LANE1_ONLY
-%define %%LFSR_A_NEW           %18  ;; [clobbered] ymm register for new LFSR_A_HDQ
-%define %%LFSR_B_NEW           %19  ;; [clobbered] ymm register for new LFSR_B_HDQ
+%define %%TEMP1                %8   ;; [clobbered] temporary ymm register (holds the keystream)
+%define %%TEMP2                %9   ;; [clobbered] temporary ymm register
+%define %%SRC0                 %10  ;; [in] lane 0 src pointer (pre-loaded)
+%define %%DST0                 %11  ;; [in] lane 0 dst pointer (pre-loaded)
+%define %%SRC1                 %12  ;; [in] lane 1 src pointer (pre-loaded)
+%define %%DST1                 %13  ;; [in] lane 1 dst pointer (pre-loaded)
+%define %%OFFSET               %14  ;; [in] current byte offset into src/dst buffers
+%define %%KREG_INIT            %15  ;; [in] k-register mask for INIT phase, or 'none' (cipher phase: no feedback XOR)
+%define %%LANE_MASK            %16  ;; [in] BOTH_LANES, LANE0_ONLY, or LANE1_ONLY
+%define %%LFSR_A_NEW           %17  ;; [clobbered] ymm register for new LFSR_A_HDQ
+%define %%LFSR_B_NEW           %18  ;; [clobbered] ymm register for new LFSR_B_HDQ
 
         vpaddw          %%TEMP1, %%LFSR_B_HDQ, %%FSM_R1
         vpxord          %%TEMP1, %%TEMP1, %%FSM_R2
-        vmovdqa32       [rsp + %%KEYSTREAM_SAVE], %%TEMP1
 
         ;; Lane 0: load src, XOR with lower xmm keystream, store dst
         ;; runs when LANE_MASK=LANE0_ONLY or BOTH_LANES
@@ -554,14 +560,19 @@ align_loop
         ;; Lane 1: extract upper xmm keystream, load src, XOR, store dst
         ;; runs when LANE_MASK=LANE1_ONLY or BOTH_LANES
 %if %%LANE_MASK != LANE0_ONLY
-        vextracti32x4   XWORD(%%TEMP1), %%TEMP1, 1
-        vmovdqu32       XWORD(%%TEMP2), [%%SRC1 + %%OFFSET]
-        vpxord          XWORD(%%TEMP2), XWORD(%%TEMP1), XWORD(%%TEMP2)
+        vextracti32x4   XWORD(%%TEMP2), %%TEMP1, 1
+        vmovdqu32       XWORD(%%LFSR_A_NEW), [%%SRC1 + %%OFFSET]
+        vpxord          XWORD(%%TEMP2), XWORD(%%TEMP2), XWORD(%%LFSR_A_NEW)
         vmovdqu32       [%%DST1 + %%OFFSET], XWORD(%%TEMP2)
 %endif
 
-        SNOW5G_FSM_CLOCK_2 %%FSM_R1, %%FSM_R2, %%FSM_R3, %%LFSR_A_HDQ, %%TEMP1, %%TEMP2
-        SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_NEW, %%LFSR_B_NEW, {[rsp + %%KEYSTREAM_SAVE]}, %%KREG_INIT, %%TEMP1, %%TEMP2
+        ;; TEMP1 keeps the full keystream for the init-phase LFSR feedback XOR
+        SNOW5G_FSM_CLOCK_2 %%FSM_R1, %%FSM_R2, %%FSM_R3, %%LFSR_A_HDQ, %%TEMP2, %%LFSR_A_NEW
+%ifidn %%KREG_INIT, none
+        SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_NEW, %%LFSR_B_NEW, none, none, %%TEMP2, %%TEMP1
+%else
+        SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_NEW, %%LFSR_B_NEW, %%TEMP1, %%KREG_INIT, %%TEMP2, %%TEMP1
+%endif
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -168,7 +168,6 @@ align_loop
 %%phase1:
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                _keystream_nca4, \
                 TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, BOTH_LANES, ymm4, ymm5
         add     %%offset, 16
         dec     DWORD(%%num_blocks)
@@ -216,7 +215,6 @@ align_loop
 %%phase2_lane0:
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                _keystream_nca4, \
                 TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE0_ONLY, ymm4, ymm5
         add     %%offset, 16
         dec     DWORD(%%len0)
@@ -226,7 +224,6 @@ align_loop
 %%phase2_lane1:
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                _keystream_nca4, \
                 TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE1_ONLY, ymm4, ymm5
         add     %%offset, 16
         dec     DWORD(%%len0)
