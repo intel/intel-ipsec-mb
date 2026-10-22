@@ -261,6 +261,7 @@ ___
 #
 # Description:
 #   Performs one butterfly step of a single NTT level on two 8-element YMM vectors.
+#   Implements FIPS 204 Algorithm 41's sum/difference with a twiddle product.
 #   Uses signed Montgomery multiplication (vpmuldq) for the twiddle product:
 #
 #     t = hi32(zeta × w_odd) − hi32(Q × lo32(zeta_qinv × w_odd))   ∈ (−Q, Q)
@@ -322,16 +323,18 @@ ___
     $code .= <<___;
     vpmuldq $q, $tmp0, $tmp0
     vpmuldq $q, $tmp2, $tmp2
-    # move upper 32 bits of each 64-bit lane product into the low dword position
+    # product and correction have equal low dwords: subtract as qwords before
+    # packing, the high dword is then the exact signed difference
+    vpsubq $tmp0, $w_odd, $w_odd
+    vpsubq $tmp2, $tmp1, $tmp1
+    # move upper 32 bits of each 64-bit lane result into the low dword position
     vmovshdup $w_odd, $w_odd
     # 0xAA = 0b10101010: merge odd-lane results (tmp1) into even lanes (w_odd)
     vpblendd \$0xAA, $tmp1, $w_odd, $w_odd
-    vmovshdup $tmp0, $tmp0
-    vpblendd \$0xAA, $tmp2, $tmp0, $tmp0
-    vpsubd $w_odd, $w_even, $tmp1
+    # n_even may alias w_even, so compute the difference first
+    vpsubd $w_odd, $w_even, $tmp0
     vpaddd $w_odd, $w_even, $n_even
-    vpaddd $tmp0, $tmp1, $n_odd
-    vpsubd $tmp0, $n_even, $n_even
+    vmovdqa $tmp0, $n_odd
 ___
 }
 
@@ -831,6 +834,7 @@ ___
 #
 # Description:
 #   Performs one butterfly step of a single INTT level on two 8-element YMM vectors.
+#   Implements FIPS 204 Algorithm 42's sum and twiddle-scaled difference.
 #   Uses signed Montgomery multiplication (vpmuldq) for the twiddle product.
 #
 #   The INTT butterfly is the algebraic inverse of the NTT butterfly:
@@ -839,8 +843,8 @@ ___
 #     diff   = w_even − w_odd
 #     n_odd  = hi32(zeta × diff) − hi32(Q × lo32(zeta_qinv × diff))   ∈ (−Q, Q)
 #
-#   After 8 levels the worst-case signed range is (-128Q, 256Q) ≈ ±1 B, far
-#   below int32 overflow. The caller (intt_levels5to7) adds a one-time +128Q
+#   With canonical inputs, after 8 levels the signed range is (-128Q, 256Q),
+#   within int32 since 256Q < 2^31. The caller (intt_levels5to7) adds +128Q
 #   correction to all 8 coefficient registers before the unsigned 1/N scaling.
 #
 # Parameters:
@@ -900,13 +904,14 @@ ___
     $code .= <<___;
     vpmuldq $q, $tmp1, $tmp1
     vpmuldq $q, $tmp2, $tmp2
-    # move upper 32 bits of each 64-bit lane product into the low dword position
+    # product and correction have equal low dwords: subtract as qwords before
+    # packing, the high dword is then the exact signed difference
+    vpsubq $tmp1, $tmp0, $tmp0
+    vpsubq $tmp2, $n_odd, $n_odd
+    # move upper 32 bits of each 64-bit lane result into the low dword position
     vmovshdup $tmp0, $tmp0
     # 0xAA = 0b10101010: merge odd-lane results (n_odd scratch) into even lanes (tmp0)
-    vpblendd \$0xAA, $n_odd, $tmp0, $tmp0
-    vmovshdup $tmp1, $tmp1
-    vpblendd \$0xAA, $tmp2, $tmp1, $tmp1
-    vpsubd $tmp1, $tmp0, $n_odd
+    vpblendd \$0xAA, $n_odd, $tmp0, $n_odd
 ___
 }
 
