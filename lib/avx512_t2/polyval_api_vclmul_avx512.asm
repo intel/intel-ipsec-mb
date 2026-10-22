@@ -12,45 +12,21 @@
 %include "include/align_avx512.inc"
 ;; reuse AES-GCM argument definitions and access
 %include "include/gcm_defines.inc"
+%include "include/polyval_vclmul_avx512.inc"
 
 ;; Above the cut-off length use 8 hash keys, otherwise 4 hash keys.
 %define MSG_LEN_CUT_OFF 320
-
-;;
-;; Key structure holds up to 8 hash keys
-;;
-%xdefine HashKey_8      (16 * 0) ; HashKey^8
-%xdefine HashKey_7      (16 * 1) ; HashKey^7
-%xdefine HashKey_6      (16 * 2) ; HashKey^6
-%xdefine HashKey_5      (16 * 3) ; HashKey^5
-%xdefine HashKey_4      (16 * 4) ; HashKey^4
-%xdefine HashKey_3      (16 * 5) ; HashKey^3
-%xdefine HashKey_2      (16 * 6) ; HashKey^2
-%xdefine HashKey_1      (16 * 7) ; HashKey
-
-%xdefine HKeyGap (8 * 16)
-;; (HashKey^n mod POLY) x POLY constants
-
-%xdefine HashKeyK_8     (HashKey_8 + HKeyGap)  ; HashKey^8 x POLY
-%xdefine HashKeyK_7     (HashKey_7 + HKeyGap)  ; HashKey^7 x POLY
-%xdefine HashKeyK_6     (HashKey_6 + HKeyGap)  ; HashKey^6 x POLY
-%xdefine HashKeyK_5     (HashKey_5 + HKeyGap)  ; HashKey^5 x POLY
-%xdefine HashKeyK_4     (HashKey_4 + HKeyGap)  ; HashKey^4 x POLY
-%xdefine HashKeyK_3     (HashKey_3 + HKeyGap)  ; HashKey^3 x POLY
-%xdefine HashKeyK_2     (HashKey_2 + HKeyGap)  ; HashKey^2 x POLY
-%xdefine HashKeyK_1     (HashKey_1 + HKeyGap)  ; HashKey x POLY
-
-%xdefine HKeySize (2*8*16)
 
 mksection .rodata
 default rel
 
 align 64
-POLY:
-        dq     0x0000000000000001, 0xC200000000000000
-        dq     0x0000000000000001, 0xC200000000000000
-        dq     0x0000000000000001, 0xC200000000000000
-        dq     0x0000000000000001, 0xC200000000000000
+MKGLOBAL(polyval_poly_avx512,data,internal)
+polyval_poly_avx512:
+        dq      0x0000000000000001, 0xC200000000000000
+        dq      0x0000000000000001, 0xC200000000000000
+        dq      0x0000000000000001, 0xC200000000000000
+        dq      0x0000000000000001, 0xC200000000000000
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Stack frame definition
@@ -136,110 +112,6 @@ POLY:
         mov     r14, [rsp + STACK_GP_OFFSET + 2*8]
         mov     r15, [rsp + STACK_GP_OFFSET + 3*8]
         mov     rsp, [rsp + STACK_GP_OFFSET + 4*8] ; stack
-%endmacro
-
-;; ===========================================================================
-;; ===========================================================================
-;; Horizontal XOR - 4 x 128bits xored together
-%macro VHPXORI4x128 2
-%define %%REG   %1      ; [in/out] ZMM with 4x128bits to xor; 128bit output
-%define %%TMP   %2      ; [clobbered] ZMM temporary register
-        vextracti64x4   YWORD(%%TMP), %%REG, 1
-        vpxorq          YWORD(%%REG), YWORD(%%REG), YWORD(%%TMP)
-        vextracti32x4   XWORD(%%TMP), YWORD(%%REG), 1
-        vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
-%endmacro               ; VHPXORI4x128
-
-;; ===========================================================================
-;; ===========================================================================
-;; Horizontal XOR - 2 x 128bits xored together
-%macro VHPXORI2x128 2
-%define %%REG   %1      ; [in/out] YMM with 2x128bits to xor; 128bit output
-%define %%TMP   %2      ; [clobbered] YMM temporary register
-        vextracti32x4   XWORD(%%TMP), YWORD(%%REG), 1
-        vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
-%endmacro               ; VHPXORI2x128
-
-;; ===========================================================================
-;; ===========================================================================
-;; Schoolbook multiply of 4 blocks (4 x 16 bytes) or 8 blocks (8 x 16 bytes)
-;; - always starts POLYVAL process and performs reduction at the end
-;; - LOAD TYPE options:
-;;   - hk_load (default): load hash keys and do horizontal XOR after reduction
-;;   - hk_broadcast: broadcast hash keys and NO horizontal XOR after reduction
-%macro HASH_4_OR_8 14
-%define %%LOADT %1      ; [in] hash key load type: hk_load (load) or hk_bcast (broadcast)
-%define %%INPTR %2      ; [in] data input pointer
-%define %%HKPTR %3      ; [in] hash key pointer
-%define %%HASH  %4      ; [in/out] ZMM hash value in/out
-%define %%NUM_BLOCKS %5 ; [in] numerical value: 4 or 8
-%define %%ZTMP0 %6      ; [clobbered] temporary ZMM
-%define %%ZTMP1 %7      ; [clobbered] temporary ZMM
-%define %%ZTMP2 %8      ; [clobbered] temporary ZMM
-%define %%ZTMP3 %9      ; [clobbered] temporary ZMM
-%define %%ZTMP4 %10     ; [clobbered] temporary ZMM
-%define %%ZTMP5 %11     ; [clobbered] temporary ZMM
-%define %%ZTMP6 %12     ; [clobbered] temporary ZMM
-%define %%GH    %13     ; [clobbered] temporary ZMM
-%define %%GL    %14     ; [clobbered] temporary ZMM
-
-        ;; in this use case, start-hash and reduction always take place
-%assign hk_broadcast 0
-%assign do_hxor 1
-
-%ifidn %%LOADT, hk_bcast
-%assign hk_broadcast 1
-%assign do_hxor 0
-%endif
-
-        ;; hash blocks 0-3
-        vmovdqu64       %%ZTMP5, [%%INPTR]
-        vpxorq          %%ZTMP5, %%ZTMP5, %%HASH
-
-%if hk_broadcast != 0
-        vbroadcasti64x2 %%ZTMP4, [%%HKPTR]
-        vbroadcasti64x2 %%ZTMP6, [%%HKPTR + HKeyGap]
-%else
-        vmovdqa64       %%ZTMP4, [%%HKPTR]
-        vmovdqa64       %%ZTMP6, [%%HKPTR + HKeyGap]
-%endif
-        vpclmulqdq      %%ZTMP0, %%ZTMP5, %%ZTMP6, 0x00 ; TLL = ML*KL
-        vpclmulqdq      %%ZTMP1, %%ZTMP5, %%ZTMP6, 0x10 ; TLH = ML*KH
-        vpclmulqdq      %%ZTMP2, %%ZTMP5, %%ZTMP4, 0x01 ; THL = MH*HL
-        vpclmulqdq      %%ZTMP3, %%ZTMP5, %%ZTMP4, 0x11 ; THH = MH*HH
-
-        ;; update sums
-        vpxorq          %%GL, %%ZTMP0, %%ZTMP2          ; GL = THL + TLL
-        vpxorq          %%GH, %%ZTMP1, %%ZTMP3          ; GH = THH + TLH
-
-%if %%NUM_BLOCKS == 8
-        ;; hash blocks 4-7
-        vmovdqu64       %%ZTMP5, [%%INPTR + 64]
-%if hk_broadcast != 0
-        vbroadcasti64x2 %%ZTMP4, [%%HKPTR + 64]
-        vbroadcasti64x2 %%ZTMP6, [%%HKPTR + HKeyGap + 64]
-%else
-        vmovdqa64       %%ZTMP4, [%%HKPTR + 64]
-        vmovdqa64       %%ZTMP6, [%%HKPTR + HKeyGap + 64]
-%endif
-        vpclmulqdq      %%ZTMP0, %%ZTMP5, %%ZTMP6, 0x00 ; TLL = ML*KL
-        vpclmulqdq      %%ZTMP1, %%ZTMP5, %%ZTMP6, 0x10 ; TLH = ML*KH
-        vpclmulqdq      %%ZTMP2, %%ZTMP5, %%ZTMP4, 0x01 ; THL = MH*HL
-        vpclmulqdq      %%ZTMP3, %%ZTMP5, %%ZTMP4, 0x11 ; THH = MH*HH
-
-        ;; update sums
-        vpternlogq      %%GL, %%ZTMP2, %%ZTMP0, 0x96    ; GL += THL + TLL
-        vpternlogq      %%GH, %%ZTMP3, %%ZTMP1, 0x96    ; GH += THH + TLH
-%endif ;; 8 blocks
-
-        ;; new reduction
-        vpclmulqdq      %%HASH, %%GL, [rel POLY], 0x10
-        vpshufd         %%ZTMP0, %%GL, 01001110b
-        vpternlogq      %%HASH, %%GH, %%ZTMP0, 0x96
-%if do_hxor != 0
-        VHPXORI4x128    %%HASH, %%ZTMP0
-%endif
-
 %endmacro
 
 ;; ===========================================================================
@@ -365,79 +237,22 @@ POLY:
 
         ;; new reduction
 %if %%NUM_BLOCKS == 1
-        vpclmulqdq      XWORD(%%HASH), XWORD(%%TLL1), [rel POLY], 0x10
+        vpclmulqdq      XWORD(%%HASH), XWORD(%%TLL1), [rel polyval_poly_avx512], 0x10
         vpshufd         XWORD(%%TLH1),  XWORD(%%TLL1), 01001110b
         vpternlogq      XWORD(%%HASH), XWORD(%%THH1), XWORD(%%TLH1), 0x96
 %elif %%NUM_BLOCKS == 2
-        vpclmulqdq      YWORD(%%HASH), YWORD(%%TLL1), [rel POLY], 0x10
+        vpclmulqdq      YWORD(%%HASH), YWORD(%%TLL1), [rel polyval_poly_avx512], 0x10
         vpshufd         YWORD(%%TLH1),  YWORD(%%TLL1), 01001110b
         vpternlogq      YWORD(%%HASH), YWORD(%%THH1), YWORD(%%TLH1), 0x96
         VHPXORI2x128    YWORD(%%HASH), YWORD(%%TLH1)
 %else
-        vpclmulqdq      ZWORD(%%HASH), %%TLL1, [rel POLY], 0x10
+        vpclmulqdq      ZWORD(%%HASH), %%TLL1, [rel polyval_poly_avx512], 0x10
         vpshufd         %%TLH1, %%TLL1, 01001110b
         vpternlogq      ZWORD(%%HASH), %%THH1, %%TLH1, 0x96
         VHPXORI4x128    ZWORD(%%HASH), %%TLH1
 %endif
 
 
-%endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; HASH_MUL2 MACRO to implement: Data*HashKey mod POLY
-;; Input: A and B (128-bits each)
-;; Output: C = A*B*x mod poly
-;; To compute GH = GH*HashKey mod poly, give two constants:
-;;   HK = HashKey<<1 mod poly as input
-;;   KK = SWAP_H_L( HK_L * POLY) + HK
-;;   POLY = 0xC2 << 56
-;;
-;; Realize four multiplications first, to achieve partially reduced product
-;;   TLL = GH_L * KK_L
-;;   TLH = GH_L * KK_H
-;;   THL = GH_H * HK_L
-;;   THH = GH_H * HK_H
-;;
-;; Accumulate results into 2 registers, with corresponding weights
-;;   T1 = THH + TLH
-;;   T2 = THL + TLL
-;;
-;; Begin reduction
-;;    ----------
-;;    |   T1   |
-;;    ---------------
-;;         |   T2   |
-;;         ----------
-;;
-;;   T3 = SWAP_H_L(T2)
-;;   T5 = T2_L * POLY
-;;   GH = T1 + T5 + T3
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  HASH_MUL2  7
-%define %%GH  %1        ;; [in/out] xmm with multiply operand(s) (128-bits)
-%define %%HK  %2        ;; [in] xmm with hash key value(s) (128-bits)
-%define %%KK  %3        ;; [in] xmm with hash key K value(s) (128-bits)
-%define %%TLL %4        ;; [clobbered] xmm
-%define %%TLH %5        ;; [clobbered] xmm
-%define %%THL %6        ;; [clobbered] xmm
-%define %%THH %7        ;; [clobbered] xmm
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpclmulqdq      %%TLL, %%GH, %%KK, 0x00     ; TLL = GH_L * KK_L
-        vpclmulqdq      %%TLH, %%GH, %%KK, 0x10     ; TLH = GH_L * KK_H
-        vpclmulqdq      %%THL, %%GH, %%HK, 0x01     ; THL = GH_H * HK_L
-        vpclmulqdq      %%THH, %%GH, %%HK, 0x11     ; THH = GH_H * HK_H
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; add products
-        vpxorq          %%TLL, %%TLL, %%THL
-        vpxorq          %%THH, %%THH, %%TLH
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; new reduction
-        vpclmulqdq      %%GH, %%TLL, [rel POLY], 0x10
-        vpshufd         %%TLH, %%TLL, 01001110b
-        vpternlogq      %%GH, %%THH, %%TLH, 0x96
 %endmacro
 
 mksection .text
@@ -608,7 +423,7 @@ nia_vclmul_avx512:
         vinserti64x2    ymm9, [arg2 + 16], 1    ;; load Q (ymm9)
 
         ;; Calculate K-constant for H and Q at the same time.
-        vpclmulqdq      ymm8, ymm9, [rel POLY], 0x10
+        vpclmulqdq      ymm8, ymm9, [rel polyval_poly_avx512], 0x10
         vpshufd         ymm1, ymm9, 01001110b
         vpxorq          ymm8, ymm8, ymm1
 
@@ -637,7 +452,7 @@ nia_vclmul_avx512:
         vshufi64x2      zmm5, zmm5, zmm5, 0x00          ;; broadcast HK^4 across all zmm5
 
         ;; calculate HashKeyK = HashKey x POLY
-        vpclmulqdq      zmm1, zmm7, [rel POLY], 0x10
+        vpclmulqdq      zmm1, zmm7, [rel polyval_poly_avx512], 0x10
         vpshufd         zmm2, zmm7, 01001110b
         vpxorq          zmm1, zmm1, zmm2
         vmovdqa64       [r15 + HashKeyK_4], zmm1
@@ -680,7 +495,7 @@ align_label
         vmovdqa64       [r15 + HashKey_8], zmm5         ;; HK^8 to HK^5
 
         ;; calculate HashKeyX = HashKey x POLY
-        vpclmulqdq      zmm1, zmm5, [rel POLY], 0x10
+        vpclmulqdq      zmm1, zmm5, [rel polyval_poly_avx512], 0x10
         vpshufd         zmm2, zmm5, 01001110b
         vpxorq          zmm1, zmm1, zmm2
         vmovdqa64       [r15 + HashKeyK_8], zmm1
@@ -736,7 +551,7 @@ nca_vclmul_avx512:
         vinserti64x2    ymm9, [arg2 + 16], 1    ;; load Q (ymm9)
 
         ;; Calculate K-constant for H and Q at the same time.
-        vpclmulqdq      ymm8, ymm9, [rel POLY], 0x10
+        vpclmulqdq      ymm8, ymm9, [rel polyval_poly_avx512], 0x10
         vpshufd         ymm1, ymm9, 01001110b
         vpxorq          ymm8, ymm8, ymm1
 
@@ -764,7 +579,7 @@ nca_vclmul_avx512:
         vshufi64x2      zmm5, zmm5, zmm5, 0x00          ;; broadcast HK^4 across all zmm5
 
         ;; calculate HashKeyK = HashKey x POLY
-        vpclmulqdq      zmm1, zmm7, [rel POLY], 0x10
+        vpclmulqdq      zmm1, zmm7, [rel polyval_poly_avx512], 0x10
         vpshufd         zmm2, zmm7, 01001110b
         vpxorq          zmm1, zmm1, zmm2
         vmovdqa64       [r15 + HashKeyK_4], zmm1
@@ -816,7 +631,7 @@ align_label
         vmovdqa64       [r15 + HashKey_8], zmm5         ;; HK^8 to HK^5
 
         ;; calculate HashKeyX = HashKey x POLY
-        vpclmulqdq      zmm1, zmm5, [rel POLY], 0x10
+        vpclmulqdq      zmm1, zmm5, [rel polyval_poly_avx512], 0x10
         vpshufd         zmm2, zmm5, 01001110b
         vpxorq          zmm1, zmm1, zmm2
         vmovdqa64       [r15 + HashKeyK_8], zmm1
