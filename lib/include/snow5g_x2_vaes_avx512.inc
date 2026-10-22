@@ -41,14 +41,6 @@ beta:
 times 16 dw 0xcc87
 times 16 dw 0xcc87
 
-align 64
-byte_len_to_mask_table_nca4:
-        dw      0x0000, 0x0001, 0x0003, 0x0007
-        dw      0x000f, 0x001f, 0x003f, 0x007f
-        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff
-        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff
-        dw      0xffff
-
 mksection .text
 
 %ifdef LINUX
@@ -660,32 +652,6 @@ align_loop
         vextracti32x4   [%%STATE_PTR + 1*112 + 4*16], %%LFSR_A_HDQ, 1
         vextracti32x4   [%%STATE_PTR + 1*112 + 5*16], %%LFSR_B_LDQ, 1
         vextracti32x4   [%%STATE_PTR + 1*112 + 6*16], %%LFSR_B_HDQ, 1
-%endmacro
-
-;; Load 2-lane state (lanes 0 and 1, 112 bytes each)
-%macro STATE_LOAD_NCA4_X2 8
-%define %%STATE_PTR     %1
-%define %%FSM_R1        %2  ;; [out] ymm
-%define %%FSM_R2        %3  ;; [out] ymm
-%define %%FSM_R3        %4  ;; [out] ymm
-%define %%LFSR_A_LDQ    %5  ;; [out] ymm
-%define %%LFSR_A_HDQ    %6  ;; [out] ymm
-%define %%LFSR_B_LDQ    %7  ;; [out] ymm
-%define %%LFSR_B_HDQ    %8  ;; [out] ymm
-        vmovdqu32       XWORD(%%FSM_R1),     [%%STATE_PTR + 0*112 + 0*16]
-        vinserti32x4    %%FSM_R1, %%FSM_R1,  [%%STATE_PTR + 1*112 + 0*16], 1
-        vmovdqu32       XWORD(%%FSM_R2),     [%%STATE_PTR + 0*112 + 1*16]
-        vinserti32x4    %%FSM_R2, %%FSM_R2,  [%%STATE_PTR + 1*112 + 1*16], 1
-        vmovdqu32       XWORD(%%FSM_R3),     [%%STATE_PTR + 0*112 + 2*16]
-        vinserti32x4    %%FSM_R3, %%FSM_R3,  [%%STATE_PTR + 1*112 + 2*16], 1
-        vmovdqu32       XWORD(%%LFSR_A_LDQ), [%%STATE_PTR + 0*112 + 3*16]
-        vinserti32x4    %%LFSR_A_LDQ, %%LFSR_A_LDQ, [%%STATE_PTR + 1*112 + 3*16], 1
-        vmovdqu32       XWORD(%%LFSR_A_HDQ), [%%STATE_PTR + 0*112 + 4*16]
-        vinserti32x4    %%LFSR_A_HDQ, %%LFSR_A_HDQ, [%%STATE_PTR + 1*112 + 4*16], 1
-        vmovdqu32       XWORD(%%LFSR_B_LDQ), [%%STATE_PTR + 0*112 + 5*16]
-        vinserti32x4    %%LFSR_B_LDQ, %%LFSR_B_LDQ, [%%STATE_PTR + 1*112 + 5*16], 1
-        vmovdqu32       XWORD(%%LFSR_B_HDQ), [%%STATE_PTR + 0*112 + 6*16]
-        vinserti32x4    %%LFSR_B_HDQ, %%LFSR_B_HDQ, [%%STATE_PTR + 1*112 + 6*16], 1
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
