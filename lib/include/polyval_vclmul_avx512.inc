@@ -54,6 +54,11 @@
 
 %xdefine HKeySize (2*8*16)
 
+;; polyval_api_vclmul_avx512.asm defines the constant and sets the guard
+%ifndef POLYVAL_POLY_AVX512_DEFINED
+extern polyval_poly_avx512
+%endif
+
 ;;; ===========================================================================
 ;;; Horizontal XOR - 4 x 128bits xored together
 %macro VHPXORI4x128 2
@@ -156,10 +161,24 @@
 %endmacro
 
 ;;; ===========================================================================
+;;; Precompute the HashKey_K helper for one hash key power, used by HASH_MUL2
+;;; to fold the mod-POLY reduction into the multiply (saves a separate
+;;; reduction step). Must be recomputed whenever the corresponding %%HK changes.
+;;; Works for xmm/ymm/zmm operands (lane-parallel).
+%macro  HASHKEY_K_PRECOMPUTE  3
+%define %%K   %1        ;; [out] xmm/ymm/zmm: HashKey_K helper for %%HK
+%define %%HK  %2        ;; [in] xmm/ymm/zmm: hash key value(s)
+%define %%TMP %3        ;; [clobbered] xmm/ymm/zmm
+
+        vpclmulqdq      %%K, %%HK, [rel polyval_poly_avx512], 0x10
+        vpshufd         %%TMP, %%HK, 01001110b
+        vpxorq          %%K, %%K, %%TMP
+%endmacro
+
+;;; ===========================================================================
 ;;; GH = (GH * HK) mod POLY using improved (KK-augmented) reduction.
 ;;; KK = pclmul(HK, POLY, 0x10) ^ pshufd(HK, 0b01001110) precomputed once per HK.
 ;;; Works for xmm/ymm/zmm operands (lane-parallel).
-;;; Requires: extern polyval_poly_avx512 (defined in polyval_api_vclmul_avx512.asm)
 %macro  HASH_MUL2  7
 %define %%GH  %1        ;; [in/out] xmm with multiply operand(s) (128-bits)
 %define %%HK  %2        ;; [in] xmm with hash key value(s) (128-bits)

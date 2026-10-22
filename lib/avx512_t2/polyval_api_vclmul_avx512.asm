@@ -12,6 +12,7 @@
 %include "include/align_avx512.inc"
 ;; reuse AES-GCM argument definitions and access
 %include "include/gcm_defines.inc"
+%define POLYVAL_POLY_AVX512_DEFINED
 %include "include/polyval_vclmul_avx512.inc"
 
 ;; Above the cut-off length use 8 hash keys, otherwise 4 hash keys.
