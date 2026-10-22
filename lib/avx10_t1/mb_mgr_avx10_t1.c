@@ -486,8 +486,8 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes_cfb_256_ooo, 16);
         ooo_mgr_snow5g_reset(state->snow5g_ooo, 2);
         ooo_mgr_snow5g_reset(state->snow5g_nia4_ooo, 2);
-        ooo_mgr_snow5g_reset(state->snow5g_nca4_enc_ooo, 2);
-        ooo_mgr_snow5g_reset(state->snow5g_nca4_dec_ooo, 2);
+        ooo_mgr_snow5g_nca4_reset(state->snow5g_nca4_enc_ooo, 2);
+        ooo_mgr_snow5g_nca4_reset(state->snow5g_nca4_dec_ooo, 2);
 }
 
 IMB_DLL_LOCAL void

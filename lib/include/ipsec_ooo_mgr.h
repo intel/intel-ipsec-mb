@@ -360,6 +360,19 @@ typedef struct {
         uint64_t road_block;
 } MB_MGR_SNOW5G_OOO;
 
+/* SNOW5G-NCA4 out-of-order scheduler fields. */
+typedef struct {
+        MB_MGR_SNOW5G_OOO base;
+        DECLARE_ALIGNED(uint8_t hqp[2][48], 16);
+        DECLARE_ALIGNED(uint8_t polyval_acc[2][16], 16);
+        uint64_t aad_len[2];
+        uint64_t msg_len[2];
+        uint64_t bytes_processed[2];
+        DECLARE_ALIGNED(uint8_t digest[2][16], 16);
+        uint64_t phase[2];
+        uint64_t road_block;
+} MB_MGR_SNOW5G_NCA4_OOO;
+
 /* HMAC-SHA1 and HMAC-SHA256/224 */
 typedef struct {
         /* YMM aligned access to extra_block */

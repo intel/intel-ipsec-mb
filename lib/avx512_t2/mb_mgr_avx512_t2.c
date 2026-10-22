@@ -437,8 +437,8 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_snow5g_reset(state->snow5g_nia4_ooo, 2);
 
         /* Init SNOW5G NCA4 out-of-order fields */
-        ooo_mgr_snow5g_reset(state->snow5g_nca4_enc_ooo, 2);
-        ooo_mgr_snow5g_reset(state->snow5g_nca4_dec_ooo, 2);
+        ooo_mgr_snow5g_nca4_reset(state->snow5g_nca4_enc_ooo, 2);
+        ooo_mgr_snow5g_nca4_reset(state->snow5g_nca4_dec_ooo, 2);
 
         /* Init SHA1 out-of-order fields */
         ooo_mgr_sha1_reset(state->sha_1_ooo, AVX512_NUM_SHA1_LANES);

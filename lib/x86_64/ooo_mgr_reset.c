@@ -442,3 +442,16 @@ ooo_mgr_snow5g_reset(void *p_ooo_mgr, const unsigned num_lanes)
         if (num_lanes == 2)
                 p_mgr->unused_lanes = 0x10;
 }
+
+IMB_DLL_LOCAL
+void
+ooo_mgr_snow5g_nca4_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_SNOW5G_NCA4_OOO *p_mgr = (MB_MGR_SNOW5G_NCA4_OOO *) p_ooo_mgr;
+
+        ooo_mgr_snow5g_reset(&p_mgr->base, num_lanes);
+
+        memset((uint8_t *) p_mgr + offsetof(MB_MGR_SNOW5G_NCA4_OOO, hqp), 0,
+               offsetof(MB_MGR_SNOW5G_NCA4_OOO, road_block) -
+                       offsetof(MB_MGR_SNOW5G_NCA4_OOO, hqp));
+}

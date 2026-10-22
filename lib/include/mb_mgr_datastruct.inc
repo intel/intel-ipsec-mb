@@ -286,6 +286,7 @@ FIELD   _snow5g_job_in_lane,    2*8,                    8       ; 2 x 64-bit job
 FIELD   _snow5g_INIT_MASK,      8,                      8       ; 64-bit initialization mask
 FIELD   _snow5g_unused_lanes,   8,                      8       ; 64-bit unused lanes queue
 FIELD   _snow5g_lanes_in_use,   8,                      8       ; 64-bit number of lanes in use
+FIELD   _snow5g_road_block,     8,                      8       ; sentinel for IMB_OOO_ROAD_BLOCK
 END_FIELDS
 %assign _MB_MGR_SNOW5G_OOO_size     _FIELD_OFFSET
 %assign _MB_MGR_SNOW5G_OOO_align    _STRUCT_ALIGN
@@ -304,6 +305,32 @@ _snow5g_args_FSM_2      equ    _snow5g_args + _snow5g_arg_FSM_2
 _snow5g_args_FSM_3      equ    _snow5g_args + _snow5g_arg_FSM_3
 _snow5g_args_LD_ST_MASK equ    _snow5g_args + _snow5g_arg_LD_ST_MASK
 _snow5g_args_byte_length equ   _snow5g_args + _snow5g_arg_byte_length
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; MB_MGR_SNOW5G_NCA4_OOO - state
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+START_FIELDS    ; MB_MGR_SNOW5G_NCA4_OOO extension
+;;      name                    size                    align
+FIELD   _nca4_hqp,              2*48,                   16      ; H|Q|P per lane
+FIELD   _nca4_polyval_acc,      2*16,                   16      ; persisted POLYVAL accumulator
+FIELD   _nca4_aad_len,          2*8,                    8       ; original AAD length per lane
+FIELD   _nca4_msg_len,          2*8,                    8       ; original message length per lane
+FIELD   _nca4_bytes_processed,  2*8,                    8       ; msg bytes already done
+FIELD   _nca4_digest,           2*16,                   16      ; persisted POLYVAL digest per lane
+FIELD   _nca4_phase,            2*8,                    8       ; per-lane state machine phase
+FIELD   _nca4_road_block,       8,                      8       ; sentinel for IMB_OOO_ROAD_BLOCK
+END_FIELDS
+%assign _MB_MGR_SNOW5G_NCA4_EXT_size    _FIELD_OFFSET
+
+; NCA4 absolute offsets from base of MB_MGR_SNOW5G_NCA4_OOO
+_snow5g_nca4_hqp           equ    _MB_MGR_SNOW5G_OOO_size + _nca4_hqp
+_snow5g_nca4_polyval_acc   equ    _MB_MGR_SNOW5G_OOO_size + _nca4_polyval_acc
+_snow5g_nca4_aad_len       equ    _MB_MGR_SNOW5G_OOO_size + _nca4_aad_len
+_snow5g_nca4_msg_len       equ    _MB_MGR_SNOW5G_OOO_size + _nca4_msg_len
+_snow5g_nca4_bytes_processed equ  _MB_MGR_SNOW5G_OOO_size + _nca4_bytes_processed
+_snow5g_nca4_digest        equ    _MB_MGR_SNOW5G_OOO_size + _nca4_digest
+_snow5g_nca4_phase         equ    _MB_MGR_SNOW5G_OOO_size + _nca4_phase
+_snow5g_nca4_road_block    equ    _MB_MGR_SNOW5G_OOO_size + _nca4_road_block
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC Out Of Order Data Structures
