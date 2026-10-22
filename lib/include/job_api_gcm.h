@@ -26,6 +26,7 @@
 *******************************************************************************/
 
 #include "intel-ipsec-mb.h"
+#include "clear_regs_mem.h"
 
 #ifndef JOB_API_GCM_H
 #define JOB_API_GCM_H
@@ -253,13 +254,19 @@ process_gmac(IMB_MGR *state, IMB_JOB *job, const IMB_KEY_SIZE_BYTES key_size)
 __forceinline IMB_JOB *
 process_ghash(IMB_MGR *state, IMB_JOB *job)
 {
-        /* copy initial tag value to the destination */
-        memcpy(job->auth_tag_output, job->u.GHASH._init_tag, job->auth_tag_output_len_in_bytes);
+        DECLARE_ALIGNED(uint8_t tmp_hash[IMB_AES_BLOCK_SIZE], 16);
+
+        /* copy initial tag value to the temporary storage */
+        memcpy(tmp_hash, job->u.GHASH._init_tag, sizeof(tmp_hash));
 
         /* compute new tag value */
         IMB_GHASH(state, job->u.GHASH._key, job->src + job->hash_start_src_offset_in_bytes,
-                  job->msg_len_to_hash_in_bytes, job->auth_tag_output,
-                  job->auth_tag_output_len_in_bytes);
+                  job->msg_len_to_hash_in_bytes, tmp_hash, job->auth_tag_output_len_in_bytes);
+
+        memcpy(job->auth_tag_output, tmp_hash, job->auth_tag_output_len_in_bytes);
+#ifdef SAFE_DATA
+        clear_mem(tmp_hash, sizeof(tmp_hash));
+#endif
 
         job->status |= IMB_STATUS_COMPLETED_AUTH;
         return job;

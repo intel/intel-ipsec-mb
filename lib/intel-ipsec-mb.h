@@ -502,7 +502,7 @@ typedef struct IMB_JOB {
                 struct _GHASH_specific_fields {
                         const struct gcm_key_data *_key;
                         /**< Expanded GHASH key */
-                        const void *_init_tag; /**< initial tag value */
+                        const void *_init_tag; /**< initial tag value (16 bytes) */
                 } GHASH;                       /**< GHASH specific fields */
                 struct _POLY1305_specific_fields {
                         const void *_key;
