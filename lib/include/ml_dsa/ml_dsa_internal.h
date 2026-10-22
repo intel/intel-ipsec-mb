@@ -80,6 +80,13 @@ typedef void(ML_DSA_POLY_NTT_INVERSE_FN)(struct poly_st *p);
 typedef void(ML_DSA_POLY_NTT_MULT_FN)(const struct poly_st *lhs, const struct poly_st *rhs,
                                       struct poly_st *out);
 /*
+ * NTT-domain row dot product: out = sum(row[j] * vec[j]) * 2^-32 mod q over
+ * count (4, 5 or 7) contiguous polynomials. row is in [0,q) and vec in [0,17q)
+ * (AVX2 forward NTT bias). out is canonical [0,q) and must not overlap inputs.
+ */
+typedef void(ML_DSA_POLY_NTT_DOT_FN)(const struct poly_st *row, const struct poly_st *vec,
+                                     size_t count, struct poly_st *out);
+/*
  * Polynomial kernels process exactly 256 coefficients, with uint32_t alignment.
  * Arithmetic inputs/outputs are canonical [0,q); LowBits/Decompose store signed
  * low parts as uint32_t bit patterns. In-place output is supported; Decompose's
@@ -129,6 +136,7 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_NTT_FN *poly_ntt;
         ML_DSA_POLY_NTT_INVERSE_FN *poly_ntt_inverse;
         ML_DSA_POLY_NTT_MULT_FN *poly_ntt_mult;
+        ML_DSA_POLY_NTT_DOT_FN *poly_ntt_dot;
         ML_DSA_POLY_MAP_FN *poly_high_bits;
         ML_DSA_POLY_MAP_FN *poly_low_bits;
         ML_DSA_POLY_DECOMPOSE_FN *poly_decompose;

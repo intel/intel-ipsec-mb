@@ -10,6 +10,8 @@ Library
   subtraction and norm check, and rejecting candidates at polynomial boundaries.
   This intentionally reveals which check and polynomial rejected a candidate;
   norm checks remain constant-time. Signature output is unchanged.
+- Added fused NTT-domain matrix row multiplication for ML-DSA with an AVX2
+  implementation, using a single Montgomery reduction per coefficient.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

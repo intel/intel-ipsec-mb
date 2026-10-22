@@ -1,5 +1,6 @@
 /*
  * Copyright 2024-2026 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright (c) 2026 Intel Corporation. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -18,6 +19,7 @@ void
 ml_dsa_poly_ntt_inverse_avx2(uint32_t *p_coeff);
 void
 ml_dsa_poly_ntt_mult_avx2(const uint32_t *a, const uint32_t *b, uint32_t *out);
+IMB_DLL_LOCAL ML_DSA_POLY_NTT_DOT_FN ml_dsa_poly_ntt_dot_avx2;
 
 /* Forward declarations of the base (portable C) NTT implementations */
 static void
@@ -126,6 +128,24 @@ poly_ntt_mult_base(const POLY *lhs, const POLY *rhs, POLY *out)
 }
 
 static void
+poly_ntt_dot_base(const POLY *row, const POLY *vec, size_t count, POLY *out)
+{
+        /*
+         * Montgomery reduction is linear modulo q, so reduce once per
+         * coefficient after summing the row products (FIPS 204, Algorithm 45).
+         * count <= 7, row < q and vec < 17q give sum < 119*q^2 < q*2^32, so
+         * uint64_t accumulation and a single final subtraction are enough.
+         */
+        for (unsigned i = 0; i < ML_DSA_NUM_POLY_COEFFICIENTS; i++) {
+                uint64_t sum = 0;
+
+                for (size_t j = 0; j < count; j++)
+                        sum += (uint64_t) row[j].coeff[i] * vec[j].coeff[i];
+                out->coeff[i] = reduce_montgomery(sum);
+        }
+}
+
+static void
 poly_ntt_base(POLY *p)
 {
         int i, j, k;
@@ -221,6 +241,7 @@ ossl_ml_dsa_ntt_init_base(IMB_ML_DSA *self)
         self->poly_ntt = poly_ntt_base;
         self->poly_ntt_inverse = poly_ntt_inverse_base;
         self->poly_ntt_mult = poly_ntt_mult_base;
+        self->poly_ntt_dot = poly_ntt_dot_base;
 }
 
 /**
@@ -234,4 +255,5 @@ ossl_ml_dsa_ntt_init_avx2(IMB_ML_DSA *self)
         self->poly_ntt = poly_ntt_avx2;
         self->poly_ntt_inverse = poly_ntt_inverse_avx2;
         self->poly_ntt_mult = poly_ntt_mult_avx2;
+        self->poly_ntt_dot = ml_dsa_poly_ntt_dot_avx2;
 }

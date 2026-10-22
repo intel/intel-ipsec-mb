@@ -1774,6 +1774,95 @@ ml_dsa_inverse_degree_montgomery:
 .text
 
 ###############################################################################
+# ml_dsa_poly_ntt_dot_avx2
+#
+# AVX2 NTT-domain matrix row dot product (FIPS 204, Algorithms 6-8 and 45).
+#
+# C Prototype:
+#   void ml_dsa_poly_ntt_dot_avx2(
+#       const uint32_t *row,     // (rdi) count matrix row polynomials, [0,q)
+#       const uint32_t *vec,     // (rsi) count vector polynomials, [0,17q)
+#       size_t count,            // (rdx) number of polynomials: 4, 5 or 7
+#       uint32_t *out            // (rcx) output polynomial, canonical [0,q)
+#   );
+#
+# Description:
+#   out[i] = sum(row[j][i] x vec[j][i]) x 2^-32 mod Q
+#
+#   Products are accumulated in 64-bit lanes and reduced once per coefficient.
+#   sum < 7 x 17 x Q^2 < Q x 2^32, so neither the accumulation nor the
+#   Montgomery reduction overflows and one conditional subtraction yields
+#   canonical output. out must not overlap the inputs.
+###############################################################################
+
+.globl  ml_dsa_poly_ntt_dot_avx2
+.type   ml_dsa_poly_ntt_dot_avx2,\@function,4
+.align 32
+ml_dsa_poly_ntt_dot_avx2:
+.cfi_startproc
+    endbranch
+    shl     \$10, %rdx                     # count x 1024 bytes per polynomial
+    xor     %r10d, %r10d                   # coefficient byte offset
+    vpbroadcastd ml_dsa_q(%rip), %ymm5
+
+.align 32
+.Lntt_dot_coeff_loop:
+    vpxor   %ymm2, %ymm2, %ymm2            # even coefficient sums
+    vpxor   %ymm3, %ymm3, %ymm3            # odd coefficient sums
+    lea     (%rdi,%r10), %rax
+    lea     (%rsi,%r10), %r8
+    xor     %r11d, %r11d                   # polynomial byte offset
+
+.align 32
+.Lntt_dot_poly_loop:
+    vmovdqu (%rax,%r11), %ymm0             # row[j][8 coefficients]
+    vmovdqu (%r8,%r11), %ymm1              # vec[j][8 coefficients]
+    vpmuludq %ymm1, %ymm0, %ymm4           # even products
+    vpaddq  %ymm4, %ymm2, %ymm2
+    vmovshdup %ymm0, %ymm0
+    vmovshdup %ymm1, %ymm1
+    vpmuludq %ymm1, %ymm0, %ymm0           # odd products
+    vpaddq  %ymm0, %ymm3, %ymm3
+
+    add     \$1024, %r11
+    cmp     %rdx, %r11
+    jb      .Lntt_dot_poly_loop
+
+    # Montgomery reduction: (S + (S x -Q^-1 mod 2^32) x Q) / 2^32
+    vpbroadcastq ml_dsa_q_neg_inv(%rip), %ymm4
+    vpmuludq %ymm4, %ymm2, %ymm0
+    vpmuludq %ymm4, %ymm3, %ymm1
+    vpmuludq %ymm5, %ymm0, %ymm0
+    vpmuludq %ymm5, %ymm1, %ymm1
+    vpaddq  %ymm0, %ymm2, %ymm2
+    vpaddq  %ymm1, %ymm3, %ymm3
+
+    # take high dwords and interleave even/odd results back into order
+    vmovshdup %ymm2, %ymm2
+    vpblendd \$0xaa, %ymm3, %ymm2, %ymm0
+
+    # [0,2Q) -> [0,Q): min(x, x - Q) with unsigned wrap
+    vpsubd  %ymm5, %ymm0, %ymm4
+    vpminud %ymm4, %ymm0, %ymm0
+    vmovdqu %ymm0, (%rcx,%r10)
+
+    add     \$32, %r10
+    cmp     \$1024, %r10
+    jb      .Lntt_dot_coeff_loop
+
+    # clear YMM registers to prevent leakage of intermediate values
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_dsa_poly_ntt_dot_avx2, .-ml_dsa_poly_ntt_dot_avx2
+
+###############################################################################
 # ml_dsa_poly_ntt_mult_avx2
 #
 # AVX2 implementation of FIPS 204, Algorithm 45 (MultiplyNTT).
