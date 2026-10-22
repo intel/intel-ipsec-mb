@@ -12,6 +12,8 @@ Library
   norm checks remain constant-time. Signature output is unchanged.
 - Added fused NTT-domain matrix row multiplication for ML-DSA with an AVX2
   implementation, using a single Montgomery reduction per coefficient.
+- Optimized ML-DSA AVX2 forward and inverse NTT: fewer butterfly shuffles,
+  fixed permutes in the first inverse level and Shoup based inverse scaling.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

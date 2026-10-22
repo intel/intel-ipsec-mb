@@ -137,10 +137,10 @@ my @zetas_fwd = (
 # Precomputed zeta_qinv = (zeta * QINV) mod 2^32 for each entry in @zetas_fwd
 my @zetas_fwd_qinv = map { int(($_ * $QINV) % (2**32)) } @zetas_fwd;
 
-#  The multiplicative inverse of 256 mod Q, in Montgomery form is
-#  ((256^{-1} mod Q) * ((2^32 * 2^32) mod Q)) mod Q = (8347681 * 2365951) mod 8380417
-#  N = 256 is the polynomial degree (FIPS 204, Table 1)
-my $inverse_degree_montgomery = 41978;
+# Inverse NTT scaling factor C = N^-1 * R mod Q = 16382 = 2^14 - 2, where
+# N = 256 (FIPS 204, Algorithm 42) and R = 2^32. R cancels the R^-1 left by
+# pointwise Montgomery multiplication. Shoup multiplier: floor(C * R / Q).
+my $inverse_degree_shoup = 8395782;
 
 # Byte offset from a 256-entry zeta table to its immediately-following companion
 # qinv table (256 entries × 4 bytes/entry = 1024 bytes).
@@ -167,14 +167,11 @@ ___
 #   correction itself). A single conditional subtract reduces the final result
 #   to [0, Q).
 #
-#   Still used in two places:
-#     1. intt_levels5to7 - 1/N normalization (8 calls after the last INTT butterfly level)
-#     2. poly_ntt_mult_avx2 - pointwise NTT-domain polynomial multiplication
+#   Used by poly_ntt_mult_avx2 for pointwise NTT-domain multiplication.
 #
 #   NOTE: The NTT/INTT butterfly operations use a separate inlined signed multiply
 #   (vpmuldq + QINV) rather than calling this subroutine, because the signed butterfly
-#   chain does not need strict [0, Q) output. This subroutine is kept for the two
-#   callers above which require strict [0, Q) output.
+#   chain does not need strict [0, Q) output.
 #
 # Parameters:
 #   inA       - Input YMM containing 8 unsigned 32-bit values (A), range [0, ~384Q)
@@ -183,10 +180,6 @@ ___
 #   tmp0-tmp2 - Temporary registers for intermediate values
 #   q_neg_inv - YMM containing -Q^{-1} mod 2^32 (= 4236238847) broadcast 64-bit
 #   q         - YMM containing modulus Q (broadcast 32-bit)
-#   bcast32   - if 1, `inB` is assumed to have each qword formed by
-#               repeating its low dword (DW|DW). Multiplication uses only
-#               the low dword, avoiding the need for `vmovshdup` when
-#               zetas are uniform across all lanes of `inA`.
 #
 # Output:
 #   out      - Resulting 8 packed 32-bit integers, each (A * B * R^{-1}) mod Q,
@@ -201,29 +194,15 @@ ___
 sub multiply_mod_Q {
     my ($inA, $inB, $out,
         $tmp0, $tmp1, $tmp2,
-        $q_neg_inv, $q, $bcast32) = @_;
-
-    if (!defined($bcast32)) {
-        $bcast32 = 0;
-    }
+        $q_neg_inv, $q) = @_;
 
     $code .= <<___;
     # multiply even-lane 32-bit elements (low dword of each 64-bit lane)
     vpmuludq $inA, $inB, $tmp0
     # shift each odd dword into the low position of its 64-bit lane for vpmuludq
     vmovshdup $inA, $tmp1
-___
-    if ($bcast32 == 0) {
-        $code .= <<___;
     vmovshdup $inB, $tmp2
     vpmuludq $tmp1, $tmp2, $tmp1  # multiply odd indexes
-___
-    } else {
-        $code .= <<___;
-    vpmuludq $tmp1, $inB, $tmp1
-___
-    }
-    $code .= <<___;
     # compute Montgomery correction factor
     vpmuludq $q_neg_inv, $tmp0, $out
     vpmuludq $q_neg_inv, $tmp1, $tmp2
@@ -1239,6 +1218,51 @@ ___
 }
 
 ###############################################################################
+# intt_normalize
+#
+# Description:
+#   Inverse NTT scaling by C = 16382 using fixed-factor Shoup multiplication.
+#   For a in [0, 2^32) and M = floor(C * 2^32 / Q), t = floor(a * M / 2^32)
+#   underestimates floor(a * C / Q) by at most one, so a * C - t * Q is in
+#   [0, 2Q) and one conditional subtraction gives a canonical result.
+#
+# Parameters:
+#   a         - Input/output YMM with 8 unsigned 32-bit values
+#   tmp0-tmp2 - Temporary registers for intermediate values
+#   m         - YMM containing the Shoup multiplier M (broadcast 32-bit)
+#   q         - YMM containing modulus Q (broadcast 32-bit)
+#
+# Output:
+#   a         - (a * C) mod Q, in range [0, Q)
+#
+# Side effects:
+#   Clobbers tmp0, tmp1, tmp2
+###############################################################################
+sub intt_normalize {
+    my ($a, $tmp0, $tmp1, $tmp2, $m, $q) = @_;
+
+    $code .= <<___;
+    # t = floor(a * M / 2^32) for even and odd lanes, merged into one vector
+    vpmuludq $m, $a, $tmp0
+    vmovshdup $a, $tmp1
+    vpmuludq $m, $tmp1, $tmp1
+    vmovshdup $tmp0, $tmp0
+    vpblendd \$0xaa, $tmp1, $tmp0, $tmp0
+
+    # a * C - t * Q mod 2^32, with a * C = (a << 14) - 2a
+    vpmulld $q, $tmp0, $tmp0
+    vpslld \$14, $a, $tmp1
+    vpaddd $a, $a, $tmp2
+    vpsubd $tmp2, $tmp1, $a
+    vpsubd $tmp0, $a, $a
+
+    # [0, 2Q) -> [0, Q)
+    vpsubd $q, $a, $tmp0
+    vpminud $tmp0, $a, $a
+___
+}
+
+###############################################################################
 # intt_levels5to7
 #
 # Description:
@@ -1246,7 +1270,7 @@ ___
 #
 #   It completes the hierarchical merging of INTT, applying stage-specific zeta
 #   (twiddle) factors and modular butterfly operations for each level, and performs the final
-#   post-processing Montgomery multiplication at the end of the transform.
+#   fixed-factor normalization at the end of the transform (FIPS 204, Algorithm 42).
 #
 #   It must be invoked 4 times with offsets equal to 0*4, 8*4, 16*4 and 24*4 to cover
 #   all 256 coefficients.
@@ -1256,9 +1280,9 @@ ___
 #   - Level 6: offset =  64, step = 2;   zeta indexes (new) = 252, 253
 #   - Level 7: offset = 128, step = 1;   zeta index   (new) = 254
 #
-#   After all INTT levels, multiplies the output by the Montgomery factor
-#   corresponding to the inverse transform scaling (usually the modular inverse of the
-#   NTT degree in Montgomery form), to obtain the final reduced coefficients.
+#   After all INTT levels, multiplies the output by N^-1 * R mod Q = 16382
+#   using intt_normalize's fixed-factor reduction, to obtain the final reduced
+#   coefficients. The factor R cancels the R^-1 from pointwise multiplication.
 #
 # Prerequisites:
 #   %rdi    - pointer to the coefficients array
@@ -1269,7 +1293,8 @@ ___
 #   $off    - offset (in bytes) to the start of the 8-coefficient group
 #
 # Output:
-#   Overwrites memory at the given offset with the INTT-processed coefficients.
+#   Overwrites memory at the given offset with the INTT-processed coefficients
+#   in canonical range [0, Q).
 #
 # Notes:
 #   - This subroutine must be called 4 times with appropriate offsets to process
@@ -1378,12 +1403,12 @@ ___
                     "%ymm15", 7);
 $code .= <<___;
 
-    # Bias INTT outputs by +128Q before unsigned Montgomery 1/N scaling.
+    # Bias INTT outputs by +128Q before unsigned fixed-factor 1/N scaling.
     # Without per-butterfly +Q, n_even sums can accumulate over 8 levels.
     # In the worst case n_even pairs with another biased n_even at each level,
     # doubling the deficit: after 8 levels the minimum value is ~-128Q.
     # Adding 128Q guarantees all values >= 0, giving a max of ~384Q < 2^32
-    # which multiply_mod_Q handles correctly (result still in [0, Q)).
+    # which intt_normalize handles correctly (result still in [0, Q)).
     # Adding a multiple of Q does not affect the result modulo Q.
     vpslld  \$7, %ymm15, %ymm12       # ymm12 = 128 * Q
     vpaddd  %ymm12, %ymm0, %ymm0
@@ -1396,35 +1421,13 @@ $code .= <<___;
     vpaddd  %ymm12, %ymm7, %ymm7
 
     # ==============================================================
-    # 1/N scaling: multiply each coefficient by N^{-1} in Montgomery form
-    vpbroadcastq ml_dsa_q_neg_inv(%rip), %ymm14
-    vpbroadcastd ml_dsa_inverse_degree_montgomery(%rip), %ymm13
+    # 1/N scaling (FIPS 204, Algorithm 42)
+    vpbroadcastd ml_dsa_inverse_degree_shoup(%rip), %ymm14
 ___
-
-    &multiply_mod_Q("%ymm0", "%ymm13", "%ymm0",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
-    &multiply_mod_Q("%ymm4", "%ymm13", "%ymm4",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
-    &multiply_mod_Q("%ymm1", "%ymm13", "%ymm1",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
-    &multiply_mod_Q("%ymm5", "%ymm13", "%ymm5",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
-    &multiply_mod_Q("%ymm2", "%ymm13", "%ymm2",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
-    &multiply_mod_Q("%ymm6", "%ymm13", "%ymm6",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
-    &multiply_mod_Q("%ymm3", "%ymm13", "%ymm3",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
-    &multiply_mod_Q("%ymm7", "%ymm13", "%ymm7",
-                    "%ymm10", "%ymm11", "%ymm12",
-                    "%ymm14", "%ymm15", 1);
+    for my $reg (0, 4, 1, 5, 2, 6, 3, 7) {
+        &intt_normalize("%ymm$reg", "%ymm10", "%ymm11", "%ymm12",
+                        "%ymm14", "%ymm15");
+    }
 
 $code .= <<___;
 
@@ -1669,10 +1672,10 @@ ml_dsa_q:
 ml_dsa_q_neg_inv:
     .quad $ML_DSA_Q_NEG_INV
 
-# N^{-1} mod Q in Montgomery form - for INTT 1/N scaling (FIPS 204, Table 1: N = 256)
-.align 8
-ml_dsa_inverse_degree_montgomery:
-    .quad $inverse_degree_montgomery
+# Shoup quotient multiplier for INTT normalization (FIPS 204, Algorithm 42).
+.align 4
+ml_dsa_inverse_degree_shoup:
+    .long $inverse_degree_shoup
 
 ###############################################################################
 ###############################################################################
@@ -1844,7 +1847,7 @@ ___
 
     &multiply_mod_Q("%ymm0", "%ymm1", "%ymm0",  # A, B, out (AxB)
                     "%ymm8", "%ymm9", "%ymm10", # tmp
-                    "%ymm14", "%ymm15", 0);     # qinv, q, bcast32
+                    "%ymm14", "%ymm15");        # qinv, q
 
 $code .= <<___;
     # store result to output
