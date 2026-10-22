@@ -6,6 +6,10 @@ Library
 - Added AVX2 implementations of ML-DSA polynomial rounding (HighBits, LowBits,
   Decompose, MakeHint), modular addition/subtraction, norm checks, hint counting
   and w1/z packing.
+- Reduced ML-DSA signing work by reusing decomposition low parts, fusing their
+  subtraction and norm check, and rejecting candidates at polynomial boundaries.
+  This intentionally reveals which check and polynomial rejected a candidate;
+  norm checks remain constant-time. Signature output is unchanged.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

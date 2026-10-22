@@ -264,8 +264,10 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
          */
         for (kappa = 0; kappa + l <= ML_DSA_KAPPA_MAX; kappa += l) {
                 VECTOR *y_ntt = &cs1;
-                VECTOR *r0 = &w1;
+                VECTOR *w0 = &sig.hint;
                 VECTOR *ct0 = &w1;
+                uint32_t h_ones = 0;
+                size_t i;
 
                 self->vector_expand_mask(&y, rho_prime, (uint32_t) kappa, gamma1, md_ctx,
                                          priv->shake256_md);
@@ -275,7 +277,13 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                 matrix_mult_vector(self, &a_ntt, y_ntt, &w);
                 vector_ntt_inverse(self, &w);
 
-                vector_high_bits(self, &w, &w1);
+                /*
+                 * Keep both parts of w (FIPS 204, Algorithm 36). w0 is stored in
+                 * the hint buffer, which is not written until the checks for its
+                 * row pass. w1 is reused for ct0 once encoded.
+                 */
+                for (i = 0; i < k; i++)
+                        self->poly_decompose(w.poly + i, w1.poly + i, w0->poly + i);
                 if (!ossl_ml_dsa_w1_encode(self, &w1, gamma2, w1_encoded, w1_encoded_len))
                         break;
 
@@ -287,44 +295,62 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
                                              priv->shake256_md, params->tau))
                         break;
 
-                vector_mult_scalar(self, &s1_ntt, c_ntt, &cs1);
-                vector_ntt_inverse(self, &cs1);
-                vector_mult_scalar(self, &s2_ntt, c_ntt, &cs2);
-                vector_ntt_inverse(self, &cs2);
-
-                vector_add(self, &y, &cs1, &sig.z);
-
-                /* r0 = lowbits(w - cs2) */
-                vector_sub(self, &w, &cs2, r0);
-                vector_low_bits(self, r0, r0);
-
                 /*
-                 * Leaking that the signature is rejected is fine: the next attempt
-                 * is (indistinguishable from) independent of this one, so an
-                 * observer learns nothing about the secret key beyond the number of
-                 * iterations, which is itself safe to reveal.
-                 * Declassify the bound-check output so that Valgrind does not flag
-                 * these intentional leaks.
+                 * Reject at polynomial boundaries (FIPS 204, Algorithm 7). This
+                 * intentionally reveals which check and polynomial rejected the
+                 * attempt, not only the number of attempts (see the Dilithium
+                 * Round 3 specification, Section 5.5). Each norm check still
+                 * scans all coefficients and only its result is declassified.
+                 *
+                 * z is checked first so rejected attempts skip computing c*s2.
                  */
-                const uint32_t z_bad = vector_chknorm(self, &sig.z, gamma1 - params->beta);
-                const uint32_t r0_bad = vector_chknorm_signed(self, r0, gamma2 - params->beta);
-
-                if (constant_time_declassify_u32(z_bad | r0_bad))
+                for (i = 0; i < l; i++) {
+                        self->poly_ntt_mult(s1_ntt.poly + i, c_ntt, cs1.poly + i);
+                        self->poly_ntt_inverse(cs1.poly + i);
+                        self->poly_add(y.poly + i, cs1.poly + i, sig.z.poly + i);
+                        if (constant_time_declassify_u32(
+                                    self->poly_chknorm(sig.z.poly + i, gamma1 - params->beta)))
+                                break;
+                }
+                if (i != l)
                         continue;
 
-                vector_mult_scalar(self, &t0_ntt, c_ntt, ct0);
-                vector_ntt_inverse(self, ct0);
-                vector_make_hint(self, ct0, &cs2, &w, &sig.hint);
+                for (i = 0; i < k; i++) {
+                        self->poly_ntt_mult(s2_ntt.poly + i, c_ntt, cs2.poly + i);
+                        self->poly_ntt_inverse(cs2.poly + i);
+                        /*
+                         * |c*s2| <= beta, so |w0 - centered(c*s2)| < gamma2 - beta
+                         * is equivalent to the LowBits(w - c*s2) norm check:
+                         * crossing a Decompose boundary, including the q-1 case,
+                         * leaves both norms >= gamma2 - beta.
+                         */
+                        if (constant_time_declassify_u32(self->poly_sub_chknorm(
+                                    w0->poly + i, cs2.poly + i, gamma2 - params->beta)))
+                                break;
+                }
+                if (i != k)
+                        continue;
 
-                const uint32_t ct0_bad = vector_chknorm(self, ct0, gamma2);
-                const uint32_t h_ones = (uint32_t) vector_count_ones(self, &sig.hint);
+                /* Compute c*t0 and hints only once all r0 checks pass */
+                for (i = 0; i < k; i++) {
+                        self->poly_ntt_mult(t0_ntt.poly + i, c_ntt, ct0->poly + i);
+                        self->poly_ntt_inverse(ct0->poly + i);
+                        if (constant_time_declassify_u32(self->poly_chknorm(ct0->poly + i, gamma2)))
+                                break;
 
-                /* Same reasoning applies to the leak as above */
-                if (constant_time_declassify_u32(ct0_bad | constant_time_lt(params->omega, h_ones)))
+                        /* MakeHint uses w and c*s2, not w0 */
+                        self->poly_make_hint(ct0->poly + i, cs2.poly + i, w.poly + i,
+                                             sig.hint.poly + i);
+                        h_ones += self->poly_count_ones(sig.hint.poly + i);
+                        /* h_ones only grows, so reject as soon as it exceeds omega */
+                        if (constant_time_declassify_u32(constant_time_lt(params->omega, h_ones)))
+                                break;
+                }
+                if (i != k)
                         continue;
 
                 /*
-                 * The iteration has passed both rejection tests: the signature is
+                 * The iteration has passed all rejection tests: the signature is
                  * accepted.  Declassify all three public outputs before encoding.
                  *
                  * sig.z and sig.hint were computed from secret key material (s1,
