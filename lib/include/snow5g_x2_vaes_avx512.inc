@@ -50,42 +50,6 @@ byte_len_to_mask_table_nca4:
         dw      0xffff
 
 mksection .text
-%xdefine TEMP0                   ymm0
-%xdefine TEMP1                   ymm1
-%xdefine TEMP2                   ymm2
-%xdefine TEMP3                   ymm3
-
-%xdefine FSM_R1_L01             ymm12
-%xdefine FSM_R2_L01             ymm13
-%xdefine FSM_R3_L01             ymm14
-%xdefine FSM_R1_L23             ymm15
-%xdefine FSM_R2_L23             ymm16
-%xdefine FSM_R3_L23             ymm17
-%xdefine FSM_R1_L45             ymm18
-%xdefine FSM_R2_L45             ymm19
-%xdefine FSM_R3_L45             ymm20
-%xdefine FSM_R1_L67             ymm21
-%xdefine FSM_R2_L67             ymm22
-%xdefine FSM_R3_L67             ymm23
-
-%xdefine LFSR_A_LDQ_L01         ymm24
-%xdefine LFSR_A_HDQ_L01         ymm25
-%xdefine LFSR_B_LDQ_L01         ymm26
-%xdefine LFSR_B_HDQ_L01         ymm27
-%xdefine LFSR_A_LDQ_L23         ymm28
-%xdefine LFSR_A_HDQ_L23         ymm29
-%xdefine LFSR_B_LDQ_L23         ymm30
-%xdefine LFSR_B_HDQ_L23         ymm31
-
-%xdefine LFSR_A_LDQ_L45         ymm11
-%xdefine LFSR_A_HDQ_L45         ymm10
-%xdefine LFSR_B_LDQ_L45         ymm9
-%xdefine LFSR_B_HDQ_L45         ymm8
-
-%xdefine LFSR_A_LDQ_L67         ymm7
-%xdefine LFSR_A_HDQ_L67         ymm6
-%xdefine LFSR_B_LDQ_L67         ymm5
-%xdefine LFSR_B_HDQ_L67         ymm4
 
 %ifdef LINUX
 %define arg1    rdi
@@ -282,26 +246,33 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Store/load LFSR and FSM state to/from memory (lane pair 0 only)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro LFSR_FSM_STATE_X2 2
-%define %%PTR   %1
-%define %%TYPE  %2
+%macro LFSR_FSM_STATE_X2 9
+%define %%PTR           %1
+%define %%TYPE          %2
+%define %%FSM_R1        %3  ;; [in/out] ymm: lane-pair FSM_R1
+%define %%FSM_R2        %4  ;; [in/out] ymm: lane-pair FSM_R2
+%define %%FSM_R3        %5  ;; [in/out] ymm: lane-pair FSM_R3
+%define %%LFSR_A_LDQ    %6  ;; [in/out] ymm: lane-pair LFSR_A_LDQ
+%define %%LFSR_A_HDQ    %7  ;; [in/out] ymm: lane-pair LFSR_A_HDQ
+%define %%LFSR_B_LDQ    %8  ;; [in/out] ymm: lane-pair LFSR_B_LDQ
+%define %%LFSR_B_HDQ    %9  ;; [in/out] ymm: lane-pair LFSR_B_HDQ
 
 %ifidn %%TYPE, STORE
-        vmovdqa64      [%%PTR + _snow5g_args_LFSRA_LO], LFSR_A_LDQ_L01
-        vmovdqa64      [%%PTR + _snow5g_args_LFSRA_HI], LFSR_A_HDQ_L01
-        vmovdqa64      [%%PTR + _snow5g_args_LFSRB_LO], LFSR_B_LDQ_L01
-        vmovdqa64      [%%PTR + _snow5g_args_LFSRB_HI], LFSR_B_HDQ_L01
-        vmovdqa64      [%%PTR + _snow5g_args_FSM_1], FSM_R1_L01
-        vmovdqa64      [%%PTR + _snow5g_args_FSM_2], FSM_R2_L01
-        vmovdqa64      [%%PTR + _snow5g_args_FSM_3], FSM_R3_L01
+        vmovdqa64      [%%PTR + _snow5g_args_LFSRA_LO], %%LFSR_A_LDQ
+        vmovdqa64      [%%PTR + _snow5g_args_LFSRA_HI], %%LFSR_A_HDQ
+        vmovdqa64      [%%PTR + _snow5g_args_LFSRB_LO], %%LFSR_B_LDQ
+        vmovdqa64      [%%PTR + _snow5g_args_LFSRB_HI], %%LFSR_B_HDQ
+        vmovdqa64      [%%PTR + _snow5g_args_FSM_1], %%FSM_R1
+        vmovdqa64      [%%PTR + _snow5g_args_FSM_2], %%FSM_R2
+        vmovdqa64      [%%PTR + _snow5g_args_FSM_3], %%FSM_R3
 %else
-        vmovdqa64      LFSR_A_LDQ_L01, [%%PTR + _snow5g_args_LFSRA_LO]
-        vmovdqa64      LFSR_A_HDQ_L01, [%%PTR + _snow5g_args_LFSRA_HI]
-        vmovdqa64      LFSR_B_LDQ_L01, [%%PTR + _snow5g_args_LFSRB_LO]
-        vmovdqa64      LFSR_B_HDQ_L01, [%%PTR + _snow5g_args_LFSRB_HI]
-        vmovdqa64      FSM_R1_L01, [%%PTR + _snow5g_args_FSM_1]
-        vmovdqa64      FSM_R2_L01, [%%PTR + _snow5g_args_FSM_2]
-        vmovdqa64      FSM_R3_L01, [%%PTR + _snow5g_args_FSM_3]
+        vmovdqa64      %%LFSR_A_LDQ, [%%PTR + _snow5g_args_LFSRA_LO]
+        vmovdqa64      %%LFSR_A_HDQ, [%%PTR + _snow5g_args_LFSRA_HI]
+        vmovdqa64      %%LFSR_B_LDQ, [%%PTR + _snow5g_args_LFSRB_LO]
+        vmovdqa64      %%LFSR_B_HDQ, [%%PTR + _snow5g_args_LFSRB_HI]
+        vmovdqa64      %%FSM_R1, [%%PTR + _snow5g_args_FSM_1]
+        vmovdqa64      %%FSM_R2, [%%PTR + _snow5g_args_FSM_2]
+        vmovdqa64      %%FSM_R3, [%%PTR + _snow5g_args_FSM_3]
 %endif
 %endmacro
 
@@ -449,7 +420,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SNOW5G cipher - generates keystream blocks for lane pair 0 (2 buffers)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW5G_KEYSTREAM_X2 9
+%macro SNOW5G_KEYSTREAM_X2 25
 %xdefine %%STATE_PTR            %1  ;; [in] FSM_LFSR state structure pointer
 %xdefine %%COUNT                %2  ;; [in/clobbered] number of 16-byte blocks
 %xdefine %%SRC_PTRS             %3  ;; [in] address of array of pointers to src
@@ -459,23 +430,40 @@ endstruc
 %xdefine %%TGP0                 %7  ;; [clobbered] temporary 64bit register
 %xdefine %%TGP1                 %8  ;; [clobbered] temporary 64bit register
 %xdefine %%KREG1                %9  ;; [in] k-register with LP_INIT_MASK for pair 0
+%xdefine %%FSM_R1               %10 ;; [in/out] ymm: lane-pair-0 FSM_R1 (state)
+%xdefine %%FSM_R2               %11 ;; [in/out] ymm: lane-pair-0 FSM_R2 (state)
+%xdefine %%FSM_R3               %12 ;; [in/out] ymm: lane-pair-0 FSM_R3 (state)
+%xdefine %%LFSR_A_LDQ           %13 ;; [in/out] ymm: lane-pair-0 LFSR_A_LDQ (state)
+%xdefine %%LFSR_A_HDQ           %14 ;; [in/out] ymm: lane-pair-0 LFSR_A_HDQ (state)
+%xdefine %%LFSR_B_LDQ           %15 ;; [in/out] ymm: lane-pair-0 LFSR_B_LDQ (state)
+%xdefine %%LFSR_B_HDQ           %16 ;; [in/out] ymm: lane-pair-0 LFSR_B_HDQ (state)
+%xdefine %%LFSR_A_NEW_SCR       %17 ;; [clobbered] ymm scratch (LFSR_UPDATE new-A)
+%xdefine %%LFSR_B_NEW_SCR       %18 ;; [clobbered] ymm scratch (LFSR_UPDATE new-B)
+%xdefine %%KEYSTREAM_SCR        %19 ;; [clobbered] ymm scratch (keystream save)
+%xdefine %%TEMP1_SCR            %20 ;; [clobbered] ymm scratch
+%xdefine %%TEMP2_SCR            %21 ;; [clobbered] ymm scratch
+%xdefine %%CONST_SIGMA_REG      %22 ;; [clobbered] ymm: loaded with sigma constant
+%xdefine %%CONST_ALPHA_REG      %23 ;; [clobbered] ymm: loaded with alpha constant
+%xdefine %%CONST_BETA_REG       %24 ;; [clobbered] ymm: loaded with beta constant
+%xdefine %%CONST_ZERO_REG       %25 ;; [clobbered] ymm: zeroed (AES round key)
 
         test            DWORD(%%COUNT), DWORD(%%COUNT)
         jz              %%end_key_stream_x2
 
         xor             %%OFFSET0, %%OFFSET0
         xor             %%OFFSET1, %%OFFSET1
-        LFSR_FSM_STATE_X2 %%STATE_PTR, LOAD
+        LFSR_FSM_STATE_X2 %%STATE_PTR, LOAD, %%FSM_R1, %%FSM_R2, %%FSM_R3, \
+                %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ
 
         mov             r12, [%%DST_PTRS + 0]
         mov             r13, [%%DST_PTRS + 8]
         kmovw           k2, [%%STATE_PTR + _snow5g_args_LD_ST_MASK + 0]
         kmovw           k3, [%%STATE_PTR + _snow5g_args_LD_ST_MASK + 2]
 
-        vmovdqa64       FSM_R2_L23, [rel sigma]
-        vmovdqa64       FSM_R3_L23, [rel alpha]
-        vmovdqa64       FSM_R1_L45, [rel beta]
-        vpxorq          FSM_R2_L45, FSM_R2_L45, FSM_R2_L45
+        vmovdqa64       %%CONST_SIGMA_REG, [rel sigma]
+        vmovdqa64       %%CONST_ALPHA_REG, [rel alpha]
+        vmovdqa64       %%CONST_BETA_REG, [rel beta]
+        vpxorq          %%CONST_ZERO_REG, %%CONST_ZERO_REG, %%CONST_ZERO_REG
 
         ;; Compute offset increment values: 16 if lane in WORK mode (mask != 0), else 0
         xor             DWORD(%%TGP0), DWORD(%%TGP0)
@@ -494,17 +482,20 @@ endstruc
         mov             %%TGP1, [%%SRC_PTRS + 8]
 align_loop
 %%next_keyword_x2:
-        SNOW5G_ENC_DEC_LANE_PAIR_X2 FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
-                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                LFSR_B_HDQ_L67, LFSR_B_LDQ_L67, LFSR_A_HDQ_L67, FSM_R3_L45, FSM_R1_L67, %%TGP0, %%TGP1, r12, r13, %%OFFSET0, \
-                %%OFFSET1, FSM_R2_L23, FSM_R3_L23, FSM_R1_L45, FSM_R2_L45
+        SNOW5G_ENC_DEC_LANE_PAIR_X2 %%FSM_R1, %%FSM_R2, %%FSM_R3, \
+                %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, \
+                %%LFSR_A_NEW_SCR, %%LFSR_B_NEW_SCR, %%KEYSTREAM_SCR, %%TEMP1_SCR, %%TEMP2_SCR, \
+                %%TGP0, %%TGP1, r12, r13, %%OFFSET0, %%OFFSET1, \
+                %%CONST_SIGMA_REG, %%CONST_ALPHA_REG, %%CONST_BETA_REG, %%CONST_ZERO_REG
 
         ;; Add 16 bytes to offsets only in working mode (where k2/k3 are non zero)
         add             %%OFFSET0, [rsp + _offset0_inc]
         add             %%OFFSET1, [rsp + _offset1_inc]
         dec             %%COUNT
         jnz             %%next_keyword_x2
-        LFSR_FSM_STATE_X2 %%STATE_PTR, STORE
+
+        LFSR_FSM_STATE_X2 %%STATE_PTR, STORE, %%FSM_R1, %%FSM_R2, %%FSM_R3, \
+                %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ
 
 %%end_key_stream_x2:
 
@@ -528,24 +519,25 @@ align_loop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; XOR key data into a register for a lane pair
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro XOR_KEY_INTO_REG 5
+%macro XOR_KEY_INTO_REG 6
 %define %%KEY_PTRS      %1  ;; [in] pointer to array of key pointers
 %define %%LANE_LO       %2  ;; [in] low lane index
 %define %%LANE_HI       %3  ;; [in] high lane index
 %define %%OFFSET        %4  ;; [in] offset within key (0 or 16)
 %define %%REG           %5  ;; [in/out] register to XOR into
+%define %%TMP           %6  ;; [clobbered] temporary ymm register
         mov     r10, [%%KEY_PTRS + %%LANE_LO * 8]
         mov     r11, [%%KEY_PTRS + %%LANE_HI * 8]
-        vmovdqu32 XWORD(TEMP0), [r10 + %%OFFSET]
-        vinserti32x4 TEMP0, TEMP0, [r11 + %%OFFSET], 1
-        vpxorq  %%REG, %%REG, TEMP0
+        vmovdqu32 XWORD(%%TMP), [r10 + %%OFFSET]
+        vinserti32x4 %%TMP, %%TMP, [r11 + %%OFFSET], 1
+        vpxorq  %%REG, %%REG, %%TMP
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; NCA4 cipher: encrypt/decrypt 16 bytes per lane, clock FSM and update LFSR
 ;; %%LANE_MASK: BOTH_LANES, LANE0_ONLY, or LANE1_ONLY
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro NCA4_CIPHER_LANE_PAIR 17
+%macro NCA4_CIPHER_LANE_PAIR 19
 %define %%FSM_R1               %1   ;; [in/out] FSM R1 register
 %define %%FSM_R2               %2   ;; [in/out] FSM R2 register
 %define %%FSM_R3               %3   ;; [in/out] FSM R3 register
@@ -563,6 +555,8 @@ align_loop
 %define %%OFFSET               %15  ;; [in] current byte offset into src/dst buffers
 %define %%KREG_INIT            %16  ;; [in] k-register mask for INIT phase
 %define %%LANE_MASK            %17  ;; [in] BOTH_LANES, LANE0_ONLY, or LANE1_ONLY
+%define %%LFSR_A_NEW           %18  ;; [clobbered] ymm register for new LFSR_A_HDQ
+%define %%LFSR_B_NEW           %19  ;; [clobbered] ymm register for new LFSR_B_HDQ
 
         vpaddw          %%TEMP1, %%LFSR_B_HDQ, %%FSM_R1
         vpxord          %%TEMP1, %%TEMP1, %%FSM_R2
@@ -586,7 +580,7 @@ align_loop
 %endif
 
         SNOW5G_FSM_CLOCK_2 %%FSM_R1, %%FSM_R2, %%FSM_R3, %%LFSR_A_HDQ, %%TEMP1, %%TEMP2
-        SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, LFSR_B_HDQ_L67, LFSR_B_LDQ_L67, {[rsp + %%KEYSTREAM_SAVE]}, %%KREG_INIT, %%TEMP1, %%TEMP2
+        SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_NEW, %%LFSR_B_NEW, {[rsp + %%KEYSTREAM_SAVE]}, %%KREG_INIT, %%TEMP1, %%TEMP2
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -642,12 +636,12 @@ align_loop
                 %%TEMP0, %%TEMP1, 0, 0, 0, 0, r10, r11, %%K_ONES, k3, 1
         dec     DWORD(%%LOOP_CTR)
         jnz     %%init_loop_x2
-        XOR_KEY_INTO_REG %%KEY_PTRS, 0, 1, 0,  %%FSM_R1
+        XOR_KEY_INTO_REG %%KEY_PTRS, 0, 1, 0,  %%FSM_R1, %%TEMP0
         SNOW5G_ENC_DEC_LANE_PAIR 0, %%FSM_R1, %%FSM_R2, %%FSM_R3, \
                 %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, \
                 %%SAVE_A, %%SAVE_B, %%KEYSTREAM_OFF, \
                 %%TEMP0, %%TEMP1, 0, 0, 0, 0, r10, r11, %%K_ONES, k3, 1
-        XOR_KEY_INTO_REG %%KEY_PTRS, 0, 1, 16, %%FSM_R1
+        XOR_KEY_INTO_REG %%KEY_PTRS, 0, 1, 16, %%FSM_R1, %%TEMP0
 %endmacro
 
 ;; Store 2-lane state (lanes 0 and 1, 112 bytes each)
@@ -676,23 +670,30 @@ align_loop
         vextracti32x4   [%%STATE_PTR + 1*112 + 6*16], %%LFSR_B_HDQ, 1
 %endmacro
 
-;; Load 2-lane state (lanes 0 and 1, 112 bytes each) into L01 registers
-%macro STATE_LOAD_NCA4_X2 1
+;; Load 2-lane state (lanes 0 and 1, 112 bytes each)
+%macro STATE_LOAD_NCA4_X2 8
 %define %%STATE_PTR     %1
-        vmovdqu32       XWORD(FSM_R1_L01),    [%%STATE_PTR + 0*112 + 0*16]
-        vinserti32x4    FSM_R1_L01,    FSM_R1_L01,    [%%STATE_PTR + 1*112 + 0*16], 1
-        vmovdqu32       XWORD(FSM_R2_L01),    [%%STATE_PTR + 0*112 + 1*16]
-        vinserti32x4    FSM_R2_L01,    FSM_R2_L01,    [%%STATE_PTR + 1*112 + 1*16], 1
-        vmovdqu32       XWORD(FSM_R3_L01),    [%%STATE_PTR + 0*112 + 2*16]
-        vinserti32x4    FSM_R3_L01,    FSM_R3_L01,    [%%STATE_PTR + 1*112 + 2*16], 1
-        vmovdqu32       XWORD(LFSR_A_LDQ_L01),[%%STATE_PTR + 0*112 + 3*16]
-        vinserti32x4    LFSR_A_LDQ_L01,LFSR_A_LDQ_L01,[%%STATE_PTR + 1*112 + 3*16], 1
-        vmovdqu32       XWORD(LFSR_A_HDQ_L01),[%%STATE_PTR + 0*112 + 4*16]
-        vinserti32x4    LFSR_A_HDQ_L01,LFSR_A_HDQ_L01,[%%STATE_PTR + 1*112 + 4*16], 1
-        vmovdqu32       XWORD(LFSR_B_LDQ_L01),[%%STATE_PTR + 0*112 + 5*16]
-        vinserti32x4    LFSR_B_LDQ_L01,LFSR_B_LDQ_L01,[%%STATE_PTR + 1*112 + 5*16], 1
-        vmovdqu32       XWORD(LFSR_B_HDQ_L01),[%%STATE_PTR + 0*112 + 6*16]
-        vinserti32x4    LFSR_B_HDQ_L01,LFSR_B_HDQ_L01,[%%STATE_PTR + 1*112 + 6*16], 1
+%define %%FSM_R1        %2  ;; [out] ymm
+%define %%FSM_R2        %3  ;; [out] ymm
+%define %%FSM_R3        %4  ;; [out] ymm
+%define %%LFSR_A_LDQ    %5  ;; [out] ymm
+%define %%LFSR_A_HDQ    %6  ;; [out] ymm
+%define %%LFSR_B_LDQ    %7  ;; [out] ymm
+%define %%LFSR_B_HDQ    %8  ;; [out] ymm
+        vmovdqu32       XWORD(%%FSM_R1),     [%%STATE_PTR + 0*112 + 0*16]
+        vinserti32x4    %%FSM_R1, %%FSM_R1,  [%%STATE_PTR + 1*112 + 0*16], 1
+        vmovdqu32       XWORD(%%FSM_R2),     [%%STATE_PTR + 0*112 + 1*16]
+        vinserti32x4    %%FSM_R2, %%FSM_R2,  [%%STATE_PTR + 1*112 + 1*16], 1
+        vmovdqu32       XWORD(%%FSM_R3),     [%%STATE_PTR + 0*112 + 2*16]
+        vinserti32x4    %%FSM_R3, %%FSM_R3,  [%%STATE_PTR + 1*112 + 2*16], 1
+        vmovdqu32       XWORD(%%LFSR_A_LDQ), [%%STATE_PTR + 0*112 + 3*16]
+        vinserti32x4    %%LFSR_A_LDQ, %%LFSR_A_LDQ, [%%STATE_PTR + 1*112 + 3*16], 1
+        vmovdqu32       XWORD(%%LFSR_A_HDQ), [%%STATE_PTR + 0*112 + 4*16]
+        vinserti32x4    %%LFSR_A_HDQ, %%LFSR_A_HDQ, [%%STATE_PTR + 1*112 + 4*16], 1
+        vmovdqu32       XWORD(%%LFSR_B_LDQ), [%%STATE_PTR + 0*112 + 5*16]
+        vinserti32x4    %%LFSR_B_LDQ, %%LFSR_B_LDQ, [%%STATE_PTR + 1*112 + 5*16], 1
+        vmovdqu32       XWORD(%%LFSR_B_HDQ), [%%STATE_PTR + 0*112 + 6*16]
+        vinserti32x4    %%LFSR_B_HDQ, %%LFSR_B_HDQ, [%%STATE_PTR + 1*112 + 6*16], 1
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

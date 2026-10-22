@@ -23,29 +23,17 @@
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
-%define tmp_gp1 rcx
-%define tmp_gp2 rdx
+%define arg3    rdx
 %else
 %define arg1    rcx
 %define arg2    rdx
-%define tmp_gp1 rdi
-%define tmp_gp2 rsi
+%define arg3    rsi
 %endif
 
 %define state    arg1
 %define job      arg2
 
 %define job_rax  rax
-
-%define tmp_gp3  rbx
-%define tmp_gp4  rbp
-%define tmp_gp5  r9
-%define tmp_gp6  r10
-%define tmp_gp7  r11
-%define tmp_gp8  r12
-%define tmp_gp9  r13
-%define tmp_gp10 r14
-%define tmp_gp11 r15
 
 mksection .rodata
 default rel
@@ -84,7 +72,7 @@ mksection .text
 %endmacro
 
 
-%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 13
+%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 29
 %define %%SUBMIT_FLUSH    %1  ;; [in] submit/flush selector
 %define %%UNUSED_LANES    %2  ;; [clobbered] GP register
 %define %%LANE            %3  ;; [clobbered] GP register
@@ -92,12 +80,28 @@ mksection .text
 %define %%TGP1            %5  ;; [clobbered] GP register
 %define %%TGP2            %6  ;; [clobbered] GP register
 %define %%LANE_PAIR       %7  ;; [clobbered] GP register
-%define %%TGP4            %8  ;; [clobbered] GP register
-%define %%TGP5            %9  ;; [clobbered] GP register
-%define %%MIN_COMMON_LEN  %10 ;; [clobbered] GP register
-%define %%OFFSET0         %11 ;; [clobbered] GP register
-%define %%OFFSET1         %12 ;; [clobbered] GP register
-%define %%GEN             %13 ;; [in] avx512_gen1/avx512_gen2
+%define %%INIT_TMP_GP     %8  ;; [clobbered] GP register: scratch for SNOW_5G_LFSR_FSM_INIT_SUBMIT
+%define %%MIN_COMMON_LEN  %9  ;; [clobbered] GP register
+%define %%OFFSET0         %10 ;; [clobbered] GP register
+%define %%LP_INIT_KMASK   %11 ;; [clobbered] k register: LP_INIT_MASK mask
+%define %%YMM0            %12 ;; [clobbered] ymm/xmm: key/IV scratch (submit init), FSM_R1 state (KEYSTREAM_X2), zero scratch (SAFE_DATA)
+%define %%YMM1            %13 ;; [clobbered] ymm/xmm: key/IV scratch (submit init), FSM_R2 state (KEYSTREAM_X2)
+%define %%FSM_R3          %14 ;; [clobbered] ymm FSM_R3 state (KEYSTREAM_X2 only)
+%define %%LFSR_A_LDQ      %15 ;; [clobbered] ymm LFSR_A_LDQ state (KEYSTREAM_X2 only)
+%define %%LFSR_A_HDQ      %16 ;; [clobbered] ymm LFSR_A_HDQ state (KEYSTREAM_X2 only)
+%define %%LFSR_B_LDQ      %17 ;; [clobbered] ymm LFSR_B_LDQ state (KEYSTREAM_X2 only)
+%define %%LFSR_B_HDQ      %18 ;; [clobbered] ymm LFSR_B_HDQ state (KEYSTREAM_X2 only)
+%define %%LFSR_A_NEW_SCR  %19 ;; [clobbered] ymm (KEYSTREAM_X2 only)
+%define %%LFSR_B_NEW_SCR  %20 ;; [clobbered] ymm (KEYSTREAM_X2 only)
+%define %%KEYSTREAM_SCR   %21 ;; [clobbered] ymm (KEYSTREAM_X2 only)
+%define %%TEMP1_SCR       %22 ;; [clobbered] ymm (KEYSTREAM_X2 only)
+%define %%TEMP2_SCR       %23 ;; [clobbered] ymm (KEYSTREAM_X2 only)
+%define %%CONST_SIGMA     %24 ;; [clobbered] ymm loaded with sigma constant (KEYSTREAM_X2 only)
+%define %%CONST_ALPHA     %25 ;; [clobbered] ymm loaded with alpha constant (KEYSTREAM_X2 only)
+%define %%CONST_BETA      %26 ;; [clobbered] ymm loaded with beta constant (KEYSTREAM_X2 only)
+%define %%CONST_ZERO      %27 ;; [clobbered] ymm zeroed (KEYSTREAM_X2 only)
+%define %%GEN             %28 ;; [in] avx512_gen1/avx512_gen2
+%define %%OFFSET1         %29 ;; [clobbered] GP register
 
         xor     job_rax, job_rax        ;; assume NULL return job
 
@@ -115,7 +119,7 @@ mksection .text
         mov             %%TGP1, [job + _enc_keys]
         mov             %%TGP2, [job + _iv]
 
-        SNOW_5G_LFSR_FSM_INIT_SUBMIT state, %%LANE, %%TGP1, %%TGP2, ymm0, ymm1, %%TGP5
+        SNOW_5G_LFSR_FSM_INIT_SUBMIT state, %%LANE, %%TGP1, %%TGP2, %%YMM0, %%YMM1, %%INIT_TMP_GP
 
         bts             word [state + _snow5g_INIT_MASK], WORD(%%LANE)
 
@@ -189,10 +193,13 @@ align_loop
         sub             [state + _snow5g_lens_dqw], DWORD(%%MIN_COMMON_LEN)
         sub             [state + _snow5g_lens_dqw + 4], DWORD(%%MIN_COMMON_LEN)
 
-        kmovb           k1, byte [state + _snow5g_arg_LP_INIT_MASK]
+        kmovb           %%LP_INIT_KMASK, byte [state + _snow5g_arg_LP_INIT_MASK]
 
         SNOW5G_KEYSTREAM_X2 state, %%MIN_COMMON_LEN, {state + _snow5g_args_in}, \
-                        {state + _snow5g_args_out}, %%OFFSET0, %%OFFSET1, %%TGP0, %%TGP1, k1
+                        {state + _snow5g_args_out}, %%OFFSET0, %%OFFSET1, %%TGP0, %%TGP1, %%LP_INIT_KMASK, \
+                        %%YMM0, %%YMM1, %%FSM_R3, %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, \
+                        %%LFSR_A_NEW_SCR, %%LFSR_B_NEW_SCR, %%KEYSTREAM_SCR, %%TEMP1_SCR, %%TEMP2_SCR, \
+                        %%CONST_SIGMA, %%CONST_ALPHA, %%CONST_BETA, %%CONST_ZERO
 
         ;; Update src/dst pointers for lanes not in INIT
         mov             BYTE(%%TGP0), [state + _snow5g_arg_LP_INIT_MASK]
@@ -255,10 +262,10 @@ align_label
         mov             %%TGP0, [state + _snow5g_args_keys + %%LANE*8]                                 ;; Get key pointer
         mov             %%TGP1, %%LANE
         shl             %%TGP1, 4                                        ;; %%TGP1 = %%LANE * 16
-        vmovdqu         xmm0, [state + _snow5g_args_FSM_1 + %%TGP1]     ;; Load FSM1 for this lane
-        vmovdqu         xmm1, [%%TGP0]                                  ;; Load key low part
-        vpxor           xmm0, xmm0, xmm1
-        vmovdqu         [state + _snow5g_args_FSM_1 + %%TGP1], xmm0     ;; Store back modified FSM1
+        vmovdqu64       XWORD(%%YMM0), [state + _snow5g_args_FSM_1 + %%TGP1]     ;; Load FSM1 for this lane
+        vmovdqu64       XWORD(%%YMM1), [%%TGP0]                                  ;; Load key low part
+        vpxorq          XWORD(%%YMM0), XWORD(%%YMM0), XWORD(%%YMM1)
+        vmovdqu64       [state + _snow5g_args_FSM_1 + %%TGP1], XWORD(%%YMM0)     ;; Store back modified FSM1
 
         btr             word [state + _snow5g_INIT_MASK], WORD(%%LANE)  ;; INIT_MASK[LANE] = 0
 
@@ -274,10 +281,10 @@ align_label
         mov             %%TGP0,[state + _snow5g_args_keys + %%LANE*8]   ;; Get key pointer
         mov             %%TGP1, %%LANE
         shl             %%TGP1, 4                                       ;; %%TGP1 = %%LANE * 16
-        vmovdqu         xmm0, [state + _snow5g_args_FSM_1 + %%TGP1]     ;; Load FSM1 for this lane
-        vmovdqu         xmm1, [%%TGP0 + 16]                             ;; Load key high part
-        vpxor           xmm0, xmm0, xmm1
-        vmovdqu         [state + _snow5g_args_FSM_1 + %%TGP1], xmm0     ;; Store back modified FSM1
+        vmovdqu64       XWORD(%%YMM0), [state + _snow5g_args_FSM_1 + %%TGP1]     ;; Load FSM1 for this lane
+        vmovdqu64       XWORD(%%YMM1), [%%TGP0 + 16]                             ;; Load key high part
+        vpxorq          XWORD(%%YMM0), XWORD(%%YMM0), XWORD(%%YMM1)
+        vmovdqu64       [state + _snow5g_args_FSM_1 + %%TGP1], XWORD(%%YMM0)     ;; Store back modified FSM1
 
 
         ;; Clear LP_INIT_MASK bits for this lane (INIT2 -> WORK1 transition)
@@ -335,15 +342,15 @@ align_label
         ;; Each lane occupies 16 bytes (128 bits) in the LFSR and FSM arrays
 
         ;; Clear LFSR and FSM registers for this lane (16 bytes each)
-        vpxorq          xmm0, xmm0, xmm0
+        vpxorq          XWORD(%%YMM0), XWORD(%%YMM0), XWORD(%%YMM0)
         shl             %%LANE, 4                               ;; offset = %%LANE * 16
-        vmovdqu         [state + _snow5g_args_LFSRA_LO + %%LANE], xmm0
-        vmovdqu         [state + _snow5g_args_LFSRA_HI + %%LANE], xmm0
-        vmovdqu         [state + _snow5g_args_LFSRB_LO + %%LANE], xmm0
-        vmovdqu         [state + _snow5g_args_LFSRB_HI + %%LANE], xmm0
-        vmovdqu         [state + _snow5g_args_FSM_1 + %%LANE], xmm0
-        vmovdqu         [state + _snow5g_args_FSM_2 + %%LANE], xmm0
-        vmovdqu         [state + _snow5g_args_FSM_3 + %%LANE], xmm0
+        vmovdqu64       [state + _snow5g_args_LFSRA_LO + %%LANE], XWORD(%%YMM0)
+        vmovdqu64       [state + _snow5g_args_LFSRA_HI + %%LANE], XWORD(%%YMM0)
+        vmovdqu64       [state + _snow5g_args_LFSRB_LO + %%LANE], XWORD(%%YMM0)
+        vmovdqu64       [state + _snow5g_args_LFSRB_HI + %%LANE], XWORD(%%YMM0)
+        vmovdqu64       [state + _snow5g_args_FSM_1 + %%LANE], XWORD(%%YMM0)
+        vmovdqu64       [state + _snow5g_args_FSM_2 + %%LANE], XWORD(%%YMM0)
+        vmovdqu64       [state + _snow5g_args_FSM_3 + %%LANE], XWORD(%%YMM0)
 
 %endif
 
@@ -366,7 +373,9 @@ MKGLOBAL(SUBMIT_JOB_SNOW5G_NEA4_GEN2,function,internal)
 align_function
 SUBMIT_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 submit, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, rax, avx512_gen2
+        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 submit, arg3, rbx, rbp, r9, r10, r11, r13, r14, r15, k1, \
+                ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9, ymm10, ymm11, \
+                ymm12, ymm13, ymm14, ymm15, avx512_gen2, rax
         SNOW5G_FUNC_END
         ret
 
@@ -376,7 +385,9 @@ MKGLOBAL(FLUSH_JOB_SNOW5G_NEA4_GEN2,function,internal)
 align_function
 FLUSH_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 flush, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, rax, avx512_gen2
+        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 flush, arg3, rbx, rbp, r9, r10, r11, r13, r14, r15, k1, \
+                ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9, ymm10, ymm11, \
+                ymm12, ymm13, ymm14, ymm15, avx512_gen2, rax
         SNOW5G_FUNC_END
         ret
 

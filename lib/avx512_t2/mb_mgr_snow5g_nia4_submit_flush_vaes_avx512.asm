@@ -106,9 +106,9 @@ endstruc
         lea     rax, [%%STATE + _snow5g_args_keys]
         SNOW5G_GENERATE_HQP_X2 rax, {%%STATE + _snow5g_args_IV}, \
                 {rsp + _hqp_nia4}, 0, _keystream_nia4, \
-                FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
-                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                TEMP0, TEMP1, ymm4, ymm5, rcx, k1, k2
+                ymm12, ymm13, ymm14, \
+                ymm24, ymm25, ymm26, ymm27, \
+                ymm0, ymm1, ymm4, ymm5, rcx, k1, k2
 
         ;; Reload state pointer (r11 clobbered by SNOW5G_GENERATE_HQP_X2)
         mov     %%STATE, [rsp + _state_save_nia4]

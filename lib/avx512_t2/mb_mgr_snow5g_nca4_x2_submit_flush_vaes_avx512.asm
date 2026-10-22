@@ -17,6 +17,17 @@
 
 extern nca_vclmul_avx512
 
+%xdefine TEMP0                  ymm0
+%xdefine TEMP1                  ymm1
+%xdefine TEMP2                  ymm2
+%xdefine FSM_R1_L01             ymm12
+%xdefine FSM_R2_L01             ymm13
+%xdefine FSM_R3_L01             ymm14
+%xdefine LFSR_A_LDQ_L01         ymm24
+%xdefine LFSR_A_HDQ_L01         ymm25
+%xdefine LFSR_B_LDQ_L01         ymm26
+%xdefine LFSR_B_HDQ_L01         ymm27
+
 %define NCA4_HQP_SIZE           48  ;; HQP: H(16) | Q(16) | P(16) = 48 bytes per lane
 
 ;; Callee-saved GP register aliases
@@ -145,7 +156,8 @@ endstruc
 
 %if %%STATE_IN_REGS == 0
         lea     rax, [rsp + _states_nca4]
-        STATE_LOAD_NCA4_X2 rax
+        STATE_LOAD_NCA4_X2 rax, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01
 %endif
         kxord   k1, k1, k1
 
@@ -157,7 +169,7 @@ align_loop
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
                 _keystream_nca4, \
-                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, BOTH_LANES
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, BOTH_LANES, ymm4, ymm5
         add     %%offset, 16
         dec     DWORD(%%num_blocks)
         jnz     %%phase1
@@ -205,7 +217,7 @@ align_loop
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
                 _keystream_nca4, \
-                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE0_ONLY
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE0_ONLY, ymm4, ymm5
         add     %%offset, 16
         dec     DWORD(%%len0)
         jnz     %%phase2_lane0
@@ -215,7 +227,7 @@ align_loop
         NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
                 _keystream_nca4, \
-                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE1_ONLY
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, LANE1_ONLY, ymm4, ymm5
         add     %%offset, 16
         dec     DWORD(%%len0)
         jnz     %%phase2_lane1
