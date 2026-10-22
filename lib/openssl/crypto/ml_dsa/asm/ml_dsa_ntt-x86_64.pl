@@ -967,121 +967,33 @@ sub intt_levels0to4 {
     # ==============================================================
     # level 0: offset = 1, step = 128
     # zeta indexes = 0..127  (zetas_inverse table)
+___
+    # 4 groups of 16 coefficients, unrolled at generation time
+    for my $group (0..3) {
+        my $input = $off + 64 * $group;
+        my $twiddle = $l0 + 32 * $group;
+        my $even = "%ymm" . (2 * $group);
+        my $odd = "%ymm" . (2 * $group + 1);
 
-    # separate interleaved coefficient pairs into even and odd YMM registers.
-    # memory layout: ymm8 = [0,1,2,3|4,5,6,7], ymm9 = [8,9,10,11|12,13,14,15]
-    # target layout: ymm0 = [0,2,4,6|8,10,12,14] (even), ymm1 = [1,3,5,7|9,11,13,15] (odd)
-    # idx_even/idx_odd are vpermd index vectors that gather even/odd dwords to lanes 0..3.
-    # 0xf0 = 0b11110000: select upper 4 dwords (lanes 4..7) from ymm11 (src2).
-
-    # load w_even and w_odd
-    vmovdqu $off(%rdi), %ymm8
-    vmovdqu $off+32(%rdi), %ymm9
-
-    # compact even words into ymm0 (w_even[0:7])
-    vmovdqa idx_even(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10            # [ 0, 2, 4, 6 | 0, 2, 4, 6]
-    vpermd %ymm9, %ymm13, %ymm11            # [ 8,10,12,14 | 8,10,12,14]
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm0  # [ 0, 2, 4, 6 | 8,10,12,14]
-
-    # compact odd words into ymm1 (w_odd[0..7])
-    vmovdqa idx_odd(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10            # [ 1, 3, 5, 7 | 1, 3, 5, 7]
-    vpermd %ymm9, %ymm13, %ymm11            # [ 9,11,13,15 | 9,11,13,15]
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm1  # [ 1, 3, 5, 7 | 9,11,13,15]
+        $code .= <<___;
+    # load w_even and w_odd and split interleaved coefficient pairs:
+    # $even = [0,2,4,6|8,10,12,14], $odd = [1,3,5,7|9,11,13,15]
+    # vshufps gives [0,2,8,10|4,6,12,14], vpermq 0xd8 restores the order
+    vmovdqu $input(%rdi), %ymm8
+    vmovdqu $input+32(%rdi), %ymm9
+    vshufps \$0x88, %ymm9, %ymm8, $even
+    vpermq \$0xd8, $even, $even
+    vshufps \$0xdd, %ymm9, %ymm8, $odd
+    vpermq \$0xd8, $odd, $odd
 
     # load 8 zetas and 8 qinv companions
-    vmovdqu $l0(%r11), %ymm13
-    vmovdqu $l0+$ZETA256_QINV_OFS(%r11), %ymm14
-
+    vmovdqu $twiddle(%r11), %ymm13
+    vmovdqu $twiddle+$ZETA256_QINV_OFS(%r11), %ymm14
 ___
-    &intt_butterfly("%ymm0", "%ymm1", "%ymm13", "%ymm14",
-                    "%ymm10", "%ymm11", "%ymm12", "%ymm9",
-                    "%ymm0", "%ymm1",
-                    "%ymm15", 0);
-
-$code .= <<___;
-
-    # same even/odd separation for the next coefficient group (same pattern as above)
-    vmovdqu $off+64(%rdi), %ymm8
-    vmovdqu $off+96(%rdi), %ymm9
-
-    # compact even words into ymm2 (w_even[8..15])
-    vmovdqa idx_even(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10
-    vpermd %ymm9, %ymm13, %ymm11
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm2
-
-    # compact odd words into ymm3 (w_odd[8..15])
-    vmovdqa idx_odd(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10
-    vpermd %ymm9, %ymm13, %ymm11
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm3
-
-    # load 8 zetas and 8 qinv companions
-    vmovdqu $l0+1*32(%r11), %ymm13
-    vmovdqu $l0+1*32+$ZETA256_QINV_OFS(%r11), %ymm14
-
-___
-    &intt_butterfly("%ymm2", "%ymm3", "%ymm13", "%ymm14",
-                    "%ymm10", "%ymm11", "%ymm12", "%ymm9",
-                    "%ymm2", "%ymm3",
-                    "%ymm15", 0);
-
-$code .= <<___;
-    # load w_even and w_odd
-    vmovdqu $off+128(%rdi), %ymm8
-    vmovdqu $off+160(%rdi), %ymm9
-
-    # compact even words into ymm4 (w_even[16..23])
-    vmovdqa idx_even(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10            # [ 0, 2, 4, 6 | 0, 2, 4, 6]
-    vpermd %ymm9, %ymm13, %ymm11            # [ 8,10,12,14 | 8,10,12,14]
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm4  # [ 0, 2, 4, 6 | 8,10,12,14]
-
-    # compact odd words into ymm5 (w_odd[16..23])
-    vmovdqa idx_odd(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10            # [ 1, 3, 5, 7 | 1, 3, 5, 7]
-    vpermd %ymm9, %ymm13, %ymm11            # [ 9,11,13,15 | 9,11,13,15]
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm5  # [ 1, 3, 5, 7 | 9,11,13,15]
-
-    # load 8 zetas and 8 qinv companions
-    vmovdqu $l0+2*32(%r11), %ymm13
-    vmovdqu $l0+2*32+$ZETA256_QINV_OFS(%r11), %ymm14
-
-___
-    &intt_butterfly("%ymm4", "%ymm5", "%ymm13", "%ymm14",
-                    "%ymm10", "%ymm11", "%ymm12", "%ymm9",
-                    "%ymm4", "%ymm5",
-                    "%ymm15", 0);
-
-$code .= <<___;
-
-    # load w_even and w_odd
-    vmovdqu $off+192(%rdi), %ymm8
-    vmovdqu $off+224(%rdi), %ymm9
-
-    # compact even words into ymm6 (w_even[24..31])
-    vmovdqa idx_even(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10
-    vpermd %ymm9, %ymm13, %ymm11
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm6
-
-    # compact odd words into ymm7 (w_odd[24..31])
-    vmovdqa idx_odd(%rip), %ymm13
-    vpermd %ymm8, %ymm13, %ymm10
-    vpermd %ymm9, %ymm13, %ymm11
-    vpblendd \$0xf0, %ymm11, %ymm10, %ymm7
-
-    # load 8 zetas and 8 qinv companions
-    vmovdqu $l0+3*32(%r11), %ymm13
-    vmovdqu $l0+3*32+$ZETA256_QINV_OFS(%r11), %ymm14
-
-___
-    &intt_butterfly("%ymm6", "%ymm7", "%ymm13", "%ymm14",
-                    "%ymm10", "%ymm11", "%ymm12", "%ymm9",
-                    "%ymm6", "%ymm7",
-                    "%ymm15", 0);
+        &intt_butterfly($even, $odd, "%ymm13", "%ymm14",
+                        "%ymm10", "%ymm11", "%ymm12", "%ymm9",
+                        $even, $odd, "%ymm15", 0);
+    }
 
 $code .= <<___;
 
@@ -1747,16 +1659,6 @@ for (my $i = 0; $i < 256; $i += 8) {
 }
 
 $code .= <<___;
-.align 32
-idx_even:
-    # vpermd index vector: gathers even-indexed dwords [0,2,4,6] from each 128-bit lane
-    .long 0,2,4,6, 0,2,4,6
-
-.align 32
-idx_odd:
-    # vpermd index vector: gathers odd-indexed dwords [1,3,5,7] from each 128-bit lane
-    .long 1,3,5,7, 1,3,5,7
-
 # Modulus Q = 2^23 - 2^13 + 1 (FIPS 204, Table 1)
 .align 8
 ml_dsa_q:
