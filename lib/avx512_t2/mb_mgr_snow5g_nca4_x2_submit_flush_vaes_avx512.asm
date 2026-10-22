@@ -32,8 +32,13 @@
 
 %define NCA4_HQP_SIZE           48      ;; HQP: H(16) | Q(16) | P(16) = 48 bytes per lane
 
-;; A survivor with less than one full block left is finished in the same call.
-%define NCA4_CARRY_MIN_BYTES    16
+;; A carried lane hides exactly NCA4_INIT_OVERLAP_ROUNDS fresh-lane init rounds
+;; behind its own cipher rounds, so it must always hold that many full blocks.
+;; A survivor with fewer bytes left is finished in the same call instead of
+;; being carried, so the next job pair starts with both lanes STASHED and takes
+;; the packed 2-lane init rather than a mostly 1-lane one.
+%define NCA4_INIT_OVERLAP_ROUNDS 15
+%define NCA4_CARRY_MIN_BYTES    (NCA4_INIT_OVERLAP_ROUNDS * 16)
 
 %define NCA4_SCRATCH_HK4        1
 %define NCA4_SCRATCH_HK8        4
@@ -41,7 +46,6 @@
 
 ;; Callee-saved GP register aliases
 %define p_state         r12
-%define p_job_in_lane   r13
 
 ;; Fixed register contract of nca4_polyval_absorb_bytes_vaes_avx512.
 ;; Fixed by the helper: do not change.
@@ -100,7 +104,7 @@ _keystream_nca4: resy    1                               ; 32-byte keystream scr
 _hk_x2:          resb    (HKeySize * 2)
 ;; 64-aligned ciphertext copy. Used only in encrypt in interleaved cipher+POLYVAL
 _ct_scratch:     resb    (128 * 4)
-_gpr_save_nca4: resq     8
+_gpr_save_nca4: resq     8                               ; 7 used, padded to keep _xmm_save_nca4 16B-aligned
 %ifndef LINUX
 _xmm_save_nca4: reso     10
 %endif
@@ -270,7 +274,7 @@ default rel
 %define %%FINALIZE_SCR %25 ;; [clobbered] xmm: FINALIZE_LANE len_block scratch
 
         NCA4_CHECK_ABSORB_REGS %%ACC, %%HK1, %%KK1
-        mov     %%JOB_GP, [p_job_in_lane + %%LANE*8]
+        mov     %%JOB_GP, [p_state + _snow5g_job_in_lane + %%LANE*8]
 
         ;; HK^1 = HQP[0], build KK^1 (L01 SNOW5G state regs preserved, unused).
         vmovdqu64       %%HK1,  [p_state + _snow5g_nca4_hqp + %%LANE * NCA4_HQP_SIZE + 0]
@@ -312,7 +316,7 @@ align_label
 
         ;; Finalize: tag = ((acc ^ len_block) * Q) ^ P.  Reload job (ABSORB
         ;; clobbered %%JOB_GP); Q = HQP[16], P = HQP[32].
-        mov     %%JOB_GP, [p_job_in_lane + %%LANE*8]
+        mov     %%JOB_GP, [p_state + _snow5g_job_in_lane + %%LANE*8]
         vmovdqu64       %%T1,  [p_state + _snow5g_nca4_hqp + %%LANE * NCA4_HQP_SIZE + 16]
         vmovdqu64       %%T2,  [p_state + _snow5g_nca4_hqp + %%LANE * NCA4_HQP_SIZE + 32]
         mov     %%MSG_PTR_GP,  [%%JOB_GP + _nca_aad_len]
@@ -335,7 +339,7 @@ align_label
 %define %%PTR_GP     %5  ;; [clobbered] gp: auth_tag_output pointer
 %define %%MASK_K     %6  ;; [clobbered] k register: tag byte mask
 
-        mov     %%JOB_GP, [p_job_in_lane + %%LANE*8]
+        mov     %%JOB_GP, [p_state + _snow5g_job_in_lane + %%LANE*8]
 
         vmovdqa64 %%TMP0, [rsp + _digest_nca4 + %%LANE*16]
         mov     DWORD(%%LEN_GP), [%%JOB_GP + _auth_tag_output_len_in_bytes]
@@ -607,6 +611,36 @@ align_loop
         vextracti32x4   %%LFSR_B_HDQ, %%PAIR_LD, 1
 %endmacro
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;; MERGE: pack an independent XMM lane-1 register set into the high half of a
+;; packed lane-pair YMM state. Inverse of NCA4_STATE_SPLIT_X2. Lane 0 already
+;; occupies the low half of each %%PAIR_* register, so only lane 1 is inserted.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro NCA4_STATE_MERGE_X2 14
+%define %%FSM_R1      %1      ;; [in] xmm: lane-1 FSM_R1 bank register
+%define %%FSM_R2      %2      ;; [in] xmm: lane-1 FSM_R2 bank register
+%define %%FSM_R3      %3      ;; [in] xmm: lane-1 FSM_R3 bank register
+%define %%LFSR_A_LDQ  %4      ;; [in] xmm: lane-1 LFSR_A_LDQ bank register
+%define %%LFSR_A_HDQ  %5      ;; [in] xmm: lane-1 LFSR_A_HDQ bank register
+%define %%LFSR_B_LDQ  %6      ;; [in] xmm: lane-1 LFSR_B_LDQ bank register
+%define %%LFSR_B_HDQ  %7      ;; [in] xmm: lane-1 LFSR_B_HDQ bank register
+%define %%PAIR_R1  %8   ;; [in/out] ymm: packed lane-pair FSM_R1
+%define %%PAIR_R2  %9   ;; [in/out] ymm: packed lane-pair FSM_R2
+%define %%PAIR_R3  %10  ;; [in/out] ymm: packed lane-pair FSM_R3
+%define %%PAIR_LA  %11  ;; [in/out] ymm: packed lane-pair LFSR_A_LDQ
+%define %%PAIR_LB  %12  ;; [in/out] ymm: packed lane-pair LFSR_A_HDQ
+%define %%PAIR_LC  %13  ;; [in/out] ymm: packed lane-pair LFSR_B_LDQ
+%define %%PAIR_LD  %14  ;; [in/out] ymm: packed lane-pair LFSR_B_HDQ
+        vinserti32x4    %%PAIR_R1, %%PAIR_R1, %%FSM_R1, 1
+        vinserti32x4    %%PAIR_R2, %%PAIR_R2, %%FSM_R2, 1
+        vinserti32x4    %%PAIR_R3, %%PAIR_R3, %%FSM_R3, 1
+        vinserti32x4    %%PAIR_LA, %%PAIR_LA, %%LFSR_A_LDQ, 1
+        vinserti32x4    %%PAIR_LB, %%PAIR_LB, %%LFSR_A_HDQ, 1
+        vinserti32x4    %%PAIR_LC, %%PAIR_LC, %%LFSR_B_LDQ, 1
+        vinserti32x4    %%PAIR_LD, %%PAIR_LD, %%LFSR_B_HDQ, 1
+%endmacro
+
 %macro NCA4_CLEAR_LANE 1
 %define %%LANE %1 ;; [in] immediate: lane index (0 or 1)
 %ifdef SAFE_DATA
@@ -638,7 +672,7 @@ align_loop
 ;; Encrypt streams the new output into the persisted accumulator; decrypt
 ;; reloads the digest that the lane init persisted in OOO.
 ;; p_state = OOO base.  Uses the cipher helper's fixed GP and SIMD registers.
-;; Additional clobbers: p_job_in_lane, zmm8-9.
+;; Additional clobbers: zmm8-9.
 ;; The byte-absorb helper's fixed register contract also applies.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro NCA4_RUN_CIPHER_X1 20
@@ -683,7 +717,6 @@ align_loop
 align_label
 %%cipher_x1_done_ %+ %%LANE:
         ;; All bytes ciphered - finalize tag.
-        lea     p_job_in_lane, [p_state + _snow5g_job_in_lane]
 %ifidn %%DIR, ENCRYPT
         ;; ENCRYPT: full message already streamed into the persisted acc - finalize only.
         vmovdqu64       %%ACC, [p_state + _snow5g_nca4_polyval_acc + %%LANE*16]
@@ -783,7 +816,7 @@ align_label
 ;; any), finalise the tag (enc: POLYVAL over output; dec: reload INIT digest),
 ;; copy the tag out.  Bulk already ciphered by the joint kernel.
 ;; Pre: p_state loaded; state saved in OOO; bytes_processed = msg_len - tail.
-;; Additional clobber: p_job_in_lane; the byte-absorb helper's register contract also applies.
+;; The byte-absorb helper's register contract also applies.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro NCA4_FINISH_LANE_X1 31
 %define %%LANE  %1      ;; [in] immediate: 0 or 1
@@ -839,7 +872,6 @@ align_label
 align_label
 %%finish_no_tail_ %+ %%LANE:
 
-        lea     p_job_in_lane, [p_state + _snow5g_job_in_lane]
 %ifidn %%DIR, ENCRYPT
         ;; All full message blocks were already streamed into the persisted
         ;; accumulator by the joint loop.  Absorb only the final tail block
@@ -1154,7 +1186,7 @@ align_label
 ;; A survivor with < NCA4_CARRY_MIN_BYTES left is finished too (see define).
 ;; Retired lanes get IMB_STATUS_COMPLETED, slot cleared, phase=IDLE, lanes_in_use--;
 ;; job_rax = one completed job (or NULL).
-;; Additional clobbers: p_job_in_lane, rax, rdx, r11, zmm0-11, zmm15-21, k2, plus
+;; Additional clobbers: rax, rdx, r11, zmm0-11, zmm15-21, k2, plus
 ;; the L01 state and lane-1 split bank arguments; encrypt also clobbers r14.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro NCA4_SCHED_JOINT_CARRY 24
@@ -1306,6 +1338,179 @@ align_label
 align_label
 %%carry_done:
         mov     job_rax, %%NBLK_GP
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Stage 3 - INIT||CIPHER interleave (one FRESH STASHED lane + one CARRIED CIPHER lane).
+;;
+;; State after macro call:
+;; FRESH lane   = initialized + AAD-seeded, phase CIPHER (decrypt also has saved digest).
+;; CARRIED lane = advanced by NCA4_INIT_OVERLAP_ROUNDS blocks, still phase CIPHER.
+;;
+;; Additional clobbers: zmm5-11, xmm16-21.
+;; The byte-absorb helper's fixed register contract also applies.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro NCA4_INIT_OVERLAP_CIPHER 29
+%define %%FRESH         %1      ;; [in] immediate: fresh lane to initialise (0 or 1)
+%assign %%CARRIED       (1 - %%FRESH) ;; opposite lane is always the carried CIPHER lane
+%define %%DIR           %2      ;; [in] ENCRYPT or DECRYPT
+%define %%FR1           %3      ;; [in/out] xmm: fresh lane's FSM_R1 bank register
+%define %%FR2           %4      ;; [in/out] xmm: fresh lane's FSM_R2 bank register
+%define %%FR3           %5      ;; [in/out] xmm: fresh lane's FSM_R3 bank register
+%define %%FLA           %6      ;; [in/out] xmm: fresh lane's LFSR_A_LDQ bank register
+%define %%FLB           %7      ;; [in/out] xmm: fresh lane's LFSR_A_HDQ bank register
+%define %%FLC           %8      ;; [in/out] xmm: fresh lane's LFSR_B_LDQ bank register
+%define %%FLD           %9      ;; [in/out] xmm: fresh lane's LFSR_B_HDQ bank register
+%define %%CR1           %10     ;; [in/out] xmm: carried lane's FSM_R1 bank register
+%define %%CR2           %11     ;; [in/out] xmm: carried lane's FSM_R2 bank register
+%define %%CR3           %12     ;; [in/out] xmm: carried lane's FSM_R3 bank register
+%define %%CLA           %13     ;; [in/out] xmm: carried lane's LFSR_A_LDQ bank register
+%define %%CLB           %14     ;; [in/out] xmm: carried lane's LFSR_A_HDQ bank register
+%define %%CLC           %15     ;; [in/out] xmm: carried lane's LFSR_B_LDQ bank register
+%define %%CLD           %16     ;; [in/out] xmm: carried lane's LFSR_B_HDQ bank register
+%define %%SRC_GP        %17     ;; [clobbered] gp: carried-lane src pointer
+%define %%DST_GP        %18     ;; [clobbered] gp: carried-lane dst pointer
+%define %%KEY_GP        %19     ;; [clobbered] gp: fresh-lane key pointer
+%define %%REM_GP        %20     ;; [clobbered] gp: remaining-blocks / mask-build scratch
+%define %%OFF_GP        %21     ;; [clobbered] gp: carried-lane byte offset counter
+%define %%INIT_ROUNDS_OVERLAP   %22 ;; [clobbered] gp: overlap round counter, POLYVAL scratch
+%define %%MASK_INIT_FB_K %23    ;; [clobbered] k register: init-phase LFSR feedback-enable mask (all-ones)
+%define %%MASK_FRESH_K  %24     ;; [clobbered] k register: fresh-lane-only feedback mask
+%define %%T0            %25     ;; [clobbered] xmm/ymm scratch
+%define %%T1            %26     ;; [clobbered] xmm/ymm scratch
+%define %%T2            %27     ;; [clobbered] xmm/ymm scratch
+%define %%T3            %28     ;; [clobbered] xmm scratch
+%define %%T4            %29     ;; [clobbered] xmm/ymm scratch: key-halves XOR scratch
+
+;; Packed state uses lane 0's register bank regardless of its FRESH/CARRIED role.
+%if %%FRESH == 0
+%define %%L0R1  %%FR1
+%define %%L0R2  %%FR2
+%define %%L0R3  %%FR3
+%define %%L0LA  %%FLA
+%define %%L0LB  %%FLB
+%define %%L0LC  %%FLC
+%define %%L0LD  %%FLD
+%define %%L1R1  %%CR1
+%define %%L1R2  %%CR2
+%define %%L1R3  %%CR3
+%define %%L1LA  %%CLA
+%define %%L1LB  %%CLB
+%define %%L1LC  %%CLC
+%define %%L1LD  %%CLD
+%else
+%define %%L0R1  %%CR1
+%define %%L0R2  %%CR2
+%define %%L0R3  %%CR3
+%define %%L0LA  %%CLA
+%define %%L0LB  %%CLB
+%define %%L0LC  %%CLC
+%define %%L0LD  %%CLD
+%define %%L1R1  %%FR1
+%define %%L1R2  %%FR2
+%define %%L1R3  %%FR3
+%define %%L1LA  %%FLA
+%define %%L1LB  %%FLB
+%define %%L1LC  %%FLC
+%define %%L1LD  %%FLD
+%endif
+
+        ;; ---- Carried lane: load state, pointers
+        NCA4_STATE_LOAD_X1 p_state, %%CARRIED, %%CR1, %%CR2, %%CR3, %%CLA, %%CLB, %%CLC, %%CLD
+        mov     %%SRC_GP, [p_state + _snow5g_args_in + %%CARRIED*8]
+        add     %%SRC_GP, [p_state + _snow5g_nca4_bytes_processed + %%CARRIED*8]
+        mov     %%DST_GP, [p_state + _snow5g_args_out + %%CARRIED*8]
+        add     %%DST_GP, [p_state + _snow5g_nca4_bytes_processed + %%CARRIED*8]
+        xor     %%OFF_GP, %%OFF_GP                ;; carried byte offset
+
+        ;; ---- Fresh lane: build initial SNOW5G init state ----
+        mov     %%KEY_GP, [p_state + _snow5g_args_keys + %%FRESH*8]
+        vpxord          %%FR1, %%FR1, %%FR1
+        vmovdqa32       %%FR2, %%FR1
+        vmovdqa32       %%FR3, %%FR1
+        vmovdqa32       %%FLC, %%FR1                  ;; LFSR_B_LDQ = 0
+        vmovdqu32       %%FLA, [p_state + _snow5g_args_IV + %%FRESH*16] ;; LFSR_A_LDQ = IV
+        vmovdqu32       %%FLB, [%%KEY_GP + 0]              ;; LFSR_A_HDQ = key[0:16]
+        vmovdqu32       %%FLD, [%%KEY_GP + 16]             ;; LFSR_B_HDQ = key[16:32]
+        kxnord          %%MASK_INIT_FB_K, %%MASK_INIT_FB_K, %%MASK_INIT_FB_K ;; init feedback enable
+        ;; Fresh-lane feedback mask in MASK_FRESH_K (lane0: 0x3, lane1: 0xC).
+        mov     DWORD(%%REM_GP), (0x3 << (2 * %%FRESH))
+        kmovw   %%MASK_FRESH_K, DWORD(%%REM_GP)
+
+        ;; ---- First NCA4_INIT_OVERLAP_ROUNDS feedback init rounds, packed with the
+        ;; carried lane's cipher rounds (FRESH runs INIT with LFSR feedback, CARRIED
+        ;; runs CIPHER without, both in the L01 YMM regs).  The carried lane holds
+        ;; >= NCA4_CARRY_MIN_BYTES, i.e. a full block for every overlapped round.
+        NCA4_STATE_MERGE_X2 %%L1R1, %%L1R2, %%L1R3, %%L1LA, %%L1LB, %%L1LC, %%L1LD, \
+                YWORD(%%L0R1), YWORD(%%L0R2), YWORD(%%L0R3), YWORD(%%L0LA), YWORD(%%L0LB), YWORD(%%L0LC), YWORD(%%L0LD)
+        mov     DWORD(%%INIT_ROUNDS_OVERLAP), NCA4_INIT_OVERLAP_ROUNDS
+align_loop
+%%ovl_pair_loop:
+%if %%FRESH == 0
+        NCA4_CIPHER_LANE_PAIR YWORD(%%L0R1), YWORD(%%L0R2), YWORD(%%L0R3), \
+                YWORD(%%L0LA), YWORD(%%L0LB), YWORD(%%L0LC), YWORD(%%L0LD), \
+                YWORD(%%T1), YWORD(%%T2), %%SRC_GP, %%DST_GP, %%SRC_GP, %%DST_GP, %%OFF_GP, %%MASK_FRESH_K, LANE1_ONLY, \
+                YWORD(%%T4), YWORD(%%T0)
+%else
+        NCA4_CIPHER_LANE_PAIR YWORD(%%L0R1), YWORD(%%L0R2), YWORD(%%L0R3), \
+                YWORD(%%L0LA), YWORD(%%L0LB), YWORD(%%L0LC), YWORD(%%L0LD), \
+                YWORD(%%T1), YWORD(%%T2), %%SRC_GP, %%DST_GP, %%SRC_GP, %%DST_GP, %%OFF_GP, %%MASK_FRESH_K, LANE0_ONLY, \
+                YWORD(%%T4), YWORD(%%T0)
+%endif
+        add     %%OFF_GP, 16
+        dec     DWORD(%%INIT_ROUNDS_OVERLAP)
+        jnz     %%ovl_pair_loop
+        ;; Split packed state back into per-lane X1 banks.
+        NCA4_STATE_SPLIT_X2 %%L1R1, %%L1R2, %%L1R3, %%L1LA, %%L1LB, %%L1LC, %%L1LD, \
+                YWORD(%%L0R1), YWORD(%%L0R2), YWORD(%%L0R3), YWORD(%%L0LA), YWORD(%%L0LB), YWORD(%%L0LC), YWORD(%%L0LD)
+
+        ;; ---- 16th init round (FRESH-only): %%FR1 ^= key halves around the round
+        vmovdqu32       %%T4, [%%KEY_GP + 0]
+        vpxord          %%FR1, %%FR1, %%T4
+        NCA4_INIT_ROUND_X1 %%FR1, %%FR2, %%FR3, %%FLA, %%FLB, %%FLC, %%FLD, \
+                %%T0, %%T1, %%T2, %%T3, %%MASK_INIT_FB_K
+        vmovdqu32       %%T4, [%%KEY_GP + 16]
+        vpxord          %%FR1, %%FR1, %%T4
+
+        ;; ---- 3 no-feedback rounds (FRESH-only): extract keystream -> HQP ----
+        ;; KEY_GP, REM_GP and INIT_ROUNDS_OVERLAP are dead here: REM_GP = HQP store pointer.
+        lea     %%REM_GP, [p_state + _snow5g_nca4_hqp + %%FRESH*NCA4_HQP_SIZE]
+        mov     DWORD(%%INIT_ROUNDS_OVERLAP), 3
+align_loop
+%%hqp_loop:
+        vpaddw          %%T0, %%FLD, %%FR1            ;; keystream = LFSR_B_HDQ + FSM_R1
+        vpxord          %%T0, %%T0, %%FR2            ;;            XOR FSM_R2
+        vmovdqu32       [%%REM_GP], %%T0
+        SNOW5G_FSM_CLOCK_2 %%FR1, %%FR2, %%FR3, %%FLB, %%T0, %%T1
+        SNOW5G_LFSR_UPDATE %%FLA, %%FLB, %%FLC, %%FLD, \
+                %%T2, %%T3, none, none, %%T0, %%T1
+        add     %%REM_GP, 16
+        dec     DWORD(%%INIT_ROUNDS_OVERLAP)
+        jnz     %%hqp_loop
+
+        ;; ---- Persist carried advance (while OFF_GP valid) ----
+%ifidn %%DIR, ENCRYPT
+        ;; Fold the carried lane's overlap-advanced ciphertext blocks into its
+        ;; accumulator so the streamed-hash invariant (acc hashed up to
+        ;; bytes_processed) holds before the joint loop continues.
+        NCA4_STREAM_ABSORB_LANE %%CARRIED, %%DST_GP, %%OFF_GP, \
+                NCA4_ABSORB_ACC, NCA4_ABSORB_HK1, NCA4_ABSORB_KK1, %%T0
+%endif
+        NCA4_STATE_SAVE_X1 p_state, %%CARRIED, %%CR1, %%CR2, %%CR3, %%CLA, %%CLB, %%CLC, %%CLD
+        add     qword [p_state + _snow5g_nca4_bytes_processed + %%CARRIED*8], NCA4_CARRY_MIN_BYTES
+
+        ;; ---- Finalise fresh lane bring-up ----
+        NCA4_STATE_SAVE_X1 p_state, %%FRESH, %%FR1, %%FR2, %%FR3, %%FLA, %%FLB, %%FLC, %%FLD
+        NCA4_HASH_AAD_LANE %%FRESH, %%REM_GP, %%KEY_GP, %%OFF_GP, NCA4_ABSORB_HK1, NCA4_ABSORB_KK1, NCA4_ABSORB_ACC, %%T0
+        mov     qword [p_state + _snow5g_nca4_bytes_processed + %%FRESH*8], 0
+        mov     qword [p_state + _snow5g_nca4_phase + %%FRESH*8], NCA4_PHASE_CIPHER
+%ifidn %%DIR, DECRYPT
+        NCA4_POLYVAL_LANE %%FRESH, _snow5g_args_in, \
+                %%REM_GP, %%KEY_GP, %%OFF_GP, %%INIT_ROUNDS_OVERLAP, %%SRC_GP, NCA4_ABSORB_HK1, NCA4_ABSORB_KK1, NCA4_ABSORB_ACC, %%T0, %%T1, %%T2, %%T3, %%T4, xmm5, \
+                xmm10, zmm11, zmm7, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21
+        vmovdqa64 %%T0, [rsp + _digest_nca4 + %%FRESH*16]
+        vmovdqu64 [p_state + _snow5g_nca4_digest + %%FRESH*16], %%T0
+%endif
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1541,12 +1746,11 @@ align_label
         mov     [rsp + _gpr_save_nca4 + 8*0], rbx
         mov     [rsp + _gpr_save_nca4 + 8*1], rbp
         mov     [rsp + _gpr_save_nca4 + 8*2], r12
-        mov     [rsp + _gpr_save_nca4 + 8*3], r13
-        mov     [rsp + _gpr_save_nca4 + 8*4], r14
-        mov     [rsp + _gpr_save_nca4 + 8*5], r15
+        mov     [rsp + _gpr_save_nca4 + 8*3], r14
+        mov     [rsp + _gpr_save_nca4 + 8*4], r15
 %ifndef LINUX
-        mov     [rsp + _gpr_save_nca4 + 8*6], rsi
-        mov     [rsp + _gpr_save_nca4 + 8*7], rdi
+        mov     [rsp + _gpr_save_nca4 + 8*5], rsi
+        mov     [rsp + _gpr_save_nca4 + 8*6], rdi
         ;; Save XMM6-15 (Windows callee-saved)
         vmovdqa [rsp + _xmm_save_nca4 + 16 * 0], xmm6
         vmovdqa [rsp + _xmm_save_nca4 + 16 * 1], xmm7
@@ -1615,12 +1819,11 @@ align_label
         mov     rbx, [rsp + _gpr_save_nca4 + 8*0]
         mov     rbp, [rsp + _gpr_save_nca4 + 8*1]
         mov     r12, [rsp + _gpr_save_nca4 + 8*2]
-        mov     r13, [rsp + _gpr_save_nca4 + 8*3]
-        mov     r14, [rsp + _gpr_save_nca4 + 8*4]
-        mov     r15, [rsp + _gpr_save_nca4 + 8*5]
+        mov     r14, [rsp + _gpr_save_nca4 + 8*3]
+        mov     r15, [rsp + _gpr_save_nca4 + 8*4]
 %ifndef LINUX
-        mov     rsi, [rsp + _gpr_save_nca4 + 8*6]
-        mov     rdi, [rsp + _gpr_save_nca4 + 8*7]
+        mov     rsi, [rsp + _gpr_save_nca4 + 8*5]
+        mov     rdi, [rsp + _gpr_save_nca4 + 8*6]
         vmovdqa xmm6,  [rsp + _xmm_save_nca4 + 16 * 0]
         vmovdqa xmm7,  [rsp + _xmm_save_nca4 + 16 * 1]
         vmovdqa xmm8,  [rsp + _xmm_save_nca4 + 16 * 2]
@@ -1684,7 +1887,7 @@ align_label
         mov     [state + _snow5g_nca4_msg_len + %%LANE_OUT*8], %%TMP_GP
 %endmacro
 
-%macro SUBMIT_JOB_SNOW5G_NCA4_X2 43
+%macro SUBMIT_JOB_SNOW5G_NCA4_X2 44
 %define %%DIR            %1      ;; [in] ENCRYPT or DECRYPT
 %define %%LANE_GP        %2      ;; [clobbered] gp: allocated lane index scratch
 %define %%TMP_GP         %3      ;; [clobbered] gp: opposite-lane scratch
@@ -1726,8 +1929,9 @@ align_label
 %define %%L1_LFSR_A_HDQ  %39     ;; [out] xmm: lane-1 split LFSR_A_HDQ bank register
 %define %%L1_LFSR_B_LDQ  %40     ;; [out] xmm: lane-1 split LFSR_B_LDQ bank register
 %define %%L1_LFSR_B_HDQ  %41     ;; [out] xmm: lane-1 split LFSR_B_HDQ bank register
-%define %%DST_GP         %42     ;; [clobbered] gp: lane 0 dst pointer / fresh-lane key pointer scratch
-%define %%DST1_GP        %43     ;; [clobbered] gp: lane 1 dst pointer
+%define %%DST_GP         %42     ;; [clobbered] gp: lane 0 dst pointer / carried-lane dst scratch
+%define %%MASK_FRESH_K   %43     ;; [clobbered] k register: fresh-lane-only feedback mask
+%define %%DST1_GP        %44     ;; [clobbered] gp: lane 1 dst pointer
 
         SNOW5G_NCA4_FUNC_START
 
@@ -1758,7 +1962,6 @@ align_label
         mov     qword [p_state + _snow5g_nca4_phase + 0], NCA4_PHASE_CIPHER
         mov     qword [p_state + _snow5g_nca4_phase + 8], NCA4_PHASE_CIPHER
 %ifidn %%DIR, DECRYPT
-        lea             p_job_in_lane, [p_state + _snow5g_job_in_lane]
         NCA4_POLYVAL_LANE 0, _snow5g_args_in, \
                 %%REM_GP, %%FOLD_PTR_GP, %%MSG_LEN_GP, %%COUNTER_GP, %%TAIL_GP, %%HK1, %%KK1, %%ACC, XWORD(%%T0), XWORD(%%T1), %%T2, %%T3, XWORD(%%T4), XWORD(%%T5), \
                 %%HKN, %%ZBUILD, %%HASH4_T6, %%FIN0, %%FIN1, %%FIN2, %%FIN3, %%FIN4, %%FIN5
@@ -1774,31 +1977,23 @@ align_label
 
 align_label
 %%one_fresh_lane:
-        ;; One lane is a carried CIPHER stream (state in OOO); init only the
-        ;; freshly STASHED lane on the single-lane path.
+        ;; One lane is a carried CIPHER stream; init ONLY the freshly STASHED
+        ;; lane in its own XMM bank, overlapping the init with the carried lane's
+        ;; bulk cipher rounds (Stage 3 INIT||CIPHER interleave) so the carried
+        ;; lane's state is both preserved and advanced.
         test    %%LANE_GP, %%LANE_GP
-        jnz     %%fresh_1
-%assign %%fl 0
-%rep 2
-align_label
-%%fresh_ %+ %%fl:
-        NCA4_INIT_LANE_X1 %%fl, XWORD(%%FSM_R1), XWORD(%%FSM_R2), XWORD(%%FSM_R3), XWORD(%%LFSR_A_LDQ), XWORD(%%LFSR_A_HDQ), XWORD(%%LFSR_B_LDQ), XWORD(%%LFSR_B_HDQ), \
-                %%DST_GP, %%COUNTER_GP, %%MASK_K2, XWORD(%%T0), XWORD(%%T1), %%T2, %%T3, XWORD(%%T4)
-        NCA4_STATE_SAVE_X1 p_state, %%fl, XWORD(%%FSM_R1), XWORD(%%FSM_R2), XWORD(%%FSM_R3), XWORD(%%LFSR_A_LDQ), XWORD(%%LFSR_A_HDQ), XWORD(%%LFSR_B_LDQ), XWORD(%%LFSR_B_HDQ)
-        NCA4_HASH_AAD_LANE %%fl, %%REM_GP, %%FOLD_PTR_GP, %%MSG_LEN_GP, %%HK1, %%KK1, %%ACC, XWORD(%%T0)
-        mov     qword [p_state + _snow5g_nca4_bytes_processed + %%fl*8], 0
-        mov     qword [p_state + _snow5g_nca4_phase + %%fl*8], NCA4_PHASE_CIPHER
-%ifidn %%DIR, DECRYPT
-        lea             p_job_in_lane, [p_state + _snow5g_job_in_lane]
-        NCA4_POLYVAL_LANE %%fl, _snow5g_args_in, \
-                %%REM_GP, %%FOLD_PTR_GP, %%MSG_LEN_GP, %%COUNTER_GP, %%TAIL_GP, %%HK1, %%KK1, %%ACC, XWORD(%%T0), XWORD(%%T1), %%T2, %%T3, XWORD(%%T4), XWORD(%%T5), \
-                %%HKN, %%ZBUILD, %%HASH4_T6, %%FIN0, %%FIN1, %%FIN2, %%FIN3, %%FIN4, %%FIN5
-        vmovdqa64       XWORD(%%T0), [rsp + _digest_nca4 + %%fl*16]
-        vmovdqu64       [p_state + _snow5g_nca4_digest + %%fl*16], XWORD(%%T0)
-%endif
+        jnz     %%fresh_is_l1
+
+        NCA4_INIT_OVERLAP_CIPHER 0, %%DIR, XWORD(%%FSM_R1), XWORD(%%FSM_R2), XWORD(%%FSM_R3), XWORD(%%LFSR_A_LDQ), XWORD(%%LFSR_A_HDQ), XWORD(%%LFSR_B_LDQ), XWORD(%%LFSR_B_HDQ), \
+                %%L1_FSM_R1, %%FIN0, %%FIN1, %%L1_LFSR_A_LDQ, %%L1_LFSR_A_HDQ, %%L1_LFSR_B_LDQ, %%L1_LFSR_B_HDQ, \
+                %%LANE_GP, %%DST_GP, %%FOLD_PTR_GP, %%REM_GP, %%COUNTER_GP, %%MSG_LEN_GP, %%MASK_K2, %%MASK_FRESH_K, XWORD(%%T0), XWORD(%%T1), %%T2, %%T3, XWORD(%%T4)
         jmp     %%do_joint_carry
-%assign %%fl (%%fl + 1)
-%endrep
+
+align_label
+%%fresh_is_l1:
+        NCA4_INIT_OVERLAP_CIPHER 1, %%DIR, %%L1_FSM_R1, %%FIN0, %%FIN1, %%L1_LFSR_A_LDQ, %%L1_LFSR_A_HDQ, %%L1_LFSR_B_LDQ, %%L1_LFSR_B_HDQ, \
+                XWORD(%%FSM_R1), XWORD(%%FSM_R2), XWORD(%%FSM_R3), XWORD(%%LFSR_A_LDQ), XWORD(%%LFSR_A_HDQ), XWORD(%%LFSR_B_LDQ), XWORD(%%LFSR_B_HDQ), \
+                %%LANE_GP, %%DST_GP, %%FOLD_PTR_GP, %%REM_GP, %%COUNTER_GP, %%MSG_LEN_GP, %%MASK_K2, %%MASK_FRESH_K, XWORD(%%T0), XWORD(%%T1), %%T2, %%T3, XWORD(%%T4)
 
 align_label
 %%do_joint_carry:
@@ -1862,7 +2057,6 @@ align_label
 
         ;; arg1 (rcx on Windows) is reused as scratch below.
         mov     p_state, state
-        lea     p_job_in_lane, [p_state + _snow5g_job_in_lane]
 
         ;; --- Init any STASHED lanes (single-lane XMM init per lane) ---
         ;; Each stashed lane is brought up independently in its own X1 register
@@ -1950,7 +2144,7 @@ align_function
 submit_job_snow5g_nca4_enc_vaes_avx512:
         SUBMIT_JOB_SNOW5G_NCA4_X2 ENCRYPT, r8, r15, rax, ymm0, ymm12, ymm13, ymm14, ymm24, ymm25, ymm26, ymm27, ymm1, ymm4, ymm5, rcx, k1, k2, \
                 r10, r11, xmm9, xmm8, xmm6, xmm2, xmm3, rbx, rdx, xmm10, zmm11, zmm7, \
-                xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm15, xmm28, xmm29, xmm30, xmm31, r9, rbp
+                xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm15, xmm28, xmm29, xmm30, xmm31, r9, k3, rbp
         ret
 
 ;; flush_job_snow5g_nca4_enc_vaes_avx512(state) - encrypt queue
@@ -1968,7 +2162,7 @@ align_function
 submit_job_snow5g_nca4_dec_vaes_avx512:
         SUBMIT_JOB_SNOW5G_NCA4_X2 DECRYPT, r8, r15, rax, ymm0, ymm12, ymm13, ymm14, ymm24, ymm25, ymm26, ymm27, ymm1, ymm4, ymm5, rcx, k1, k2, \
                 r10, r11, xmm9, xmm8, xmm6, xmm2, xmm3, rbx, rdx, xmm10, zmm11, zmm7, \
-                xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm15, xmm28, xmm29, xmm30, xmm31, r9, rbp
+                xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm15, xmm28, xmm29, xmm30, xmm31, r9, k3, rbp
         ret
 
 ;; flush_job_snow5g_nca4_dec_vaes_avx512(state) - decrypt queue
