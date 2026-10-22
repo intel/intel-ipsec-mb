@@ -11,7 +11,8 @@
 #   AVX2 implementations of the ML-DSA polynomial operations used by signing
 #   and verification (FIPS 204): HighBits, LowBits, Decompose and MakeHint
 #   for both gamma2 values, modular addition and subtraction, infinity norm
-#   checks, hint counting and w1/z bit packing.
+#   checks (including a fused low - c*s2 check), hint counting and w1/z bit
+#   packing.
 #
 # Notes:
 #   - Each routine processes 256 32-bit coefficients, 8 per loop iteration,
@@ -407,6 +408,78 @@ ml_dsa_poly_chknorm_signed_avx2:
     ret
 .cfi_endproc
 .size   ml_dsa_poly_chknorm_signed_avx2, .-ml_dsa_poly_chknorm_signed_avx2
+
+###############################################################################
+# ml_dsa_poly_sub_chknorm_avx2
+#
+# Infinity norm check of low - c*s2 (FIPS 204, Algorithm 7).
+#
+# C Prototype:
+#   uint32_t ml_dsa_poly_sub_chknorm_avx2(
+#       const POLY *low,  // (rdi) Signed low parts of w
+#       const POLY *cs2,  // (rsi) c*s2 polynomial
+#       uint32_t bound    // (edx) Infinity norm bound
+#   );
+#
+# Description:
+#   cs2 is centered to (-(Q-1)/2, (Q-1)/2] before the subtraction, as modular
+#   subtraction is incorrect for the signed low parts. |centered(cs2)| <= beta
+#   during signing, so the difference fits in 32 bits. The whole polynomial
+#   is always scanned and neither input is modified.
+#
+# Inputs:
+#   low   - signed 32-bit coefficients
+#   cs2   - coefficients in [0, Q)
+#   bound - norm bound
+#
+# Output:
+#   eax - 1 if any |low - centered(cs2)| >= bound, 0 otherwise
+###############################################################################
+.align 32
+.globl  ml_dsa_poly_sub_chknorm_avx2
+.type   ml_dsa_poly_sub_chknorm_avx2,\@function,3
+ml_dsa_poly_sub_chknorm_avx2:
+.cfi_startproc
+    endbranch
+    xor     %r10d, %r10d
+    vmovd   %edx, %xmm2
+    vpbroadcastd %xmm2, %ymm2           # ymm2 = bound
+    vpxor   %ymm3, %ymm3, %ymm3         # ymm3 = accumulated failures
+    vpbroadcastd ml_dsa_q(%rip), %ymm4
+    vpbroadcastd ml_dsa_q_half(%rip), %ymm5
+
+.align 32
+.Lsub_chknorm_loop:
+    vmovdqu (%rsi,%r10), %ymm0
+    vpcmpgtd %ymm5, %ymm0, %ymm1
+    vpand   %ymm4, %ymm1, %ymm1
+    vpsubd  %ymm1, %ymm0, %ymm0         # ymm0 = centered(cs2)
+    vmovdqu (%rdi,%r10), %ymm1
+    vpsubd  %ymm0, %ymm1, %ymm0
+    vpabsd  %ymm0, %ymm0
+    # |x| >= bound <=> max(|x|, bound) == |x|
+    vpmaxud %ymm2, %ymm0, %ymm1
+    vpcmpeqd %ymm0, %ymm1, %ymm1
+    vpor    %ymm1, %ymm3, %ymm3
+
+    add     \$8*4, %r10
+    cmp     \$256*4, %r10
+    jb      .Lsub_chknorm_loop
+
+    xor     %eax, %eax
+    vptest  %ymm3, %ymm3
+    setnz   %al
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_dsa_poly_sub_chknorm_avx2, .-ml_dsa_poly_sub_chknorm_avx2
 
 ###############################################################################
 # ml_dsa_poly_count_ones_avx2

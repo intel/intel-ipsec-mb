@@ -96,6 +96,12 @@ typedef void(ML_DSA_POLY_DECOMPOSE_FN)(const struct poly_st *in, struct poly_st 
 typedef void(ML_DSA_POLY_HINT_FN)(const struct poly_st *ct0, const struct poly_st *cs2,
                                   const struct poly_st *w, struct poly_st *out);
 typedef uint32_t(ML_DSA_POLY_CHKNORM_FN)(const struct poly_st *p, uint32_t bound);
+/*
+ * Return 1 if any |low - centered(cs2)| >= bound, 0 otherwise. low holds signed
+ * Decompose output, cs2 is canonical. Neither input is modified.
+ */
+typedef uint32_t(ML_DSA_POLY_SUB_CHKNORM_FN)(const struct poly_st *low, const struct poly_st *cs2,
+                                             uint32_t bound);
 typedef uint32_t(ML_DSA_POLY_COUNT_FN)(const struct poly_st *p);
 typedef void(ML_DSA_POLY_PACK_FN)(const struct poly_st *p, uint8_t *out);
 
@@ -131,6 +137,7 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_NTT_MULT_FN *poly_sub;
         ML_DSA_POLY_CHKNORM_FN *poly_chknorm;
         ML_DSA_POLY_CHKNORM_FN *poly_chknorm_signed;
+        ML_DSA_POLY_SUB_CHKNORM_FN *poly_sub_chknorm;
         ML_DSA_POLY_COUNT_FN *poly_count_ones;
         ML_DSA_POLY_PACK_FN *poly_pack_w1_4;
         ML_DSA_POLY_PACK_FN *poly_pack_z_20;
