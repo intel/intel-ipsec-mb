@@ -35,6 +35,11 @@
 %define ZUC_EIA3_N64B asm_Eia3_Nx64B_AVX512_16
 %endif
 
+%if USE_GFNI_VAES_VPCLMUL
+extern asm_ZucGenKeystream64B_avx
+extern asm_ZucGenKeystream_avx
+%endif
+
 mksection .rodata
 default rel
 
@@ -340,13 +345,14 @@ mksection .text
         %define XMM_STORAGE     0
         %define GP_STORAGE      6*8
 %endif
-%define LANE_STORAGE    32
+%define LANE_STORAGE    64
 %define KEYSTR_STORAGE  64*16
 
 %define VARIABLE_OFFSET KEYSTR_STORAGE + XMM_STORAGE + LANE_STORAGE + GP_STORAGE
 %define KEYSTR_OFFSET 0
 %define XMM_OFFSET KEYSTR_STORAGE
 %define LANE_OFFSET XMM_OFFSET + XMM_STORAGE
+%define COMPLETE_OFFSET (LANE_OFFSET + 32)
 %define GP_OFFSET LANE_OFFSET + LANE_STORAGE
 
 %macro FUNC_SAVE 0
@@ -2068,6 +2074,9 @@ ZUC_KEYGEN_SKIP8_16:
 ;; 5 - ZMM16-31 will contain 64 bytes of KS for each buffer
 ;; 6 - Reads 64 bytes of data for each buffer, XOR with KS and writes the ciphertext
 ;;
+;; Parameter 5 selects byte masking: 0 = full blocks, 1 = common-prefix final
+;; block (length 0 means 64), 2 = tails (literal lengths 0 through 64).
+;;
 ;; Optional 16th parameter: INIT_KMASK - k-register with bits set for init lanes
 ;; When provided, init lanes use LFSR_UPDT in init mode (W feedback) while work lanes
 ;; use work mode (no W feedback). This allows init and cipher to run in parallel.
@@ -2156,17 +2165,24 @@ align_label
         ;; XOR Input buffer with keystream
 %if %%LAST_ROUND == 1
         lea     rbx, [rel byte64_len_to_mask_table]
+%elif %%LAST_ROUND == 2
+        mov     rbx, -1
 %endif
         ;; Read all 16 streams using registers r12-15 into registers zmm0-15
 %assign i 0
 %assign j 0
 %assign k 12
 %rep 16
-%if %%LAST_ROUND == 1
+%if %%LAST_ROUND != 0
         ;; Read number of bytes left to encrypt for the lane stored in stack
         ;; and construct byte mask to read from input pointer
         movzx   r12d, word [rsp + LANE_OFFSET + j*2]
+%if %%LAST_ROUND == 2
+        bzhi    r12, rbx, r12
+        kmovq   %%BYTE_MASK, r12
+%else
         kmovq   %%BYTE_MASK, [rbx + r12*8]
+%endif
 %endif
         mov     APPEND(r, k), [pIn + i]
         vmovdqu8 APPEND(zmm, j){%%BYTE_MASK}{z}, [APPEND(r, k) + %%OFFSET]
@@ -2197,11 +2213,16 @@ align_label
         bt      edi, (j - 16)
         jc      %%skip_output_ %+ j     ;; init lanes: skip movzx + kmovq + write (LAST_ROUND and full blocks)
 %endif
-%if %%LAST_ROUND == 1
+%if %%LAST_ROUND != 0
         ;; Read length to encrypt for the lane stored in stack
         ;; and construct byte mask to write to output pointer
         movzx   r12d, word [rsp + LANE_OFFSET + (j-16)*2]
+%if %%LAST_ROUND == 2
+        bzhi    r12, rbx, r12
+        kmovq   %%BYTE_MASK, r12
+%else
         kmovq   %%BYTE_MASK, [rbx + r12*8]
+%endif
 %endif
         mov     APPEND(r, k), [pOut + i]
         vmovdqu8 [APPEND(r, k) + %%OFFSET]{%%BYTE_MASK}, APPEND(zmm, j)
@@ -2215,15 +2236,6 @@ align_label
 
 %endmacro
 
-;;
-;; void asm_ZucCipher_16_avx512(state16_t *pSta, u64 *pIn[16],
-;;                              u64 *pOut[16], u16 lengths[16],
-;;                              u64 min_length);
-align_function
-MKGLOBAL(CIPHER_16,function,internal)
-align_function
-CIPHER_16:
-
 %define pState     arg1
 %define pIn        arg2
 %define pOut       arg3
@@ -2232,9 +2244,16 @@ CIPHER_16:
 %define min_length r10
 %define buf_idx    r11
 
+; Shared cipher body; in the GFNI variant, r11d selects whether to complete tails.
+align_function
+cipher_common:
         mov     min_length, arg5
 
         FUNC_SAVE
+
+%if USE_GFNI_VAES_VPCLMUL
+        mov     dword [rsp + COMPLETE_OFFSET], r11d
+%endif
 
         ; Convert all lengths set to UINT16_MAX (indicating that lane is not valid) to min length
         vpbroadcastw ymm0, min_length
@@ -2375,6 +2394,13 @@ _no_final_rounds:
         vmovdqa64       [pOut], zmm1
         vmovdqa64       [pOut + 64], zmm2
 
+%if USE_GFNI_VAES_VPCLMUL
+        cmp     dword [rsp + COMPLETE_OFFSET], 0
+        jne     cipher_complete_tails
+%endif
+
+align_label
+cipher_cleanup:
         ; Clear keystream from stack and registers holding plaintext/ciphertext data
 %ifdef SAFE_DATA
         vpxorq          zmm0, zmm0
@@ -2389,6 +2415,177 @@ _no_final_rounds:
         FUNC_RESTORE
 
         ret
+
+%if USE_GFNI_VAES_VPCLMUL
+;;
+;; Keep residual packets in their original lanes. Each iteration consumes up to
+;; 64 bytes per active lane; finished lanes have zero byte masks and frozen state.
+;; Always generate 16 rounds so surviving lanes need no LFSR reordering.
+;; Tails may span many blocks: they are the bytes beyond the common prefix.
+;; This completes the batch synchronously; finished lanes are not refilled here.
+;;
+align_label
+cipher_complete_tails:
+align_loop
+tail_block:
+        ; k3 selects state updates only for lanes with bytes remaining.
+        vmovdqa ymm1, [lengths]
+        vpxorq  ymm0, ymm0
+        vpcmpuw k3, ymm1, ymm0, 4
+        kortestw k3, k3
+        jz      cipher_cleanup
+        ; A nonzero mask with just one bit set selects the single-packet fallback.
+        kmovw   r12d, k3
+        lea     r13d, [r12d - 1]
+        test    r13d, r12d
+        jz      tail_single_lane
+        ; Literal byte counts 0-64 give finished lanes zero-access masks.
+        mov     r12d, 64
+        vpbroadcastw ymm0, r12d
+        vpminuw ymm2, ymm1, ymm0
+        vmovdqa [rsp + LANE_OFFSET], ymm2
+
+        mov     r12d, 0xAAAAAAAA
+        kmovd   k1, r12d
+        mov     rax, pState
+        xor     buf_idx, buf_idx
+        vmovdqa64 zmm0, [rel mask31]
+        CIPHER64B 16, k2, k3, buf_idx, 2, zmm0, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, rax, r14, r15
+
+        ; Advance each pointer by its own consumed byte count, not a shared offset.
+        vmovdqa ymm0, [rsp + LANE_OFFSET]
+        vmovdqa ymm1, [lengths]
+        vpsubusw ymm1, ymm1, ymm0
+        vmovdqa [lengths], ymm1
+        vpmovzxwq zmm1, xmm0
+        vextracti128 xmm0, ymm0, 1
+        vpmovzxwq zmm2, xmm0
+        vpaddq zmm3, zmm1, [pIn]
+        vmovdqa64 [pIn], zmm3
+        vpaddq zmm3, zmm2, [pIn + 64]
+        vmovdqa64 [pIn + 64], zmm3
+        vpaddq zmm3, zmm1, [pOut]
+        vmovdqa64 [pOut], zmm3
+        vpaddq zmm3, zmm2, [pOut + 64]
+        vmovdqa64 [pOut + 64], zmm3
+        jmp     tail_block
+
+; A single residual lane is faster with the single-packet keystream helpers.
+align_label
+tail_single_lane:
+; Reuse the 1024-byte keystream scratch; SIMD processing will not resume.
+; Bytes 0-31 provide Windows call shadow space; padding keeps buffers 64-byte aligned.
+%define TAIL_STATE  (KEYSTR_OFFSET + 64)  ; Bytes 64-191: 72-byte ZUC state plus padding
+%define TAIL_KS     (KEYSTR_OFFSET + 192) ; Bytes 192-255: 64-byte keystream
+%define TAIL_IN     (KEYSTR_OFFSET + 256) ; Bytes 256-263: input pointer
+%define TAIL_OUT    (KEYSTR_OFFSET + 264) ; Bytes 264-271: output pointer
+%define TAIL_LEN    (KEYSTR_OFFSET + 272) ; Bytes 272-279: remaining length
+
+        bsf     ebx, r12d
+        mov     r12, pState
+        mov     r13, pIn
+        mov     r14, pOut
+        mov     r15, lengths
+        movzx   eax, word [r15 + rbx*2]
+        mov     [rsp + TAIL_LEN], rax
+        mov     rax, [r13 + rbx*8]
+        mov     [rsp + TAIL_IN], rax
+        mov     rax, [r14 + rbx*8]
+        mov     [rsp + TAIL_OUT], rax
+        vpxorq  zmm0, zmm0
+        vmovdqa64 [rsp + TAIL_STATE], zmm0
+        vmovdqa64 [rsp + TAIL_STATE + 64], zmm0
+        vmovdqa64 [rsp + TAIL_KS], zmm0
+        ; Gather S0-S15 and R1/R2 from 16-lane fields into contiguous packet state.
+%assign I 0
+%rep 18
+        mov     eax, [r12 + rbx*4 + I*64]
+        mov     [rsp + TAIL_STATE + I*4], eax
+%assign I (I + 1)
+%endrep
+
+align_loop
+tail_single_block:
+        ; The last surviving packet can still have multiple full blocks remaining.
+        lea     arg1, [rsp + TAIL_KS]
+        lea     arg2, [rsp + TAIL_STATE]
+        cmp     qword [rsp + TAIL_LEN], 64
+        jb      tail_single_partial
+        call    asm_ZucGenKeystream64B_avx
+        jmp     tail_single_xor
+
+align_label
+tail_single_partial:
+        ; ZUC generates 4-byte words; masked XOR below uses only requested bytes.
+        mov     arg3, [rsp + TAIL_LEN]
+        add     arg3, 3
+        shr     arg3, 2
+        call    asm_ZucGenKeystream_avx
+
+align_label
+tail_single_xor:
+        ; One mask bit per byte: BZHI keeps min(remaining, 64) low bits set.
+        mov     ecx, 64
+        cmp     [rsp + TAIL_LEN], rcx
+        cmovb   rcx, [rsp + TAIL_LEN]
+        mov     rax, -1
+        bzhi    rax, rax, rcx
+        kmovq   k1, rax
+        mov     rax, [rsp + TAIL_IN]
+        mov     rdx, [rsp + TAIL_OUT]
+        vmovdqa64 zmm0, [rsp + TAIL_KS]
+        vpshufb zmm0, [rel swap_mask]
+        vmovdqu8 zmm1{k1}{z}, [rax]
+        vpxorq  zmm0, zmm1
+        vmovdqu8 [rdx]{k1}, zmm0
+        add     [rsp + TAIL_IN], rcx
+        add     [rsp + TAIL_OUT], rcx
+        sub     [rsp + TAIL_LEN], rcx
+        jnz     tail_single_block
+
+        ; Publish completion and pointers; completed lane state is no longer needed.
+        mov     word [r15 + rbx*2], 0
+        mov     rax, [rsp + TAIL_IN]
+        mov     [r13 + rbx*8], rax
+        mov     rax, [rsp + TAIL_OUT]
+        mov     [r14 + rbx*8], rax
+%ifdef SAFE_DATA
+        vpxorq  zmm1, zmm1
+        vpxorq  zmm2, zmm2
+        vpxorq  zmm3, zmm3
+        vpxorq  zmm4, zmm4
+%endif
+        vzeroupper
+        ; Shared SAFE_DATA cleanup wipes the entire reused keystream scratch.
+        jmp     cipher_cleanup
+%endif
+
+;;
+;; void CIPHER_16(state16_t *pSta, u64 *pIn[16],
+;;                u64 *pOut[16], u16 lengths[16], u64 min_length);
+;; Process the common prefix and return with per-lane remainders.
+;;
+MKGLOBAL(CIPHER_16,function,internal)
+align_function
+CIPHER_16:
+%if USE_GFNI_VAES_VPCLMUL
+        xor     r11d, r11d
+%endif
+        jmp     cipher_common
+
+%if USE_GFNI_VAES_VPCLMUL
+;;
+;; void asm_ZucCipherComplete_16_gfni_avx512(state16_t *pSta, u64 *pIn[16],
+;;                                         u64 *pOut[16], u16 lengths[16],
+;;                                         u64 min_length);
+;; NCA6: process the common prefix and complete all tails before returning.
+;;
+MKGLOBAL(asm_ZucCipherComplete_16_gfni_avx512,function,internal)
+align_function
+asm_ZucCipherComplete_16_gfni_avx512:
+        mov     r11d, 1
+        jmp     cipher_common
+%endif
 
 ;;
 ;; void CIPHER_INIT_16(state16_t *pSta, u64 *pIn[16],

@@ -872,6 +872,20 @@ asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState, const uint64_t *pIn[16], uint
                              const uint16_t lengths[16], const uint64_t minLength);
 
 /**
+ * Cipher the common prefix, then complete remaining lanes in parallel without
+ * returning to C. Arguments and alignment requirements match the common-prefix
+ * cipher. Remaining lengths are zero on return and tail pointers are advanced
+ * by the bytes consumed. Completed lane state is unspecified on return; the
+ * caller must not resume ciphering completed lanes.
+ * Inactive lanes must have length minLength and valid duplicate key/IV/pointers.
+ * Keystream scratch is cleared when SAFE_DATA is enabled.
+ */
+IMB_DLL_LOCAL void
+asm_ZucCipherComplete_16_gfni_avx512(ZucState16_t *pState, const uint64_t *pIn[16],
+                                     uint64_t *pOut[16], uint16_t lengths[16],
+                                     const uint64_t minLength);
+
+/**
  ******************************************************************************
  * @description
  *      Definition of the external function to update the authentication tag

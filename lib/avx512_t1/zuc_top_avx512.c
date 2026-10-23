@@ -158,14 +158,12 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
 {
         unsigned int i;
         DECLARE_ALIGNED(ZucState16_t state, 64);
-        DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         DECLARE_ALIGNED(uint32_t keyStr[2 * NUM_AVX512_BUFS * 16], 64);
         DECLARE_ALIGNED(uint16_t remainBytes[NUM_AVX512_BUFS], 32) = { 0 };
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
         DECLARE_ALIGNED(const uint64_t *pIn64[NUM_AVX512_BUFS], 64);
         DECLARE_ALIGNED(uint64_t * pOut64[NUM_AVX512_BUFS], 64);
         uint16_t bytes;
-        DECLARE_ALIGNED(uint8_t singleKeyStr[ZUC_KEYSTR_LEN], 64);
         const __m128i shuf_mask =
                 _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
 
@@ -241,65 +239,15 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
                 }
         }
 
-        /* Encrypt/decrypt common minimum length across all real lanes */
-        asm_ZucCipher_16_gfni_avx512(&state, pIn64, pOut64, remainBytes, (uint16_t) bytes);
+        /* Process the common prefix and complete all tails within assembly. */
+        asm_ZucCipherComplete_16_gfni_avx512(&state, pIn64, pOut64, remainBytes, bytes);
 
-        /* Per-lane: cipher remainder, POLYVAL for encrypt, tag finalization */
+        /* Per-lane: POLYVAL for encrypt, tag finalization */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 const IMB_JOB *job = job_in_lane[i];
 
                 if (job == NULL)
                         continue;
-
-                /* Handle remaining bytes for this lane */
-                if (remainBytes[i]) {
-                        for (unsigned j = 0; j <= 15; j++)
-                                singlePktState.lfsrState[j] = state.lfsrState[j][i];
-
-                        singlePktState.fR1 = state.fR1[i];
-                        singlePktState.fR2 = state.fR2[i];
-
-                        uint32_t numKeyStreamsPerPkt = remainBytes[i] / ZUC_KEYSTR_LEN;
-                        const uint32_t numBytesLeftOver = remainBytes[i] % ZUC_KEYSTR_LEN;
-                        const uint32_t processedBytes = length[i] - remainBytes[i];
-
-                        const uint8_t *pTempBufInPtr = (const uint8_t *) pBufferIn[i];
-                        uint8_t *pTempBufOutPtr = (uint8_t *) pBufferOut[i];
-
-                        pOut64[0] = (uint64_t *) &pTempBufOutPtr[processedBytes];
-                        pIn64[0] = (const uint64_t *) &pTempBufInPtr[processedBytes];
-
-                        while (numKeyStreamsPerPkt--) {
-                                asm_ZucGenKeystream64B_avx((uint32_t *) singleKeyStr,
-                                                           &singlePktState);
-                                asm_XorKeyStream64B_avx512(pIn64[0], pOut64[0],
-                                                           (uint64_t *) singleKeyStr);
-                                pIn64[0] += 8;
-                                pOut64[0] += 8;
-                        }
-
-                        if (numBytesLeftOver) {
-                                DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
-                                DECLARE_ALIGNED(uint8_t tempDst[64], 64);
-                                const uint32_t offset = length[i] - numBytesLeftOver;
-                                const uint64_t num4BRounds = ((numBytesLeftOver - 1) / 4) + 1;
-
-                                asm_ZucGenKeystream_avx((uint32_t *) singleKeyStr, &singlePktState,
-                                                        num4BRounds);
-
-                                memcpy(&tempSrc[0], &pTempBufInPtr[offset], numBytesLeftOver);
-                                memset(&tempSrc[numBytesLeftOver], 0, 64 - numBytesLeftOver);
-
-                                asm_XorKeyStream64B_avx512((uint64_t *) tempSrc,
-                                                           (uint64_t *) tempDst,
-                                                           (uint64_t *) singleKeyStr);
-                                memcpy(&pTempBufOutPtr[offset], &tempDst[0], numBytesLeftOver);
-#ifdef SAFE_DATA
-                                clear_mem(tempSrc, sizeof(tempSrc));
-                                clear_mem(tempDst, sizeof(tempDst));
-#endif
-                        }
-                }
 
                 /* Encrypt: compute POLYVAL on ciphertext after encrypting */
                 if (dir == IMB_DIR_ENCRYPT) {
@@ -329,8 +277,6 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
 
 #ifdef SAFE_DATA
         clear_mem(keyStr, sizeof(keyStr));
-        clear_mem(singleKeyStr, sizeof(singleKeyStr));
-        clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
         clear_scratch_gps();

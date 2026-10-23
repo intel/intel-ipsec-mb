@@ -93,26 +93,4 @@ asm_XorKeyStream32B_avx2:
         vzeroupper
         ret
 
-MKGLOBAL(asm_XorKeyStream64B_avx512,function,internal)
-asm_XorKeyStream64B_avx512:
-%ifdef LINUX
-        %define         pIn     rdi
-        %define         pOut    rsi
-        %define         pKS     rdx
-%else
-        %define         pIn     rcx
-        %define         pOut    rdx
-        %define         pKS     r8
-%endif
-        %define         ZKEY    zmm0
-        %define         ZIN     zmm1
-
-        vmovdqa64       ZKEY,   [pKS]
-        vpshufb         ZKEY,   [rel swap_mask]
-        vmovdqu64       ZIN,    [pIn]
-        vpxorq          ZKEY,   ZIN
-        vmovdqu64       [pOut], ZKEY
-        vzeroupper
-        ret
-
 mksection stack-noexec
