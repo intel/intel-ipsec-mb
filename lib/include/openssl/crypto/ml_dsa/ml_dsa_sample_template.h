@@ -108,6 +108,9 @@ ML_DSA_VECTOR_EXPAND_MASK(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
         const size_t seed_len = sizeof(derived_seeds[0]);
         const size_t buf_size = ML_DSA_EXPAND_MASK_BUF_SIZE(gamma1);
         uint8_t buffers[ML_DSA_SHAKE_X4_BATCH_SIZE][ML_DSA_EXPAND_MASK_BUF_SIZE_GAMMA1_19];
+        void (*const decode_mask)(POLY *, const uint8_t *) =
+                gamma1 == ML_DSA_GAMMA1_TWO_POWER_19 ? ml_dsa_poly_unpack_mask_20_avx2
+                                                     : ml_dsa_poly_unpack_mask_18_avx2;
 
         (void) h_ctx;
         (void) md;
@@ -130,14 +133,10 @@ ML_DSA_VECTOR_EXPAND_MASK(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
                                         derived_seeds[0], derived_seeds[1], derived_seeds[2],
                                         derived_seeds[3], seed_len);
 
-                ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 0], buffers[0], buf_size,
-                                                    gamma1);
-                ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 1], buffers[1], buf_size,
-                                                    gamma1);
-                ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 2], buffers[2], buf_size,
-                                                    gamma1);
-                ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 3], buffers[3], buf_size,
-                                                    gamma1);
+                decode_mask(&out->poly[i + 0], buffers[0]);
+                decode_mask(&out->poly[i + 1], buffers[1]);
+                decode_mask(&out->poly[i + 2], buffers[2]);
+                decode_mask(&out->poly[i + 3], buffers[3]);
         }
 
         if (i < num_polys) {
@@ -155,16 +154,13 @@ ML_DSA_VECTOR_EXPAND_MASK(VECTOR *out, const uint8_t rho_prime[ML_DSA_RHO_PRIME_
                                         derived_seeds[0], derived_seeds[1], derived_seeds[2],
                                         derived_seeds[3], seed_len);
 
-                ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 0], buffers[0], buf_size,
-                                                    gamma1);
+                decode_mask(&out->poly[i + 0], buffers[0]);
 
                 if ((i + 1) < num_polys)
-                        ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 1], buffers[1], buf_size,
-                                                            gamma1);
+                        decode_mask(&out->poly[i + 1], buffers[1]);
 
                 if ((i + 2) < num_polys)
-                        ossl_ml_dsa_poly_decode_expand_mask(&out->poly[i + 2], buffers[2], buf_size,
-                                                            gamma1);
+                        decode_mask(&out->poly[i + 2], buffers[2]);
         }
 
         OPENSSL_cleanse(buffers, sizeof(buffers));

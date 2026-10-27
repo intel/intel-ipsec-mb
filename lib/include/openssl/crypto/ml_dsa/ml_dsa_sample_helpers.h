@@ -33,6 +33,12 @@
 
 typedef int(COEFF_FROM_NIBBLE_FUNC)(uint32_t nibble, uint32_t *out);
 
+/* AVX2 ExpandMask decoding, reading exactly 576 / 640 bytes */
+IMB_DLL_LOCAL void
+ml_dsa_poly_unpack_mask_18_avx2(POLY *out, const uint8_t *in);
+IMB_DLL_LOCAL void
+ml_dsa_poly_unpack_mask_20_avx2(POLY *out, const uint8_t *in);
+
 /* See FIPS 204, Algorithm 14, CoeffFromThreeBytes() */
 static ossl_inline int
 coeff_from_three_bytes(const uint8_t *s, uint32_t *out)

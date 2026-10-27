@@ -14,6 +14,7 @@ Library
   implementation, using a single Montgomery reduction per coefficient.
 - Optimized ML-DSA AVX2 forward and inverse NTT: fewer butterfly shuffles,
   fixed permutes in the first inverse level and Shoup based inverse scaling.
+- Added AVX2 ExpandMask decoding for ML-DSA.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

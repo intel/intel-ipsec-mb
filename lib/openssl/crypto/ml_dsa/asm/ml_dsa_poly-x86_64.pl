@@ -11,8 +11,8 @@
 #   AVX2 implementations of the ML-DSA polynomial operations used by signing
 #   and verification (FIPS 204): HighBits, LowBits, Decompose and MakeHint
 #   for both gamma2 values, modular addition and subtraction, infinity norm
-#   checks (including a fused low - c*s2 check), hint counting and w1/z bit
-#   packing.
+#   checks (including a fused low - c*s2 check), hint counting, w1/z bit
+#   packing and ExpandMask decoding.
 #
 # Notes:
 #   - Each routine processes 256 32-bit coefficients, 8 per loop iteration,
@@ -892,6 +892,86 @@ $code .= <<___;
     ret
 .cfi_endproc
 .size   ml_dsa_poly_pack_z_20_avx2, .-ml_dsa_poly_pack_z_20_avx2
+___
+
+###############################################################################
+# ExpandMask decoding routines, generated for 18-bit (ML-DSA-44) and 20-bit
+# (ML-DSA-65/87) coefficients. The C caller selects one by gamma1.
+###############################################################################
+for my $bits (18, 20) {
+    my $gamma1 = ($bits == 18) ? "ml_dsa_gamma1_44" : "ml_dsa_gamma1";
+    my $upper = $bits - 16;
+    my $in_len = 32 * $bits;
+
+$code .= <<___;
+
+###############################################################################
+# ml_dsa_poly_unpack_mask_${bits}_avx2
+#
+# BitUnpack(v, gamma1 - 1, gamma1) for ExpandMask (FIPS 204, Algorithms 19
+# and 34).
+#
+# C Prototype:
+#   void ml_dsa_poly_unpack_mask_${bits}_avx2(
+#       POLY *out,           // (rdi) Output polynomial
+#       const uint8_t *in    // (rsi) Packed input
+#   );
+#
+# Description:
+#   Two overlapping 16-byte loads cover the $bits bytes of 8 coefficients.
+#   The 3 bytes holding each coefficient are gathered into a dword, shifted
+#   by its bit offset and masked to x. gamma1 - x is mapped to [0, Q) by
+#   adding Q when negative.
+#
+# Inputs:
+#   in - exactly $in_len bytes read
+#
+# Output:
+#   out - (gamma1 - x) mod Q; must not overlap in
+###############################################################################
+.align 32
+.globl  ml_dsa_poly_unpack_mask_${bits}_avx2
+.type   ml_dsa_poly_unpack_mask_${bits}_avx2,\@function,2
+ml_dsa_poly_unpack_mask_${bits}_avx2:
+.cfi_startproc
+    endbranch
+    xor     %r10d, %r10d
+    vpbroadcastd $gamma1(%rip), %ymm3
+    vpbroadcastd ml_dsa_q(%rip), %ymm4
+    vpbroadcastd ml_dsa_mask_${bits}(%rip), %ymm5
+
+.align 32
+.Lunpack_mask_${bits}_loop:
+    vmovdqu (%rsi), %xmm0
+    vinserti128 \$1, $upper(%rsi), %ymm0, %ymm0
+    vpshufb ml_dsa_unpack_mask_${bits}_shuf(%rip), %ymm0, %ymm0
+    vpsrlvd ml_dsa_unpack_mask_${bits}_shift(%rip), %ymm0, %ymm0
+    vpand   %ymm5, %ymm0, %ymm0
+    vpsubd  %ymm0, %ymm3, %ymm0
+    vpsrad  \$31, %ymm0, %ymm1
+    vpand   %ymm4, %ymm1, %ymm1
+    vpaddd  %ymm1, %ymm0, %ymm0
+    vmovdqu %ymm0, (%rdi,%r10)
+    add     \$$bits, %rsi
+
+    add     \$8*4, %r10
+    cmp     \$256*4, %r10
+    jb      .Lunpack_mask_${bits}_loop
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_dsa_poly_unpack_mask_${bits}_avx2, .-ml_dsa_poly_unpack_mask_${bits}_avx2
+___
+}
+
+$code .= <<___;
 
 .section    .rodata
 
@@ -909,6 +989,19 @@ ml_dsa_q_half:
 .align 4
 ml_dsa_gamma1:
     .long 524288
+
+# gamma1 = 2^17 for ML-DSA-44 (FIPS 204, Table 1)
+.align 4
+ml_dsa_gamma1_44:
+    .long 131072
+
+# ExpandMask coefficient masks, 2^18 - 1 and 2^20 - 1
+.align 4
+ml_dsa_mask_18:
+    .long 262143
+.align 4
+ml_dsa_mask_20:
+    .long 1048575
 
 .align 4
 ml_dsa_one:
@@ -954,6 +1047,21 @@ ml_dsa_pack_w1_4_shuf:
 ml_dsa_pack_z_20_shuf:
     .byte 0,1,2,3,4,8,9,10,11,12,0x80,0x80,0x80,0x80,0x80,0x80
     .byte 0,1,2,3,4,8,9,10,11,12,0x80,0x80,0x80,0x80,0x80,0x80
+
+# ExpandMask gather and shift tables. Coefficient i starts at bit i*bits;
+# lane 1 bytes are relative to its load at offset bits - 16.
+.align 32
+ml_dsa_unpack_mask_18_shuf:
+    .byte 0,1,2,0x80,2,3,4,0x80,4,5,6,0x80,6,7,8,0x80
+    .byte 7,8,9,0x80,9,10,11,0x80,11,12,13,0x80,13,14,15,0x80
+ml_dsa_unpack_mask_18_shift:
+    .long 0,2,4,6,0,2,4,6
+.align 32
+ml_dsa_unpack_mask_20_shuf:
+    .byte 0,1,2,0x80,2,3,4,0x80,5,6,7,0x80,7,8,9,0x80
+    .byte 6,7,8,0x80,8,9,10,0x80,11,12,13,0x80,13,14,15,0x80
+ml_dsa_unpack_mask_20_shift:
+    .long 0,4,0,4,0,4,0,4
 
 .section    .note.GNU-stack,"",\@progbits
 ___
