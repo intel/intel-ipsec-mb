@@ -39,6 +39,13 @@ ml_dsa_poly_unpack_mask_18_avx2(POLY *out, const uint8_t *in);
 IMB_DLL_LOCAL void
 ml_dsa_poly_unpack_mask_20_avx2(POLY *out, const uint8_t *in);
 
+/*
+ * AVX2 ExpandA rejection sampling of one SHAKE128 block. Returns the number
+ * of accepted coefficients written to out, at most capacity.
+ */
+IMB_DLL_LOCAL uint32_t
+ml_dsa_rej_ntt_block_avx2(uint32_t *out, const uint32_t capacity, const uint8_t *in);
+
 /* See FIPS 204, Algorithm 14, CoeffFromThreeBytes() */
 static ossl_inline int
 coeff_from_three_bytes(const uint8_t *s, uint32_t *out)

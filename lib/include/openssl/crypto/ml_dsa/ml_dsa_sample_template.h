@@ -36,7 +36,7 @@
  *   ML_DSA_SAMPLE_INIT_FN            exported ossl_ml_dsa_sample_init_* name
  *
  * See ml_dsa_sample_hw_x86_64_avx512.c and ml_dsa_sample_hw_x86_64_avx2.c
- * for example instantiations.
+ * for example instantiations. Both use the AVX2 ExpandA and ExpandMask kernels.
  */
 
 #define ML_DSA_SHAKE_X4_BATCH_SIZE 4
@@ -59,7 +59,7 @@ ML_DSA_REJ_NTT_POLY_MB(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const s
 {
         ML_DSA_X4_CTX ctx;
         uint8_t blocks[ML_DSA_SHAKE_X4_BATCH_SIZE][SHAKE128_BLOCKSIZE];
-        int coeff_idx[ML_DSA_SHAKE_X4_BATCH_SIZE] = { 0, 0, 0, 0 };
+        uint32_t coeff_idx[ML_DSA_SHAKE_X4_BATCH_SIZE] = { 0, 0, 0, 0 };
         size_t done_mask = 0;
         size_t lane;
 
@@ -77,15 +77,9 @@ ML_DSA_REJ_NTT_POLY_MB(const uint8_t *seeds[ML_DSA_SHAKE_X4_BATCH_SIZE], const s
                         if (done_mask & ((size_t) 1 << lane))
                                 continue;
 
-                        const uint8_t *b = blocks[lane];
-                        const uint8_t *end = b + SHAKE128_BLOCKSIZE;
-
-                        for (; b < end && coeff_idx[lane] < ML_DSA_NUM_POLY_COEFFICIENTS; b += 3) {
-                                uint32_t *coeff_ptr = &(outs[lane]->coeff[coeff_idx[lane]]);
-
-                                if (coeff_from_three_bytes(b, coeff_ptr))
-                                        coeff_idx[lane]++;
-                        }
+                        coeff_idx[lane] += ml_dsa_rej_ntt_block_avx2(
+                                &outs[lane]->coeff[coeff_idx[lane]],
+                                ML_DSA_NUM_POLY_COEFFICIENTS - coeff_idx[lane], blocks[lane]);
 
                         if (coeff_idx[lane] >= ML_DSA_NUM_POLY_COEFFICIENTS)
                                 done_mask |= ((size_t) 1 << lane);

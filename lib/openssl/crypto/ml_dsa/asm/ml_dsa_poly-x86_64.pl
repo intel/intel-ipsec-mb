@@ -12,11 +12,12 @@
 #   and verification (FIPS 204): HighBits, LowBits, Decompose and MakeHint
 #   for both gamma2 values, modular addition and subtraction, infinity norm
 #   checks (including a fused low - c*s2 check), hint counting, w1/z bit
-#   packing and ExpandMask decoding.
+#   packing, ExpandMask decoding and ExpandA rejection sampling.
 #
 # Notes:
 #   - Each routine processes 256 32-bit coefficients, 8 per loop iteration,
-#     with a fixed trip count and unaligned loads/stores
+#     with a fixed trip count and unaligned loads/stores. The exception is
+#     ExpandA rejection sampling, which branches on public data only
 #   - %r10 holds the byte offset into the polynomial
 #   - Only YMM0-YMM5 are used (volatile on SysV and Win64); they are cleared
 #     before returning
@@ -973,6 +974,96 @@ ___
 
 $code .= <<___;
 
+###############################################################################
+# ml_dsa_rej_ntt_block_avx2
+#
+# RejNTTPoly sampling of one SHAKE128 block for ExpandA (FIPS 204,
+# Algorithms 14 and 30).
+#
+# C Prototype:
+#   uint32_t ml_dsa_rej_ntt_block_avx2(
+#       uint32_t *out,              // (rdi) Output coefficients
+#       const uint32_t capacity,    // (esi) Free output slots, in [0, 256]
+#       const uint8_t *in           // (rdx) SHAKE128 block
+#   );
+#
+# Description:
+#   Each 3-byte candidate, with its top bit cleared, is accepted if below Q.
+#   While 8 output slots are free and all 8 candidates of a 24-byte group
+#   are accepted, the group is stored directly. Otherwise the rest of the
+#   block is processed one candidate at a time, keeping stream order.
+#   Branches depend only on public data derived from rho.
+#
+# Inputs:
+#   in - exactly 168 bytes read
+#
+# Output:
+#   out - accepted coefficients in [0, Q), at most capacity written
+#   eax - number of coefficients written
+###############################################################################
+.align 32
+.globl  ml_dsa_rej_ntt_block_avx2
+.type   ml_dsa_rej_ntt_block_avx2,\@function,3
+ml_dsa_rej_ntt_block_avx2:
+.cfi_startproc
+    endbranch
+    xor     %r10d, %r10d
+    xor     %eax, %eax
+    vpbroadcastd ml_dsa_mask_23(%rip), %ymm3
+    vpbroadcastd ml_dsa_q(%rip), %ymm4
+    vmovdqa ml_dsa_rej_ntt_shuf(%rip), %ymm5
+
+.align 32
+.Lrej_ntt_block_loop:
+    lea     8(%rax), %r8d
+    cmp     %esi, %r8d
+    ja      .Lrej_ntt_block_scalar
+    vmovdqu (%rdx,%r10), %xmm0
+    vinserti128 \$1, 8(%rdx,%r10), %ymm0, %ymm0
+    vpshufb %ymm5, %ymm0, %ymm0
+    vpand   %ymm3, %ymm0, %ymm0
+    vpcmpgtd %ymm0, %ymm4, %ymm1
+    vmovmskps %ymm1, %ecx
+    cmp     \$255, %ecx
+    jne     .Lrej_ntt_block_scalar
+    vmovdqu %ymm0, (%rdi,%rax,4)
+    add     \$8, %eax
+
+    add     \$8*3, %r10
+    cmp     \$168, %r10
+    jb      .Lrej_ntt_block_loop
+    jmp     .Lrej_ntt_block_done
+
+.align 32
+.Lrej_ntt_block_scalar:
+    cmp     %esi, %eax
+    jae     .Lrej_ntt_block_done
+    movzwl  (%rdx,%r10), %ecx
+    movzbl  2(%rdx,%r10), %r9d
+    and     \$127, %r9d
+    shl     \$16, %r9d
+    or      %r9d, %ecx
+    add     \$3, %r10
+    cmp     \$8380417, %ecx
+    jae     .Lrej_ntt_block_next
+    mov     %ecx, (%rdi,%rax,4)
+    inc     %eax
+.Lrej_ntt_block_next:
+    cmp     \$168, %r10
+    jb      .Lrej_ntt_block_scalar
+
+.Lrej_ntt_block_done:
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_dsa_rej_ntt_block_avx2, .-ml_dsa_rej_ntt_block_avx2
+
 .section    .rodata
 
 # Modulus Q = 2^23 - 2^13 + 1 (FIPS 204, Table 1)
@@ -1002,6 +1093,11 @@ ml_dsa_mask_18:
 .align 4
 ml_dsa_mask_20:
     .long 1048575
+
+# ExpandA candidate mask, 2^23 - 1
+.align 4
+ml_dsa_mask_23:
+    .long 8388607
 
 .align 4
 ml_dsa_one:
@@ -1062,6 +1158,13 @@ ml_dsa_unpack_mask_20_shuf:
     .byte 6,7,8,0x80,8,9,10,0x80,11,12,13,0x80,13,14,15,0x80
 ml_dsa_unpack_mask_20_shift:
     .long 0,4,0,4,0,4,0,4
+
+# ExpandA gather: lane 0 takes candidates 0-3 from bytes 0-11, lane 1
+# takes candidates 4-7 from bytes 12-23 (its load starts at byte 8)
+.align 32
+ml_dsa_rej_ntt_shuf:
+    .byte 0,1,2,0x80,3,4,5,0x80,6,7,8,0x80,9,10,11,0x80
+    .byte 4,5,6,0x80,7,8,9,0x80,10,11,12,0x80,13,14,15,0x80
 
 .section    .note.GNU-stack,"",\@progbits
 ___
