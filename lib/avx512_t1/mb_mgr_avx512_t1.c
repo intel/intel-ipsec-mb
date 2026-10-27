@@ -22,7 +22,7 @@
 #include "include/cpu_feature.h"
 #include "include/error.h"
 
-#include "include/arch_avx2_type1.h" /* AESNI, MD5 */
+#include "include/arch_avx2_type1.h" /* AESNI, MD5, ZUC */
 #include "include/arch_avx512_type1.h"
 #include "include/arch_avx512_type2.h"
 #include "include/arch_sse_type1.h" /* aes-cfb, zuc */
@@ -200,15 +200,15 @@
 #define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_avx512
 #define POLY1305_MAC                     poly1305_mac_plain_avx512
 
-/* ZUC EEA3 & EIA3 */
-#define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_no_gfni_avx512
-#define FLUSH_JOB_ZUC_EEA3  flush_job_zuc_eea3_no_gfni_avx512
-#define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_avx512
-#define FLUSH_JOB_ZUC_EIA3  flush_job_zuc_eia3_no_gfni_avx512
+/* ZUC EEA3 & EIA3: AVX512 type 1 requirements include non-GFNI AVX2. */
+#define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_avx2
+#define FLUSH_JOB_ZUC_EEA3  flush_job_zuc_eea3_avx2
+#define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_avx2
+#define FLUSH_JOB_ZUC_EIA3  flush_job_zuc_eia3_avx2
 
 /* ZUC NEA6 */
-#define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_no_gfni_avx512
-#define FLUSH_JOB_ZUC_NEA6  flush_job_zuc_nea6_no_gfni_avx512
+#define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_avx2
+#define FLUSH_JOB_ZUC_NEA6  flush_job_zuc_nea6_avx2
 
 /* ZUC NIA6 */
 #define SUBMIT_JOB_ZUC_NIA6 submit_job_zuc_nia6_no_gfni_sse
@@ -366,9 +366,9 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_des_reset(state->docsis_des_dec_ooo, AVX512_NUM_DES_LANES);
 
         /* Init ZUC out-of-order fields */
-        ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 16);
-        ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 16);
-        ooo_mgr_zuc_reset(state->zuc_nea6_ooo, 16);
+        ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 8);
+        ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 8);
+        ooo_mgr_zuc_reset(state->zuc_nea6_ooo, 8);
         ooo_mgr_zuc_reset(state->zuc_nia6_ooo, 4);
         ooo_mgr_zuc_reset(state->zuc_nca6_enc_ooo, 4);
         ooo_mgr_zuc_reset(state->zuc_nca6_dec_ooo, 4);

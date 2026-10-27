@@ -15,6 +15,9 @@ Library
 - Optimized ML-DSA AVX2 forward and inverse NTT: fewer butterfly shuffles,
   fixed permutes in the first inverse level and Shoup based inverse scaling.
 - Added AVX2 ExpandMask decoding and ExpandA rejection sampling for ML-DSA.
+- Removed non-GFNI AVX512 ZUC implementations. AVX512 type 1 now uses
+  non-GFNI AVX2 implementations for EEA3, EIA3 and NEA6, and the existing
+  non-GFNI SSE implementations for NIA6 and NCA6.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

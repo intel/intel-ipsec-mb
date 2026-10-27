@@ -43,21 +43,6 @@ IMB_JOB *
 flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 
 IMB_JOB *
-submit_job_zuc_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_zuc_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *
-submit_job_zuc_nea6_no_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_zuc_nea6_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *
-submit_job_zuc_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_zuc_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *
 submit_job_sha1_avx512(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_sha1_avx512(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);

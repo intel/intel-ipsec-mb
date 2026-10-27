@@ -251,10 +251,6 @@ IMB_DLL_LOCAL void
 asm_ZucNEA6Initialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
 
 IMB_DLL_LOCAL void
-asm_ZucNEA6Initialization_16_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
-                                    const uint64_t lane_mask);
-
-IMB_DLL_LOCAL void
 asm_ZucNEA6Initialization_16_gfni_avx512(ZucKey16_t *pKeys, const uint8_t *ivs,
                                          ZucState16_t *pState, const uint64_t lane_mask);
 
@@ -305,10 +301,6 @@ asm_ZucInitialization_8_gfni_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
-                                const uint16_t lane_mask);
-
 IMB_DLL_LOCAL void
 asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
                                      const uint16_t lane_mask);
@@ -510,9 +502,6 @@ asm_ZucGenKeystream32B_8_gfni_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_avx512(ZucState16_t *pState, uint32_t *pKeyStr, const unsigned key_off);
-
-IMB_DLL_LOCAL void
 asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
                                       const unsigned key_off);
 /**
@@ -542,10 +531,6 @@ asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
  *      the ZUC state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip8_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
-                                       const unsigned key_off, const uint16_t lane_mask);
-
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream64B_16_skip8_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
                                             const unsigned key_off, const uint16_t lane_mask);
@@ -700,9 +685,6 @@ asm_ZucGenKeystream4B_8_gfni_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream8B_16_avx512(ZucState16_t *pState, uint32_t *pKeyStr, const unsigned key_off);
-
-IMB_DLL_LOCAL void
 asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
                                      const unsigned key_off);
 
@@ -730,10 +712,6 @@ asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
-                              const uint32_t numRounds);
-
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
                                    const uint32_t numRounds);
@@ -765,10 +743,6 @@ asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr, const 
  *      ZUC state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip8_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
-                                    const uint16_t lane_mask, const uint32_t numRounds);
-
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream_16_skip8_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr,
                                          const unsigned key_off, const uint16_t lane_mask,
@@ -864,10 +838,6 @@ asm_ZucCipher_8_gfni_avx2(ZucState8_t *pState, const uint64_t *pIn[8], uint64_t 
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucCipher_16_avx512(ZucState16_t *pState, const uint64_t *pIn[16], uint64_t *pOut[16],
-                        const uint16_t lengths[16], const uint64_t minLength);
-
-IMB_DLL_LOCAL void
 asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState, const uint64_t *pIn[16], uint64_t *pOut[16],
                              const uint16_t lengths[16], const uint64_t minLength);
 
@@ -951,15 +921,8 @@ asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t 
  *      None
  *
  *****************************************************************************/
-
-IMB_DLL_LOCAL void
-asm_Eia3Round64BAVX512_16(void *T, const uint32_t *ks, const void **data, uint16_t *len);
-
 IMB_DLL_LOCAL void
 asm_Eia3Round64B_16_VPCLMUL(void *T, const uint32_t *ks, const void **data, uint16_t *len);
-
-IMB_DLL_LOCAL void
-asm_Eia3Round64BAVX512(uint32_t *T, const void *ks, const void *data);
 
 /**
  ******************************************************************************
@@ -979,13 +942,6 @@ asm_Eia3Round64BAVX512(uint32_t *T, const void *ks, const void *data);
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_Eia3RemainderAVX512(uint32_t *T, const void *ks, const void *data, const uint32_t n_bytes);
-
-IMB_DLL_LOCAL uint32_t
-asm_Eia3RemainderAVX512_16(uint32_t *T, const uint32_t *ks, const void **data, uint16_t *lens,
-                           const uint32_t commonBytes);
-
 IMB_DLL_LOCAL uint32_t
 asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const void **data,
                                    uint16_t *lens, const uint32_t commonBytes);
@@ -1003,10 +959,6 @@ asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const void *
  * @param[in] numRounds             Number of 64B rounds to perform
  *
  *****************************************************************************/
-IMB_DLL_LOCAL
-void
-asm_Eia3_Nx64B_AVX512_16(ZucState16_t *pState, uint32_t *pKeyStr, uint32_t *T, const void **data,
-                         uint16_t *len, const uint64_t numRounds);
 IMB_DLL_LOCAL
 void
 asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState, uint32_t *pKeyStr, uint32_t *T,

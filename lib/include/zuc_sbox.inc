@@ -283,27 +283,12 @@ Rotl5_matrix:
 %endmacro
 
 ;
-; Rotate left 5 bits in each byte, within an ZMM register
+; Compute 64 S0 box values from 64 bytes, stored in ZMM register, using GFNI
 ;
-%macro Rotl_5_AVX512 2
-%define %%ZDATA         %1 ; [in/out] ZMM register to rotate
-%define %%ZTMP0         %2 ; [clobbered] Temporary ZMM register
-
-        vpslld  %%ZTMP0, %%ZDATA, 5
-        vpsrld  %%ZDATA, 3
-        vpandq  %%ZTMP0, [rel Top3_bits_of_the_byte]
-        vpternlogq %%ZDATA, %%ZTMP0, [rel Bottom5_bits_of_the_byte], 0xEC
-
-%endmacro
-
-;
-; Compute 64 S0 box values from 64 bytes, stored in ZMM register
-;
-%macro S0_comput_AVX512 4
+%macro S0_comput_AVX512 3
 %define %%IN_OUT        %1 ; [in/out] ZMM reg with input values which will contain the output values
 %define %%ZTMP1         %2 ; [clobbered] Temporary ZMM register
 %define %%ZTMP2         %3 ; [clobbered] Temporary ZMM register
-%define %%USE_GFNI      %4 ; [in] If 1, GFNI can be used
 
         vpandq   %%ZTMP1, %%IN_OUT, [rel High_nibble_mask]
         vpsrlq   %%ZTMP1, 4                 ; x1
@@ -326,11 +311,7 @@ Rotl5_matrix:
         vpsllq   %%IN_OUT, 4
         vporq    %%IN_OUT, %%ZTMP1 ; t = (s << 4) | r
 
-%if (%%USE_GFNI == 1)
         vgf2p8affineqb  %%IN_OUT, %%IN_OUT, [rel Rotl5_matrix], 0x00
-%else
-        Rotl_5_AVX512   %%IN_OUT, %%ZTMP1
-%endif
 
 %endmacro
 
@@ -508,71 +489,15 @@ Rotl5_matrix:
 %endmacro
 
 ;
-; Perform 8x8 matrix multiplication using lookup tables with partial results
-; for high and low nible of each input byte
+; Compute 64 S1 box values from 64 bytes, stored in ZMM register, using GFNI and VAES
 ;
-%macro MUL_PSHUFB_AVX512 4
-%define %%ZIN     %1      ; [in] ZMM reg containing input vector
-%define %%ZLO     %2      ; [in/clobbered] ZMM reg containing low nibble table
-%define %%ZHI_OUT %3      ; [in/out] ZMM reg with high nibble table as input and which outputs the resulted vector
-%define %%ZTMP    %4      ; [clobbered] Temp ZMM register
-
-        ; Get low nibble of input data
-        vpandq  %%ZTMP, %%ZIN, [rel Low_nibble_mask]
-
-        ; Get low nibble of output
-        vpshufb %%ZLO, %%ZTMP
-
-        ; Get high nibble of input data
-        vpandq  %%ZTMP, %%ZIN, [rel High_nibble_mask]
-        vpsrlq  %%ZTMP, 4
-
-        ; Get high nibble of output
-        vpshufb %%ZHI_OUT, %%ZTMP
-
-        ; XOR high and low nibbles to get full bytes
-        vpxorq  %%ZHI_OUT, %%ZLO
-
-%endmacro
-
-;
-; Compute 64 S1 box values from 64 bytes, stored in ZMM register
-;
-%macro S1_comput_AVX512 6
+%macro S1_comput_AVX512 1
 %define %%ZIN_OUT       %1 ; [in/out] ZMM reg with input values which will contain the output values
-%define %%ZTMP1         %2 ; [clobbered] Temporary ZMM register
-%define %%ZTMP2         %3 ; [clobbered] Temporary ZMM register
-%define %%ZTMP3         %4 ; [clobbered] Temporary ZMM register
-%define %%ZTMP4         %5 ; [clobbered] Temporary ZMM register
-%define %%USE_GFNI      %6 ; [in] If 1, GFNI can be used
 
-%if (%%USE_GFNI == 1)
         vgf2p8affineqb  %%ZIN_OUT, %%ZIN_OUT, [rel Aes_to_Zuc], 0x00
         vpshufb         %%ZIN_OUT, [rel Shuf_mask]
         vaesenclast     %%ZIN_OUT, %%ZIN_OUT, [rel Cancel_aes]
         vgf2p8affineqb  %%ZIN_OUT, %%ZIN_OUT, [rel CombMatrix], 0x55
-%else ; USE_GFNI = 0
-        vmovdqa64       %%ZTMP1, [rel Aes_to_Zuc_mul_low_nibble]
-        vmovdqa64       %%ZTMP2, [rel Aes_to_Zuc_mul_high_nibble]
-        MUL_PSHUFB_AVX512 %%ZIN_OUT, %%ZTMP1, %%ZTMP2, %%ZTMP3
-
-        vpshufb         %%ZTMP2, [rel Shuf_mask]
-        vextracti32X4   XWORD(%%ZTMP1), %%ZTMP2, 1
-        vextracti32X4   XWORD(%%ZTMP3), %%ZTMP2, 2
-        vextracti32X4   XWORD(%%ZTMP4), %%ZTMP2, 3
-        vaesenclast     XWORD(%%ZTMP2), [rel Cancel_aes]
-        vaesenclast     XWORD(%%ZTMP1), [rel Cancel_aes]
-        vaesenclast     XWORD(%%ZTMP3), [rel Cancel_aes]
-        vaesenclast     XWORD(%%ZTMP4), [rel Cancel_aes]
-        vinserti32X4    %%ZTMP2, XWORD(%%ZTMP1), 1
-        vinserti32X4    %%ZTMP2, XWORD(%%ZTMP3), 2
-        vinserti32X4    %%ZTMP2, XWORD(%%ZTMP4), 3
-
-        vmovdqa64       %%ZTMP1, [rel Comb_matrix_mul_low_nibble]
-        vmovdqa64       %%ZIN_OUT, [rel Comb_matrix_mul_high_nibble]
-        MUL_PSHUFB_AVX512 %%ZTMP2, %%ZTMP1, %%ZIN_OUT, %%ZTMP3
-        vpxorq          %%ZIN_OUT, [rel Const_comb_matrix]
-%endif ; USE_GFNI == 1
 
 %endmacro
 %endif ; end ifndef _ZUC_SBOX_INC_

@@ -15,58 +15,18 @@
 
 default rel
 
-%ifndef SUBMIT_JOB_ZUC128_EEA3
-%define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_no_gfni_avx512
-%define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_no_gfni_avx512
-%define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_no_gfni_avx512
-%define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_no_gfni_avx512
-%define FLUSH_JOB_ZUC_NEA6 flush_job_zuc_nea6_no_gfni_avx512
-%define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_no_gfni_avx512
-%define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_no_gfni_avx512
-%define ZUC_NCA6_16_BUFFER  zuc_nca6_16_buffer_job_no_gfni_avx512
-%define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_no_gfni_avx512
-%define FLUSH_JOB_ZUC_NCA6  flush_job_zuc_nca6_no_gfni_avx512
-%define ZUC128_INIT_16     asm_ZucInitialization_16_avx512
-%define ZUCNEA6_INIT_16     asm_ZucNEA6Initialization_16_avx512
-%define ZUC_KEYGEN4B_16    asm_ZucGenKeystream4B_16_avx512
-%define ZUC_CIPHER         asm_ZucCipher_16_avx512
-%define ZUC_CIPHER_INIT    asm_ZucCipherInit_16_avx512
-%define ZUC128_LFSR_LOAD_16  asm_ZucLfsrLoad_avx512
-%define ZUCNEA6_LFSR_LOAD_16 asm_ZucNEA6LfsrLoad_avx512
-%define ZUC_REMAINDER_16   asm_Eia3RemainderAVX512_16
-%define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
-%define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
-%define ZUC_KEYGEN_16      asm_ZucGenKeystream_16_avx512
-%define ZUC_KEYGEN64B_16   asm_ZucGenKeystream64B_16_avx512
-%define ZUC_ROUND64B       asm_Eia3Round64BAVX512_16
-%define ZUC_EIA3_N64B      asm_Eia3_Nx64B_AVX512_16
-%endif
-
-extern asm_ZucInitialization_16_avx512
 extern asm_ZucInitialization_16_gfni_avx512
-extern asm_ZucCipher_16_avx512
 extern asm_ZucCipher_16_gfni_avx512
-extern asm_ZucCipherInit_16_avx512
 extern asm_ZucCipherInit_16_gfni_avx512
-extern asm_ZucLfsrLoad_avx512
 extern asm_ZucLfsrLoad_gfni_avx512
-extern asm_ZucNEA6LfsrLoad_avx512
 extern asm_ZucNEA6LfsrLoad_gfni_avx512
-extern asm_ZucNEA6Initialization_16_avx512
 extern asm_ZucNEA6Initialization_16_gfni_avx512
-extern asm_Eia3RemainderAVX512_16
 extern asm_Eia3RemainderAVX512_16_VPCLMUL
-extern asm_ZucGenKeystream_16_skip8_avx512
 extern asm_ZucGenKeystream_16_skip8_gfni_avx512
-extern asm_ZucGenKeystream64B_16_skip8_avx512
 extern asm_ZucGenKeystream64B_16_skip8_gfni_avx512
-extern asm_ZucGenKeystream_16_avx512
 extern asm_ZucGenKeystream_16_gfni_avx512
-extern asm_ZucGenKeystream64B_16_avx512
 extern asm_ZucGenKeystream64B_16_gfni_avx512
-extern asm_Eia3Round64BAVX512_16
 extern asm_Eia3Round64B_16_VPCLMUL
-extern asm_Eia3_Nx64B_AVX512_16
 extern asm_Eia3_Nx64B_AVX512_16_VPCLMUL
 extern zuc_nia6_16_buffer_job_gfni_avx512
 
@@ -1006,8 +966,6 @@ align_label
         mov     rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
 
-%ifdef USE_GFNI
-
 %macro SUBMIT_JOB_ZUC_NIA6_16 0
 
 ; idx needs to be in rbp
@@ -1388,11 +1346,6 @@ align_label
 %%exit_flush:
 %endmacro
 
-%endif ; USE_GFNI
-
-
-%ifdef USE_GFNI
-
 extern ZUC_NCA6_16_BUFFER
 
 %macro SUBMIT_JOB_ZUC_NCA6_16 0
@@ -1764,9 +1717,6 @@ align_label
 %%exit_flush:
 %endmacro
 
-%endif ; USE_GFNI
-
-
 mksection .rodata
 default rel
 
@@ -1796,7 +1746,6 @@ SUBMIT_JOB_ZUC128_EIA3:
         SUBMIT_JOB_ZUC_EIA3
         ret
 
-
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
@@ -1822,8 +1771,6 @@ FLUSH_JOB_ZUC128_EEA3:
         SUBMIT_FLUSH_JOB_ZUC_EEA3 ZUC128, flush
         ret
 
-%ifdef USE_GFNI
-
 ; JOB* SUBMIT_JOB_ZUC_NIA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -1841,8 +1788,6 @@ FLUSH_JOB_ZUC_NIA6:
         FLUSH_JOB_ZUC_NIA6_16
         ret
 
-%endif ; USE_GFNI
-
 ; JOB* SUBMIT_JOB_ZUC_NEA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -1859,8 +1804,6 @@ align_function
 FLUSH_JOB_ZUC_NEA6:
         SUBMIT_FLUSH_JOB_ZUC_EEA3 ZUCNEA6, flush
         ret
-
-%ifdef USE_GFNI
 
 ; JOB* SUBMIT_JOB_ZUC_NCA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
 ; arg 1 : state
@@ -1880,7 +1823,5 @@ align_function
 FLUSH_JOB_ZUC_NCA6:
         FLUSH_JOB_ZUC_NCA6_16
         ret
-
-%endif ; USE_GFNI
 
 mksection stack-noexec
