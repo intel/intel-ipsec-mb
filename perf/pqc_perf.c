@@ -44,9 +44,16 @@
 #define ML_DSA_OP_VERIFY 2
 
 /* ML-KEM ops[] indices */
-#define ML_KEM_OP_KEYPAIR 0
-#define ML_KEM_OP_ENCAPS  1
-#define ML_KEM_OP_DECAPS  2
+#define ML_KEM_OP_KEYPAIR      0
+#define ML_KEM_OP_ENCAPS       1
+#define ML_KEM_OP_DECAPS       2
+#define ML_KEM_OP_ENCAPS_FRESH 3 /* only with --kem-fresh-key */
+
+/**
+ * Distinct client encapsulation keys cycled through by --kem-fresh-key; sized so the
+ * pool (~4.8 MB for ML-KEM-768) does not fit in L1/L2.
+ */
+#define FRESH_KEY_POOL_SIZE 4096
 
 /* ML-KEM d || z; ML-DSA uses the first 32 bytes (xi) */
 #define KEY_SEED_MAX_BYTES IMB_ML_KEM_KEYGEN_SEED_BYTES
@@ -71,9 +78,10 @@ struct bench_cfg {
         unsigned long warmup_iters;           /**< untimed calls before each timed run */
         uint8_t key_seed[KEY_SEED_MAX_BYTES]; /**< seed of the fixed sign/verify/encaps key */
         size_t key_seed_len;                  /**< valid bytes in key_seed (32 or 64) */
+        int fresh_key;                        /**< ML-KEM: also time encaps to a fresh client key */
 };
 
-static struct bench_cfg cfg = { RND_INTERNAL, 0, { 0 }, KEY_SEED_MAX_BYTES };
+static struct bench_cfg cfg = { RND_INTERNAL, 0, { 0 }, KEY_SEED_MAX_BYTES, 0 };
 
 /**
  * @brief Benchmark result for a single algorithm (one entry per algorithm × operation).
@@ -450,21 +458,26 @@ static const struct ml_kem_variant ml_kem_variants[] = {
  * @brief Per-call ML-KEM benchmark context (buffers, handle, PRNG state).
  */
 struct ml_kem_ctx {
-        IMB_ML_KEM *handle;     /**< handle holding the fixed key used by encaps/decaps */
-        IMB_ML_KEM *gen_handle; /**< handle rebound by every keypair iteration */
-        uint8_t *ek;            /**< encapsulation key buffer of the fixed key */
-        size_t ek_cap;          /**< capacity of the ek buffer in bytes */
-        uint8_t *dk;            /**< decapsulation key buffer of the fixed key */
-        size_t dk_cap;          /**< capacity of the dk buffer in bytes */
-        uint8_t *gen_ek;        /**< encapsulation key buffer written by the keypair loop */
-        uint8_t *gen_dk;        /**< decapsulation key buffer written by the keypair loop */
-        uint8_t *ct;            /**< ciphertext buffer */
-        size_t ct_len;          /**< ciphertext length in bytes */
+        IMB_ML_KEM *handle;       /**< handle holding the fixed key used by encaps/decaps */
+        IMB_ML_KEM *gen_handle;   /**< handle rebound by every keypair iteration */
+        uint8_t *ek;              /**< encapsulation key buffer of the fixed key */
+        size_t ek_cap;            /**< capacity of the ek buffer in bytes */
+        uint8_t *dk;              /**< decapsulation key buffer of the fixed key */
+        size_t dk_cap;            /**< capacity of the dk buffer in bytes */
+        uint8_t *gen_ek;          /**< encapsulation key buffer written by the keypair loop */
+        uint8_t *gen_dk;          /**< decapsulation key buffer written by the keypair loop */
+        uint8_t *ct;              /**< ciphertext buffer */
+        size_t ct_len;            /**< ciphertext length in bytes */
+        IMB_ML_KEM *fresh_handle; /**< handle rebound to a pool key by every --kem-fresh-key
+                                     iteration */
+        uint8_t *pool;            /**< FRESH_KEY_POOL_SIZE encoded client encapsulation keys */
+        uint8_t *fresh_ct;        /**< ciphertext buffer of the --kem-fresh-key loop */
         uint8_t ss_encap[IMB_ML_KEM_SHARED_SECRET_BYTES]; /**< shared secret produced by encaps */
         uint8_t ss_decap[IMB_ML_KEM_SHARED_SECRET_BYTES]; /**< shared secret produced by decaps */
         uint64_t prng; /**< splitmix64 PRNG state for deterministic randomisation */
         uint8_t seed_buf[IMB_ML_KEM_KEYGEN_SEED_BYTES]; /**< keypair seed "d" || "z", per call */
         uint8_t m_buf[IMB_ML_KEM_ENCAP_SEED_BYTES];     /**< encaps randomizer "m", per call */
+        uint64_t pool_prng; /**< PRNG state selecting the pool key of each --kem-fresh-key call */
 };
 
 /* Binds the fixed, seed-derived key used by every encaps/decaps iteration. */
@@ -522,6 +535,78 @@ ml_kem_op_decap(void *arg)
                                 NULL);
 }
 
+/**
+ * @brief One timed server-side TLS handshake share: bind a randomly chosen pool
+ *        client key (decode and validate it, hash it and expand its matrix) and
+ *        encapsulate to it. ml_kem_op_encap() skips all of that because the fixed
+ *        key is bound once.
+ *
+ * @param [in] arg  struct ml_kem_ctx pointer
+ * @return 0 on success, non-zero on library failure
+ */
+static int
+ml_kem_op_encap_fresh(void *arg)
+{
+        struct ml_kem_ctx *c = (struct ml_kem_ctx *) arg;
+        IMB_ML_KEM_ENCAP_PARAMS params;
+        const uint8_t *m = per_call_rnd(&c->prng, c->m_buf, sizeof(c->m_buf));
+        const size_t idx = (size_t) (splitmix64(&c->pool_prng) % FRESH_KEY_POOL_SIZE);
+
+        IMB_ML_KEM_ENCAP_PARAMS_INIT(&params);
+        params.m_32 = m;
+        params.m_len = (m != NULL) ? sizeof(c->m_buf) : 0;
+        if (imb_ml_kem_set_pubkey(c->fresh_handle, c->pool + idx * c->ek_cap, c->ek_cap) != 0)
+                return -1;
+        return imb_ml_kem_encap(c->fresh_handle, c->fresh_ct, c->ct_len, c->ss_encap,
+                                sizeof(c->ss_encap), &params);
+}
+
+/**
+ * @brief Generate the pool of client keys (untimed), then check that encapsulating
+ *        to pool key 0 agrees with decapsulating using its private key.
+ *
+ * @param [in,out] c  ML-KEM benchmark context with handles and buffers set up
+ * @return 0 on success, -1 otherwise
+ */
+static int
+ml_kem_setup_fresh_key(struct ml_kem_ctx *c)
+{
+        uint64_t prng = prng_init ^ 0x5352565349ULL;
+        uint8_t seed[IMB_ML_KEM_KEYGEN_SEED_BYTES];
+        uint8_t ss_srv[IMB_ML_KEM_SHARED_SECRET_BYTES];
+        IMB_ML_KEM_ENCAP_PARAMS eparams;
+
+        c->pool = malloc((size_t) FRESH_KEY_POOL_SIZE * c->ek_cap);
+        c->fresh_ct = malloc(c->ct_len);
+        c->pool_prng = prng_init;
+        if (c->pool == NULL || c->fresh_ct == NULL)
+                return -1;
+
+        for (size_t i = 0; i < FRESH_KEY_POOL_SIZE; i++) {
+                IMB_ML_KEM_KEYGEN_PARAMS params;
+
+                fill_random_buf(&prng, seed, sizeof(seed));
+                IMB_ML_KEM_KEYGEN_PARAMS_INIT(&params);
+                params.seed_d_z = seed;
+                params.seed_d_z_len = sizeof(seed);
+                if (imb_ml_kem_keypair(c->gen_handle, c->pool + i * c->ek_cap, c->ek_cap, c->gen_dk,
+                                       c->dk_cap, &params) != 0)
+                        return -1;
+                /* Keep the private key of pool key 0 on fresh_handle for the check below. */
+                if (i == 0 && imb_ml_kem_set_privkey(c->fresh_handle, c->gen_dk, c->dk_cap) != 0)
+                        return -1;
+        }
+
+        IMB_ML_KEM_ENCAP_PARAMS_INIT(&eparams);
+        if (imb_ml_kem_set_pubkey(c->gen_handle, c->pool, c->ek_cap) != 0 ||
+            imb_ml_kem_encap(c->gen_handle, c->fresh_ct, c->ct_len, ss_srv, sizeof(ss_srv),
+                             &eparams) != 0 ||
+            imb_ml_kem_decap(c->fresh_handle, c->ss_decap, sizeof(c->ss_decap), c->fresh_ct,
+                             c->ct_len, NULL) != 0)
+                return -1;
+        return (memcmp(ss_srv, c->ss_decap, sizeof(ss_srv)) == 0) ? 0 : -1;
+}
+
 static int
 measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double seconds,
                struct pqc_result *res)
@@ -532,16 +617,20 @@ measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double
         memset(res, 0, sizeof(*res));
         memset(&ctx, 0, sizeof(ctx));
         res->algo = v->name;
-        res->num_ops = 3;
+        res->num_ops = cfg.fresh_key ? 4 : 3;
         res->ops[ML_KEM_OP_KEYPAIR].name = "keypair";
         res->ops[ML_KEM_OP_ENCAPS].name = "encaps";
         res->ops[ML_KEM_OP_DECAPS].name = "decaps";
+        res->ops[ML_KEM_OP_ENCAPS_FRESH].name = "encaps-fresh";
 
         if (imb_ml_kem_new(mgr, v->alg, &ctx.handle) != 0 ||
-            imb_ml_kem_new(mgr, v->alg, &ctx.gen_handle) != 0) {
+            imb_ml_kem_new(mgr, v->alg, &ctx.gen_handle) != 0 ||
+            (cfg.fresh_key && imb_ml_kem_new(mgr, v->alg, &ctx.fresh_handle) != 0)) {
                 fprintf(stderr, "%s: imb_ml_kem_new failed (errno %d: %s)\n", v->name,
                         imb_get_errno(mgr), imb_get_strerror(imb_get_errno(mgr)));
                 imb_ml_kem_free(ctx.handle);
+                imb_ml_kem_free(ctx.gen_handle);
+                imb_ml_kem_free(ctx.fresh_handle);
                 return -1;
         }
 
@@ -569,6 +658,10 @@ measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double
                 fprintf(stderr, "%s: functional self-check failed\n", v->name);
                 goto cleanup;
         }
+        if (cfg.fresh_key && ml_kem_setup_fresh_key(&ctx) != 0) {
+                fprintf(stderr, "%s: --kem-fresh-key setup or self-check failed\n", v->name);
+                goto cleanup;
+        }
 
         res->ops[ML_KEM_OP_KEYPAIR].secs = bench(ml_kem_op_keygen, &ctx, v->name, "keypair",
                                                  seconds, &res->ops[ML_KEM_OP_KEYPAIR].iter);
@@ -584,8 +677,14 @@ measure_ml_kem(struct IMB_MGR *mgr, const struct ml_kem_variant *v, const double
         res->ops[ML_KEM_OP_DECAPS].secs = bench(ml_kem_op_decap, &ctx, v->name, "decaps", seconds,
                                                 &res->ops[ML_KEM_OP_DECAPS].iter);
 
+        if (cfg.fresh_key)
+                res->ops[ML_KEM_OP_ENCAPS_FRESH].secs =
+                        bench(ml_kem_op_encap_fresh, &ctx, v->name, "encaps-fresh", seconds,
+                              &res->ops[ML_KEM_OP_ENCAPS_FRESH].iter);
+
         if (res->ops[ML_KEM_OP_KEYPAIR].secs < 0.0 || res->ops[ML_KEM_OP_ENCAPS].secs < 0.0 ||
-            res->ops[ML_KEM_OP_DECAPS].secs < 0.0) {
+            res->ops[ML_KEM_OP_DECAPS].secs < 0.0 ||
+            (cfg.fresh_key && res->ops[ML_KEM_OP_ENCAPS_FRESH].secs < 0.0)) {
                 fprintf(stderr, "%s: benchmark run failed\n", v->name);
                 goto cleanup;
         }
@@ -598,8 +697,11 @@ cleanup:
         free(ctx.gen_ek);
         free(ctx.gen_dk);
         free(ctx.ct);
+        free(ctx.pool);
+        free(ctx.fresh_ct);
         imb_ml_kem_free(ctx.handle);
         imb_ml_kem_free(ctx.gen_handle);
+        imb_ml_kem_free(ctx.fresh_handle);
         return ret;
 }
 
@@ -860,9 +962,15 @@ usage(const char *prog)
                "                         the first 32). Default: fixed built-in seed\n"
                "  --warmup-iter <n>      untimed calls before each timed run,\n"
                "                         0-100000 (default: 0)\n"
+               "  --kem-fresh-key        ML-KEM only: also time encaps-fresh, an encapsulation\n"
+               "                         that rebinds a randomly chosen key from a pool of\n"
+               "                         4096 client keys on every call (key decode/check,\n"
+               "                         hash and matrix expansion included), as a TLS server\n"
+               "                         does for each handshake\n"
                "  --help, -h             show this help and exit\n"
                "\n"
-               "Sign/verify and encaps/decaps always use one fixed key for the whole run;\n"
+               "Sign/verify and encaps/decaps always use one fixed key for the whole run\n"
+               "(except encaps-fresh, which rebinds a pool key on every call);\n"
                "keygen runs on separate handles and never replaces it.\n"
                "\n"
                "Architectures (default: AUTO):\n",
@@ -925,6 +1033,8 @@ main(int argc, char **argv)
                                         MAX_WARMUP_ITERS);
                                 return EXIT_FAILURE;
                         }
+                } else if (strcmp(a, "--kem-fresh-key") == 0) {
+                        cfg.fresh_key = 1;
                 } else if (strcmp(a, "--help") == 0 || strcmp(a, "-h") == 0) {
                         usage(argv[0]);
                         return EXIT_SUCCESS;

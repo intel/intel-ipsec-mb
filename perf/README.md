@@ -43,10 +43,13 @@ To benchmark all supported PQC algorithms:
 To benchmark specific algorithms:
 `imb-speed-pqc ML-DSA-44 ML-KEM-768`
 
-Sign/verify and encaps/decaps run against one fixed key for the whole run (derived from a built-in seed, or from `--key-seed <hex>`), so results are repeatable. Keygen runs on separate handles and never replaces that key.
+Sign/verify and encaps/decaps run against one fixed key for the whole run (derived from a built-in seed, or from `--key-seed <hex>`), so results are repeatable. Keygen runs on separate handles and never replaces that key. The only exception is the `encaps-fresh` column of `--kem-fresh-key` (see below).
 
 By default, the library generates fresh randomness on every call and there is no warm-up before each timed run. Use `--rnd prng` for randomness from the tool's internal PRNG and `--warmup-iter <n>` to run untimed calls before each timed run:
 `imb-speed-pqc --rnd prng --warmup-iter 1000 ML-DSA-65`
+
+ML-KEM encaps/decaps normally reuse the cached state of one bound key. A TLS server instead encapsulates to a different client key on every handshake. Use `--kem-fresh-key` to add an `encaps-fresh` column that, on every call, rebinds a randomly chosen key from a pool of 4096 pre-generated client keys (decode/check, hash and matrix expansion included) and encapsulates to it:
+`imb-speed-pqc --kem-fresh-key ML-KEM-768`
 
 For more options:
 `imb-speed-pqc --help`
