@@ -284,7 +284,8 @@ print_hw_features(void)
                          { IMB_FEATURE_SHA512NI, "SHA512NI" },
                          { IMB_FEATURE_APX, "APX" },
                          { IMB_FEATURE_AVX10_256, "AVX10-256" },
-                         { IMB_FEATURE_AVX10_512, "AVX10-512" } };
+                         { IMB_FEATURE_AVX10_512, "AVX10-512" },
+                         { IMB_FEATURE_AVX10_2, "AVX10.2" } };
         IMB_MGR *p_mgr = NULL;
         unsigned i;
         uint64_t features = 0;
