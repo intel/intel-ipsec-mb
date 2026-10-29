@@ -4,7 +4,7 @@
         "SNOW5G-NCA4 test vectors from 3GPP TS 35.223"
     ],
     "notes": {},
-    "numberOfTests": 26,
+    "numberOfTests": 32,
     "schema": "aead_test_schema_v1.json",
     "testGroups": [
         {
@@ -397,6 +397,30 @@
                     "ct": "580f1957d70c769ff2fcc45f4d5a7ff3631cc960fbd300c5604183e562f556392913c15ced1335ec6a91fef4edc98cdb448eef7fa2e824a486dc2f8104a0d53ae21e30725e56d697eef9dd82faf25539a5ae32857337c00fcded93e8cfc8907d80992e5f08551433fa798846b1065aa95a6920d70c0dd8eec96fbb76f8c78c650827c70cddac03aa85c9e01da668f3aa08208edb2ddec401ba7e8c01a1176e78b07a7ef9b42cdc436569b2ff0b0d6d3e516cbbb4317213be79ecda8fad67e0efd9523459d433362f32e3b71497d3303b087ccf2f2b10f780f38ef9cb1909d378bb526c3fba422d7dff4770ae6afdf5234ad58993c7d69c9f733a82e46b1884dabd471712f2c2041784addfcc7972a88eb53306c3425eb1ec0acb57c1bb7733306b209b44964b86de7be7056e1c0b8a1e6fff4590139b21cf235465d64ecdcadd51b1a68caaca131b120bcc2abcecbcb3c45b6a92fb6e83b5255f9c257f69bc70977ad633aa46bed55e5a632d963d5b0fe969a85fb6fe3d4863022c95fc3eab4e8a17732fba214939beb1103cfd3eb2ac96d580afb5ed22de4e70cf5b971704be18cd70646232a77e8438f4cdef19e56b2411e2f9cecb896b0ad6a5ac72ff2033f7c5089797d5c507203124496b61e8da084e7e5f04c592f8db233652416a6ee8be89e1b4485aa7553629d5cf51cdee321beda4f9d11b6a7cbf0e57014dd81c7036374c622f0dd44521e3c1218c49ea8233050013c0ff88ac673a1eb6476ddcd11dad30413bc214ac4e4adf1d4ae2b81c5ae0825a4ba4506567e95548ef29c45031c4352e945f7bb05ea94673a6afaa63c788c48147ff1e4e067dc2e37156d54699b2bfa48dbeee1b90fee71f1c861c70f4f3cc59eb9316ec27de8a3cdb5a24c652cf7881b6288651085da9db445c74554f9bf6d7a6f535dd813d63ba8b049d150471b5d2d9dfe9e492708bdd72ef3c6ab6cae491ce06e711bcf490150dd2796a08cbf7f235549441cd390ef319d745ad061f94a86e6843e57546760103420d37eb63059dcf993bccb01a9ae532157b00045f41b939b2a6eff7b357bc3d2c11f8fc2abc2c0ca4871f08b1bbc63365fd077f6ea6959855ab01",
                     "tag": "08c1fe2595b55d39",
                     "aad": "ef75543ab96ad2551024bbceca"
+                },
+                {
+                    "comment": "wireless.py NCA4 reference, AAD 127 bytes, msg 64 bytes",
+                    "key": "8a854bd8764482b9357d2ba08f64e1ca67653e335f9d346df995d54245d9e5f2",
+                    "iv": "442ceb915cead92c889da34b00000000",
+                    "msg": "ced807fa1492d8efa840e0e19d56bd2fbfa384e4f1dede87e3975605dc71f987aeac4d8af678d0437bfca713c1b3225d34066464222ca8dee821956048cd9193",
+                    "result": "valid",
+                    "flags": [],
+                    "tcId": 27,
+                    "ct": "307cb7ec13fae00726d030af183af6afaca196b231e4a37b1c55d3366592d1fea0dad35f5ff5fe1abb45609ca17683bb391915cd13fda8af4e7519242e8fde93",
+                    "tag": "d6b91630b73f0ef0",
+                    "aad": "3db10103fe717d1325a29f7f2b8aec266903e27951e73bba6b35281ad8ea4f98fc174561918c5bd46057553f93f11ba38a1c005b1d281e048a5fc49b14b06d27396803d61d6ad132800d20471ae0a9c8c84a3334879b3556c372e10ad3e476fc834f8d21a93694c2f6edb3dfc96a62a235dc127a89db545f1e0ba93abbd7be"
+                },
+                {
+                    "comment": "wireless.py NCA4 reference, AAD 517 bytes, msg 0 bytes",
+                    "key": "bc4bd39c4f5f2f0256aad6bcb0cbd05c0774bcba29730c03dce0d49214ae9859",
+                    "iv": "442a48340d2d6429dde6b49600000000",
+                    "msg": "",
+                    "result": "valid",
+                    "flags": [],
+                    "tcId": 32,
+                    "ct": "",
+                    "tag": "6a55b50c38e6c482",
+                    "aad": "4fb4006b776181627779f113a27909e97e2a53adb3f6451365a791cfea52b5ef508acacd826af683d2b8ec30db36717a98828a5d27527aba26561e5d3da8ee375e578c8b5372f4b68c56d544d6ba0f6835eb0f3ae153e8e06a9b21099538839da790f58c91806177c828540ff69a9a87937d85a6470878d2830bb298a243244099220496dbc78acf6f7e8e5115622459042773df2c0ed1ba4aaf3bc2df99e28decf472d7f93168bd77728f61a6550e972f94417f637b798fdb1a5a025ea81d03b1db8710f1a084a699e8454a8958b5a76b202330267f2ad1bf792bc7e6393b399897df4f80e5d5a7083e278ab633e1372071ee68267b730dec1ef0e6ab1256a2822d7c15a989d3128f4bba5630dfd9f09d03f77b4659bcfc446b7c9500b7431b0d07efda5750b882b1de31b580b396400a686370267a3cc7f0e6e3f41bb3583885a371f0b404aaeeb0eddcb3835e7be43b8cd93e366b3a02a1919922e9d5cab96c29496f6826766c2b7587606f7d61267cde27a4ff13f91fce2a199fb8a3c1c77fd36bd1ed77829f2d4735c061a09ea658aa71d6f3999c41e65726258c9244acb6fe03364b16b6e72b92de54e51c33f631061e0fd3181c1ad5529627c801d62910ffef83f0a375247ec35680dd3374bf714b8f28fd716cc2b2fdcc94a62be9d10b925f9cd616b19efbee85877c658a2662226c2d29d1bacf5a9a3ece52aa1dd1fcb5fee5ee"
                 }
             ]
         },
@@ -460,6 +484,81 @@
                     "ct": "05dd98f72e057ebb84a985c4aefb1d93bc913bb3bff476c2f33582fbc4b2fec6efc443b8bfc4550f4a5507e97b8ae7fc069803b48713d600b9fa66429d2d8ba4661a9baae3b82df4fbf1b41ff38ec1f75a56fdab84a05d71ef70cb18edd043002f752144bd49bba7ac7fc9e94d835fcb751cfee749bd3fe8868596b91414f8924b653b88ea657fc4dcb9fa0e52742bfd5bc04c2cf5b6372d895d7c476ad9d0a138478345f062e4147a9d5b1c6cff562952eedc844ef8c909f3",
                     "tag": "9f553690521c72490a5092c8d3af9d",
                     "aad": "bf12e7003eb89e4bb79b009574d20c2980063803d7ef93ef03a48a"
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "Generated with SNOW5G NCA4 reference implementation",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "comment": "wireless.py NCA4 reference, AAD 128 bytes, msg 200 bytes",
+                    "key": "524a5cdc5327275aec71cc41a0763b76a0237ecee2f35c7097e295d5fbe6e7a0",
+                    "iv": "841c7df7b4c467a98bb166c900000000",
+                    "msg": "ff6bdb8e7a270191fb0a354cf9623243c6faad70a70263779f25ca8037d949e8a5bd60f7021e157cae52ac1c4c9a01f8a9357ad800a772ea335ae0e271ff04e6657602b16a66abe0c323b529979a8dead31828daf8ca5fe430dc936658648a8374fbd2eda7bdcbb83a97bbe79db921b3140ae4069e2bcca58cb9f850c18315c98d0e82ab8b97d00bcf24692e3be0f6d6e9a87b94f58b89e4429dc833d009a1df86ecfb656bbca9189fcaf8b30cf7686619ddcc480a21edfdfc85fe484ccf6d2006756f00a8ef5b60",
+                    "result": "valid",
+                    "flags": [],
+                    "tcId": 28,
+                    "ct": "5dcce21ec96da8e6bff16624a1f6301565dc088a16eb6ddd073fbfd648fcfe4ada83598d8ee87b6a15abe79504793fd9cb2231a29f54c479cd21741c82e2c698591d12e1963f44a2b24edc2a3f9bf49d2e49c927f0c5c9f29084d837ca715c350bd1e82b329d621a3bba37e10792dd9807349febd75cf393b61608118d70a0616a8bf8667bf6ca4126a581fc3b2b7e6358d4e4f8c932b365f86e6babe361a97dd48bec63651143211fea415d45b8f9616e4cb2096e1d42d784a23958cd0df6498297c52bbc2b8fc8",
+                    "tag": "1486c4f16ab211718c6e261d3cadc1a1",
+                    "aad": "407251f4a44276500660cfebfb8abda8bb4c64cc27d96f117c7bbbfc3da8ff3233ea1c53fe0d35b9730139e7a6d0851eb37feb8bb30250d8d2c108dfd9a0d0d1aa5d13a07e2527f469a393f96c43f1f59df7a6d7a22b36db5373e9e6be5670025f286251f71e5d03898c03082856e3ccd4091ecc731c4b407cacdd8706413a72"
+                },
+                {
+                    "comment": "wireless.py NCA4 reference, AAD 300 bytes, msg 17 bytes",
+                    "key": "107ceb4b1e1fa6a9506c0642b472389b7dc566d0c9e4fe5fa80601eef34c02db",
+                    "iv": "842b9a79bc24fc638a21e6af00000000",
+                    "msg": "b79b5edb31d59d4d1de6cea7f204f19c7e",
+                    "result": "valid",
+                    "flags": [],
+                    "tcId": 31,
+                    "ct": "e7c3ebeb67d417001c29d7f5d11b854911",
+                    "tag": "c396e930f815bc188177b0c8f86ea928",
+                    "aad": "7220257fdeff9377bbea3a35a241277f1191811d7c046f779915daefcefb0e6116f9eb533ccaaf3bb04d5742ade87fa92a4bb1ef14ade6a035bb3df0a2f4348be2b3e93d1420e17d40a1a1dbdf1b0d97d4feb0a5a4e4d88a9591a2268b2c8cfd02af142935ec7101664b539b2baba80bb8c4c5611930ea270d015c354b109d4f8eaa41ae1c538d9311ba0906fd30077f05f2de60ddb1e91225fed13534a69b5a9d41129b9d205af79d5544499d321088a1ef885d417f65139398e5374689da182042907bfc19cee33d854328527ec2ae002c931ee152cedbb676fef1242f849df6dfae1513118622c82c7d8da1677b08616ee057d2f7e210474f3dd0e9b23b1eaaff438a4e6108d04c422e448562884fd1ffb2d0fdd139ee9f7ab6c7fd5bba32329e409cf99e8d06ec073609"
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "Generated with SNOW5G NCA4 reference implementation",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 32,
+            "tests": [
+                {
+                    "comment": "wireless.py NCA4 reference, AAD 129 bytes, msg 33 bytes",
+                    "key": "4165976d1b04db4004134c0a57e25b582530be84fef4484646d3c38af6a7953e",
+                    "iv": "24346f1a7f81f2e838a48c7700000000",
+                    "msg": "f21ea71706c19516c2ace7181c88466d8e3e2a344767a4b29e7da531e127be370f",
+                    "result": "valid",
+                    "flags": [],
+                    "tcId": 29,
+                    "ct": "d7239ded595e2b6ec9781a0dde09beff4856a220148cb692e7297e011144c24e3d",
+                    "tag": "0a27d34f",
+                    "aad": "4db5d30528d3553a85d6218c30be420c674e4e46ad836c56bbe4ef9d1ec229089bbaab3c2bfbf17fa289f4febf17fc9c5a795299f2937629eca741a0c63c770943458001cfda9eda9d1021570a07d62859d3af3c519a77c72573f1d454c414e583984a012b3e1bb7b1cdfc30c213877e435082e913443d4ee4c8cae12aef51b087"
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "Generated with SNOW5G NCA4 reference implementation",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "comment": "wireless.py NCA4 reference, AAD 191 bytes, msg 150 bytes",
+                    "key": "fde5bcae245e376a26ff54094686d713c7fb6a73168a806926f54cfc22225e90",
+                    "iv": "64294478e6668dd9cb5cdf0d00000000",
+                    "msg": "c7f0f36ca1103e07c6ee1fc4c5dbb0ac5227457c22ef471ef4c22a6e21500b910903980ec411885f6d86436435bc24a53addb65876e744dc25fea1651e5220be2d367aafeb9dd66642bc90983fd391a1033397455b4b0b09e7b307f0c75b98d2437e7032a96831160ff5a3bc78e16cd5ac6a2d7a0ee6eb69e6339bccb3a723e765a8cc8704300cfb999f3546bef60b07593e13b2e031",
+                    "result": "valid",
+                    "flags": [],
+                    "tcId": 30,
+                    "ct": "3c6bf01785f456165076912a1e701426eca9e4d89f165f3d33c44b74cc7ac01e2e2b55abe4cbe65b07e816e52421a1992e13e825890d6cc1f2eafb7d47d60a92fd23cb779a9ebda29cf98b48202d55e48153401cce78677a714f8062d11ee4f3d96d204b9808c6ae3cae5ab2c687f584c33d96190b7f387b5289820ace74f98469f5360a6db0016b982929c9b79a9259218032593424",
+                    "tag": "3b2c09e66a76aa3d1921b66c",
+                    "aad": "3c2b9dca7e17722af1ec934b7294eb0c10ffcdeb0aa646eebf8b032114c7cf62dbef0e6d204358c732abeef2e43e6847b7c05f8c5f5f9f61491118592d6f39f2f40fd2938d0f6ab447f7393c155306508307e414f4e20b159d162ae03624ed4816ccd0b2b09b1d27bfb8d4f029816104989f37c03565da1a92044f3a1fee6426147b38ab08908988a2f7a382a577bdec4de36e4cda1a9fcbddd472b0b86544fdbaf4f1def3c9cf7bce7c0300f1c1ef277a69a58c818efc2449f1cad28e0020"
                 }
             ]
         }
