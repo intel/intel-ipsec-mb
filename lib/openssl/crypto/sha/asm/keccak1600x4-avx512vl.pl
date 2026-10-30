@@ -95,7 +95,7 @@ $sf_size="856";       # 48 + 808 = 856 bytes
 # Emit an internal helper call used by one-shot wrappers.
 # - Win64: call the provided *_internal shim and bracket it with 32-byte
 #   shadow space so shim entry can use xlate-compatible [rsp+8]/[rsp+16].
-# - non-Win64: call the public API symbol (same base name without _internal).
+# - non-Win64: call the local .L_ label of the public API symbol (same base name without _internal)
 # The argument must be the shim/internal symbol name, e.g.
 #   SHA3_shake128_x4_inc_squeeze_avx512vl_internal
 sub call_internal {
@@ -111,7 +111,7 @@ sub call_internal {
 ___
 
     return <<___;
-    call    $external_name
+    call    .L_$external_name
 ___
 }
 
