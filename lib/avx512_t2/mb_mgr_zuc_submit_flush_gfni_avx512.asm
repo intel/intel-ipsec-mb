@@ -23,7 +23,6 @@
 %define ZUC_KEYGEN64B_16   asm_ZucGenKeystream64B_16_gfni_avx512
 %define ZUC_ROUND64B       asm_Eia3Round64B_16_VPCLMUL
 %define ZUC_EIA3_N64B      asm_Eia3_Nx64B_AVX512_16_VPCLMUL
-%define ZUC_NIA6_16_BUFFER zuc_nia6_16_buffer_job_gfni_avx512
 %define SUBMIT_JOB_ZUC_NIA6 submit_job_zuc_nia6_gfni_avx512
 %define FLUSH_JOB_ZUC_NIA6 flush_job_zuc_nia6_gfni_avx512
 %define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_gfni_avx512
@@ -53,7 +52,7 @@ extern asm_ZucGenKeystream_16_gfni_avx512
 extern asm_ZucGenKeystream64B_16_gfni_avx512
 extern asm_Eia3Round64B_16_VPCLMUL
 extern asm_Eia3_Nx64B_AVX512_16_VPCLMUL
-extern zuc_nia6_16_buffer_job_gfni_avx512
+extern nia_vclmul_avx512
 extern asm_ZucCipherComplete_16_gfni_avx512
 extern nca_vclmul_avx512
 
@@ -1092,29 +1091,7 @@ align_label
         or              min_len, min_len
         jz              %%len_is_0_submit_nia6
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-
-        call    ZUC_NIA6_16_BUFFER
-
-        RESTORE_STACK_SPACE 6
+        ZUC_NIA6_CORE state, 0, 0
 
         mov     state, [rsp + _state_save]
         mov     job,   [rsp + _job_save]
@@ -1284,29 +1261,7 @@ align_label
         vmovdqu64       [state + _zuc_args_keys + (0*PTR_SZ)]{k1}, zmm1
         vmovdqu64       [state + _zuc_args_keys + (8*PTR_SZ)]{k2}, zmm1
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-
-        call    ZUC_NIA6_16_BUFFER
-
-        RESTORE_STACK_SPACE 6
+        ZUC_NIA6_CORE state, 1, idx
 
         mov     state, [rsp + _state_save]
 
@@ -1389,7 +1344,7 @@ _nca6_out:       resq    16
 _nca6_lens:      resw    16
 endstruc
 
-struc NCA6_POLYVAL_STACK
+struc ZUC_POLYVAL_STACK
 %ifdef WIN_ABI
 ; Shadow space plus the two stack-passed NCA POLYVAL arguments.
 _polyval_abi:    resb    48
@@ -1399,6 +1354,104 @@ _polyval_hqp:    resb    48
 _polyval_tag:    resb    16
 _polyval_gpr:    resq    3
 endstruc
+
+; p_mgr is preserved by the initialization and keystream functions.
+%macro ZUC_AUTH_INIT 2
+%define %%COPY_NULL_IVS %1 ; [in] replicate first active IV into NULL lanes
+%define %%FIRST_LANE    %2 ; [in] first active lane (flush) or unused (submit)
+
+%if %%COPY_NULL_IVS
+        mov     core_tmp, %%FIRST_LANE
+        shl     core_tmp, 4
+        vbroadcasti32x4 vec, [p_mgr + _zuc_args_IV + core_tmp]
+        vpxorq  zmm2, zmm2, zmm2
+
+        ; Expand null-job bits to all-ones qwords, then extract both dword
+        ; sign bits to select the two qwords of each 16-byte IV.
+%assign %%i 0
+%rep 2
+        vpcmpeqq k1, zmm2, [p_mgr + _zuc_job_in_lane + %%i*64]
+        vpmovm2q zmm1, k1
+        vpmovd2m k1, zmm1
+        vmovdqu64 [p_mgr + _zuc_args_IV + %%i*128]{k1}, vec
+        kshiftrw k1, k1, 8
+        vmovdqu64 [p_mgr + _zuc_args_IV + %%i*128 + 64]{k1}, vec
+%assign %%i (%%i + 1)
+%endrep
+%endif
+
+        lea     arg1, [p_mgr + _zuc_args_keys]
+        lea     arg2, [p_mgr + _zuc_args_IV]
+        lea     arg3, [p_mgr + _zuc_state]
+        mov     arg4, 0xFFFF
+        call    ZUCNEA6_INIT_16
+
+        lea     arg1, [p_mgr + _zuc_state]
+        lea     arg2, [p_mgr + _zuc_args_KS]
+        xor     DWORD(arg3), DWORD(arg3)
+        mov     arg4, 12
+        call    ZUC_KEYGEN_16
+%endmacro
+
+; Clear manager-owned ZUC state, generated keystream and scratch GPRs.
+; Call only under SAFE_DATA; the POLYVAL function clears its own H/Q/P and tag.
+%macro ZUC_AUTH_CLEAR 0
+        vpxorq  vec, vec, vec
+        xor     DWORD(core_tmp), DWORD(core_tmp)
+
+align_loop
+%%clear_state:
+        ; 16 lanes x 4 bytes x (16 LFSR + 2 F + 4 bit-reorganization words).
+        ; Clear two 64-byte state vectors per iteration (11 iterations total).
+        vmovdqa64 [p_mgr + _zuc_state + core_tmp], vec
+        vmovdqa64 [p_mgr + _zuc_state + core_tmp + 64], vec
+        add     DWORD(core_tmp), 128
+        cmp     DWORD(core_tmp), 16*4*22
+        jb      %%clear_state
+
+        xor     DWORD(core_tmp), DWORD(core_tmp)
+
+align_loop
+%%clear_keys:
+        ; Clear 128 bytes per lane-sized chunk (16 iterations total).
+        vmovdqa64 [p_mgr + _zuc_args_KS + core_tmp], vec
+        vmovdqa64 [p_mgr + _zuc_args_KS + core_tmp + 64], vec
+        add     DWORD(core_tmp), 128
+        cmp     DWORD(core_tmp), 16*128
+        jb      %%clear_keys
+        clear_scratch_gps_asm
+%endmacro
+
+; Initialize ZUC, generate H/Q/P and authenticate each occupied NIA6 lane.
+; Uses manager-owned state/keystream; the POLYVAL function owns its scratch frame.
+%macro ZUC_NIA6_CORE 3
+%define %%STATE         %1 ; [in] manager state pointer register
+%define %%COPY_NULL_IVS %2 ; [in] replicate first active IV into NULL lanes
+%define %%FIRST_LANE    %3 ; [in] first active lane (flush) or unused (submit)
+
+%define p_mgr            r12
+%define core_tmp         rax
+%define vec              zmm0
+
+        mov     p_mgr, %%STATE
+%ifdef WIN_ABI
+        ; The outer frame is already 16-byte aligned; only Windows shadow space
+        ; is needed here, since manager state and POLYVAL scratch live elsewhere.
+        sub     rsp, 32
+%endif
+
+        ZUC_AUTH_INIT %%COPY_NULL_IVS, %%FIRST_LANE
+        mov     arg1, p_mgr
+        lea     arg2, [p_mgr + _zuc_args_in]
+        call    zuc_nia6_polyval
+%ifdef SAFE_DATA
+        ZUC_AUTH_CLEAR
+%endif
+
+%ifdef WIN_ABI
+        add     rsp, 32
+%endif
+%endmacro
 
 ; Initialize ZUC, generate authentication keys, cipher the batch and authenticate.
 ; Copies isolate the cipher's in/out pointer and length updates from manager state.
@@ -1410,7 +1463,6 @@ endstruc
 
 %define p_mgr            r12
 %define core_tmp         rax
-%define iv_offset        rdx
 %define vec              zmm0
 %define min_lo           xmm1
 %define min_hi           xmm2
@@ -1445,40 +1497,7 @@ endstruc
         vpextrw DWORD(core_tmp), min_lo, 0
         mov     [rsp + _nca6_min], core_tmp
 
-%if %%COPY_NULL_IVS
-        ; Fill unused IV slots using the first active lane's IV.
-        mov     core_tmp, %%FIRST_LANE
-        shl     core_tmp, 4
-        vmovdqu64 XWORD(vec), [p_mgr + _zuc_args_IV + core_tmp]
-        xor     DWORD(core_tmp), DWORD(core_tmp)
-
-align_loop
-%%copy_iv:
-        cmp     qword [p_mgr + _zuc_job_in_lane + core_tmp*8], 0
-        jne     %%next_iv
-        mov     DWORD(iv_offset), DWORD(core_tmp)
-        shl     DWORD(iv_offset), 4
-        vmovdqu64 [p_mgr + _zuc_args_IV + iv_offset], XWORD(vec)
-
-align_label
-%%next_iv:
-        inc     DWORD(core_tmp)
-        cmp     DWORD(core_tmp), 16
-        jb      %%copy_iv
-%endif
-
-        ; Initialize all lanes and generate H, Q and P for NCA6.
-        lea     arg1, [p_mgr + _zuc_args_keys]
-        lea     arg2, [p_mgr + _zuc_args_IV]
-        lea     arg3, [p_mgr + _zuc_state]
-        mov     arg4, 0xFFFF
-        call    ZUCNEA6_INIT_16
-
-        lea     arg1, [p_mgr + _zuc_state]
-        lea     arg2, [p_mgr + _zuc_args_KS]
-        xor     DWORD(arg3), DWORD(arg3)
-        mov     arg4, 12
-        call    ZUC_KEYGEN_16
+        ZUC_AUTH_INIT %%COPY_NULL_IVS, %%FIRST_LANE
 
         ; Decryption authenticates input ciphertext before ciphering.
         cmp     dword [rsp + _nca6_dir], 1 ; IMB_DIR_ENCRYPT
@@ -1511,26 +1530,7 @@ align_label
 align_label
 %%done:
 %ifdef SAFE_DATA
-        ; Clear the generated ZUC state and keystream keys.
-        vpxorq  vec, vec, vec
-        xor     DWORD(core_tmp), DWORD(core_tmp)
-
-align_loop
-%%clear_state:
-        vmovdqa64 [p_mgr + _zuc_state + core_tmp], vec
-        add     DWORD(core_tmp), 64
-        cmp     DWORD(core_tmp), 16*4*22
-        jb      %%clear_state
-
-        xor     DWORD(core_tmp), DWORD(core_tmp)
-
-align_loop
-%%clear_keys:
-        vmovdqa64 [p_mgr + _zuc_args_KS + core_tmp], vec
-        add     DWORD(core_tmp), 64
-        cmp     DWORD(core_tmp), 16*128
-        jb      %%clear_keys
-        clear_scratch_gps_asm
+        ZUC_AUTH_CLEAR
 %endif
         mov     rsp, [rsp + _nca6_rsp]
 %endmacro
@@ -1865,7 +1865,7 @@ index_to_mask:
         dd      0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000, 0x8000
 
 align 16
-nca6_hqp_shuf_mask:
+zuc_auth_hqp_shuf_mask:
         db      3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
 
 ;; 32 rounds * 4 bytes = 128 bytes
@@ -1880,11 +1880,9 @@ zuc5g_init_round_bytes:
 
 mksection .text
 
-; void zuc_nca6_polyval(MB_MGR_ZUC_OOO *state, const void *const ciphertext[16])
-; arg 1 : state
-; arg 2 : ciphertext pointer array
-align_function
-zuc_nca6_polyval:
+; Generate separate callable NIA6/NCA6 functions without a runtime mode branch.
+%macro ZUC_AUTH_POLYVAL 1
+%define %%NCA %1 ; [in] include AAD for NCA6, otherwise authenticate NIA6
 
 %define p_mgr            r12
 %define lane_idx         r13
@@ -1896,7 +1894,7 @@ zuc_nca6_polyval:
 %define hqp_tag          xmm0
 %define tag_kmask        k1
 
-        sub     rsp, NCA6_POLYVAL_STACK_size
+        sub     rsp, ZUC_POLYVAL_STACK_size
         mov     [rsp + _polyval_gpr + 8*0], p_mgr
         mov     [rsp + _polyval_gpr + 8*1], lane_idx
         mov     [rsp + _polyval_gpr + 8*2], p_data
@@ -1905,10 +1903,10 @@ zuc_nca6_polyval:
         xor     DWORD(lane_idx), DWORD(lane_idx)
 
 align_loop
-.lane:
+%%lane:
         mov     job_tmp, [p_mgr + _zuc_job_in_lane + lane_idx*8]
         test    job_tmp, job_tmp
-        jz      .next
+        jz      %%next
 
         ; Extract and byte-swap this lane's interleaved H, Q and P values.
         mov     DWORD(addr_tmp), DWORD(lane_idx)
@@ -1918,18 +1916,19 @@ align_loop
         shr     DWORD(len_tmp), 2
         shl     DWORD(len_tmp), 4
         add     DWORD(addr_tmp), DWORD(len_tmp)
-%assign i 0
+%assign %%i 0
 %rep 3
-        vmovdqu64 hqp_tag, [p_mgr + _zuc_args_KS + addr_tmp + i*64]
-        vpshufb hqp_tag, hqp_tag, [rel nca6_hqp_shuf_mask]
-        vmovdqa64 [rsp + _polyval_hqp + i*16], hqp_tag
-%assign i (i + 1)
+        vmovdqu64 hqp_tag, [p_mgr + _zuc_args_KS + addr_tmp + %%i*64]
+        vpshufb hqp_tag, hqp_tag, [rel zuc_auth_hqp_shuf_mask]
+        vmovdqa64 [rsp + _polyval_hqp + %%i*16], hqp_tag
+%assign %%i (%%i + 1)
 %endrep
 
-        ; Authenticate the selected ciphertext and copy out the truncated tag.
+        ; Authenticate the selected message and copy out the truncated tag.
         lea     arg1, [rsp + _polyval_tag]
         lea     arg2, [rsp + _polyval_hqp]
         mov     arg3, [p_data + lane_idx*8]
+%if %%NCA
         mov     arg4, [job_tmp + _msg_len_to_cipher_in_bytes]
 %ifdef LINUX
         mov     arg5, [job_tmp + _nca_aad]
@@ -1941,6 +1940,10 @@ align_loop
         mov     arg6, call_tmp
 %endif
         call    nca_vclmul_avx512
+%else
+        movzx   DWORD(arg4), word [p_mgr + _zuc_lens + lane_idx*2]
+        call    nia_vclmul_avx512
+%endif
 
         ; Write only the job's requested tag bytes.
         mov     job_tmp, [p_mgr + _zuc_job_in_lane + lane_idx*8]
@@ -1953,10 +1956,10 @@ align_loop
         vmovdqu8 [addr_tmp]{tag_kmask}, hqp_tag
 
 align_label
-.next:
+%%next:
         inc     DWORD(lane_idx)
         cmp     DWORD(lane_idx), 16
-        jb      .lane
+        jb      %%lane
 %ifdef SAFE_DATA
         vpxorq  ZWORD(hqp_tag), ZWORD(hqp_tag), ZWORD(hqp_tag)
         vmovdqu64 [rsp + _polyval_hqp], ZWORD(hqp_tag)
@@ -1965,7 +1968,23 @@ align_label
         mov     p_mgr, [rsp + _polyval_gpr + 8*0]
         mov     lane_idx, [rsp + _polyval_gpr + 8*1]
         mov     p_data, [rsp + _polyval_gpr + 8*2]
-        add     rsp, NCA6_POLYVAL_STACK_size
+        add     rsp, ZUC_POLYVAL_STACK_size
+%endmacro
+
+; void zuc_nca6_polyval(MB_MGR_ZUC_OOO *state, const void *const ciphertext[16])
+; arg 1 : state
+; arg 2 : ciphertext pointer array
+align_function
+zuc_nca6_polyval:
+        ZUC_AUTH_POLYVAL 1
+        ret
+
+; void zuc_nia6_polyval(MB_MGR_ZUC_OOO *state, const void *const message[16])
+; arg 1 : state
+; arg 2 : message pointer array
+align_function
+zuc_nia6_polyval:
+        ZUC_AUTH_POLYVAL 0
         ret
 
 ; JOB* SUBMIT_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)

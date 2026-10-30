@@ -1016,13 +1016,6 @@ zuc_nca6_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
                                const uint16_t lengthInBytes[4], const IMB_JOB *const job_in_lane[4],
                                const IMB_CIPHER_DIRECTION dir);
 
-IMB_DLL_LOCAL
-void
-zuc_nia6_16_buffer_job_gfni_avx512(const void *const pKey[16], const uint8_t *ivs,
-                                   const void *const pBufferIn[16], void *pMacI[16],
-                                   const uint16_t lengthInBytes[16],
-                                   const void *const job_in_lane[16]);
-
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];
