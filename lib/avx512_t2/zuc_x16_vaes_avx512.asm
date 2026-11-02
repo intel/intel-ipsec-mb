@@ -2279,6 +2279,9 @@ cipher_cleanup:
         clear_zmms_avx512 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31
 %endif
+        ; Avoid AVX-SSE transition penalties in the caller (e.g. C code)
+        vzeroupper
+
         FUNC_RESTORE
 
         ret
@@ -2418,7 +2421,6 @@ tail_single_xor:
 %ifdef SAFE_DATA
         vpxorq  zmm1, zmm1
 %endif
-        vzeroupper
         ; Shared SAFE_DATA cleanup wipes the entire reused keystream scratch.
         jmp     cipher_cleanup
 
