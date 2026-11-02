@@ -22,7 +22,8 @@
 %define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_avx2
 %define ZUC128_INIT_8        asm_ZucInitialization_8_avx2
 %define ZUCNEA6_INIT_8       asm_ZucNEA6Initialization_8_avx2
-%define ZUC_EIA3_8_BUFFER    zuc_eia3_8_buffer_job_avx2
+%define ZUC_KEYGEN32B_8     asm_ZucGenKeystream32B_8_avx2
+%define ZUC_KEYGEN8B_8      asm_ZucGenKeystream8B_8_avx2
 %define ZUC_CIPHER_8      asm_ZucCipher_8_avx2
 %endif
 
@@ -65,7 +66,12 @@ dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 extern ZUC128_INIT_8
 extern ZUCNEA6_INIT_8
 extern ZUC_CIPHER_8
-extern ZUC_EIA3_8_BUFFER
+extern ZUC_KEYGEN32B_8
+extern ZUC_KEYGEN8B_8
+extern asm_ZucGenKeystream32B_avx
+extern asm_ZucGenKeystream8B_avx
+extern asm_Eia3Round32B_avx
+extern asm_Eia3Remainder_avx
 
 %ifdef LINUX
 %define arg1    rdi
@@ -767,29 +773,7 @@ FLUSH_JOB_ZUC_NEA6:
         cmp     len2, 0
         je      %%len_is_0_submit_eia3
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-
-        call    ZUC_EIA3_8_BUFFER
-
-        RESTORE_STACK_SPACE 6
+        call    zuc_eia3_8_buffer
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -922,29 +906,7 @@ APPEND(%%skip_eia3_,I):
 %assign I (I+1)
 %endrep
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-
-        call    ZUC_EIA3_8_BUFFER
-
-        RESTORE_STACK_SPACE 6
+        call    zuc_eia3_8_buffer
 
         vmovdqa xmm2, [rsp + _null_len_save]
 
@@ -996,6 +958,255 @@ align_label
 align_label
 %%exit_flush_eia3:
 %endmacro
+
+struc EIA3_STACK
+%ifdef WIN_ABI
+; Shadow space for calls to initialization, keystream and digest helpers.
+_eia3_abi:      resb    32
+%endif
+                alignb  32
+_eia3_single:   resb    96       ; 88-byte single-packet state, padded to a 32-byte multiple
+_eia3_ks_ptr:   resq    8
+
+; Keep the scheduler's completion index outside the SAFE_DATA wipe range.
+_eia3_idx:      resq    1
+_eia3_rsp:      resq    1
+_eia3_equal:    resd    1        ; 0xFFFF when all eight lengths match
+endstruc
+
+; void zuc_eia3_8_buffer(MB_MGR_ZUC_OOO *state)
+; arg 1 : manager state
+; Uses manager state, compact 64-byte keystream slots and eight packed dword tags.
+; Only single-packet tail state, keystream pointers and call bookkeeping live on stack.
+; Preserves rbp (scheduler completion index); clobbers rbx and r12-r15.
+; The outer submit/flush frame preserves these registers for the external caller.
+; The including scheduler selects GFNI/non-GFNI initialization and key generation.
+align_function
+zuc_eia3_8_buffer:
+%define p_mgr            r12
+%define lane_idx         r13
+%define consumed         r14
+%define bytes_left       r15
+%define p_in             rbx
+%define p_ks             rbp
+
+        mov     rax, rsp
+        sub     rsp, EIA3_STACK_size
+        and     rsp, -32
+        mov     [rsp + _eia3_rsp], rax
+        mov     [rsp + _eia3_idx], p_ks
+        mov     p_mgr, arg1
+
+        ; Equal lengths need only 8 extra keystream bytes after the last common block.
+        vmovdqa xmm0, [p_mgr + _zuc_lens]
+        vpshufb xmm1, xmm0, [rel broadcast_word]
+        vpcmpeqw xmm1, xmm1, xmm0
+        vpmovmskb eax, xmm1
+        mov     [rsp + _eia3_equal], eax
+        vphminposuw xmm0, xmm0
+        vpextrw DWORD(bytes_left), xmm0, 0
+
+        vpxor   ymm0, ymm0
+        vmovdqa [p_mgr + _zuc_args_digest], ymm0
+
+%assign i 0
+%rep 8
+        lea     rax, [p_mgr + _zuc_args_KS + i*64]
+        mov     [rsp + _eia3_ks_ptr + i*8], rax
+%assign i (i + 1)
+%endrep
+
+        lea     arg1, [p_mgr + _zuc_args_keys]
+        lea     arg2, [p_mgr + _zuc_args_IV]
+        lea     arg3, [p_mgr + _zuc_state]
+        call    ZUC128_INIT_8
+
+        lea     arg1, [p_mgr + _zuc_state]
+        lea     arg2, [rsp + _eia3_ks_ptr]
+        call    ZUC_KEYGEN32B_8
+
+        ; Digest helpers slide the next block down; keygen keeps writing the upper half.
+%assign i 0
+%rep 8
+        add     qword [rsp + _eia3_ks_ptr + i*8], 32
+%assign i (i + 1)
+%endrep
+        xor     DWORD(consumed), DWORD(consumed)
+
+align_loop
+.common:
+        cmp     bytes_left, 32
+        jb      .tails
+        sub     bytes_left, 32
+        add     consumed, 32
+
+        lea     arg1, [p_mgr + _zuc_state]
+        lea     arg2, [rsp + _eia3_ks_ptr]
+        test    bytes_left, bytes_left
+        jne     .common_key32
+        cmp     dword [rsp + _eia3_equal], 0xFFFF
+        jne     .common_key32
+        call    ZUC_KEYGEN8B_8
+        jmp     .common_digest
+
+align_label
+.common_key32:
+        call    ZUC_KEYGEN32B_8
+
+align_label
+.common_digest:
+        xor     DWORD(lane_idx), DWORD(lane_idx)
+
+align_loop
+.common_lane:
+        cmp     qword [p_mgr + _zuc_job_in_lane + lane_idx*8], 0
+        je      .common_next
+
+        mov     rax, lane_idx
+        shl     rax, 6
+        lea     arg1, [p_mgr + _zuc_args_digest + lane_idx*4]
+        lea     arg2, [p_mgr + _zuc_args_KS + rax]
+        ; consumed already includes this block; manager input pointers stay unchanged.
+        mov     arg3, [p_mgr + _zuc_args_in + lane_idx*8]
+        add     arg3, consumed
+        sub     arg3, 32
+        call    asm_Eia3Round32B_avx
+
+align_label
+.common_next:
+        inc     DWORD(lane_idx)
+        cmp     DWORD(lane_idx), 8
+        jb      .common_lane
+        jmp     .common
+
+align_label
+.tails:
+        ; Finish occupied lanes independently after the shortest common prefix.
+        xor     DWORD(lane_idx), DWORD(lane_idx)
+
+align_loop
+.tail_lane:
+        cmp     qword [p_mgr + _zuc_job_in_lane + lane_idx*8], 0
+        je      .tail_next
+
+        movzx   DWORD(bytes_left), word [p_mgr + _zuc_lens + lane_idx*2]
+        sub     bytes_left, consumed
+        mov     p_in, [p_mgr + _zuc_args_in + lane_idx*8]
+        add     p_in, consumed
+        mov     p_ks, lane_idx
+        shl     p_ks, 6
+        lea     p_ks, [p_mgr + _zuc_args_KS + p_ks]
+
+        ; Up to 24 data bytes plus the two final ZUC words fit in the current block.
+        cmp     bytes_left, 24
+        jbe     .remainder
+
+        ; Gather the canonical eight-lane LFSR and F registers for this packet.
+%assign i 0
+%rep 18
+        mov     eax, [p_mgr + _zuc_state + i*32 + lane_idx*4]
+        mov     [rsp + _eia3_single + i*4], eax
+%assign i (i + 1)
+%endrep
+
+align_loop
+.tail_block:
+        cmp     bytes_left, 32
+        jb      .tail_partial
+        sub     bytes_left, 32
+        lea     arg1, [p_ks + 32]
+        lea     arg2, [rsp + _eia3_single]
+        test    bytes_left, bytes_left
+        jnz     .tail_key32
+        ; An exact final block needs only the two words used to finalize the tag.
+        call    asm_ZucGenKeystream8B_avx
+        jmp     .tail_digest
+
+align_label
+.tail_key32:
+        call    asm_ZucGenKeystream32B_avx
+
+align_label
+.tail_digest:
+        lea     arg1, [p_mgr + _zuc_args_digest + lane_idx*4]
+        mov     arg2, p_ks
+        mov     arg3, p_in
+        call    asm_Eia3Round32B_avx
+        add     p_in, 32
+        jmp     .tail_block
+
+align_label
+.tail_partial:
+        ; A 25-31 byte remainder needs two more keystream words for finalization.
+        cmp     bytes_left, 24
+        jbe     .remainder
+        lea     arg1, [p_ks + 32]
+        lea     arg2, [rsp + _eia3_single]
+        call    asm_ZucGenKeystream8B_avx
+
+align_label
+.remainder:
+        lea     arg1, [p_mgr + _zuc_args_digest + lane_idx*4]
+        mov     arg2, p_ks
+        mov     arg3, p_in
+        mov     arg4, bytes_left
+        call    asm_Eia3Remainder_avx
+
+        mov     rax, [p_mgr + _zuc_args_out + lane_idx*8]
+        mov     edx, [p_mgr + _zuc_args_digest + lane_idx*4]
+        mov     [rax], edx
+
+align_label
+.tail_next:
+        inc     DWORD(lane_idx)
+        cmp     DWORD(lane_idx), 8
+        jb      .tail_lane
+
+%ifdef SAFE_DATA
+        ; All lanes are complete; clear manager-owned working data as well as local scratch.
+        vpxor   ymm0, ymm0
+        vmovdqa [p_mgr + _zuc_args_digest], ymm0
+        xor     eax, eax
+
+align_loop
+.clear_state:
+        ; Clear two 32-byte state vectors per iteration (11 iterations total).
+        vmovdqa [p_mgr + _zuc_state + rax], ymm0
+        vmovdqa [p_mgr + _zuc_state + rax + 32], ymm0
+        add     rax, 64
+        cmp     rax, 22*32
+        jb      .clear_state
+
+        xor     eax, eax
+
+align_loop
+.clear_ks:
+        ; Clear two 32-byte keystream vectors per iteration (8 iterations total).
+        vmovdqa [p_mgr + _zuc_args_KS + rax], ymm0
+        vmovdqa [p_mgr + _zuc_args_KS + rax + 32], ymm0
+        add     rax, 64
+        cmp     rax, 8*64
+        jb      .clear_ks
+
+        xor     eax, eax
+
+align_loop
+.clear_local:
+        vmovdqa [rsp + _eia3_single + rax], ymm0
+        vmovdqa [rsp + _eia3_single + rax + 32], ymm0
+        add     rax, 64
+        cmp     rax, (_eia3_idx - _eia3_single) - 32
+        jb      .clear_local
+        ; The 160-byte scratch range leaves one final 32-byte vector.
+        vmovdqa [rsp + _eia3_single + rax], ymm0
+        clear_scratch_ymms_asm
+        clear_scratch_gps_asm
+%endif
+        vzeroupper
+
+        mov     p_ks, [rsp + _eia3_idx]
+        mov     rsp, [rsp + _eia3_rsp]
+        ret
 
 ; JOB* SUBMIT_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
