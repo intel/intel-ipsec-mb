@@ -150,6 +150,7 @@ _gpr_save:      resq    8  ; Memory to save GP registers
 _xmm_save:      reso    10 ; Memory to save XMM registers
 %endif
 _rsp_save:      resq    1  ; Memory to save RSP
+_mul_gpr_save:  resq    2  ; MSG/LEN spill while the R^4/R^3 setup uses them as scratch
 endstruc
 
 mksection .text
@@ -183,7 +184,7 @@ mksection .text
 ;; =============================================================================
 ;; Computes hash for message length being multiple of block size
 ;; =============================================================================
-%macro POLY1305_MUL_REDUCE 11-12
+%macro POLY1305_MUL_REDUCE 11
 %define %%A0      %1    ; [in/out] GPR with accumulator bits 63:0
 %define %%A1      %2    ; [in/out] GPR with accumulator bits 127:64
 %define %%A2      %3    ; [in/out] GPR with accumulator bits 195:128
@@ -195,7 +196,6 @@ mksection .text
 %define %%T3      %9    ; [clobbered] GPR register
 %define %%GP_RAX  %10   ; [clobbered] RAX register
 %define %%GP_RDX  %11   ; [clobbered] RDX register
-%define %%ONLY128 %12   ; [in] Used if input A2 is 0
 
         ;; Combining 64-bit x 64-bit multiplication with reduction steps
         ;;
@@ -245,9 +245,7 @@ mksection .text
 
         ;; T1:A0 += (A1 * R1x5)
         mul     %%A1
-%if %0 == 11
         mov     %%A1, %%A2      ;; use A1 for A2
-%endif
         add     %%A0, %%GP_RAX
         adc     %%T1, %%GP_RDX
 
@@ -255,7 +253,6 @@ mksection .text
         ;;       R1/R0 is clamped to 60-bits,
         ;;       their product is less than 2^64.
 
-%if %0 == 11
         ;; T3:T2 += (A2 * R1x5)
         imul    %%A1, %%C1
         add     %%T2, %%A1
@@ -266,12 +263,6 @@ mksection .text
         imul    %%A2, %%R0
         add     %%A1, %%T2
         adc     %%T3, %%A2
-        ;; If A2 == 0, just move and add T1-T2 to A1
-%else
-        mov     %%A1, %%T1
-        add     %%A1, %%T2
-        adc     %%T3, 0
-%endif
 
         ;; At this point, 3 64-bit limbs are in T3:A1:A0
         ;; T3 can span over more than 2 bits so final partial reduction step is needed.
@@ -294,6 +285,139 @@ mksection .text
         add     %%A0, %%T1
         adc     %%A1, 0
         adc     DWORD(%%A2), 0
+%endmacro
+
+;; =============================================================================
+;; =============================================================================
+;; Computes R^4 = R^2 * R^2 and R^3 = R^2 * R from A = R^2 and broadcasts their
+;; 64-bit halves and top bits into the masked qwords of the power table
+;; registers (R^4 under %%K_R4, R^3 under %%K_R3)
+;; =============================================================================
+%macro POLY1305_MUL_REDUCE_X 19
+%define %%A0      %1    ; [in/clobbered] GPR with R^2 bits 63:0
+%define %%A1      %2    ; [in/clobbered] GPR with R^2 bits 127:64
+%define %%A2      %3    ; [in/clobbered] GPR with R^2 bits 130:128 (<= 4)
+%define %%R0      %4    ; [in] GPR with R constant bits 63:0
+%define %%R1      %5    ; [in] GPR with R constant bits 127:64
+%define %%C1      %6    ; [in/out] C1 = R1 + (R1 >> 2), rebuilt after use as a limb
+%define %%T1      %7    ; [clobbered] GPR register
+%define %%T2      %8    ; [clobbered] GPR register
+%define %%T3      %9    ; [clobbered] GPR register
+%define %%GP_RAX  %10   ; [clobbered] RAX register
+%define %%GP_RDX  %11   ; [clobbered] RDX register
+%define %%T4      %12   ; [clobbered] GPR register
+%define %%T5      %13   ; [clobbered] GPR register
+%define %%T6      %14   ; [clobbered] GPR register
+%define %%ZLO     %15   ; [in/out] ZMM: bits 63:0 of the powers of R
+%define %%ZHI     %16   ; [in/out] ZMM: bits 127:64 of the powers of R
+%define %%ZTOP    %17   ; [in/out] ZMM: bits 130:128 of the powers of R
+%define %%K_R4    %18   ; [in] k register: qword mask of R^4 in the table
+%define %%K_R3    %19   ; [in] k register: qword mask of R^3 in the table
+
+        ;; R^4 needs a full square: R^2 has a non-zero top limb and unclamped A1.
+        ;; R^4 = D + 2*X, D = A0^2 + A1^2*2^128 + A2^2*2^256
+        ;;              X = A0*A1*2^64 + A0*A2*2^128 + A1*A2*2^192
+        mov     %%GP_RDX, %%A0
+        mulx    %%T2, %%T1, %%A1        ; X: A0 * A1
+        mulx    %%T3, %%GP_RAX, %%A2    ; X: A0 * A2
+        mulx    %%T5, %%T4, %%A0        ; D: A0 * A0
+        add     %%T2, %%GP_RAX
+        adc     %%T3, 0
+
+        mov     %%GP_RDX, %%A1
+        mulx    %%T6, %%GP_RAX, %%A2    ; X: A1 * A2
+        mulx    %%GP_RDX, %%C1, %%A1    ; D: A1 * A1
+        add     %%T3, %%GP_RAX
+        adc     %%T6, 0
+
+        mov     %%GP_RAX, %%A2
+        imul    %%GP_RAX, %%A2          ; D: A2 * A2
+
+        ;; X = T6:T3:T2:T1 (x 2^64) with T6 < 2^3, so 2*X cannot overflow
+        add     %%T1, %%T1
+        adc     %%T2, %%T2
+        adc     %%T3, %%T3
+        adc     %%T6, %%T6
+        add     %%T5, %%T1
+        adc     %%C1, %%T2
+        adc     %%GP_RDX, %%T3
+        adc     %%GP_RAX, %%T6
+
+        ;; R^4 = RAX:RDX:C1:T5:T4 (< 2^262)
+        ;; (P mod 2^130) + 4 * (P >> 130) + (P >> 130)
+        mov     DWORD(%%T6), DWORD(%%C1)
+        and     DWORD(%%T6), 3
+        and     %%C1, ~3
+        mov     %%T1, %%C1
+        shrd    %%T1, %%GP_RDX, 2
+        mov     %%T2, %%GP_RDX
+        shrd    %%T2, %%GP_RAX, 2
+        mov     %%T3, %%GP_RAX
+        shr     %%T3, 2
+
+        add     %%T4, %%C1
+        adc     %%T5, %%GP_RDX
+        adc     %%T6, %%GP_RAX
+        add     %%T4, %%T1
+        adc     %%T5, %%T2
+        adc     %%T6, %%T3
+
+        ;; Fold bits above 2^130 once more
+        mov     %%T1, %%T6
+        and     DWORD(%%T6), 3
+        shr     %%T1, 2
+        lea     %%T1, [%%T1 + %%T1*4]
+        add     %%T4, %%T1
+        adc     %%T5, 0
+        adc     DWORD(%%T6), 0
+
+        vpbroadcastq %%ZLO{%%K_R4}, %%T4
+        vpbroadcastq %%ZHI{%%K_R4}, %%T5
+        vpbroadcastq %%ZTOP{%%K_R4}, %%T6
+
+        ;; R^3 = R^2 * R
+        ;;          A2        A1        A0
+        ;;        x           R1        R0
+        ;;   -----------------------------
+        ;;       A2xR0     A1xR0     A0xR0
+        ;;   +             A0xR1
+        ;;   +           5xA2xR1   5xA1xR1
+        mov     %%C1, %%R1
+        shr     %%C1, 2
+        add     %%C1, %%R1
+
+        mov     %%GP_RDX, %%A0
+        mulx    %%T2, %%T1, %%R0        ; A0 * R0
+        mulx    %%T3, %%GP_RAX, %%R1    ; A0 * R1
+        mov     %%GP_RDX, %%A1
+        mulx    %%T5, %%T4, %%C1        ; A1 * C1
+        mulx    %%A0, %%T6, %%R0        ; A1 * R0
+        mov     %%GP_RDX, %%A2
+        imul    %%GP_RDX, %%C1          ; A2 * C1
+        imul    %%A2, %%R0              ; A2 * R0
+
+        add     %%T2, %%GP_RAX
+        adc     %%T3, 0
+        add     %%T1, %%T4
+        adc     %%T2, %%T5
+        adc     %%T3, 0
+        add     %%T2, %%T6
+        adc     %%T3, %%A0
+        add     %%T2, %%GP_RDX
+        adc     %%T3, %%A2
+
+        ;; R^3 = T3:T2:T1
+        mov     DWORD(%%GP_RDX), DWORD(%%T3)
+        and     DWORD(%%GP_RDX), 3
+        shr     %%T3, 2
+        lea     %%T3, [%%T3 + %%T3*4]
+        add     %%T1, %%T3
+        adc     %%T2, 0
+        adc     DWORD(%%GP_RDX), 0
+
+        vpbroadcastq %%ZLO{%%K_R3}, %%T1
+        vpbroadcastq %%ZHI{%%K_R3}, %%T2
+        vpbroadcastq %%ZTOP{%%K_R3}, %%GP_RDX
 %endmacro
 
 ;; =============================================================================
@@ -929,59 +1053,62 @@ mksection .text
         ; Add 2^128 to all 8 final qwords of the message
         vporq   zmm18, [rel high_bit]
 
-        ; Use memory in stack to save powers of R, before loading them into ZMM registers
-        ; The first 16*8 bytes will contain the 16 bytes of the 8 powers of R
-        ; The last 64 bytes will contain the last 2 bits of powers of R, spread in 8 qwords,
-        ; to be OR'd with the highest qwords (in zmm26)
-        vmovq   xmm3, %%R0
-        vpinsrq xmm3, %%R1, 1
-        vinserti32x4 zmm1, xmm3, 3
+        ; Build the power table R^4 R^3 R^2 R straight into even qwords 0/2/4/6
+        ; (odd qwords receive R^8..R^5 later): zmm19 = bits 63:0, zmm21 = bits
+        ; 127:64, zmm2 = bits 130:128.  k3 = R^4, k4 = R^3, k2 = R^2, k1 = R.
+        kxnorw  k3, k3, k3
+        kshiftrw k3, k3, 15
+        kshiftlw k4, k3, 2
+        kshiftlw k2, k3, 4
+        kshiftlw k1, k3, 6
+        vpbroadcastq zmm19{k1}{z}, %%R0
+        vpbroadcastq zmm21{k1}{z}, %%R1
 
-        vpxorq  zmm0, zmm0
-        vpxorq  zmm2, zmm2
-
-        ; Calculate R^2
+        ; Calculate R^2 = R0^2 + 2*R0*R1*2^64 + R1^2*2^128; R1 = 0 mod 4 turns the
+        ; last term into R1 * C1 with C1 = R1 + (R1 >> 2) (= 5*R1/4)
         mov     %%T0, %%R1
         shr     %%T0, 2
-        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
+        add     %%T0, %%R1
 
-        mov     %%A0, %%R0
-        mov     %%A1, %%R1
+        mov     %%GP_RDX, %%R0
+        mulx    %%T1, %%A0, %%R0        ; T1:A0 = R0^2
+        mulx    %%T3, %%T2, %%R1        ; T3:T2 = R0*R1
+        mov     %%GP_RDX, %%R1
+        mulx    %%GP_RAX, %%A1, %%T0    ; RAX:A1 = R1*C1
+        add     %%T2, %%T2
+        adc     %%T3, %%T3              ; 2*R0*R1 < 2^121
+        add     %%A0, %%A1
+        adc     %%T1, %%GP_RAX          ; R0^2 + R1*C1 < 2^122
+        add     %%T1, %%T2
+        adc     %%T3, 0
+        mov     %%A1, %%T1
 
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX, no_A2
+        ; Partial reduction: A2 = T3 & 3, A += (T3 & ~3) + (T3 >> 2)
+        mov     %%T1, %%T3
+        mov     DWORD(%%A2), DWORD(%%T3)
+        and     %%T1, ~3
+        shr     %%T3, 2
+        and     DWORD(%%A2), 3
+        add     %%T1, %%T3
+        add     %%A0, %%T1
+        adc     %%A1, 0
+        adc     DWORD(%%A2), 0
 
-        vmovq   xmm3, %%A0
-        vpinsrq xmm3, %%A1, 1
-        vinserti32x4 zmm1, xmm3, 2
+        vpbroadcastq zmm19{k2}, %%A0
+        vpbroadcastq zmm21{k2}, %%A1
+        vpbroadcastq zmm2{k2}{z}, %%A2
 
-        vmovq   xmm4, %%A2
-        vinserti32x4 zmm2, xmm4, 2
-
-        ; Calculate R^3
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        vmovq   xmm3, %%A0
-        vpinsrq xmm3, %%A1, 1
-        vinserti32x4 zmm1, xmm3, 1
-
-        vmovq   xmm4, %%A2
-        vinserti32x4 zmm2, xmm4, 1
-
-        ; Calculate R^4
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        vmovq   xmm3, %%A0
-        vpinsrq xmm3, %%A1, 1
-        vinserti32x4 zmm1, xmm3, 0
-
-        vmovq   xmm4, %%A2
-        vinserti32x4 zmm2, xmm4, 0
+        ; Calculate R^4 and R^3 (rbx, MSG and LEN are the only free GPRs)
+        mov     [rsp + _mul_gpr_save], %%MSG
+        mov     [rsp + _mul_gpr_save + 8], %%LEN
+        POLY1305_MUL_REDUCE_X %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, \
+                                %%GP_RAX, %%GP_RDX, rbx, %%MSG, %%LEN, \
+                                zmm19, zmm21, zmm2, k3, k4
+        mov     %%MSG, [rsp + _mul_gpr_save]
+        mov     %%LEN, [rsp + _mul_gpr_save + 8]
 
         ; Move 2 MSbits to top 24 bits, to be OR'ed later
         vpsllq  zmm2, 40
-
-        vpunpckhqdq zmm21, zmm1, zmm0
-        vpunpcklqdq zmm19, zmm1, zmm0
 
         vpsrlq  zmm20, zmm19, 44
         vpsllq  zmm4, zmm21, 20
@@ -993,19 +1120,10 @@ mksection .text
         ; zmm2 contains the 2 highest bits of the powers of R
         vporq   zmm21, zmm2
 
-        ; Broadcast 44-bit limbs of R^4
-        mov     %%T0, %%A0
-        and     %%T0, [rel mask_44] ;; First limb (R^4[43:0])
-        vpbroadcastq zmm22, %%T0
-
-        mov     %%T0, %%A1
-        shrd    %%A0, %%T0, 44
-        and     %%A0, [rel mask_44] ;; Second limb (R^4[87:44])
-        vpbroadcastq zmm23, %%A0
-
-        shrd    %%A1, %%A2, 24
-        and     %%A1, [rel mask_42] ;; Third limb (R^4[129:88])
-        vpbroadcastq zmm24, %%A1
+        ; Broadcast R^4 (qword 0 of the table)
+        vpbroadcastq zmm22, xmm19
+        vpbroadcastq zmm23, xmm20
+        vpbroadcastq zmm24, xmm21
 
         ; Generate 4*5*R^4
         vpsllq  zmm25, zmm23, 2
