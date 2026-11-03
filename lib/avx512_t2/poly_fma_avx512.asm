@@ -227,11 +227,9 @@ mksection .text
         ;; T3 = L1H + L2L
 
         ;; T3:T2 = (A0 * R1)
-        mov     %%GP_RAX, %%R1
-        mul     %%A0
-        mov     %%T2, %%GP_RAX
+        mov     %%GP_RDX, %%R1
+        mulx    %%T3, %%T2, %%A0
         mov     %%GP_RAX, %%R0
-        mov     %%T3, %%GP_RDX
 
         ;; T1:A0 = (A0 * R0)
         mul     %%A0
