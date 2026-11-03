@@ -459,11 +459,14 @@ mksection .text
                       ;   "lazy_carry": 1 parallel pass; inputs limbs <= 2^44, 2^44, 2^42;
                       ;     out: limb0 < 2^49, limb1 < 12*2^44 (20*limb1 < 2^52), limb2 < 2^46
                       ;   "parallel_carry": 2 parallel passes
+                      ;   "no_reduce": A0-A2 = unreduced limbs of A*R, < 2^60 for A < 2^49
 
 %if %0 > 15
 %ifnidn %%CARRY, lazy_carry
 %ifnidn %%CARRY, parallel_carry
+%ifnidn %%CARRY, no_reduce
 %error "POLY1305_MUL_REDUCE_VEC: unknown carry mode"
+%endif
 %endif
 %endif
 %endif
@@ -499,6 +502,20 @@ mksection .text
         vpmadd52huq %%P2_H, %%A1, %%R1
 
 %if %0 > 15
+%ifidn %%CARRY, no_reduce
+        ; Unreduced limbs; each high product half belongs to the next limb up:
+        ;   A0 = P0_L + 5 * (P2_H << 10)  (P2_H is above bit 130, wraps with x5)
+        ;   A1 = P1_L + (P0_H << 8)
+        ;   A2 = P2_L + (P1_H << 8)
+        vpsllq  %%P0_H, 8
+        vpsllq  %%P1_H, 8
+        vpsllq  %%ZTMP1, %%P2_H, 12
+        vpsllq  %%P2_H, 10
+        vpaddq  %%A0, %%P0_L, %%P2_H
+        vpaddq  %%A1, %%P1_L, %%P0_H
+        vpaddq  %%A2, %%P2_L, %%P1_H
+        vpaddq  %%A0, %%ZTMP1
+%else
         ; First pass: each limb's carry computed independently
         vpsrlq  %%ZTMP1, %%P0_L, 44
         vpsllq  %%P0_H, 8
@@ -532,6 +549,7 @@ mksection .text
         vpaddq  %%A0, %%P2_L
         vpsllq  %%P2_L, 2
         vpaddq  %%A0, %%P2_L
+%endif
 %endif
 %else
         ; Carry propagation (first pass)
@@ -812,7 +830,7 @@ mksection .text
 ;; multiplying by 5 in case of the carry of p2.
 ;;
 ;; =============================================================================
-%macro POLY1305_MUL_REDUCE_VEC16 30
+%macro POLY1305_MUL_REDUCE_VEC16 30-31
 %define %%A0      %1  ; [in/out] ZMM register containing 1st 44-bit limb of the 8 blocks
 %define %%A1      %2  ; [in/out] ZMM register containing 2nd 44-bit limb of the 8 blocks
 %define %%A2      %3  ; [in/out] ZMM register containing 3rd 44-bit limb of the 8 blocks
@@ -843,6 +861,13 @@ mksection .text
 %define %%Q2_H    %28 ; [clobbered] ZMM register to contain p[2] of the 8 blocks
 %define %%ZTMP1   %29 ; [clobbered] Temporary ZMM register
 %define %%ZTMP2   %30 ; [clobbered] Temporary ZMM register
+%define %%MODE    %31 ; [in] optional "no_reduce": A0-A2 = unreduced limbs of A*R + B*S (< 2^57, B clobbered)
+
+%if %0 > 30
+%ifnidn %%MODE, no_reduce
+%error "POLY1305_MUL_REDUCE_VEC16: unknown mode"
+%endif
+%endif
 
         ;; Reset accumulator
         vpxorq  %%P0_L, %%P0_L
@@ -901,28 +926,53 @@ mksection .text
         vpmadd52luq %%Q2_L, %%B0, %%S2
         vpmadd52huq %%Q2_H, %%B0, %%S2
 
+%ifnidn %%MODE, no_reduce
         ; Carry propagation (first pass)
         vpsrlq  %%ZTMP1, %%P0_L, 44
         vpsllq  %%P0_H, 8
         vpsrlq  %%ZTMP2, %%Q0_L, 44
         vpsllq  %%Q0_H, 8
+%endif
 
         vpmadd52luq %%P1_L, %%A1, %%R0
         vpmadd52huq %%P1_H, %%A1, %%R0
         vpmadd52luq %%Q1_L, %%B1, %%S0
         vpmadd52huq %%Q1_H, %%B1, %%S0
 
+%ifnidn %%MODE, no_reduce
         ; Carry propagation (first pass) - continue
         vpandq  %%A0, %%P0_L, [rel mask_44] ; Clear top 20 bits
         vpaddq  %%P0_H, %%ZTMP1
         vpandq  %%B0, %%Q0_L, [rel mask_44] ; Clear top 20 bits
         vpaddq  %%Q0_H, %%ZTMP2
+%endif
 
         vpmadd52luq %%P2_L, %%A1, %%R1
         vpmadd52huq %%P2_H, %%A1, %%R1
         vpmadd52luq %%Q2_L, %%B1, %%S1
         vpmadd52huq %%Q2_H, %%B1, %%S1
 
+%ifidn %%MODE, no_reduce
+        ; Unreduced limbs of A*R + B*S; each high product half belongs to the
+        ; next limb up:
+        ;   A0 = P0_L + Q0_L + 5 * ((P2_H + Q2_H) << 10)  (above bit 130, wraps with x5)
+        ;   A1 = P1_L + Q1_L + ((P0_H + Q0_H) << 8)
+        ;   A2 = P2_L + Q2_L + ((P1_H + Q1_H) << 8)
+        vpaddq  %%P0_H, %%Q0_H
+        vpaddq  %%P1_H, %%Q1_H
+        vpaddq  %%P2_H, %%Q2_H
+        vpaddq  %%A0, %%P0_L, %%Q0_L
+        vpaddq  %%A1, %%P1_L, %%Q1_L
+        vpaddq  %%A2, %%P2_L, %%Q2_L
+        vpsllq  %%P0_H, 8
+        vpsllq  %%P1_H, 8
+        vpsllq  %%ZTMP1, %%P2_H, 12
+        vpsllq  %%P2_H, 10
+        vpaddq  %%A1, %%P0_H
+        vpaddq  %%A2, %%P1_H
+        vpaddq  %%A0, %%ZTMP1
+        vpaddq  %%A0, %%P2_H
+%else
         ; Carry propagation (first pass) - continue
         vpaddq  %%P1_L, %%P0_H
         vpsllq  %%P1_H, 8
@@ -962,6 +1012,7 @@ mksection .text
         vpsrlq  %%ZTMP2, %%B0, 44
         vpandq  %%B0, [rel mask_44]
         vpaddq  %%B1, %%ZTMP2
+%endif
 %endmacro
 
 ;; =============================================================================
@@ -1050,8 +1101,7 @@ mksection .text
         and     %%A0, [rel mask_44] ;; Second limb (A[77:52])
         vmovq   xmm6, %%A0
 
-        shrd    %%A1, %%A2, 24
-        and     %%A1, [rel mask_42] ;; Third limb (A[129:88])
+        shrd    %%A1, %%A2, 24          ;; Third limb (A[133:88]); A2 == 4 only after a carry that zeroed A1, so <= 2^42
         vmovq   xmm7, %%A1
 
         ; Load first block of data (128 bytes)
@@ -1316,6 +1366,11 @@ align_label
         vpsllq  zmm25, 2
         vpsllq  zmm26, 2
 
+        mov     %%T0, %%LEN
+        and     %%T0, (POLY1305_BLOCK_SIZE*16 - 1)
+        cmp     %%T0, 32
+        jbe     %%_last_16_blocks_to_gp
+
         POLY1305_MUL_REDUCE_VEC16 zmm13, zmm14, zmm15, zmm16, zmm17, zmm18, \
                                 zmm19, zmm20, zmm21, zmm27, zmm28, \
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
@@ -1393,6 +1448,9 @@ align_label
         add     %%MSG, POLY1305_BLOCK_SIZE*8
         sub     %%LEN, POLY1305_BLOCK_SIZE*8
 
+        cmp     %%LEN, 32
+        jbe     %%_last_vec_mul_to_gp
+
         POLY1305_MUL_REDUCE_VEC zmm13, zmm14, zmm15, \
                                 zmm22, zmm23, zmm24, \
                                 zmm25, zmm26, \
@@ -1429,9 +1487,7 @@ align_label
 
 align_label
 %%_less_than_128:
-        cmp     %%LEN, 32 ; If remaining bytes is <= 32, perform last blocks in scalar
-        jbe     %%_simd_to_gp
-
+        ; 33..127 bytes left: 3 to 8 blocks, the last one possibly partial
         mov     %%T0, %%LEN
         and     %%T0, 0x3f
         lea     %%T1, [rel byte64_len_to_mask_table]
@@ -1505,7 +1561,7 @@ align_label
 
         ; No need to shuffle data blocks (data is in the right order)
         cmp     %%T0, 8
-        je      %%_end_shuffle
+        je      %%_last_vec_mul_to_gp
 
         cmp     %%T0, 4
         je      %%_shuffle_blocks_4
@@ -1521,76 +1577,12 @@ align_label
 %rep 5
 APPEND(%%_shuffle_blocks_, i):
         SHUFFLE_DATA_BLOCKS zmm13, zmm14, zmm15, %%T1, i
-        jmp     %%_end_shuffle
+        jmp     %%_last_vec_mul_to_gp
 %assign i (i + 1)
 %endrep
 
 align_label
-%%_end_shuffle:
-        ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
-        ; zmm22-24 contain the 3x44-bit limbs of the powers of R
-        ; zmm25-26 contain the 3x44-bit limbs of the powers of R' (5*4*R)
-        POLY1305_MUL_REDUCE_VEC zmm13, zmm14, zmm15, \
-                                zmm22, zmm23, zmm24, \
-                                zmm25, zmm26, \
-                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                                zmm11
-
-        ;; Add all blocks (horizontally)
-        vextracti64x4   ymm0, zmm13, 1
-        vextracti64x4   ymm1, zmm14, 1
-        vextracti64x4   ymm2, zmm15, 1
-
-        vpaddq  ymm13, ymm0
-        vpaddq  ymm14, ymm1
-        vpaddq  ymm15, ymm2
-
-        vextracti32x4   xmm10, ymm13, 1
-        vextracti32x4   xmm11, ymm14, 1
-        vextracti32x4   xmm12, ymm15, 1
-
-        vpaddq  xmm13, xmm10
-        vpaddq  xmm14, xmm11
-        vpaddq  xmm15, xmm12
-
-        vpsrldq xmm10, xmm13, 8
-        vpsrldq xmm11, xmm14, 8
-        vpsrldq xmm12, xmm15, 8
-
-        vpaddq  xmm13, xmm10
-        vpaddq  xmm14, xmm11
-        vpaddq  xmm15, xmm12
-
-align_label
-%%_simd_to_gp:
-        ; Carry propagation
-        vpsrlq  xmm0, xmm13, 44
-        vpandq  xmm13, [rel mask_44] ; Clear top 20 bits
-        vpaddq  xmm14, xmm0
-        vpsrlq  xmm0, xmm14, 44
-        vpandq  xmm14, [rel mask_44] ; Clear top 20 bits
-        vpaddq  xmm15, xmm0
-        vpsrlq  xmm0, xmm15, 42
-        vpandq  xmm15, [rel mask_42] ; Clear top 22 bits
-        vpsllq  xmm1, xmm0, 2
-        vpaddq  xmm0, xmm1
-        vpaddq  xmm13, xmm0
-
-        ; Put together A
-        vmovq   %%A0, xmm13
-
-        vmovq   %%T0, xmm14
-        mov     %%T1, %%T0
-        shl     %%T1, 44
-        or      %%A0, %%T1
-
-        shr     %%T0, 20
-        vmovq   %%A2, xmm15
-        mov     %%A1, %%A2
-        shl     %%A1, 24
-        or      %%A1, %%T0
-        shr     %%A2, 40
-
+%%_gp_hash_ready:
         ; Clear powers of R
 %ifdef SAFE_DATA
         vpxorq  zmm0, zmm0
@@ -1659,6 +1651,12 @@ align_label
         vpaddq  zmm14, zmm17
         vpaddq  zmm15, zmm18
 
+        add     %%MSG, POLY1305_BLOCK_SIZE*16
+        sub     %%LEN, POLY1305_BLOCK_SIZE*16
+
+        cmp     %%LEN, 32
+        jbe     %%_last_vec_mul_to_gp
+
         ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
         ; zmm22-24 contain the 3x44-bit limbs of the powers of R
         ; zmm25-26 contain the 3x44-bit limbs of the powers of R' (5*4*R)
@@ -1696,10 +1694,86 @@ align_label
         vpaddq  xmm14{k1}{z}, xmm11
         vpaddq  xmm15{k1}{z}, xmm12
 
-        add     %%MSG, POLY1305_BLOCK_SIZE*16
-        sub     %%LEN, POLY1305_BLOCK_SIZE*16
-
         jmp     %%_less_than_256
+
+align_label
+%%_last_vec_mul_to_gp:
+        ; Last vector multiply of the message: zmm13-15 hold 8 blocks plus the
+        ; accumulator, zmm22-26 the powers R^8..R; MSG/LEN are final.
+        POLY1305_MUL_REDUCE_VEC zmm13, zmm14, zmm15, \
+                                zmm22, zmm23, zmm24, \
+                                zmm25, zmm26, \
+                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                                zmm11, no_reduce
+
+align_label
+%%_unreduced_lanes_to_gp:
+        ; Sum unreduced lanes (each < 2^60), reduce once in GP
+        vextracti64x4   ymm0, zmm13, 1
+        vextracti64x4   ymm1, zmm14, 1
+        vextracti64x4   ymm2, zmm15, 1
+
+        vpaddq  ymm13, ymm0
+        vpaddq  ymm14, ymm1
+        vpaddq  ymm15, ymm2
+
+        vextracti32x4   xmm10, ymm13, 1
+        vextracti32x4   xmm11, ymm14, 1
+        vextracti32x4   xmm12, ymm15, 1
+
+        vpaddq  xmm13, xmm10
+        vpaddq  xmm14, xmm11
+        vpaddq  xmm15, xmm12
+
+        vpsrldq xmm10, xmm13, 8
+        vpsrldq xmm11, xmm14, 8
+        vpsrldq xmm12, xmm15, 8
+
+        vpaddq  xmm13, xmm10
+        vpaddq  xmm14, xmm11
+        vpaddq  xmm15, xmm12
+
+        ; A = L0 + L1*2^44 + L2*2^88 (each Lx < 2^63)
+        vmovq   %%A0, xmm13
+        vmovq   %%T0, xmm14
+        vmovq   %%A2, xmm15
+
+        mov     %%T1, %%T0
+        shl     %%T1, 44
+        shr     %%T0, 20
+        mov     %%A1, %%A2
+        shl     %%A1, 24
+        shr     %%A2, 40
+
+        add     %%A0, %%T1
+        adc     %%A1, %%T0
+        adc     %%A2, 0
+
+        ; Fold bits above 130
+        mov     %%T0, %%A2
+        and     %%A2, 3
+        shr     %%T0, 2
+        lea     %%T0, [%%T0 + %%T0*4]
+        add     %%A0, %%T0
+        adc     %%A1, 0
+        adc     %%A2, 0
+
+        jmp     %%_gp_hash_ready
+
+align_label
+%%_last_16_blocks_to_gp:
+        add     %%MSG, POLY1305_BLOCK_SIZE*16
+        and     %%LEN, (POLY1305_BLOCK_SIZE*16 - 1)
+
+        ; Last 16 blocks with <= 32 bytes left: sum unreduced lanes, reduce once in GP
+        POLY1305_MUL_REDUCE_VEC16 zmm13, zmm14, zmm15, zmm16, zmm17, zmm18, \
+                                zmm19, zmm20, zmm21, zmm27, zmm28, \
+                                zmm22, zmm23, zmm24, zmm25, zmm26, \
+                                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+                                zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm29, no_reduce
+
+        jmp     %%_unreduced_lanes_to_gp
+
 align_label
 %%_poly1305_blocks_partial:
 
