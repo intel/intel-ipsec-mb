@@ -244,7 +244,8 @@ macro(imb_add_target_print_help OPTIONS)
       add_custom_command(
         TARGET print_help
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E echo "    ${OPTION}=${${OPTION}} - ${HELP_TEXT}")
+        COMMAND ${CMAKE_COMMAND} -E echo "    ${OPTION}=${${OPTION}} - ${HELP_TEXT}"
+        VERBATIM)
     endif()
   endforeach()
 endmacro()
