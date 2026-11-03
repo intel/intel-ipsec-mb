@@ -439,7 +439,7 @@ mksection .text
 ;; Then, it propagates the carry (higher bits after bit 43) from lower limbs into higher limbs,
 ;; multiplying by 5 in case of the carry of p2.
 ;;
-%macro POLY1305_MUL_REDUCE_VEC 15
+%macro POLY1305_MUL_REDUCE_VEC 15-16
 %define %%A0      %1  ; [in/out] ZMM register containing 1st 44-bit limb of the 8 blocks
 %define %%A1      %2  ; [in/out] ZMM register containing 2nd 44-bit limb of the 8 blocks
 %define %%A2      %3  ; [in/out] ZMM register containing 3rd 44-bit limb of the 8 blocks
@@ -455,6 +455,18 @@ mksection .text
 %define %%P2_L    %13 ; [clobbered] ZMM register to contain p[2] of the 8 blocks
 %define %%P2_H    %14 ; [clobbered] ZMM register to contain p[2] of the 8 blocks
 %define %%ZTMP1   %15 ; [clobbered] Temporary ZMM register
+%define %%CARRY   %16 ; [in] optional carry mode:
+                      ;   "lazy_carry": 1 parallel pass; inputs limbs <= 2^44, 2^44, 2^42;
+                      ;     out: limb0 < 2^49, limb1 < 12*2^44 (20*limb1 < 2^52), limb2 < 2^46
+                      ;   "parallel_carry": 2 parallel passes
+
+%if %0 > 15
+%ifnidn %%CARRY, lazy_carry
+%ifnidn %%CARRY, parallel_carry
+%error "POLY1305_MUL_REDUCE_VEC: unknown carry mode"
+%endif
+%endif
+%endif
 
         ;; Reset accumulator
         vpxorq  %%P0_L, %%P0_L
@@ -486,6 +498,42 @@ mksection .text
         vpmadd52luq %%P2_L, %%A1, %%R1
         vpmadd52huq %%P2_H, %%A1, %%R1
 
+%if %0 > 15
+        ; First pass: each limb's carry computed independently
+        vpsrlq  %%ZTMP1, %%P0_L, 44
+        vpsllq  %%P0_H, 8
+        vpaddq  %%P0_H, %%ZTMP1         ; c0
+        vpsrlq  %%ZTMP1, %%P1_L, 44
+        vpsllq  %%P1_H, 8
+        vpaddq  %%P1_H, %%ZTMP1         ; c1
+        vpsrlq  %%ZTMP1, %%P2_L, 42
+        vpsllq  %%P2_H, 10
+        vpaddq  %%P2_H, %%ZTMP1         ; c2
+
+        vpandq  %%A0, %%P0_L, [rel mask_44]
+        vpandq  %%A1, %%P1_L, [rel mask_44]
+        vpandq  %%A2, %%P2_L, [rel mask_42]
+        vpaddq  %%A1, %%P0_H
+        vpaddq  %%A2, %%P1_H
+        vpaddq  %%A0, %%P2_H
+        vpsllq  %%P2_H, 2
+        vpaddq  %%A0, %%P2_H            ; += 5*c2
+
+%ifidn %%CARRY, parallel_carry
+        ; Second pass: limb1 can exceed 2^47.7 here, too big for 20*limb1 in vpmadd52
+        vpsrlq  %%P0_L, %%A0, 44
+        vpsrlq  %%P1_L, %%A1, 44
+        vpsrlq  %%P2_L, %%A2, 42
+        vpandq  %%A0, [rel mask_44]
+        vpandq  %%A1, [rel mask_44]
+        vpandq  %%A2, [rel mask_42]
+        vpaddq  %%A1, %%P0_L
+        vpaddq  %%A2, %%P1_L
+        vpaddq  %%A0, %%P2_L
+        vpsllq  %%P2_L, 2
+        vpaddq  %%A0, %%P2_L
+%endif
+%else
         ; Carry propagation (first pass)
         vpsrlq  %%ZTMP1, %%P0_L, 44
         vpandq  %%A0, %%P0_L, [rel mask_44] ; Clear top 20 bits
@@ -511,6 +559,7 @@ mksection .text
         vpsrlq  %%ZTMP1, %%A0, 44
         vpandq  %%A0, [rel mask_44]
         vpaddq  %%A1, %%ZTMP1
+%endif
 %endmacro
 
 ;; =============================================================================
@@ -1141,12 +1190,12 @@ mksection .text
         vpslldq zmm30, zmm20, 8
         vpslldq zmm31, zmm21, 8
 
-        ; Calculate R^8-R^5
+        ; Calculate R^8-R^5 (partially reduced; all later multiplies re-normalize)
         POLY1305_MUL_REDUCE_VEC zmm19, zmm20, zmm21, \
                                 zmm22, zmm23, zmm24, \
                                 zmm25, zmm26, \
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                                zmm11
+                                zmm11, lazy_carry
 
         ; Interleave powers of R: R^8 R^4 R^7 R^3 R^6 R^2 R^5 R
         vporq   zmm19, zmm29
@@ -1183,7 +1232,7 @@ mksection .text
                                 zmm22, zmm23, zmm24, \
                                 zmm25, zmm26, \
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                                zmm11
+                                zmm11, parallel_carry
 
         ; Store R^16-R^9 for later use
         vmovdqa64 [rsp + _r_save + 64*3], zmm19
