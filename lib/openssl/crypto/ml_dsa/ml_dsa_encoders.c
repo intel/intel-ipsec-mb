@@ -75,29 +75,19 @@ poly_encode_4_bits(const IMB_ML_DSA *self, const POLY *p, WPACKET *pkt)
  * This is used to encode w1 when signing with ML-DSA-44
  *
  * @param p A polynomial with coefficients all in the range (0..43)
- * @param pkt A packet object to write 96 bytes to.
+ * @param pkt A packet object to write 192 bytes to.
  *
  * @returns 1 on success, or 0 on error.
  */
 static int
-poly_encode_6_bits(const POLY *p, WPACKET *pkt)
+poly_encode_6_bits(const IMB_ML_DSA *self, const POLY *p, WPACKET *pkt)
 {
         uint8_t *out;
-        const uint32_t *in = p->coeff, *end = in + ML_DSA_NUM_POLY_COEFFICIENTS;
 
         if (!WPACKET_allocate_bytes(pkt, POLY_COEFF_NUM_BYTES(6), &out))
                 return 0;
 
-        do {
-                uint32_t c0 = *in++;
-                uint32_t c1 = *in++;
-                uint32_t c2 = *in++;
-                uint32_t c3 = *in++;
-
-                *out++ = c0 | (c1 << 6);
-                *out++ = (c1 >> 2) | (c2 << 4);
-                *out++ = (c2 >> 4) | (c3 << 2);
-        } while (in < end);
+        self->poly_pack_w1_6(p, out);
         return 1;
 }
 
@@ -547,13 +537,13 @@ poly_encode_signed_two_to_power_17(const POLY *p, WPACKET *pkt)
 {
         static const uint32_t range = 1u << 17;
         const uint32_t *in = p->coeff, *end = in + ML_DSA_NUM_POLY_COEFFICIENTS;
+        uint8_t *out;
+
+        if (!WPACKET_allocate_bytes(pkt, POLY_COEFF_NUM_BYTES(18), &out))
+                return 0;
 
         do {
-                uint8_t *out;
                 uint32_t z0, z1, z2;
-
-                if (!WPACKET_allocate_bytes(pkt, 9, &out))
-                        return 0;
 
                 z0 = mod_sub(range, *in++);
                 z0 |= (z1 = mod_sub(range, *in++)) << 18;
@@ -562,7 +552,7 @@ poly_encode_signed_two_to_power_17(const POLY *p, WPACKET *pkt)
 
                 out = OPENSSL_store_u32_le(out, z0);
                 out = OPENSSL_store_u32_le(out, z1);
-                *out = z2 >> 10;
+                *out++ = z2 >> 10;
         } while (in < end);
         return 1;
 }
@@ -1006,7 +996,7 @@ ossl_ml_dsa_w1_encode(const IMB_ML_DSA *self, const VECTOR *w1, uint32_t gamma2,
         for (i = 0; i < w1->num_poly; ++i) {
                 const int ok = gamma2 == ML_DSA_GAMMA2_Q_MINUS1_DIV32
                                        ? poly_encode_4_bits(self, w1->poly + i, &pkt)
-                                       : poly_encode_6_bits(w1->poly + i, &pkt);
+                                       : poly_encode_6_bits(self, w1->poly + i, &pkt);
 
                 if (!ok)
                         goto err;

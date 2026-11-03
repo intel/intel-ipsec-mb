@@ -21,6 +21,7 @@ IMB_DLL_LOCAL ML_DSA_POLY_CHKNORM_FN ml_dsa_poly_chknorm_signed_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_SUB_CHKNORM_FN ml_dsa_poly_sub_chknorm_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_COUNT_FN ml_dsa_poly_count_ones_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_w1_4_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_w1_6_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_z_20_avx2;
 
 static inline void
@@ -138,6 +139,21 @@ ml_dsa_poly_pack_w1_4_base(const POLY *p, uint8_t *out)
 }
 
 static void
+ml_dsa_poly_pack_w1_6_base(const POLY *p, uint8_t *out)
+{
+        for (unsigned i = 0; i < ML_DSA_NUM_POLY_COEFFICIENTS; i += 4) {
+                const uint32_t c0 = p->coeff[i];
+                const uint32_t c1 = p->coeff[i + 1];
+                const uint32_t c2 = p->coeff[i + 2];
+                const uint32_t c3 = p->coeff[i + 3];
+
+                *out++ = (uint8_t) (c0 | (c1 << 6));
+                *out++ = (uint8_t) ((c1 >> 2) | (c2 << 4));
+                *out++ = (uint8_t) ((c2 >> 4) | (c3 << 2));
+        }
+}
+
+static void
 ml_dsa_poly_pack_z_20_base(const POLY *p, uint8_t *out)
 {
         for (unsigned i = 0; i < ML_DSA_NUM_POLY_COEFFICIENTS; i += 2) {
@@ -169,6 +185,7 @@ ossl_ml_dsa_poly_init_base(IMB_ML_DSA *self)
         self->poly_sub_chknorm = ml_dsa_poly_sub_chknorm_base;
         self->poly_count_ones = ml_dsa_poly_count_ones_base;
         self->poly_pack_w1_4 = ml_dsa_poly_pack_w1_4_base;
+        self->poly_pack_w1_6 = ml_dsa_poly_pack_w1_6_base;
         self->poly_pack_z_20 = ml_dsa_poly_pack_z_20_base;
         self->poly_add = poly_add;
         self->poly_sub = poly_sub;
@@ -193,6 +210,7 @@ ossl_ml_dsa_poly_init_avx2(IMB_ML_DSA *self)
         self->poly_sub_chknorm = ml_dsa_poly_sub_chknorm_avx2;
         self->poly_count_ones = ml_dsa_poly_count_ones_avx2;
         self->poly_pack_w1_4 = ml_dsa_poly_pack_w1_4_avx2;
+        self->poly_pack_w1_6 = ml_dsa_poly_pack_w1_6_avx2;
         self->poly_pack_z_20 = ml_dsa_poly_pack_z_20_avx2;
         self->poly_add = ml_dsa_poly_add_avx2;
         self->poly_sub = ml_dsa_poly_sub_avx2;

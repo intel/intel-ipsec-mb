@@ -92,7 +92,8 @@ typedef void(ML_DSA_POLY_NTT_DOT_FN)(const struct poly_st *row, const struct pol
  * low parts as uint32_t bit patterns. In-place output is supported; Decompose's
  * two outputs must be distinct. Norm checks return 0/1 after scanning the entire
  * polynomial (canonical or signed coefficients, respectively). Count expects
- * 0/1 hints. Packers write exactly 128 (4-bit w1) or 640 (20-bit z) bytes.
+ * 0/1 hints. Packers write exactly 128 (4-bit w1), 192 (6-bit w1) or 640
+ * (20-bit z) bytes.
  * Rounding kernels (HighBits/LowBits/Decompose/MakeHint) take no gamma2
  * argument: the init function selects the gamma2 specialization from the
  * parameter set.
@@ -148,6 +149,7 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_SUB_CHKNORM_FN *poly_sub_chknorm;
         ML_DSA_POLY_COUNT_FN *poly_count_ones;
         ML_DSA_POLY_PACK_FN *poly_pack_w1_4;
+        ML_DSA_POLY_PACK_FN *poly_pack_w1_6;
         ML_DSA_POLY_PACK_FN *poly_pack_z_20;
 
         /**

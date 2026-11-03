@@ -15,9 +15,10 @@
 #   packing, ExpandMask decoding and ExpandA rejection sampling.
 #
 # Notes:
-#   - Each routine processes 256 32-bit coefficients, 8 per loop iteration,
-#     with a fixed trip count and unaligned loads/stores. The exception is
-#     ExpandA rejection sampling, which branches on public data only
+#   - Each routine processes 256 32-bit coefficients, 8 per loop iteration
+#     (32 for 6-bit w1 packing), with a fixed trip count and unaligned
+#     loads/stores. The exception is ExpandA rejection sampling, which
+#     branches on public data only
 #   - %r10 holds the byte offset into the polynomial
 #   - Only YMM0-YMM5 are used (volatile on SysV and Win64); they are cleared
 #     before returning
@@ -824,6 +825,75 @@ ml_dsa_poly_pack_w1_4_avx2:
 .size   ml_dsa_poly_pack_w1_4_avx2, .-ml_dsa_poly_pack_w1_4_avx2
 
 ###############################################################################
+# ml_dsa_poly_pack_w1_6_avx2
+#
+# SimpleBitPack(w1, 43) for ML-DSA-44 (FIPS 204, Algorithm 16).
+#
+# C Prototype:
+#   void ml_dsa_poly_pack_w1_6_avx2(
+#       const POLY *p,    // (rdi) Input polynomial
+#       uint8_t *out      // (rsi) Output buffer
+#   );
+#
+# Description:
+#   32 coefficients per iteration are narrowed to bytes. Multiply-adds with
+#   weights (1, 64) and (1, 4096) merge each group of 4 into a 24-bit dword.
+#   The dwords are permuted back to coefficient order and the shuffle drops
+#   the top byte of each, storing 12 bytes per 128-bit lane.
+#
+# Inputs:
+#   p - coefficients in [0, 43]
+#
+# Output:
+#   out - exactly 192 bytes written; must not overlap p
+###############################################################################
+.align 32
+.globl  ml_dsa_poly_pack_w1_6_avx2
+.type   ml_dsa_poly_pack_w1_6_avx2,\@function,2
+ml_dsa_poly_pack_w1_6_avx2:
+.cfi_startproc
+    endbranch
+    xor     %r10d, %r10d
+    vpbroadcastd ml_dsa_pack_w1_6_mul8(%rip), %ymm4
+    vpbroadcastd ml_dsa_pack_w1_6_mul16(%rip), %ymm5
+
+.align 32
+.Lpack_w1_6_loop:
+    vmovdqu (%rdi,%r10), %ymm0
+    vmovdqu 32(%rdi,%r10), %ymm1
+    vmovdqu 64(%rdi,%r10), %ymm2
+    vmovdqu 96(%rdi,%r10), %ymm3
+    vpackusdw %ymm1, %ymm0, %ymm0
+    vpackusdw %ymm3, %ymm2, %ymm1
+    vpackuswb %ymm1, %ymm0, %ymm0
+    vpmaddubsw %ymm4, %ymm0, %ymm0
+    vpmaddwd %ymm5, %ymm0, %ymm0
+    vmovdqa ml_dsa_pack_w1_6_perm(%rip), %ymm2
+    vpermd  %ymm0, %ymm2, %ymm0
+    vpshufb ml_dsa_pack_w1_6_shuf(%rip), %ymm0, %ymm0
+    vextracti128 \$1, %ymm0, %xmm1
+    vmovq   %xmm0, (%rsi)
+    vpextrd \$2, %xmm0, 8(%rsi)
+    vmovq   %xmm1, 12(%rsi)
+    vpextrd \$2, %xmm1, 20(%rsi)
+    add     \$24, %rsi
+
+    add     \$32*4, %r10
+    cmp     \$256*4, %r10
+    jb      .Lpack_w1_6_loop
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_dsa_poly_pack_w1_6_avx2, .-ml_dsa_poly_pack_w1_6_avx2
+
+###############################################################################
 # ml_dsa_poly_pack_z_20_avx2
 #
 # BitPack(z, gamma1 - 1, gamma1) for ML-DSA-65/87 (FIPS 204, Algorithm 17).
@@ -1134,6 +1204,14 @@ ml_dsa_2gamma2_32:
 ml_dsa_2gamma2_88:
     .long 190464
 
+# w1 6-bit packing multiply-add weights: bytes (1, 64), words (1, 4096)
+.align 4
+ml_dsa_pack_w1_6_mul8:
+    .long 0x40014001
+.align 4
+ml_dsa_pack_w1_6_mul16:
+    .long 0x10000001
+
 # vpshufb masks, same for both 128-bit lanes; 0x80 zeroes the byte
 .align 32
 ml_dsa_pack_w1_4_shuf:
@@ -1143,6 +1221,16 @@ ml_dsa_pack_w1_4_shuf:
 ml_dsa_pack_z_20_shuf:
     .byte 0,1,2,3,4,8,9,10,11,12,0x80,0x80,0x80,0x80,0x80,0x80
     .byte 0,1,2,3,4,8,9,10,11,12,0x80,0x80,0x80,0x80,0x80,0x80
+
+# w1 6-bit packing: dword order after the lane-local packs, and the 3-byte
+# gather of each 4-coefficient group
+.align 32
+ml_dsa_pack_w1_6_perm:
+    .long 0,4,1,5,2,6,3,7
+.align 32
+ml_dsa_pack_w1_6_shuf:
+    .byte 0,1,2,4,5,6,8,9,10,12,13,14,0x80,0x80,0x80,0x80
+    .byte 0,1,2,4,5,6,8,9,10,12,13,14,0x80,0x80,0x80,0x80
 
 # ExpandMask gather and shift tables. Coefficient i starts at bit i*bits;
 # lane 1 bytes are relative to its load at offset bits - 16.
