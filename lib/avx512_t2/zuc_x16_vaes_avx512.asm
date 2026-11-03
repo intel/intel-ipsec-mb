@@ -2420,6 +2420,9 @@ tail_single_xor:
         mov     [r14 + rbx*8], rax
 %ifdef SAFE_DATA
         vpxorq  zmm1, zmm1
+        vpxorq  zmm2, zmm2
+        vpxorq  zmm3, zmm3
+        vpxorq  zmm4, zmm4
 %endif
         ; Shared SAFE_DATA cleanup wipes the entire reused keystream scratch.
         jmp     cipher_cleanup
