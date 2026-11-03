@@ -119,6 +119,20 @@ cmake -DSAFE_DATA=OFF -DSAFE_PARAM=OFF -DSAFE_LOOKUP=OFF ..
   required at configure time to generate assembly from the vendored
   OpenSSL-style scripts.
 
+- To set code alignment of the library C sources (GCC and clang only):
+```
+cmake -DALIGN_FUNCTIONS=64 -DALIGN_LOOPS=32 ..
+```
+  `ALIGN_FUNCTIONS`, `ALIGN_LOOPS`, `ALIGN_JUMPS` and `ALIGN_LABELS` map onto
+  the compiler `-falign-functions`, `-falign-loops`, `-falign-jumps` and
+  `-falign-labels` options and take a power of 2 byte alignment.
+  `ALIGN_FUNCTIONS` defaults to 32, the most stable setting measured with GCC
+  on x86-64. The rest are unset, leaving the compiler default in place. Set an
+  option to an empty string (`-DALIGN_FUNCTIONS=`) to use the compiler
+  default. Options the compiler does not accept are ignored with a warning.
+  The best alignment is compiler and microarchitecture specific, so measure
+  before changing these options.
+
 - To enable constant-time validation using Valgrind memcheck (Linux only):
 ```
 cmake -DCONSTANT_TIME_VALIDATION=ON ..

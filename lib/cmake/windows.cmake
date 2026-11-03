@@ -33,6 +33,13 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE
 set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
 set(CMAKE_STATIC_LINKER_FLAGS "/nologo /nodefaultlib")
 
+# code alignment options are GCC/clang specific and have no MSVC equivalent
+foreach(ALIGN_OPT ALIGN_FUNCTIONS ALIGN_LOOPS ALIGN_JUMPS ALIGN_LABELS)
+  if(NOT "${${ALIGN_OPT}}" STREQUAL "")
+    message(WARNING "${ALIGN_OPT} is not supported by MSVC, option ignored")
+  endif()
+endforeach()
+
 # set compiler optimization flags
 set_source_files_properties(
   ${SRC_FILES_AVX2_T1}

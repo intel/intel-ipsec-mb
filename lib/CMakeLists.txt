@@ -318,6 +318,12 @@ else()
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/unix.cmake)
 endif()
 
+# add code alignment options to all library C sources
+if(NOT MSVC)
+  imb_get_align_flags(ALIGN_FLAGS)
+  string(APPEND CMAKE_C_FLAGS "${ALIGN_FLAGS}")
+endif()
+
 # add user defined cflags
 string(APPEND CMAKE_C_FLAGS " ${EXTRA_CFLAGS}")
 

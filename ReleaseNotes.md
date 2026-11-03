@@ -18,6 +18,8 @@ Library
 - Removed non-GFNI AVX512 ZUC implementations. AVX512 type 1 now uses
   non-GFNI AVX2 implementations for EEA3, EIA3 and NEA6, and the existing
   non-GFNI SSE implementations for NIA6 and NCA6.
+- Added ALIGN_FUNCTIONS, ALIGN_LOOPS, ALIGN_JUMPS and ALIGN_LABELS CMake
+  options to set code alignment of the library C sources on GCC and clang.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

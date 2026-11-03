@@ -127,6 +127,10 @@ macro(imb_set_proj_defaults)
       SANITIZERS
       SANITIZE_LIB
       SANITIZER_SUPPRESSIONS
+      ALIGN_FUNCTIONS
+      ALIGN_LOOPS
+      ALIGN_JUMPS
+      ALIGN_LABELS
       EXTRA_CFLAGS)
 
   # clear default release build C Compiler Flags
@@ -226,6 +230,82 @@ macro(imb_add_target_uninstall UNINSTALL_ROUTINE)
   add_custom_target(
     uninstall COMMAND ${CMAKE_COMMAND} -P
                       ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+endmacro()
+
+# define the code alignment options, ALIGN_FUNCTIONS, ALIGN_LOOPS,
+# ALIGN_JUMPS and ALIGN_LABELS
+#
+# Has to be called after project(), so that the compiler is known. MSVC has no
+# equivalent of the -falign-* flags, so no default is set there and any value
+# the user sets is reported as unsupported.
+macro(imb_set_align_defaults)
+  if(MSVC)
+    set(ALIGN_FUNCTIONS_DEFAULT "")
+  else()
+    # 32 byte function alignment measured as the most stable configuration for
+    # the code alignment sensitive kernels, with GCC on x86-64
+    set(ALIGN_FUNCTIONS_DEFAULT "32")
+  endif()
+
+  set(ALIGN_FUNCTIONS
+      "${ALIGN_FUNCTIONS_DEFAULT}"
+      CACHE STRING "Align library C function entries to N bytes, N = power of 2"
+  )
+  set(ALIGN_LOOPS
+      ""
+      CACHE STRING "Align library C loops to N bytes, N = power of 2")
+  set(ALIGN_JUMPS
+      ""
+      CACHE STRING "Align library C branch targets to N bytes, GCC only")
+  set(ALIGN_LABELS
+      ""
+      CACHE STRING "Align library C labels to N bytes, GCC only")
+endmacro()
+
+# collect the code alignment flags, selected via the ALIGN_* options, in
+# FLAGS_VAR
+#
+# Each option is returned as -falign-<kind>=N when the compiler accepts it.
+# Unset options leave the compiler default in place. N is restricted to a
+# power of 2, which clang requires and GCC rounds up to anyway.
+# -falign-jumps and -falign-labels are GCC only, so they are skipped, with a
+# warning, on compilers that reject them.
+macro(imb_get_align_flags FLAGS_VAR)
+  set(${FLAGS_VAR} "")
+  foreach(ALIGN_KIND functions loops jumps labels)
+    string(TOUPPER ${ALIGN_KIND} ALIGN_OPT)
+    set(ALIGN_OPT "ALIGN_${ALIGN_OPT}")
+    set(ALIGN_VAL "${${ALIGN_OPT}}")
+
+    if(NOT ALIGN_VAL STREQUAL "")
+      if(NOT ALIGN_VAL MATCHES "^[0-9]+$")
+        message(FATAL_ERROR "${ALIGN_OPT} must be a positive integer "
+                            "(got '${ALIGN_VAL}')")
+      endif()
+      # power of 2 check: N & (N - 1) is zero only for powers of 2
+      math(EXPR ALIGN_NOT_POW2 "${ALIGN_VAL} & (${ALIGN_VAL} - 1)")
+      if(ALIGN_VAL EQUAL 0 OR NOT ALIGN_NOT_POW2 EQUAL 0)
+        message(FATAL_ERROR "${ALIGN_OPT} must be a power of 2 "
+                            "(got '${ALIGN_VAL}')")
+      endif()
+
+      set(ALIGN_FLAG "-falign-${ALIGN_KIND}=${ALIGN_VAL}")
+      # cache variable name has to be unique per flag being checked
+      set(ALIGN_SUPPORTED_VAR "COMPILER_SUPPORTS_${ALIGN_OPT}_${ALIGN_VAL}")
+      set(SAVED_CMAKE_REQUIRED_QUIET ${CMAKE_REQUIRED_QUIET})
+      set(CMAKE_REQUIRED_QUIET TRUE)
+      check_c_compiler_flag("${ALIGN_FLAG}" ${ALIGN_SUPPORTED_VAR})
+      set(CMAKE_REQUIRED_QUIET ${SAVED_CMAKE_REQUIRED_QUIET})
+
+      if(${ALIGN_SUPPORTED_VAR})
+        string(APPEND ${FLAGS_VAR} " ${ALIGN_FLAG}")
+        message(STATUS "${ALIGN_OPT}...          ${ALIGN_VAL}")
+      else()
+        message(WARNING "${ALIGN_FLAG} not supported by the compiler, "
+                        "${ALIGN_OPT} ignored")
+      endif()
+    endif()
+  endforeach()
 endmacro()
 
 # add print_help target

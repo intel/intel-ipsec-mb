@@ -58,6 +58,9 @@ imb_detect_os()
 # do compiler checks
 imb_compiler_check()
 
+# set code alignment option defaults (requires the compiler to be known)
+imb_set_align_defaults()
+
 # configure sanitizer instrumentation (SANITIZERS / SANITIZE_LIB)
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/sanitizers.cmake")
 imb_setup_sanitizers()
