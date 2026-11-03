@@ -92,8 +92,8 @@ typedef void(ML_DSA_POLY_NTT_DOT_FN)(const struct poly_st *row, const struct pol
  * low parts as uint32_t bit patterns. In-place output is supported; Decompose's
  * two outputs must be distinct. Norm checks return 0/1 after scanning the entire
  * polynomial (canonical or signed coefficients, respectively). Count expects
- * 0/1 hints. Packers write exactly 128 (4-bit w1), 192 (6-bit w1) or 640
- * (20-bit z) bytes.
+ * 0/1 hints. Packers write exactly 128 (4-bit w1), 192 (6-bit w1), 576
+ * (18-bit z) or 640 (20-bit z) bytes.
  * Rounding kernels (HighBits/LowBits/Decompose/MakeHint) take no gamma2
  * argument: the init function selects the gamma2 specialization from the
  * parameter set.
@@ -112,6 +112,12 @@ typedef uint32_t(ML_DSA_POLY_SUB_CHKNORM_FN)(const struct poly_st *low, const st
                                              uint32_t bound);
 typedef uint32_t(ML_DSA_POLY_COUNT_FN)(const struct poly_st *p);
 typedef void(ML_DSA_POLY_PACK_FN)(const struct poly_st *p, uint8_t *out);
+/*
+ * Write the indices of the nonzero coefficients of a 0/1 hint in ascending
+ * order and return their number (0..256). out must not overlap p. Branches on
+ * the hint, which is public once the signature is accepted.
+ */
+typedef uint32_t(ML_DSA_POLY_PACK_HINT_FN)(const struct poly_st *p, uint8_t *out);
 
 struct IMB_ML_DSA {
         IMB_MGR *mgr;
@@ -150,7 +156,9 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_COUNT_FN *poly_count_ones;
         ML_DSA_POLY_PACK_FN *poly_pack_w1_4;
         ML_DSA_POLY_PACK_FN *poly_pack_w1_6;
+        ML_DSA_POLY_PACK_FN *poly_pack_z_18;
         ML_DSA_POLY_PACK_FN *poly_pack_z_20;
+        ML_DSA_POLY_PACK_HINT_FN *poly_pack_hint;
 
         /**
          * Backend dispatch table. All ops return 0 on success, <0 on error,

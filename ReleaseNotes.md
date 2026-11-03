@@ -16,6 +16,8 @@ Library
   fixed permutes in the first inverse level and Shoup based inverse scaling.
 - Added AVX2 ExpandMask decoding and ExpandA rejection sampling for ML-DSA.
 - Added AVX2 6-bit w1 packing for ML-DSA-44.
+- Added AVX2 18-bit z and hint packing for ML-DSA and widened AVX2 4-bit w1
+  packing to 32 coefficients per iteration.
 - Removed non-GFNI AVX512 ZUC implementations. AVX512 type 1 now uses
   non-GFNI AVX2 implementations for EEA3, EIA3 and NEA6, and the existing
   non-GFNI SSE implementations for NIA6 and NCA6.

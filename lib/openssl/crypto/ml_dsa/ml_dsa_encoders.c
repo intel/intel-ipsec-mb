@@ -23,7 +23,6 @@ typedef int(DECODE_FN)(POLY *s, PACKET *pkt);
 
 static ENCODE_FN poly_encode_signed_2;
 static ENCODE_FN poly_encode_signed_4;
-static ENCODE_FN poly_encode_signed_two_to_power_17;
 static DECODE_FN poly_decode_signed_2;
 static DECODE_FN poly_decode_signed_4;
 static DECODE_FN poly_decode_signed_two_to_power_17;
@@ -521,7 +520,7 @@ err:
  *
  * Use 18 bits from each coefficient and pack them into bytes
  *
- * The code below packs every 4 (18 bit) coefficients into 9 bytes
+ * Every 4 (18 bit) coefficients are packed into 9 bytes
  *  z0  z1  z2 z3
  *  |   |\  |  | \
  * |18 14|4 18 10| 8
@@ -533,27 +532,13 @@ err:
  * @returns 1 on success, or 0 on error.
  */
 static int
-poly_encode_signed_two_to_power_17(const POLY *p, WPACKET *pkt)
+poly_encode_signed_two_to_power_17(const IMB_ML_DSA *self, const POLY *p, WPACKET *pkt)
 {
-        static const uint32_t range = 1u << 17;
-        const uint32_t *in = p->coeff, *end = in + ML_DSA_NUM_POLY_COEFFICIENTS;
         uint8_t *out;
 
         if (!WPACKET_allocate_bytes(pkt, POLY_COEFF_NUM_BYTES(18), &out))
                 return 0;
-
-        do {
-                uint32_t z0, z1, z2;
-
-                z0 = mod_sub(range, *in++);
-                z0 |= (z1 = mod_sub(range, *in++)) << 18;
-                z1 = (z1 >> 14) | (mod_sub(range, *in++) << 4);
-                z1 |= (z2 = mod_sub(range, *in++)) << 22;
-
-                out = OPENSSL_store_u32_le(out, z0);
-                out = OPENSSL_store_u32_le(out, z1);
-                *out++ = z2 >> 10;
-        } while (in < end);
+        self->poly_pack_z_18(p, out);
         return 1;
 }
 
@@ -817,13 +802,15 @@ err:
  * This can be encoded as a byte array of 'omega' polynomial coefficient index
  * positions for the coefficients that are set, followed by
  * k values of the last coefficient index used in each polynomial.
+ * The hint is public once the signature is accepted, so index extraction may
+ * branch on it.
  */
 static int
-hint_bits_encode(const VECTOR *hint, WPACKET *pkt, uint32_t omega)
+hint_bits_encode(const IMB_ML_DSA *self, const VECTOR *hint, WPACKET *pkt, uint32_t omega)
 {
-        int i, j, k = (int) hint->num_poly;
+        int i, k = (int) hint->num_poly;
         size_t coeff_index = 0;
-        POLY *p = hint->poly;
+        const POLY *p = hint->poly;
         uint8_t *data;
 
         if (!WPACKET_allocate_bytes(pkt, omega + k, &data))
@@ -831,9 +818,7 @@ hint_bits_encode(const VECTOR *hint, WPACKET *pkt, uint32_t omega)
         OPENSSL_cleanse(data, omega + k);
 
         for (i = 0; i < k; i++, p++) {
-                for (j = 0; j < ML_DSA_NUM_POLY_COEFFICIENTS; j++)
-                        if (p->coeff[j] != 0)
-                                data[coeff_index++] = j;
+                coeff_index += self->poly_pack_hint(p, data + coeff_index);
                 data[omega + i] = (uint8_t) coeff_index;
         }
         return 1;
@@ -911,12 +896,12 @@ ossl_ml_dsa_sig_encode(const IMB_ML_DSA *self, const ML_DSA_SIG *sig, const ML_D
                 const int ok =
                         params->gamma1 == ML_DSA_GAMMA1_TWO_POWER_19
                                 ? poly_encode_signed_two_to_power_19(self, sig->z.poly + i, &pkt)
-                                : poly_encode_signed_two_to_power_17(sig->z.poly + i, &pkt);
+                                : poly_encode_signed_two_to_power_17(self, sig->z.poly + i, &pkt);
 
                 if (!ok)
                         goto err;
         }
-        if (!hint_bits_encode(&sig->hint, &pkt, params->omega))
+        if (!hint_bits_encode(self, &sig->hint, &pkt, params->omega))
                 goto err;
         ret = 1;
 err:

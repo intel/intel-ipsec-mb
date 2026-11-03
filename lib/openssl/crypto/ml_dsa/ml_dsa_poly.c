@@ -22,7 +22,9 @@ IMB_DLL_LOCAL ML_DSA_POLY_SUB_CHKNORM_FN ml_dsa_poly_sub_chknorm_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_COUNT_FN ml_dsa_poly_count_ones_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_w1_4_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_w1_6_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_z_18_avx2;
 IMB_DLL_LOCAL ML_DSA_POLY_PACK_FN ml_dsa_poly_pack_z_20_avx2;
+IMB_DLL_LOCAL ML_DSA_POLY_PACK_HINT_FN ml_dsa_poly_pack_hint_avx2;
 
 static inline void
 ml_dsa_poly_high_bits_32_base(const POLY *in, POLY *out)
@@ -154,6 +156,23 @@ ml_dsa_poly_pack_w1_6_base(const POLY *p, uint8_t *out)
 }
 
 static void
+ml_dsa_poly_pack_z_18_base(const POLY *p, uint8_t *out)
+{
+        for (unsigned i = 0; i < ML_DSA_NUM_POLY_COEFFICIENTS; i += 4) {
+                const uint64_t a = mod_sub(ML_DSA_GAMMA1_TWO_POWER_17, p->coeff[i]);
+                const uint64_t b = mod_sub(ML_DSA_GAMMA1_TWO_POWER_17, p->coeff[i + 1]);
+                const uint64_t c = mod_sub(ML_DSA_GAMMA1_TWO_POWER_17, p->coeff[i + 2]);
+                const uint64_t d = mod_sub(ML_DSA_GAMMA1_TWO_POWER_17, p->coeff[i + 3]);
+                const uint64_t upper = c | (d << 18);
+                const uint64_t lower = a | (b << 18) | (upper << 36);
+
+                for (unsigned j = 0; j < 8; j++)
+                        *out++ = (uint8_t) (lower >> (8 * j));
+                *out++ = (uint8_t) (upper >> 28);
+        }
+}
+
+static void
 ml_dsa_poly_pack_z_20_base(const POLY *p, uint8_t *out)
 {
         for (unsigned i = 0; i < ML_DSA_NUM_POLY_COEFFICIENTS; i += 2) {
@@ -164,6 +183,17 @@ ml_dsa_poly_pack_z_20_base(const POLY *p, uint8_t *out)
                 for (unsigned j = 0; j < 5; j++)
                         *out++ = (uint8_t) (packed >> (8 * j));
         }
+}
+
+static uint32_t
+ml_dsa_poly_pack_hint_base(const POLY *p, uint8_t *out)
+{
+        uint32_t count = 0;
+
+        for (unsigned i = 0; i < ML_DSA_NUM_POLY_COEFFICIENTS; i++)
+                if (p->coeff[i] != 0)
+                        out[count++] = (uint8_t) i;
+        return count;
 }
 
 void
@@ -186,7 +216,9 @@ ossl_ml_dsa_poly_init_base(IMB_ML_DSA *self)
         self->poly_count_ones = ml_dsa_poly_count_ones_base;
         self->poly_pack_w1_4 = ml_dsa_poly_pack_w1_4_base;
         self->poly_pack_w1_6 = ml_dsa_poly_pack_w1_6_base;
+        self->poly_pack_z_18 = ml_dsa_poly_pack_z_18_base;
         self->poly_pack_z_20 = ml_dsa_poly_pack_z_20_base;
+        self->poly_pack_hint = ml_dsa_poly_pack_hint_base;
         self->poly_add = poly_add;
         self->poly_sub = poly_sub;
 }
@@ -211,7 +243,9 @@ ossl_ml_dsa_poly_init_avx2(IMB_ML_DSA *self)
         self->poly_count_ones = ml_dsa_poly_count_ones_avx2;
         self->poly_pack_w1_4 = ml_dsa_poly_pack_w1_4_avx2;
         self->poly_pack_w1_6 = ml_dsa_poly_pack_w1_6_avx2;
+        self->poly_pack_z_18 = ml_dsa_poly_pack_z_18_avx2;
         self->poly_pack_z_20 = ml_dsa_poly_pack_z_20_avx2;
+        self->poly_pack_hint = ml_dsa_poly_pack_hint_avx2;
         self->poly_add = ml_dsa_poly_add_avx2;
         self->poly_sub = ml_dsa_poly_sub_avx2;
 }

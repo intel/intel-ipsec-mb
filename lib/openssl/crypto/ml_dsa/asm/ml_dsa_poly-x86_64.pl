@@ -11,14 +11,14 @@
 #   AVX2 implementations of the ML-DSA polynomial operations used by signing
 #   and verification (FIPS 204): HighBits, LowBits, Decompose and MakeHint
 #   for both gamma2 values, modular addition and subtraction, infinity norm
-#   checks (including a fused low - c*s2 check), hint counting, w1/z bit
+#   checks (including a fused low - c*s2 check), hint counting, w1/z/hint
 #   packing, ExpandMask decoding and ExpandA rejection sampling.
 #
 # Notes:
 #   - Each routine processes 256 32-bit coefficients, 8 per loop iteration
-#     (32 for 6-bit w1 packing), with a fixed trip count and unaligned
-#     loads/stores. The exception is ExpandA rejection sampling, which
-#     branches on public data only
+#     (32 for w1 packing), with a fixed trip count and unaligned
+#     loads/stores. The exceptions are hint packing and ExpandA rejection
+#     sampling, which branch on public data only
 #   - %r10 holds the byte offset into the polynomial
 #   - Only YMM0-YMM5 are used (volatile on SysV and Win64); they are cleared
 #     before returning
@@ -535,6 +535,77 @@ ml_dsa_poly_count_ones_avx2:
     ret
 .cfi_endproc
 .size   ml_dsa_poly_count_ones_avx2, .-ml_dsa_poly_count_ones_avx2
+
+###############################################################################
+# ml_dsa_poly_pack_hint_avx2
+#
+# HintBitPack index extraction for one polynomial (FIPS 204, Algorithm 20).
+#
+# C Prototype:
+#   uint32_t ml_dsa_poly_pack_hint_avx2(
+#       const POLY *p,    // (rdi) Hint polynomial
+#       uint8_t *out      // (rsi) Output buffer
+#   );
+#
+# Description:
+#   8 coefficients are compared against zero at once, then the indices of
+#   the set mask bits are written from lowest to highest, so indices stay
+#   in ascending order. Groups with no hints are skipped. Branches depend
+#   only on the accepted, public hint. %r8 holds the output start and %r9d
+#   the index of the first coefficient in the group.
+#
+# Inputs:
+#   p - coefficients, each 0 or 1
+#
+# Output:
+#   out - indices of the 1 coefficients; must not overlap p
+#   eax - number of bytes written, in [0, 256]
+###############################################################################
+.align 32
+.globl  ml_dsa_poly_pack_hint_avx2
+.type   ml_dsa_poly_pack_hint_avx2,\@function,2
+ml_dsa_poly_pack_hint_avx2:
+.cfi_startproc
+    endbranch
+    xor     %r10d, %r10d
+    mov     %rsi, %r8
+    xor     %r9d, %r9d
+    vpxor   %ymm1, %ymm1, %ymm1
+
+.align 32
+.Lpack_hint_loop:
+    vpcmpeqd (%rdi,%r10), %ymm1, %ymm0
+    vmovmskps %ymm0, %eax
+    xor     \$255, %eax
+    jz      .Lpack_hint_next
+.Lpack_hint_index:
+    bsf     %eax, %edx
+    lea     (%r9,%rdx), %ecx
+    mov     %cl, (%rsi)
+    inc     %rsi
+    lea     -1(%rax), %ecx
+    and     %ecx, %eax
+    jnz     .Lpack_hint_index
+.Lpack_hint_next:
+    add     \$8, %r9d
+
+    add     \$8*4, %r10
+    cmp     \$256*4, %r10
+    jb      .Lpack_hint_loop
+
+    mov     %rsi, %rax
+    sub     %r8, %rax
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_dsa_poly_pack_hint_avx2, .-ml_dsa_poly_pack_hint_avx2
 ___
 
 ###############################################################################
@@ -779,15 +850,16 @@ $code .= <<___;
 #   );
 #
 # Description:
-#   Each pair of coefficients is merged into one byte within its qword. The
-#   shuffle gathers 2 bytes per 128-bit lane, and the lanes are combined to
-#   store 4 bytes per iteration.
+#   32 coefficients per iteration are narrowed to bytes. A multiply-add with
+#   weights (1, 16) merges each pair into one byte, which is narrowed again.
+#   Interleaving the low words of both 128-bit lanes restores coefficient
+#   order, storing 16 bytes per iteration.
 #
 # Inputs:
 #   p - coefficients in [0, 15]
 #
 # Output:
-#   out - exactly 128 bytes written
+#   out - exactly 128 bytes written; must not overlap p
 ###############################################################################
 .align 32
 .globl  ml_dsa_poly_pack_w1_4_avx2
@@ -796,20 +868,25 @@ ml_dsa_poly_pack_w1_4_avx2:
 .cfi_startproc
     endbranch
     xor     %r10d, %r10d
-    vmovdqa ml_dsa_pack_w1_4_shuf(%rip), %ymm2
+    vpbroadcastd ml_dsa_pack_w1_4_mul8(%rip), %ymm4
 
 .align 32
 .Lpack_w1_4_loop:
     vmovdqu (%rdi,%r10), %ymm0
-    vpsrlq  \$28, %ymm0, %ymm1
-    vpor    %ymm1, %ymm0, %ymm0
-    vpshufb %ymm2, %ymm0, %ymm0
+    vmovdqu 32(%rdi,%r10), %ymm1
+    vmovdqu 64(%rdi,%r10), %ymm2
+    vmovdqu 96(%rdi,%r10), %ymm3
+    vpackusdw %ymm1, %ymm0, %ymm0
+    vpackusdw %ymm3, %ymm2, %ymm1
+    vpackuswb %ymm1, %ymm0, %ymm0
+    vpmaddubsw %ymm4, %ymm0, %ymm0
+    vpackuswb %ymm0, %ymm0, %ymm0
     vextracti128 \$1, %ymm0, %xmm1
     vpunpcklwd %xmm1, %xmm0, %xmm0
-    vmovd   %xmm0, (%rsi)
-    add     \$4, %rsi
+    vmovdqu %xmm0, (%rsi)
+    add     \$16, %rsi
 
-    add     \$8*4, %r10
+    add     \$32*4, %r10
     cmp     \$256*4, %r10
     jb      .Lpack_w1_4_loop
 
@@ -892,42 +969,61 @@ ml_dsa_poly_pack_w1_6_avx2:
     ret
 .cfi_endproc
 .size   ml_dsa_poly_pack_w1_6_avx2, .-ml_dsa_poly_pack_w1_6_avx2
+___
 
 ###############################################################################
-# ml_dsa_poly_pack_z_20_avx2
+# z packing routines, generated for 18-bit (ML-DSA-44) and 20-bit
+# (ML-DSA-65/87) coefficients. The C caller selects one by gamma1.
+###############################################################################
+for my $bits (18, 20) {
+    my $gamma1 = ($bits == 18) ? "ml_dsa_gamma1_44" : "ml_dsa_gamma1";
+    my $levels = ($bits == 18) ? "ML-DSA-44" : "ML-DSA-65/87";
+    my $out_len = 32 * $bits;
+    my $desc = ($bits == 18)
+        ? "#   Each pair gives 36 bits per qword. Shifting a copy left by 4 lets the\n" .
+          "#   second pair of each lane start at the nibble boundary of byte 4, so\n" .
+          "#   two shuffles and an OR gather 9 bytes per 128-bit lane. 8 + 1 byte\n" .
+          "#   stores avoid writing past the end of the output buffer."
+        : "#   Each pair gives 5 bytes per qword; the shuffle gathers 10 bytes per\n" .
+          "#   128-bit lane. 8 + 2 byte stores avoid writing past the end of the\n" .
+          "#   output buffer.";
+
+$code .= <<___;
+
+###############################################################################
+# ml_dsa_poly_pack_z_${bits}_avx2
 #
-# BitPack(z, gamma1 - 1, gamma1) for ML-DSA-65/87 (FIPS 204, Algorithm 17).
+# BitPack(z, gamma1 - 1, gamma1) for $levels (FIPS 204, Algorithm 17).
 #
 # C Prototype:
-#   void ml_dsa_poly_pack_z_20_avx2(
+#   void ml_dsa_poly_pack_z_${bits}_avx2(
 #       const POLY *p,    // (rdi) Input polynomial
 #       uint8_t *out      // (rsi) Output buffer
 #   );
 #
 # Description:
-#   t = (gamma1 - z) mod Q is in [0, 2^20). Each pair is combined as
-#   t_even | (t_odd << 20), giving 5 bytes per qword; the shuffle gathers
-#   10 bytes per 128-bit lane. 8 + 2 byte stores avoid writing past the
-#   end of the output buffer.
+#   t = (gamma1 - z) mod Q is in [0, 2^$bits). Each pair is combined as
+#   t_even | (t_odd << $bits).
+$desc
 #
 # Inputs:
 #   p - z mod Q, with z in [-(gamma1 - 1), gamma1]
 #
 # Output:
-#   out - exactly 640 bytes written
+#   out - exactly $out_len bytes written; must not overlap p
 ###############################################################################
 .align 32
-.globl  ml_dsa_poly_pack_z_20_avx2
-.type   ml_dsa_poly_pack_z_20_avx2,\@function,2
-ml_dsa_poly_pack_z_20_avx2:
+.globl  ml_dsa_poly_pack_z_${bits}_avx2
+.type   ml_dsa_poly_pack_z_${bits}_avx2,\@function,2
+ml_dsa_poly_pack_z_${bits}_avx2:
 .cfi_startproc
     endbranch
     xor     %r10d, %r10d
-    vmovdqa ml_dsa_pack_z_20_shuf(%rip), %ymm2
-    vpbroadcastd ml_dsa_gamma1(%rip), %ymm3
+    vmovdqa ml_dsa_pack_z_${bits}_shuf(%rip), %ymm2
+    vpbroadcastd $gamma1(%rip), %ymm3
 
 .align 32
-.Lpack_z_20_loop:
+.Lpack_z_${bits}_loop:
     vpsubd  (%rdi,%r10), %ymm3, %ymm0
     vpbroadcastd ml_dsa_q(%rip), %ymm4
     vpaddd  %ymm4, %ymm0, %ymm0
@@ -937,8 +1033,24 @@ $code .= <<___;
     vpsllq  \$32, %ymm0, %ymm1
     vpsrlq  \$32, %ymm1, %ymm1          # ymm1 = t_even
     vpsrlq  \$32, %ymm0, %ymm0
-    vpsllq  \$20, %ymm0, %ymm0          # ymm0 = t_odd << 20
+    vpsllq  \$$bits, %ymm0, %ymm0          # ymm0 = t_odd << $bits
     vpor    %ymm1, %ymm0, %ymm0
+___
+    if ($bits == 18) {
+$code .= <<___;
+    vpsllq  \$4, %ymm0, %ymm1
+    vpshufb %ymm2, %ymm0, %ymm0
+    vpshufb ml_dsa_pack_z_18_shuf_hi(%rip), %ymm1, %ymm1
+    vpor    %ymm1, %ymm0, %ymm0
+    vextracti128 \$1, %ymm0, %xmm1
+    vmovq   %xmm0, (%rsi)
+    vpextrb \$8, %xmm0, 8(%rsi)
+    vmovq   %xmm1, 9(%rsi)
+    vpextrb \$8, %xmm1, 17(%rsi)
+    add     \$18, %rsi
+___
+    } else {
+$code .= <<___;
     vpshufb %ymm2, %ymm0, %ymm0
     vextracti128 \$1, %ymm0, %xmm1
     vmovq   %xmm0, (%rsi)
@@ -948,10 +1060,13 @@ $code .= <<___;
     vpextrw \$4, %xmm1, %eax
     mov     %ax, 18(%rsi)
     add     \$20, %rsi
+___
+    }
+$code .= <<___;
 
     add     \$8*4, %r10
     cmp     \$256*4, %r10
-    jb      .Lpack_z_20_loop
+    jb      .Lpack_z_${bits}_loop
 
     vpxor   %ymm0, %ymm0, %ymm0
     vpxor   %ymm1, %ymm1, %ymm1
@@ -962,8 +1077,9 @@ $code .= <<___;
     vzeroupper
     ret
 .cfi_endproc
-.size   ml_dsa_poly_pack_z_20_avx2, .-ml_dsa_poly_pack_z_20_avx2
+.size   ml_dsa_poly_pack_z_${bits}_avx2, .-ml_dsa_poly_pack_z_${bits}_avx2
 ___
+}
 
 ###############################################################################
 # ExpandMask decoding routines, generated for 18-bit (ML-DSA-44) and 20-bit
@@ -1204,7 +1320,11 @@ ml_dsa_2gamma2_32:
 ml_dsa_2gamma2_88:
     .long 190464
 
-# w1 6-bit packing multiply-add weights: bytes (1, 64), words (1, 4096)
+# w1 packing multiply-add weights: 4-bit bytes (1, 16); 6-bit bytes (1, 64)
+# and words (1, 4096)
+.align 4
+ml_dsa_pack_w1_4_mul8:
+    .long 0x10011001
 .align 4
 ml_dsa_pack_w1_6_mul8:
     .long 0x40014001
@@ -1214,9 +1334,13 @@ ml_dsa_pack_w1_6_mul16:
 
 # vpshufb masks, same for both 128-bit lanes; 0x80 zeroes the byte
 .align 32
-ml_dsa_pack_w1_4_shuf:
-    .byte 0,8,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
-    .byte 0,8,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
+ml_dsa_pack_z_18_shuf:
+    .byte 0,1,2,3,4,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
+    .byte 0,1,2,3,4,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
+.align 32
+ml_dsa_pack_z_18_shuf_hi:
+    .byte 0x80,0x80,0x80,0x80,8,9,10,11,12,0x80,0x80,0x80,0x80,0x80,0x80,0x80
+    .byte 0x80,0x80,0x80,0x80,8,9,10,11,12,0x80,0x80,0x80,0x80,0x80,0x80,0x80
 .align 32
 ml_dsa_pack_z_20_shuf:
     .byte 0,1,2,3,4,8,9,10,11,12,0x80,0x80,0x80,0x80,0x80,0x80
