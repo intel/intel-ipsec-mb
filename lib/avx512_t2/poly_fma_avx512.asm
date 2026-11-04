@@ -456,10 +456,10 @@ mksection .text
 %define %%P2_H    %14 ; [clobbered] ZMM register to contain p[2] of the 8 blocks
 %define %%ZTMP1   %15 ; [clobbered] Temporary ZMM register
 %define %%CARRY   %16 ; [in] optional carry mode:
-                      ;   "lazy_carry": 1 parallel pass; inputs limbs <= 2^44, 2^44, 2^42;
-                      ;     out: limb0 < 2^49, limb1 < 12*2^44 (20*limb1 < 2^52), limb2 < 2^46
-                      ;   "parallel_carry": 2 parallel passes
-                      ;   "no_reduce": A0-A2 = unreduced limbs of A*R, < 2^60 for A < 2^49
+                        ; "lazy_carry": 1 parallel pass; inputs limbs <= 2^44, 2^44, 2^42;
+                        ;     out: limb0 < 2^49, limb1 < 12*2^44 (20*limb1 < 2^52), limb2 < 2^46
+                        ; "parallel_carry": 2 parallel passes
+                        ; "no_reduce": A0-A2 = unreduced limbs of A*R, < 2^60 for A < 2^49
 
 %if %0 > 15
 %ifnidn %%CARRY, lazy_carry
