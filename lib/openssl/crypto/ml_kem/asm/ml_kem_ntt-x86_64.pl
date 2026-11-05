@@ -54,9 +54,10 @@ my $code = '';
 # Signed 16-bit range analysis (q = 3329, R = 2^16)
 #
 # Every kernel in this file operates on signed 16-bit lanes without widening
-# (except ntt_reduce). The bounds below are the invariants that keep every
-# intermediate inside [-32768, 32767]; any change to the butterfly structure,
-# the reduction points or the twiddle encoding must be re-checked against them.
+# (except the dot product accumulators). The bounds below are the invariants
+# that keep every intermediate inside [-32768, 32767]; any change to the
+# butterfly structure, the reduction points or the twiddle encoding must be
+# re-checked against them.
 #
 # Montgomery product helper bound
 #   All multiplies have the form   t = high(a*c_hi) - high(low16(a*c_lo) * q)
@@ -77,9 +78,8 @@ my $code = '';
 #       after L3: (-1.62q, 2.62q)      after L7: (-3.97q, 4.97q)
 #       after L4: (-2.18q, 3.18q)
 #   Worst case after level 7 is (-13216, +16544), well inside int16.
-#   ntt_reduce then requires x > -5q so that (x + 5q) is non-negative before
-#   the logical shift in the Barrett step; the level-7 bound gives
-#   x + 5q in (q, 10q), and (10q)*5039 < 2^31 keeps the dword product exact.
+#   ntt_reduce is a 16-bit Barrett reduction that maps every signed 16-bit
+#   input to [0, q] (checked exhaustively), then subtracts q once.
 #   Output: canonical [0, q-1].
 #
 # Inverse NTT (ml_kem_inverse_ntt_avx2)
@@ -178,60 +178,24 @@ ___
 # Used directly on the final ymm results of NTT levels 4..7 to avoid a
 # separate normalization pass with extra stores and loads.
 #
-# Barrett-style reduction, computed in 32-bit lanes:
-#     qhat = ((x + 5*q) * floor(2^24 / q)) >> 24
-#     r    = (x + 5*q) - qhat*q            # == x mod q, in [0, 2q)
-# followed by a conditional subtract of q (reduce_once) to land in [0, q-1].
+# 16-bit Barrett reduction:
+#     qhat = (high(x * 20159)) >> 10       # floor(x * 20159 / 2^26)
+#     r    = x - qhat * q                  # == x mod q, in [0, q]
+# where 20159 = round(2^26 / q), followed by r = min_u(r, r - q).
 #
 # Constants (passed pre-broadcast so callers can hoist them):
-#   $c16645 = 5*q                = 16645, broadcast as dwords. Bias that lifts a
-#             signed input to a non-negative value before the reciprocal
-#             multiply; the 5 extra multiples of q are removed by qhat*q, so the
-#             residue mod q is unchanged.
-#   $c5039  = floor(2^24 / q)    = 5039,  broadcast as dwords. Fixed-point
-#             reciprocal of q used to estimate the quotient via (x*c)>>24.
-#   $q      = q (3329)           broadcast as dwords, for the qhat*q product.
-#   $signmask = q broadcast as words (the same q vector; 0x0d01 per word), added
-#             where the packed residue is negative to bring it into [0, 2q).
-#   $minus_q  = -q (3329) broadcast as words, for the final reduce_once.
-#
-# All compute steps operate on ymm registers (16-wide) for throughput: the
-# 16->32-bit widening uses vpsraw + vpunpck{l,h}wd rather than a 128-bit
-# vpmovsxwd split, which also keeps the lanes ordered so vpackssdw restores the
-# original layout without a fix-up vpermq.
+#   $v  = 20159 broadcast as words.
+#   $qw = q (3329) broadcast as words.
 sub ntt_reduce {
-    my ($in, $out,
-        $q, $minus_q, $signmask,
-        $c5039, $c16645,
-        $s0, $s1, $s2) = @_;
+    my ($in, $out, $v, $qw, $s0) = @_;
 
     $code .= <<___;
-    # widen 16 x int16 -> 2 x (8 x int32) via sign extension (all-ymm)
-    vpsraw      \$15, $in, $s2                  # sign words
-    vpunpcklwd  $s2, $in, $s0                   # int32 lanes {0..3 | 8..11}
-    vpunpckhwd  $s2, $in, $s1                   # int32 lanes {4..7 | 12..15}
-
-    # qhat = ((x + 5q) * floor(2^24/q)) >> 24 ; residue = (x + 5q) - qhat*q
-    vpaddd      $c16645, $s0, $s0               # + 5q bias
-    vpaddd      $c16645, $s1, $s1
-    vpmulld     $c5039, $s0, $s2                # * reciprocal
-    vpsrld      \$24, $s2, $s2                  # qhat (low half)
-    vpmulld     $q, $s2, $s2                    # qhat * q
-    vpsubd      $s2, $s0, $s0                   # residue (low half)
-    vpmulld     $c5039, $s1, $s2
-    vpsrld      \$24, $s2, $s2                  # qhat (high half)
-    vpmulld     $q, $s2, $s2
-    vpsubd      $s2, $s1, $s1                   # residue (high half)
-
-    vpackssdw   $s1, $s0, $out                 # back to int16, natural lane order
-
-    # negative fixup -> [0, 2q), then reduce_once -> [0, q-1]
-    vpsraw      \$15, $out, $s2                 # sign bits
-    vpand       $signmask, $s2, $s2            # q where negative
-    vpaddw      $out, $s2, $out                # now in [0, 2q)
-    vpaddw      $minus_q, $out, $s0            # candidate x - q
-    vpsraw      \$15, $s0, $s1                  # mask where candidate < 0
-    vpblendvb   $s1, $out, $s0, $out           # final reduce_once
+    vpmulhw     $v, $in, $s0                    # high(x * 20159)
+    vpsraw      \$10, $s0, $s0                  # qhat
+    vpmullw     $qw, $s0, $s0                   # qhat * q
+    vpsubw      $s0, $in, $out                  # r in [0, q]
+    vpsubw      $qw, $out, $s0                  # r - q
+    vpminuw     $s0, $out, $out                 # reduce_once
 ___
 }
 
@@ -416,20 +380,13 @@ ___
     }
 
     # ---- Normalize level-4..7 results (ymm0..ymm7) to canonical [0, q-1] ----
-    # ymm15 stays live: it holds q broadcast as words, which doubles as the
-    # negative-fixup mask (signmask) below, so it is only read, never clobbered.
+    # ymm15 stays live: it holds q broadcast as words.
     $code .= <<'___';
-    vpbroadcastd   bias_5q(%rip), %ymm8                 # c16645 (dwords)
-    vpbroadcastd   floor2p24_div_q(%rip), %ymm9         # c5039 (dwords)
-    vpbroadcastd   q(%rip), %ymm10                      # q (dwords) for qhat*q
-    vpbroadcastw   minus_q(%rip), %ymm11                # -q as words (reduce_once)
+    vpbroadcastw   barrett_v(%rip), %ymm8               # 20159 (words)
 ___
 
     for my $r (0 .. 7) {
-        &ntt_reduce("%ymm$r", "%ymm$r",
-                    "%ymm10", "%ymm11", "%ymm15",       # q(dword), -q(word), q(word)=signmask
-                    "%ymm9", "%ymm8",                    # c5039, c16645
-                    "%ymm12", "%ymm13", "%ymm14");       # scratch (ymm15 must stay = q)
+        &ntt_reduce("%ymm$r", "%ymm$r", "%ymm8", "%ymm15", "%ymm12");
     }
 
     # Scatter L4..L7 results back to natural order and store.
@@ -1743,30 +1700,22 @@ dot_swap_mask:
     .byte 2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
 
 
-# Scalar broadcast constants.  Barrett-reduction values (ntt_reduce) are read as
-# dwords via vpbroadcastd; the modulus q is stored as a .long so the same label
-# feeds both the dword (qhat*q) and word (Montgomery/add/sub/dot) broadcasts.
+# Scalar broadcast constants.  The modulus q is stored as a .long so the same
+# label feeds both the dword (dot) and word (Montgomery/add/sub/dot) broadcasts.
 
-# 5*q = 16645; dword bias in ntt_reduce that lifts a signed lane non-negative
-# before the reciprocal multiply (the extra 5q are removed by qhat*q).
+# round(2^26 / q) = 20159; word Barrett multiplier in ntt_reduce.
 .align 4
-bias_5q:
-    .long 16645
-
-# floor(2^24 / q) = 5039; dword fixed-point reciprocal of q for the Barrett
-# quotient estimate qhat = (x * 5039) >> 24 in ntt_reduce.
-.align 4
-floor2p24_div_q:
-    .long 5039
+barrett_v:
+    .long 20159
 
 # -q = -3329; broadcast as words for the final conditional subtract (reduce_once)
-# at the tail of ntt_reduce and the inverse-NTT levels.
+# of the inverse-NTT levels.
 .align 4
 minus_q:
     .long -3329
 
-# Modulus q = 3329.  Broadcast as dwords for qhat*q (Barrett) and as words for
-# Montgomery fixups and the add/sub/dot reduce_once steps.
+# Modulus q = 3329.  Broadcast as dwords for the dot reduction and as words for
+# Montgomery fixups, Barrett and the add/sub/dot reduce_once steps.
 .align 4
 q:
     .long 3329
