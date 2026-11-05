@@ -404,7 +404,12 @@ endstruc
         vaesenclast     %%TEMP_NO_MIX, %%TEMP, %%ZERO
 
         vpcmpgtb        %%KR1, %%ZERO, %%TEMP_NO_MIX
+%if 0   ;; @todo in case of ISA support issues change to %if 1
+        vpshufb         %%TEMP_NO_MIX, %%TEMP_NO_MIX, [rel const_byte_mix_col_rev]
+        vpcmpgtb        %%KR2, %%ZERO, %%TEMP_NO_MIX
+%else
         vpshufbitqmb    %%KR2, %%TEMP_NO_MIX, FIXED_PATTERN_SHUF
+%endif
         kxorq           %%KR3, %%KR1, %%KR2
 
         vmovdqu8        %%ZERO{%%KR3}, FIXED_M_MASK
