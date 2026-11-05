@@ -963,18 +963,6 @@ IMB_DLL_LOCAL
 void
 asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState, uint32_t *pKeyStr, uint32_t *T,
                                  const void **data, uint16_t *len, const uint64_t numRounds);
-IMB_DLL_LOCAL
-void
-zuc_eia3_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
-                               const void *const pBufferIn[4], uint32_t *pMacI[4],
-                               const uint16_t lengthInBytes[4], const void *const job_in_lane[4]);
-
-IMB_DLL_LOCAL
-void
-zuc_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
-                                  const void *const pBufferIn[4], uint32_t *pMacI[4],
-                                  const uint16_t lengthInBytes[4],
-                                  const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
 void

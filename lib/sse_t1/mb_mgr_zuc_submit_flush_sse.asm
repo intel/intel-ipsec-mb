@@ -23,9 +23,11 @@
 %define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_no_gfni_sse
 %define SUBMIT_JOB_ZUC_NIA6 submit_job_zuc_nia6_no_gfni_sse
 %define FLUSH_JOB_ZUC_NIA6 flush_job_zuc_nia6_no_gfni_sse
-%define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_no_gfni_sse
 %define ZUC_NIA6_4_BUFFER zuc_nia6_4_buffer_job_no_gfni_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
+%define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
+%define ZUC_EIA3_ROUND asm_Eia3Round16B_sse
+%define ZUC_EIA3_REMAINDER asm_Eia3Remainder_sse
 %define ZUC128_INIT_4        asm_ZucInitialization_4_sse
 %define ZUC256_INIT_4     asm_Zuc256Initialization_4_sse
 %define ZUCNEA6_INIT_4     asm_ZucNEA6Initialization_4_sse
@@ -89,10 +91,14 @@ align 16
 nia6_bswap_dword:
 db      3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
 
-extern ZUC_EIA3_4_BUFFER
 extern ZUC128_INIT_4
 extern ZUCNEA6_INIT_4
 extern ZUC_KEYGEN16B_4
+extern ZUC_KEYGEN8B_4
+extern ZUC_EIA3_ROUND
+extern ZUC_EIA3_REMAINDER
+extern asm_ZucGenKeystream16B_sse
+extern asm_ZucGenKeystream_sse
 extern nia_clmul_sse
 extern ZUC_CIPHER_4
 extern ZUC_NCA6_4_BUFFER
@@ -804,33 +810,12 @@ FLUSH_JOB_ZUC_NEA6:
         cmp     len2, 0
         je      %%len_is_0_submit_eia3
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-
+        ; Private workers take only the owning manager in arg1.
 %ifidn %%ALGO, ZUC128
         call    ZUC_EIA3_4_BUFFER
 %else ; ALGO == ZUC_NIA6
         call    ZUC_NIA6_4_BUFFER
 %endif
-
-        RESTORE_STACK_SPACE 6
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -989,33 +974,12 @@ APPEND(%%skip_eia3_,I):
 %assign I (I+1)
 %endrep
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-
+        ; Private workers take only the owning manager in arg1.
 %ifidn %%ALGO, ZUC128
         call    ZUC_EIA3_4_BUFFER
 %else ; ALGO == ZUC_NIA6
         call    ZUC_NIA6_4_BUFFER
 %endif
-
-        RESTORE_STACK_SPACE 6
 
         mov     tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]
@@ -1460,6 +1424,303 @@ return_null_flush_nca6:
         xor     job_rax, job_rax
         jmp     return_flush_nca6
 
+struc EIA3_BUFFER_STACK
+%ifndef LINUX
+_eia3_shadow:   resb    32
+%endif
+_eia3_single:   resb    96
+; 104 bytes on Linux, 136 on Windows; RSP is aligned for primitive calls.
+_eia3_align:    resq    1
+endstruc
+
+; void ZUC_EIA3_4_BUFFER(MB_MGR_ZUC_OOO *state)
+; arg 1 : state (owning ZUC OOO manager)
+;
+; Manager digest scratch holds four 32-byte keystream windows followed by
+; four dword tags. The final 32 bytes hold the keygen pointer array.
+; Private scheduler-only contract: arg1 = owning MB_MGR_ZUC_OOO; no other
+; arguments or caller shadow space. RSP is 8 mod 16 on entry. The scheduler
+; saves nonvolatile registers; rbp (its selected lane) is preserved here.
+; Lengths include replicated dummy lanes, but only live lanes get tags.
+align_function
+MKGLOBAL(ZUC_EIA3_4_BUFFER,function,internal)
+ZUC_EIA3_4_BUFFER:
+%define eia_mgr   r12
+%define eia_lane  r13
+%define eia_done  r14
+%define eia_bytes r15 ; Common prefix, then the current lane's remainder
+%define eia_flags rbx ; Equal-length mask, then the remaining keystream words
+%define eia_tmp   rax
+%define eia_ks    r11
+%define eia_off   r9
+
+        sub     rsp, EIA3_BUFFER_STACK_size
+        mov     eia_mgr, arg1
+        xor     eia_done, eia_done
+
+        ; Find the shared prefix and retain the equal-length shortcut.
+        movdqa  xmm0, [eia_mgr + _zuc_lens]
+        phminposuw xmm1, xmm0
+        pextrw  DWORD(eia_tmp), xmm1, 0
+        mov     eia_bytes, eia_tmp
+        movd    xmm1, DWORD(eia_tmp)
+        pshufb  xmm1, [rel broadcast_word]
+        pcmpeqw xmm0, xmm1
+        ; Each matching word contributes two mask bits. Keep the low eight
+        ; bits for the four lanes: 0xff means all lengths equal the minimum.
+        pmovmskb eax, xmm0
+        and     eax, 0xff
+        mov     eia_flags, eia_tmp
+
+        ; Zero the keystream windows and tag accumulators.
+        pxor    xmm0, xmm0
+        xor     eax, eax
+
+align_loop
+.eia3_zero:
+        movdqa  [eia_mgr + _zuc_args_digest + eia_tmp], xmm0
+        add     eax, 16
+        cmp     eax, 144
+        jb      .eia3_zero
+
+        ; Prime each window with 16 bytes; subsequent keys fill its second half.
+        lea     arg1, [eia_mgr + _zuc_args_keys]
+        lea     arg2, [eia_mgr + _zuc_args_IV]
+        lea     arg3, [eia_mgr + _zuc_state]
+        call    ZUC128_INIT_4
+
+        ; Point keygen at the first 16-byte half of each lane's window.
+        xor     DWORD(eia_tmp), DWORD(eia_tmp)
+
+align_loop
+.eia3_initial_ks_ptrs:
+        mov     eia_ks, eia_tmp
+        shl     eia_ks, 5
+        lea     eia_ks, [eia_mgr + _zuc_args_digest + eia_ks]
+        mov     [eia_mgr + _zuc_args_digest + 160 + eia_tmp*8], eia_ks
+        inc     DWORD(eia_tmp)
+        cmp     DWORD(eia_tmp), 4
+        jb      .eia3_initial_ks_ptrs
+
+        lea     arg1, [eia_mgr + _zuc_state]
+        lea     arg2, [eia_mgr + _zuc_args_digest + 160]
+        call    ZUC_KEYGEN16B_4
+
+        ; Keygen leaves the pointer table unchanged; advance each pointer
+        ; to the second half of its window for subsequent calls.
+        xor     DWORD(eia_tmp), DWORD(eia_tmp)
+
+align_loop
+.eia3_next_ks_ptrs:
+        add     qword [eia_mgr + _zuc_args_digest + 160 + eia_tmp*8], 16
+        inc     DWORD(eia_tmp)
+        cmp     DWORD(eia_tmp), 4
+        jb      .eia3_next_ks_ptrs
+
+        ; Process full blocks shared by all four lanes.
+align_loop
+.eia3_common:
+        cmp     eia_bytes, 16
+        jb      .eia3_tails
+        sub     eia_bytes, 16
+        jne     .eia3_full_block
+        ; Only a complete four-lane match permits the final 8-byte key block.
+        cmp     eia_flags, 0xff
+        jne     .eia3_full_block
+        ; Equal-length messages need only two more words for the final block.
+        lea     arg1, [eia_mgr + _zuc_state]
+        lea     arg2, [eia_mgr + _zuc_args_digest + 160]
+        call    ZUC_KEYGEN8B_4
+        jmp     .eia3_rounds
+
+align_label
+.eia3_full_block:
+        lea     arg1, [eia_mgr + _zuc_state]
+        lea     arg2, [eia_mgr + _zuc_args_digest + 160]
+        call    ZUC_KEYGEN16B_4
+
+align_label
+.eia3_rounds:
+        xor     eia_lane, eia_lane
+
+align_loop
+.eia3_common_lane:
+        cmp     qword [eia_mgr + _zuc_job_in_lane + eia_lane*8], 0
+        je      .eia3_common_next
+        mov     eia_tmp, eia_lane
+        shl     eia_tmp, 5
+        lea     arg1, [eia_mgr + _zuc_args_digest + 128 + eia_lane*4]
+        lea     arg2, [eia_mgr + _zuc_args_digest + eia_tmp]
+        mov     arg3, [eia_mgr + _zuc_args_in + eia_lane*8]
+        add     arg3, eia_done
+        call    ZUC_EIA3_ROUND
+
+align_label
+.eia3_common_next:
+        inc     eia_lane
+        cmp     eia_lane, 4
+        jb      .eia3_common_lane
+        add     eia_done, 16
+        jmp     .eia3_common
+
+        ; Finish live lanes individually when their lengths diverge.
+align_label
+.eia3_tails:
+        xor     eia_lane, eia_lane
+
+align_loop
+.eia3_tail_lane:
+        cmp     qword [eia_mgr + _zuc_job_in_lane + eia_lane*8], 0
+        je      .eia3_tail_next
+        movzx   eax, word [eia_mgr + _zuc_lens + eia_lane*2]
+        sub     eia_tmp, eia_done
+        mov     eia_bytes, eia_tmp
+
+        ; Two final words plus ceil(remaining bytes / 4), less the four
+        ; words already present at the front of the keystream window.
+        add     eax, 3
+        shr     eax, 2
+        sub     eax, 2
+        ja      .eia3_extract
+        xor     eia_flags, eia_flags
+        jmp     .eia3_remainder
+
+align_label
+.eia3_extract:
+        ; Extract 16 LFSR words and R1/R2 from the interleaved four-lane state.
+        mov     eia_flags, eia_tmp
+        lea     eia_ks, [eia_mgr + _zuc_state + eia_lane*4]
+        xor     eax, eax
+        xor     r8d, r8d
+
+align_loop
+.eia3_extract_word:
+        mov     r9d, [eia_ks + eia_tmp]
+        mov     [rsp + _eia3_single + r8], r9d
+        add     eax, 16
+        add     r8d, 4
+        cmp     r8d, 18*4
+        jb      .eia3_extract_word
+
+align_loop
+.eia3_tail_round:
+        cmp     eia_bytes, 16
+        jb      .eia3_final_key
+        mov     eia_tmp, eia_lane
+        shl     eia_tmp, 5
+        lea     arg1, [eia_mgr + _zuc_args_digest + eia_tmp + 16]
+        lea     arg2, [rsp + _eia3_single]
+        mov     arg3, eia_flags
+        cmp     arg3, 4
+        jb      .eia3_short_key
+
+        sub     eia_flags, 4
+        call    asm_ZucGenKeystream16B_sse
+        jmp     .eia3_tail_digest
+
+align_label
+.eia3_short_key:
+        xor     eia_flags, eia_flags
+        call    asm_ZucGenKeystream_sse
+
+align_label
+.eia3_tail_digest:
+        ; Advance the input by bytes already consumed in this lane.
+        mov     eia_tmp, eia_lane
+        shl     eia_tmp, 5
+        lea     arg1, [eia_mgr + _zuc_args_digest + 128 + eia_lane*4]
+        lea     arg2, [eia_mgr + _zuc_args_digest + eia_tmp]
+        mov     arg3, [eia_mgr + _zuc_args_in + eia_lane*8]
+        movzx   r9d, word [eia_mgr + _zuc_lens + eia_lane*2]
+        sub     eia_off, eia_bytes
+        add     arg3, eia_off
+        call    ZUC_EIA3_ROUND
+        sub     eia_bytes, 16
+        jmp     .eia3_tail_round
+
+align_label
+.eia3_final_key:
+        ; Supply any missing words needed by the partial-block finalizer.
+        test    eia_flags, eia_flags
+        je      .eia3_remainder
+        mov     eia_tmp, eia_lane
+        shl     eia_tmp, 5
+        lea     arg1, [eia_mgr + _zuc_args_digest + eia_tmp + 16]
+        lea     arg2, [rsp + _eia3_single]
+        mov     arg3, eia_flags
+        call    asm_ZucGenKeystream_sse
+
+align_label
+.eia3_remainder:
+        ; Finalize the remaining 0-15 message bytes and store MAC-I.
+        mov     eia_tmp, eia_lane
+        shl     eia_tmp, 5
+        lea     arg1, [eia_mgr + _zuc_args_digest + 128 + eia_lane*4]
+        lea     arg2, [eia_mgr + _zuc_args_digest + eia_tmp]
+        mov     arg3, [eia_mgr + _zuc_args_in + eia_lane*8]
+        movzx   r9d, word [eia_mgr + _zuc_lens + eia_lane*2]
+        sub     eia_off, eia_bytes
+        add     arg3, eia_off
+        mov     arg4, eia_bytes
+        call    ZUC_EIA3_REMAINDER
+        mov     eia_ks, [eia_mgr + _zuc_args_out + eia_lane*8]
+        mov     eax, [eia_mgr + _zuc_args_digest + 128 + eia_lane*4]
+        mov     [eia_ks], eax
+
+align_label
+.eia3_tail_next:
+        inc     eia_lane
+        cmp     eia_lane, 4
+        jb      .eia3_tail_lane
+
+%ifdef SAFE_DATA
+        ; Wipe 352 bytes of four-lane state in 11 iterations of 32 bytes.
+        pxor    xmm0, xmm0
+        xor     DWORD(eia_tmp), DWORD(eia_tmp)
+
+align_loop
+.eia3_clear_state:
+        movdqa  [eia_mgr + _zuc_state + eia_tmp], xmm0
+        movdqa  [eia_mgr + _zuc_state + eia_tmp + 16], xmm0
+        add     DWORD(eia_tmp), 32
+        cmp     DWORD(eia_tmp), 22*16
+        jb      .eia3_clear_state
+
+        ; Clear 192 bytes of windows, tags and pointers in three iterations.
+        xor     DWORD(eia_tmp), DWORD(eia_tmp)
+
+align_loop
+.eia3_clear_keys:
+        movdqa  [eia_mgr + _zuc_args_digest + eia_tmp], xmm0
+        movdqa  [eia_mgr + _zuc_args_digest + eia_tmp + 16], xmm0
+        movdqa  [eia_mgr + _zuc_args_digest + eia_tmp + 32], xmm0
+        movdqa  [eia_mgr + _zuc_args_digest + eia_tmp + 48], xmm0
+        add     DWORD(eia_tmp), 64
+        cmp     DWORD(eia_tmp), 192
+        jb      .eia3_clear_keys
+
+        ; Clear the single-lane state, shadow space and alignment slot.
+        ; Three 32-byte iterations on Linux, four on Windows, then eight bytes.
+        xor     DWORD(eia_tmp), DWORD(eia_tmp)
+
+align_loop
+.eia3_clear_stack:
+        movdqa  [rsp + eia_tmp], xmm0
+        movdqa  [rsp + eia_tmp + 16], xmm0
+        add     DWORD(eia_tmp), 32
+        cmp     DWORD(eia_tmp), EIA3_BUFFER_STACK_size - 8
+        jb      .eia3_clear_stack
+        mov     qword [rsp + EIA3_BUFFER_STACK_size - 8], 0
+%endif
+
+        add     rsp, EIA3_BUFFER_STACK_size
+
+%ifdef SAFE_DATA
+        clear_scratch_xmms_sse_asm
+        clear_scratch_gps_asm
+%endif
+        ret
+
 struc NIA6_BUFFER_STACK
 %ifndef LINUX
 _nia6_shadow:   resb    32
@@ -1502,13 +1763,11 @@ ZUC_NIA6_4_BUFFER:
 %define tmp2 r11
 %define tmp3 r8
 
-        mov     idx, arg1
-        sub     idx, _zuc_args_keys
         sub     rsp, NIA6_BUFFER_STACK_size
-        mov     [rsp + _nia6_mgr], idx
+        mov     [rsp + _nia6_mgr], arg1
 
         ; Initialize the four-lane ZUC state.
-        mov     tmp1, [rsp + _nia6_mgr]
+        mov     tmp1, arg1
         lea     arg1, [tmp1 + _zuc_args_keys]
         lea     arg2, [tmp1 + _zuc_args_IV]
         lea     arg3, [tmp1 + _zuc_state]
