@@ -78,10 +78,7 @@
 /*
  * Structure of keys
  */
-typedef struct ossl_ml_kem_scalar_st {
-        /* On every function entry and exit, 0 <= c[i] < ML_KEM_PRIME. */
-        uint16_t c[ML_KEM_DEGREE];
-} scalar;
+typedef struct ossl_ml_kem_scalar_st scalar;
 
 /* AVX2 optimized NTT operations */
 void
@@ -92,8 +89,6 @@ void
 ml_kem_add_avx2(scalar *lhs, const scalar *rhs);
 void
 ml_kem_sub_avx2(scalar *lhs, const scalar *rhs);
-uint32_t
-ml_kem_rej_uniform_block_avx2(uint16_t *out, const uint32_t capacity, const uint8_t *in);
 void
 ml_kem_mul_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
 void
@@ -406,6 +401,8 @@ rej_uniform_block_base(uint16_t *out, const uint32_t capacity, const uint8_t *in
         return n;
 }
 
+static ML_KEM_MATRIX_EXPAND_FN matrix_expand_base;
+
 /* Forward declarations of the base (portable C, Barrett) implementations */
 static void
 poly_ntt_base(scalar *p);
@@ -452,6 +449,17 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_mult = ml_kem_mul_avx2;
         self->poly_mult_add = ml_kem_mul_add_avx2;
         self->rej_uniform_block = ml_kem_rej_uniform_block_avx2;
+}
+
+/**
+ * @brief Assign the base (portable C) sampling primitives to \a self.
+ *
+ * @param [in,out] self  ML-KEM context to initialise
+ */
+void
+ossl_ml_kem_sample_init_base(IMB_ML_KEM *self)
+{
+        self->matrix_expand = matrix_expand_base;
 }
 
 /*-
@@ -1018,7 +1026,7 @@ matrix_mult_transpose_add(const IMB_ML_KEM *self, scalar *out, const scalar *m, 
  * Where FIPS 203 computes t = A * s + e, we use the transpose of "m".
  */
 static __owur int
-matrix_expand(const IMB_ML_KEM *self, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
+matrix_expand_base(const IMB_ML_KEM *self, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
 {
         scalar *out = key->m;
         uint8_t input[ML_KEM_RANDOM_BYTES + 2];
@@ -1353,7 +1361,7 @@ parse_pubkey(const IMB_ML_KEM *self, const uint8_t *in, EVP_MD_CTX *mdctx, ML_KE
          * Also pre-compute the matrix expansion, stored with the public key.
          */
         if (!hash_h(key->pkhash, in, vinfo->pubkey_bytes, mdctx, key) ||
-            !matrix_expand(self, mdctx, key)) {
+            !self->matrix_expand(self, mdctx, key)) {
                 ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
                                "internal error while parsing %s public key", vinfo->algorithm_name);
                 return 0;
@@ -1447,7 +1455,7 @@ genkey(const IMB_ML_KEM *self, const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX
         CONSTTIME_DECLASSIFY(key->rho, ML_KEM_RANDOM_BYTES);
 
         /* FIPS 203 |e| vector is initial value of key->t */
-        if (!matrix_expand(self, mdctx, key) ||
+        if (!self->matrix_expand(self, mdctx, key) ||
             !gencbd_vector_ntt(self, key->s, cbd_1, &counter, sigma, rank, mdctx, key) ||
             !gencbd_vector_ntt(self, key->t, cbd_1, &counter, sigma, rank, mdctx, key))
                 goto end;

@@ -60,12 +60,17 @@ imb_ml_kem_new(IMB_MGR *mgr, IMB_ML_KEM_ALG alg, IMB_ML_KEM **new_self)
          * that the CPU supports it).
          */
         switch ((IMB_ARCH) mgr->used_arch) {
-        case IMB_ARCH_AVX2:
         case IMB_ARCH_AVX512:
         case IMB_ARCH_AVX10:
+                ossl_ml_kem_sample_init_avx512(self);
+                ossl_ml_kem_poly_init_avx2(self);
+                break;
+        case IMB_ARCH_AVX2:
+                ossl_ml_kem_sample_init_avx2(self);
                 ossl_ml_kem_poly_init_avx2(self);
                 break;
         default:
+                ossl_ml_kem_sample_init_base(self);
                 ossl_ml_kem_poly_init_base(self);
                 break;
         }

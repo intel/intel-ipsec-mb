@@ -283,14 +283,29 @@ ossl_ml_kem_decap(const IMB_ML_KEM *self, uint8_t *shared_secret, size_t slen, c
                   size_t clen, const ML_KEM_KEY *key);
 
 /*
- * ISA specific polynomial primitives are held as function pointers in
- * IMB_ML_KEM (see ml_kem_internal.h) and are assigned by the init functions
- * below, which the ipsec-mb glue calls once, at context creation.
+ * ISA specific sampling and polynomial primitives are held as function
+ * pointers in IMB_ML_KEM (see ml_kem_internal.h) and are assigned by the init
+ * functions below, which the ipsec-mb glue calls once, at context creation.
  */
+void
+ossl_ml_kem_sample_init_base(IMB_ML_KEM *self);
+void
+ossl_ml_kem_sample_init_avx512(IMB_ML_KEM *self);
+void
+ossl_ml_kem_sample_init_avx2(IMB_ML_KEM *self);
 void
 ossl_ml_kem_poly_init_base(IMB_ML_KEM *self);
 void
 ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self);
+
+struct ossl_ml_kem_scalar_st {
+        /* On every function entry and exit, 0 <= c[i] < ML_KEM_PRIME. */
+        uint16_t c[ML_KEM_DEGREE];
+};
+
+/* AVX2 SampleNTT rejection sampling of one SHAKE128 block */
+uint32_t
+ml_kem_rej_uniform_block_avx2(uint16_t *out, const uint32_t capacity, const uint8_t *in);
 
 /* Compare the public key hashes of two keys */
 __owur int

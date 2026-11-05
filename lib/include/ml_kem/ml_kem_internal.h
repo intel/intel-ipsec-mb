@@ -70,12 +70,18 @@ struct ossl_ml_kem_key_st;
  */
 struct ossl_ml_kem_scalar_st;
 
+/* Vendored OpenSSL digest context, only used through pointers */
+struct evp_md_ctx_st;
+
 /* ISA specific polynomial (NTT domain) primitives */
 typedef void(ML_KEM_POLY_NTT_FN)(struct ossl_ml_kem_scalar_st *s);
 typedef void(ML_KEM_POLY_ARITH_FN)(struct ossl_ml_kem_scalar_st *lhs,
                                    const struct ossl_ml_kem_scalar_st *rhs);
 /* SampleNTT of one SHAKE128 block: returns the number of coefficients written */
 typedef uint32_t(ML_KEM_REJ_UNIFORM_FN)(uint16_t *out, const uint32_t capacity, const uint8_t *in);
+/* Expand the public matrix from key->rho: returns 1 on success, 0 on error */
+typedef int(ML_KEM_MATRIX_EXPAND_FN)(const IMB_ML_KEM *self, struct evp_md_ctx_st *mdctx,
+                                     struct ossl_ml_kem_key_st *key);
 typedef void(ML_KEM_POLY_MULT_FN)(struct ossl_ml_kem_scalar_st *out,
                                   const struct ossl_ml_kem_scalar_st *lhs,
                                   const struct ossl_ml_kem_scalar_st *rhs);
@@ -105,6 +111,7 @@ struct IMB_ML_KEM {
         ML_KEM_POLY_MULT_FN *poly_mult;
         ML_KEM_POLY_MULT_FN *poly_mult_add;
         ML_KEM_REJ_UNIFORM_FN *rej_uniform_block;
+        ML_KEM_MATRIX_EXPAND_FN *matrix_expand;
 
         /**
          * Backend dispatch table (0 on success, <0 on error).
