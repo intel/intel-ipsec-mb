@@ -33,6 +33,7 @@ Library
 - Optimized ML-KEM PRF sampling with x4 SHAKE256 (AVX2 and AVX512VL).
 - Optimized ML-KEM AVX2 matrix multiplication with a fused NTT row dot product.
 - Added ML-KEM AVX2 ByteEncode and ByteDecode for d = 12.
+- Optimized ML-KEM AVX2 inverse NTT with fixed permutes in the first level.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

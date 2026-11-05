@@ -522,12 +522,14 @@ ___
     # pair $k : level 7 (len=2)
     vmovdqu        $zoff+${ZETA_L7}(%r14), %ymm13
     vmovdqu        $zoff+${ZETA_L7}(%r15), %ymm14
-    vperm2i128     \$0x20, $B, $A, %ymm10
-    vperm2i128     \$0x31, $B, $A, %ymm11
-    vpshufd        \$0xd8, %ymm10, %ymm10
-    vpshufd        \$0xd8, %ymm11, %ymm11
-    vpunpcklqdq    %ymm11, %ymm10, %ymm12       # L7 w_even
-    vpunpckhqdq    %ymm11, %ymm10, %ymm11       # L7 w_odd
+    # split dword pairs of A = [a0..a7] and B = [b0..b7]:
+    # vshufps gives [a0,a2,b0,b2|a4,a6,b4,b6] (even) and [a1,a3,b1,b3|a5,a7,b5,b7]
+    # (odd), vpermq 0xd8 reorders them to [a0,a2,a4,a6|b0,b2,b4,b6] and
+    # [a1,a3,a5,a7|b1,b3,b5,b7]
+    vshufps        \$0x88, $B, $A, %ymm12
+    vpermq         \$0xd8, %ymm12, %ymm12       # L7 w_even
+    vshufps        \$0xdd, $B, $A, %ymm11
+    vpermq         \$0xd8, %ymm11, %ymm11       # L7 w_odd
 ___
         &intt_butterfly("%ymm12", "%ymm11", "%ymm13", "%ymm14",
                         "%ymm8", "%ymm9", $A, $B, "%ymm15");
