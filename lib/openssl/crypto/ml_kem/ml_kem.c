@@ -92,6 +92,8 @@ void
 ml_kem_add_avx2(scalar *lhs, const scalar *rhs);
 void
 ml_kem_sub_avx2(scalar *lhs, const scalar *rhs);
+uint32_t
+ml_kem_rej_uniform_block_avx2(uint16_t *out, const uint32_t capacity, const uint8_t *in);
 void
 ml_kem_mul_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
 void
@@ -357,33 +359,51 @@ kdf(uint8_t out[ML_KEM_SHARED_SECRET_BYTES], const uint8_t z[ML_KEM_RANDOM_BYTES
  * expansion and only operates on public inputs.
  */
 static __owur int
-sample_scalar(scalar *out, EVP_MD_CTX *mdctx)
+sample_scalar(const IMB_ML_KEM *self, scalar *out, EVP_MD_CTX *mdctx)
 {
-        uint16_t *curr = out->c, *endout = curr + DEGREE;
-        uint8_t buf[SCALAR_SAMPLING_BUFSIZE], *in;
-        uint8_t *endin = buf + sizeof(buf);
+        uint8_t buf[SCALAR_SAMPLING_BUFSIZE];
+        uint32_t n = 0;
+
+        do {
+                if (!EVP_DigestSqueeze(mdctx, buf, sizeof(buf)))
+                        return 0;
+                n += self->rej_uniform_block(out->c + n, DEGREE - n, buf);
+        } while (n < DEGREE);
+        return 1;
+}
+
+/**
+ * @brief SampleNTT rejection sampling of one SHAKE128 block (base C).
+ *
+ * @param [out] out       Output coefficients, in [0, q)
+ * @param [in]  capacity  Free output slots
+ * @param [in]  in        SHAKE128 block, SCALAR_SAMPLING_BUFSIZE bytes
+ *
+ * @return Number of coefficients written, at most \a capacity
+ */
+static uint32_t
+rej_uniform_block_base(uint16_t *out, const uint32_t capacity, const uint8_t *in)
+{
+        const uint8_t *endin = in + SCALAR_SAMPLING_BUFSIZE;
+        uint32_t n = 0;
         uint16_t d;
         uint8_t b1, b2, b3;
 
         do {
-                if (!EVP_DigestSqueeze(mdctx, in = buf, sizeof(buf)))
-                        return 0;
-                do {
-                        b1 = *in++;
-                        b2 = *in++;
-                        b3 = *in++;
+                b1 = *in++;
+                b2 = *in++;
+                b3 = *in++;
 
-                        if (curr >= endout)
-                                break;
-                        if ((d = ((b2 & 0x0f) << 8) + b1) < kPrime)
-                                *curr++ = d;
-                        if (curr >= endout)
-                                break;
-                        if ((d = (b3 << 4) + (b2 >> 4)) < kPrime)
-                                *curr++ = d;
-                } while (in < endin);
-        } while (curr < endout);
-        return 1;
+                if (n >= capacity)
+                        break;
+                if ((d = ((b2 & 0x0f) << 8) + b1) < kPrime)
+                        out[n++] = d;
+                if (n >= capacity)
+                        break;
+                if ((d = (b3 << 4) + (b2 >> 4)) < kPrime)
+                        out[n++] = d;
+        } while (in < endin);
+        return n;
 }
 
 /* Forward declarations of the base (portable C, Barrett) implementations */
@@ -414,6 +434,7 @@ ossl_ml_kem_poly_init_base(IMB_ML_KEM *self)
         self->poly_sub = poly_sub_base;
         self->poly_mult = poly_mult_base;
         self->poly_mult_add = poly_mult_add_base;
+        self->rej_uniform_block = rej_uniform_block_base;
 }
 
 /**
@@ -430,6 +451,7 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_sub = ml_kem_sub_avx2;
         self->poly_mult = ml_kem_mul_avx2;
         self->poly_mult_add = ml_kem_mul_add_avx2;
+        self->rej_uniform_block = ml_kem_rej_uniform_block_avx2;
 }
 
 /*-
@@ -996,7 +1018,7 @@ matrix_mult_transpose_add(const IMB_ML_KEM *self, scalar *out, const scalar *m, 
  * Where FIPS 203 computes t = A * s + e, we use the transpose of "m".
  */
 static __owur int
-matrix_expand(EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
+matrix_expand(const IMB_ML_KEM *self, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
 {
         scalar *out = key->m;
         uint8_t input[ML_KEM_RANDOM_BYTES + 2];
@@ -1010,7 +1032,7 @@ matrix_expand(EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
                         input[ML_KEM_RANDOM_BYTES + 1] = j;
                         if (!EVP_DigestInit_ex(mdctx, key->shake128_md, NULL) ||
                             !EVP_DigestUpdate(mdctx, input, sizeof(input)) ||
-                            !sample_scalar(out++, mdctx))
+                            !sample_scalar(self, out++, mdctx))
                                 return 0;
                 }
         }
@@ -1314,7 +1336,7 @@ encode_prvkey(uint8_t *out, const ML_KEM_KEY *key)
  * wire-format of the ML-KEM public key.
  */
 static int
-parse_pubkey(const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
+parse_pubkey(const IMB_ML_KEM *self, const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo = key->vinfo;
 
@@ -1331,7 +1353,7 @@ parse_pubkey(const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
          * Also pre-compute the matrix expansion, stored with the public key.
          */
         if (!hash_h(key->pkhash, in, vinfo->pubkey_bytes, mdctx, key) ||
-            !matrix_expand(mdctx, key)) {
+            !matrix_expand(self, mdctx, key)) {
                 ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
                                "internal error while parsing %s public key", vinfo->algorithm_name);
                 return 0;
@@ -1346,7 +1368,7 @@ parse_pubkey(const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
  * This matches the output format of encode_prvkey() above.
  */
 static int
-parse_prvkey(const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
+parse_prvkey(const IMB_ML_KEM *self, const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo = key->vinfo;
 
@@ -1358,7 +1380,7 @@ parse_prvkey(const uint8_t *in, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
         }
         in += vinfo->vector_bytes;
 
-        if (!parse_pubkey(in, mdctx, key))
+        if (!parse_pubkey(self, in, mdctx, key))
                 return 0;
         in += vinfo->pubkey_bytes;
 
@@ -1425,7 +1447,7 @@ genkey(const IMB_ML_KEM *self, const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX
         CONSTTIME_DECLASSIFY(key->rho, ML_KEM_RANDOM_BYTES);
 
         /* FIPS 203 |e| vector is initial value of key->t */
-        if (!matrix_expand(mdctx, key) ||
+        if (!matrix_expand(self, mdctx, key) ||
             !gencbd_vector_ntt(self, key->s, cbd_1, &counter, sigma, rank, mdctx, key) ||
             !gencbd_vector_ntt(self, key->t, cbd_1, &counter, sigma, rank, mdctx, key))
                 goto end;
@@ -1873,7 +1895,7 @@ ossl_ml_kem_set_seed(const uint8_t *seed, size_t seedlen, ML_KEM_KEY *key)
 
 /* Parse input as a public key */
 int
-ossl_ml_kem_parse_public_key(const uint8_t *in, size_t len, ML_KEM_KEY *key)
+ossl_ml_kem_parse_public_key(const IMB_ML_KEM *self, const uint8_t *in, size_t len, ML_KEM_KEY *key)
 {
         EVP_MD_CTX *mdctx = NULL;
         const ML_KEM_VINFO *vinfo;
@@ -1888,7 +1910,7 @@ ossl_ml_kem_parse_public_key(const uint8_t *in, size_t len, ML_KEM_KEY *key)
                 return 0;
 
         if (add_storage(OPENSSL_malloc(vinfo->puballoc), NULL, 0, 0, key))
-                ret = parse_pubkey(in, mdctx, key);
+                ret = parse_pubkey(self, in, mdctx, key);
 
         if (!ret)
                 ossl_ml_kem_key_reset(key);
@@ -1898,7 +1920,8 @@ ossl_ml_kem_parse_public_key(const uint8_t *in, size_t len, ML_KEM_KEY *key)
 
 /* Parse input as a new private key */
 int
-ossl_ml_kem_parse_private_key(const uint8_t *in, size_t len, ML_KEM_KEY *key)
+ossl_ml_kem_parse_private_key(const IMB_ML_KEM *self, const uint8_t *in, size_t len,
+                              ML_KEM_KEY *key)
 {
         EVP_MD_CTX *mdctx = NULL;
         const ML_KEM_VINFO *vinfo;
@@ -1917,7 +1940,7 @@ ossl_ml_kem_parse_private_key(const uint8_t *in, size_t len, ML_KEM_KEY *key)
 
         if (add_storage(OPENSSL_malloc(vinfo->puballoc), OPENSSL_secure_malloc(vinfo->prvalloc), 1,
                         0, key))
-                ret = parse_prvkey(in, mdctx, key);
+                ret = parse_prvkey(self, in, mdctx, key);
 
         if (!ret)
                 ossl_ml_kem_key_reset(key);

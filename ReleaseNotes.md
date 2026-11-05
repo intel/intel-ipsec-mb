@@ -23,6 +23,7 @@ Library
   non-GFNI SSE implementations for NIA6 and NCA6.
 - Added ALIGN_FUNCTIONS, ALIGN_LOOPS, ALIGN_JUMPS and ALIGN_LABELS CMake
   options to set code alignment of the library C sources on GCC and clang.
+- Added ML-KEM AVX2 SampleNTT rejection sampling.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

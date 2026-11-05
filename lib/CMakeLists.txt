@@ -218,16 +218,20 @@ list(APPEND SRC_FILES_ASM ${SRC_FILES_ML_DSA_ASM})
 # initialised with.
 if(WINDOWS)
   set(MLKEM_NTT_S ${CMAKE_CURRENT_BINARY_DIR}/ml_kem_ntt-x86_64.asm)
+  set(MLKEM_POLY_S ${CMAKE_CURRENT_BINARY_DIR}/ml_kem_poly-x86_64.asm)
   set(ML_KEM_ASM_LANGUAGE ASM_NASM)
 else()
   set(MLKEM_NTT_S ${CMAKE_CURRENT_BINARY_DIR}/ml_kem_ntt-x86_64.S)
+  set(MLKEM_POLY_S ${CMAKE_CURRENT_BINARY_DIR}/ml_kem_poly-x86_64.S)
   set(ML_KEM_ASM_LANGUAGE ASM)
 endif()
 
 set(MLKEM_NTT_PL ${CMAKE_CURRENT_SOURCE_DIR}/openssl/crypto/ml_kem/asm/ml_kem_ntt-x86_64.pl)
 imb_add_perlasm(${MLKEM_NTT_PL} ${MLKEM_NTT_S})
+set(MLKEM_POLY_PL ${CMAKE_CURRENT_SOURCE_DIR}/openssl/crypto/ml_kem/asm/ml_kem_poly-x86_64.pl)
+imb_add_perlasm(${MLKEM_POLY_PL} ${MLKEM_POLY_S})
 
-set(SRC_FILES_ML_KEM_ASM ${MLKEM_NTT_S})
+set(SRC_FILES_ML_KEM_ASM ${MLKEM_NTT_S} ${MLKEM_POLY_S})
 set_source_files_properties(${SRC_FILES_ML_KEM_ASM} PROPERTIES GENERATED TRUE
   LANGUAGE ${ML_KEM_ASM_LANGUAGE})
 list(APPEND SRC_FILES_ASM ${SRC_FILES_ML_KEM_ASM})

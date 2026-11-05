@@ -250,9 +250,11 @@ ossl_ml_kem_key_fetch_digest(ML_KEM_KEY *key, const char *propq);
  * Return 1 on success, 0 otherwise.
  */
 __owur int
-ossl_ml_kem_parse_public_key(const uint8_t *in, size_t len, ML_KEM_KEY *key);
+ossl_ml_kem_parse_public_key(const IMB_ML_KEM *self, const uint8_t *in, size_t len,
+                             ML_KEM_KEY *key);
 __owur int
-ossl_ml_kem_parse_private_key(const uint8_t *in, size_t len, ML_KEM_KEY *key);
+ossl_ml_kem_parse_private_key(const IMB_ML_KEM *self, const uint8_t *in, size_t len,
+                              ML_KEM_KEY *key);
 ML_KEM_KEY *
 ossl_ml_kem_set_seed(const uint8_t *seed, size_t seedlen, ML_KEM_KEY *key);
 __owur int

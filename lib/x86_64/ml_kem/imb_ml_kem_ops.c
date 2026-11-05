@@ -115,7 +115,7 @@ op_set_privkey(IMB_ML_KEM *self, const void *dk)
         /* parse_private_key also derives/checks the public component and
          * the embedded pubkey-hash consistency check (FIPS 203 Section 7.3
          * decapsulation key check). */
-        if (!ossl_ml_kem_parse_private_key(dk, self->dk_len, key))
+        if (!ossl_ml_kem_parse_private_key(self, dk, self->dk_len, key))
                 goto end;
 
         key_unbind(self);
@@ -139,7 +139,7 @@ op_set_pubkey(IMB_ML_KEM *self, const void *ek)
 
         /* parse_public_key enforces the encoded length and coefficient
          * ranges (FIPS 203 Section 7.2 encapsulation key check). */
-        if (!ossl_ml_kem_parse_public_key(ek, self->ek_len, key))
+        if (!ossl_ml_kem_parse_public_key(self, ek, self->ek_len, key))
                 goto end;
 
         key_unbind(self);
@@ -209,7 +209,7 @@ op_pubkey_validate(IMB_ML_KEM *self, const void *ek)
         if (key == NULL)
                 goto end;
 
-        if (!ossl_ml_kem_parse_public_key(ek, self->ek_len, key))
+        if (!ossl_ml_kem_parse_public_key(self, ek, self->ek_len, key))
                 goto end;
 
         rc = 0;
@@ -234,7 +234,7 @@ op_privkey_validate(IMB_ML_KEM *self, const void *dk)
          * full consistency check (FIPS 203 Section 7.3 decapsulation key
          * check, the "modified H" ACVP negative case).
          */
-        if (!ossl_ml_kem_parse_private_key(dk, self->dk_len, key))
+        if (!ossl_ml_kem_parse_private_key(self, dk, self->dk_len, key))
                 goto end;
 
         rc = 0;
