@@ -35,6 +35,7 @@ Library
 - Added ML-KEM AVX2 ByteEncode and ByteDecode for d = 12.
 - Optimized ML-KEM AVX2 inverse NTT with fixed permutes in the first level.
 - Optimized ML-KEM AVX2 forward NTT with a 16-bit Barrett reduction.
+- Optimized ML-KEM AVX2 inverse NTT with lazy reduction.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

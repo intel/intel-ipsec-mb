@@ -84,12 +84,15 @@ my $code = '';
 #
 # Inverse NTT (ml_kem_inverse_ntt_avx2)
 #   Precondition: input canonical, in [0, q-1].
-#   intt_butterfly fully reduces both outputs at every level, so every level
-#   sees canonical inputs: w_even + w_odd in [0, 2q) feeds reduce_once, and
-#   w_even - w_odd in (-q, q) feeds the Montgomery multiply, giving
-#   |t| <= q*(q-1)/2 / 2^16 + q/2 < 0.53q. The final inverse-degree scale
-#   (intt_scale_reduce) is a Montgomery multiply by 512 (= 2^9, so the result
-#   is x * 2^9 * 2^-16 = x/128 mod q), again bounded by (M).
+#   Reduction is lazy. By (M), the odd output M(w_even - w_odd, zeta) is
+#   below 3q/4 in magnitude for any signed 16-bit difference, so it is never
+#   reduced. The even output w_even + w_odd is reduced with ntt_reduce
+#   (to [0, q]) only at levels 5 and 2. With B the largest input magnitude
+#   of a level, the even outputs are bounded by 2B:
+#       L7: 2q   L6: 4q   L5: 8q -> q   L4: 2q   L3: 4q   L2: 8q -> q   L1: 2q
+#   so every value stays below 8q = 26632 < 2^15. The final inverse-degree
+#   scale (intt_scale_reduce) is a Montgomery multiply by 512 (= 2^9, so the
+#   result is x * 2^9 * 2^-16 = x/128 mod q), again bounded by (M).
 #   Output: canonical [0, q-1].
 #
 # Row dot product (ml_kem_ntt_dot_avx2 / ml_kem_ntt_dot_add_avx2)
@@ -176,7 +179,8 @@ ___
 # ntt_reduce: reduce 16 signed 16-bit coefficients to canonical [0, q-1].
 #
 # Used directly on the final ymm results of NTT levels 4..7 to avoid a
-# separate normalization pass with extra stores and loads.
+# separate normalization pass with extra stores and loads, and on the even
+# outputs of inverse NTT levels 5 and 2.
 #
 # 16-bit Barrett reduction:
 #     qhat = (high(x * 20159)) >> 10       # floor(x * 20159 / 2^26)
@@ -405,16 +409,17 @@ ___
 }
 
 # intt_butterfly: inverse (Gentleman-Sande) butterfly, FIPS 203 Alg 10 inner step.
-#     n_even = reduce_once(w_even + w_odd)
-#     n_odd  = reduce_once(zeta * (w_even - w_odd))   (16-bit Montgomery multiply)
-# Both outputs are canonical [0, q-1].
-# Args: (w_even, w_odd, zeta_lo, zeta_hi, tmp0, tmp1, n_even, n_odd, q).
+#     n_even = w_even + w_odd                  (ntt_reduce applied if $v given)
+#     n_odd  = zeta * (w_even - w_odd)         (16-bit Montgomery multiply)
+# Outputs are signed and reduced lazily (see the range analysis above).
+# Args: (w_even, w_odd, zeta_lo, zeta_hi, tmp0, tmp1, n_even, n_odd, q, [v]),
+# with v = 20159 broadcast as words.
 sub intt_butterfly {
     my ($w_even, $w_odd,
         $zetas_lo, $zetas_hi,
         $tmp0, $tmp1,
         $n_even, $n_odd,
-        $q) = @_;
+        $q, $v) = @_;
 
     $code .= <<___;
 
@@ -426,22 +431,8 @@ sub intt_butterfly {
     vpmulhw     $zetas_hi, $tmp1, $tmp1         # tmp1 = zeta_hi * (even - odd)
     vpmulhw     $tmp0, $q, $tmp0                # tmp0 = tmp0 * Q
     vpsubw      $tmp0, $tmp1, $n_odd            # zeta_hi * (even - odd) - (Q * (zeta_lo * (even - odd)))
-
-    # n_even = reduce_once(w_even + w_odd)
-    vpcmpgtw     $n_even, $q, $tmp0             # $tmp0 = $q > $n_even ? 0xffff : 0
-    vpandn      $q, $tmp0, $tmp0                # $tmp0 = ~$tmp0 & $q
-    vpsubw      $tmp0, $n_even, $n_even         # $n_even -= $tmp0
-
-    # n_odd = reduce_once(n_odd), but first canonicalize negatives:
-    # Montgomery product lands in (-q, q), so add q where negative to move
-    # into [0, 2q) before the final conditional subtract.
-    vpsraw       \$15, $n_odd, $tmp0            # sign mask
-    vpand        $q, $tmp0, $tmp0               # +q where negative
-    vpaddw       $tmp0, $n_odd, $n_odd          # now in [0, 2q)
-    vpcmpgtw     $n_odd, $q, $tmp0              # $tmp0 = $q > $n_odd ? 0xffff : 0
-    vpandn       $q, $tmp0, $tmp0               # $tmp0 = ~$tmp0 & $q
-    vpsubw       $tmp0, $n_odd, $n_odd          # $n_odd -= $tmp0
 ___
+    &ntt_reduce($n_even, $n_even, $v, $q, $tmp0) if (defined $v);
 }
 
 # emit_ml_kem_intt_level7_4: inverse butterfly levels 7-4 (len 2/4/8/16) over the
@@ -517,6 +508,9 @@ ___
         my $zoff = $l567off + $k*32;
 
         # ---- Level 5 (len=8) : L6 arms -> L5 arms ----
+        $code .= <<___ if ($k == 0);
+    vpbroadcastw   barrett_v(%rip), %ymm10              # 20159 (words)
+___
         $code .= <<___;
     # pair $k : level 5 (len=8)
     vmovdqu        $zoff+${ZETA_L5}(%r14), %ymm13
@@ -525,7 +519,7 @@ ___
     vpunpckhqdq    $B, $A, %ymm11               # L5 w_odd
 ___
         &intt_butterfly("%ymm12", "%ymm11", "%ymm13", "%ymm14",
-                        "%ymm8", "%ymm9", $A, $B, "%ymm15");
+                        "%ymm8", "%ymm9", $A, $B, "%ymm15", "%ymm10");
     }
 
     foreach my $p (["%ymm0","%ymm1",0], ["%ymm2","%ymm3",1],
@@ -592,6 +586,9 @@ ___
     }
 
     # L2 (len=64): pairs (0,2)(1,3)->${ZETA_L2}+0 ; (4,6)(5,7)->${ZETA_L2}+2
+    $code .= <<___;
+    vpbroadcastw   barrett_v(%rip), %ymm10              # 20159 (words)
+___
     foreach my $p (["%ymm0","%ymm2",0], ["%ymm1","%ymm3",0],
                    ["%ymm4","%ymm6",2], ["%ymm5","%ymm7",2]) {
         my ($a,$b,$z) = @$p;
@@ -600,7 +597,7 @@ ___
     vpbroadcastw   ${ZETA_L2}+$z(%r15), %ymm14
 ___
         &intt_butterfly($a, $b, "%ymm13", "%ymm14",
-                        "%ymm8", "%ymm9", $a, $b, "%ymm15");
+                        "%ymm8", "%ymm9", $a, $b, "%ymm15", "%ymm10");
     }
 
     # L1 (len=128): pairs (0,4)(1,5)(2,6)(3,7) -> ${ZETA_L1}
@@ -1709,7 +1706,7 @@ barrett_v:
     .long 20159
 
 # -q = -3329; broadcast as words for the final conditional subtract (reduce_once)
-# of the inverse-NTT levels.
+# in intt_scale_reduce.
 .align 4
 minus_q:
     .long -3329
