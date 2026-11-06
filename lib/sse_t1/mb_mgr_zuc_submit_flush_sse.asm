@@ -100,8 +100,8 @@ extern ZUC_EIA3_REMAINDER
 extern asm_ZucGenKeystream16B_sse
 extern asm_ZucGenKeystream_sse
 extern nia_clmul_sse
+extern nca_clmul_sse
 extern ZUC_CIPHER_4
-extern ZUC_NCA6_4_BUFFER
 
 %ifdef LINUX
 %define arg1    rdi
@@ -110,7 +110,6 @@ extern ZUC_NCA6_4_BUFFER
 %define arg4    rcx
 %define arg5    r8
 %define arg6    r9
-%define arg7    qword [rsp]
 %else
 %define arg1    rcx
 %define arg2    rdx
@@ -118,7 +117,6 @@ extern ZUC_NCA6_4_BUFFER
 %define arg4    r9
 %define arg5    qword [rsp + 32]
 %define arg6    qword [rsp + 40]
-%define arg7    qword [rsp + 48]
 %endif
 
 %define state   arg1
@@ -1167,30 +1165,10 @@ SUBMIT_JOB_ZUC_NCA6:
         cmp     len2, 0
         je      len_is_0_submit_nca6
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 7
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-        mov     arg7, r13
-
+        ; Private worker takes the manager and cipher direction; the scheduler
+        ; already saves all nonvolatile registers and Windows XMM registers.
+        mov     arg2, r13
         call    ZUC_NCA6_4_BUFFER
-
-        RESTORE_STACK_SPACE 7
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -1343,30 +1321,9 @@ APPEND(skip_nca6_,I):
 %assign I (I+1)
 %endrep
 
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        RESERVE_STACK_SPACE 7
-
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
-%endif
-        mov     arg7, r13
-
+        ; Same private manager/direction contract as the submit path.
+        mov     arg2, r13
         call    ZUC_NCA6_4_BUFFER
-
-        RESTORE_STACK_SPACE 7
 
         mov     tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]
@@ -1861,6 +1818,295 @@ align_loop
 
         add     rsp, NIA6_BUFFER_STACK_size
 
+%ifdef SAFE_DATA
+        clear_scratch_xmms_sse_asm
+        clear_scratch_gps_asm
+%endif
+        ret
+
+struc NCA6_BUFFER_STACK
+%ifndef LINUX
+_nca6_shadow:    resb    48
+%endif
+; Reused for keygen pointers, contiguous H/Q/P plus tag, or scalar keystream.
+_nca6_scratch:   resb    64
+_nca6_in:        resq    4
+_nca6_out:       resq    4
+_nca6_lengths:   resw    4
+_nca6_remain:    resw    4
+_nca6_single:    resb    96
+; The 8-byte slot aligns RSP to 16 bytes at call sites.
+_nca6_align:     resq    1
+endstruc
+
+; void ZUC_NCA6_4_BUFFER(MB_MGR_ZUC_OOO *state, IMB_CIPHER_DIRECTION dir)
+; arg 1 : state (owning ZUC OOO manager)
+; arg 2 : dir (IMB_DIR_ENCRYPT or IMB_DIR_DECRYPT)
+;
+; Private scheduler-only contract: clobbers nonvolatile GPs except RBP and
+; Windows XMM registers, which are saved by the submit/flush callers.
+align_function
+MKGLOBAL(ZUC_NCA6_4_BUFFER,function,internal)
+ZUC_NCA6_4_BUFFER:
+%define nca_mgr   r12
+%define nca_lane  r13
+%define nca_dir   r14
+%define nca_bytes r15
+%define nca_off   rbx
+%define tmp1      r10
+%define idx       rax
+%define ptr       rdx
+%define tmp2      r11
+%define tmp3      r8
+
+        mov     nca_mgr, arg1
+        mov     nca_dir, arg2
+        sub     rsp, NCA6_BUFFER_STACK_size
+
+        ; Resolve scheduler sentinel lengths and retain original buffer pointers.
+        xor     nca_lane, nca_lane
+align_loop
+.nca6_lengths:
+        movzx   idx, word [nca_mgr + _zuc_lens + nca_lane*2]
+        cmp     idx, 1
+        jne     .nca6_store_length
+        mov     tmp1, [nca_mgr + _zuc_job_in_lane + nca_lane*8]
+        movzx   idx, word [tmp1 + _msg_len_to_cipher_in_bytes]
+
+align_label
+.nca6_store_length:
+        mov     [rsp + _nca6_lengths + nca_lane*2], WORD(idx)
+        mov     [rsp + _nca6_remain + nca_lane*2], WORD(idx)
+        mov     tmp1, [nca_mgr + _zuc_args_in + nca_lane*8]
+        mov     [rsp + _nca6_in + nca_lane*8], tmp1
+        mov     tmp1, [nca_mgr + _zuc_args_out + nca_lane*8]
+        mov     [rsp + _nca6_out + nca_lane*8], tmp1
+        inc     nca_lane
+        cmp     nca_lane, 4
+        jb      .nca6_lengths
+
+        ; Empty lanes remain 0xffff. At least one live lane supplies a valid
+        ; length, so the minimum cannot be 0xffff; ignore the upper four words.
+        pcmpeqw xmm0, xmm0
+        movq    xmm1, [rsp + _nca6_lengths]
+        punpcklqdq xmm1, xmm0
+        phminposuw xmm1, xmm1
+        pextrw  nca_off, xmm1, 0
+
+        lea     arg1, [nca_mgr + _zuc_args_keys]
+        lea     arg2, [nca_mgr + _zuc_args_IV]
+        lea     arg3, [nca_mgr + _zuc_state]
+        call    ZUCNEA6_INIT_4
+
+        ; Generate H, with one 16-byte block per lane.
+%assign nca_lane_i 0
+%rep 4
+        lea     idx, [nca_mgr + _zuc_args_digest + nca_lane_i*16]
+        mov     [rsp + _nca6_scratch + nca_lane_i*8], idx
+%assign nca_lane_i (nca_lane_i + 1)
+%endrep
+        lea     arg1, [nca_mgr + _zuc_state]
+        lea     arg2, [rsp + _nca6_scratch]
+        call    ZUC_KEYGEN16B_4
+
+        ; Keygen leaves the pointer table unchanged. Advance each pointer
+        ; by one four-lane group for Q, then again for P.
+%rep 2
+%assign nca_lane_i 0
+%rep 4
+        add     qword [rsp + _nca6_scratch + nca_lane_i*8], 64
+%assign nca_lane_i (nca_lane_i + 1)
+%endrep
+        lea     arg1, [nca_mgr + _zuc_state]
+        lea     arg2, [rsp + _nca6_scratch]
+        call    ZUC_KEYGEN16B_4
+%endrep
+
+        ; In-place decryption must authenticate ciphertext before overwriting it.
+        cmp     nca_dir, 2
+        jne     .nca6_cipher
+
+align_label
+.nca6_auth:
+        xor     nca_lane, nca_lane
+align_loop
+.nca6_auth_lane:
+        mov     tmp2, [nca_mgr + _zuc_job_in_lane + nca_lane*8]
+        test    tmp2, tmp2
+        jz      .nca6_auth_next
+
+        ; Reorder this lane's H/Q/P words into POLYVAL byte order.
+        mov     idx, nca_lane
+        shl     idx, 4
+        lea     tmp1, [nca_mgr + _zuc_args_digest]
+        movdqa  xmm0, [tmp1 + idx]
+        pshufb  xmm0, [rel nia6_bswap_dword]
+        movdqa  [rsp + _nca6_scratch], xmm0
+        movdqa  xmm0, [tmp1 + idx + 64]
+        pshufb  xmm0, [rel nia6_bswap_dword]
+        movdqa  [rsp + _nca6_scratch + 16], xmm0
+        movdqa  xmm0, [tmp1 + idx + 128]
+        pshufb  xmm0, [rel nia6_bswap_dword]
+        movdqa  [rsp + _nca6_scratch + 32], xmm0
+
+        mov     tmp1, [nca_mgr + _zuc_args_out + nca_lane*8]
+        cmp     nca_dir, 2
+        jne     .nca6_auth_args
+        mov     tmp1, [nca_mgr + _zuc_args_in + nca_lane*8]
+
+align_label
+.nca6_auth_args:
+        lea     arg1, [rsp + _nca6_scratch + 48]
+        lea     arg2, [rsp + _nca6_scratch]
+        mov     arg3, tmp1
+        movzx   arg4, word [rsp + _nca6_lengths + nca_lane*2]
+%ifdef LINUX
+        mov     arg5, [tmp2 + _nca_aad]
+        mov     arg6, [tmp2 + _nca_aad_len]
+%else
+        mov     tmp1, [tmp2 + _nca_aad]
+        mov     arg5, tmp1
+        mov     tmp1, [tmp2 + _nca_aad_len]
+        mov     arg6, tmp1
+%endif
+        call    nca_clmul_sse
+
+        mov     ptr, [nca_mgr + _zuc_job_in_lane + nca_lane*8]
+        mov     tmp1, [ptr + _auth_tag_output]
+        mov     tmp2, [ptr + _auth_tag_output_len_in_bytes]
+        lea     ptr, [rsp + _nca6_scratch + 48]
+        memcpy_sse_64 tmp1, ptr, tmp2, idx, tmp3, xmm0, xmm1, xmm2, xmm3
+
+align_label
+.nca6_auth_next:
+        inc     nca_lane
+        cmp     nca_lane, 4
+        jb      .nca6_auth_lane
+        cmp     nca_dir, 1
+        je      .nca6_clear
+
+align_label
+.nca6_cipher:
+        ; Local pointer/length arrays may be advanced by the four-lane cipher.
+        lea     arg1, [nca_mgr + _zuc_state]
+        lea     arg2, [rsp + _nca6_in]
+        lea     arg3, [rsp + _nca6_out]
+        lea     arg4, [rsp + _nca6_remain]
+        mov     arg5, nca_off
+        call    ZUC_CIPHER_4
+
+        xor     nca_lane, nca_lane
+align_loop
+.nca6_tail_lane:
+        cmp     qword [nca_mgr + _zuc_job_in_lane + nca_lane*8], 0
+        je      .nca6_tail_next
+        movzx   nca_bytes, word [rsp + _nca6_remain + nca_lane*2]
+        test    nca_bytes, nca_bytes
+        jz      .nca6_tail_next
+        movzx   nca_off, word [rsp + _nca6_lengths + nca_lane*2]
+        sub     nca_off, nca_bytes
+
+        ; Extract 16 LFSR words and R1/R2 from the interleaved state.
+        lea     tmp1, [nca_mgr + _zuc_state + nca_lane*4]
+        xor     idx, idx
+        xor     tmp3, tmp3
+align_loop
+.nca6_extract:
+        mov     DWORD(tmp2), [tmp1 + idx]
+        mov     [rsp + _nca6_single + tmp3], DWORD(tmp2)
+        add     idx, 16
+        add     tmp3, 4
+        cmp     tmp3, 18*4
+        jb      .nca6_extract
+
+align_loop
+.nca6_tail:
+        lea     arg1, [rsp + _nca6_scratch]
+        lea     arg2, [rsp + _nca6_single]
+        cmp     nca_bytes, 16
+        jb      .nca6_short_key
+        call    asm_ZucGenKeystream16B_sse
+        jmp     .nca6_xor
+
+align_label
+.nca6_short_key:
+        lea     arg3, [nca_bytes + 3]
+        shr     arg3, 2
+        call    asm_ZucGenKeystream_sse
+
+align_label
+.nca6_xor:
+        mov     tmp1, [nca_mgr + _zuc_args_in + nca_lane*8]
+        mov     tmp2, [nca_mgr + _zuc_args_out + nca_lane*8]
+        add     tmp1, nca_off
+        add     tmp2, nca_off
+        movdqa  xmm0, [rsp + _nca6_scratch]
+        pshufb  xmm0, [rel nia6_bswap_dword]
+        cmp     nca_bytes, 16
+        jb      .nca6_partial
+        movdqu  xmm1, [tmp1]
+        pxor    xmm0, xmm1
+        movdqu  [tmp2], xmm0
+        add     nca_off, 16
+        sub     nca_bytes, 16
+        jnz     .nca6_tail
+        jmp     .nca6_tail_next
+
+align_label
+.nca6_partial:
+        simd_load_sse_16_1 xmm1, tmp1, nca_bytes
+        pxor    xmm0, xmm1
+        simd_store_sse tmp2, xmm0, nca_bytes, idx, ptr
+
+align_label
+.nca6_tail_next:
+        inc     nca_lane
+        cmp     nca_lane, 4
+        jb      .nca6_tail_lane
+        cmp     nca_dir, 1
+        je      .nca6_auth
+
+align_label
+.nca6_clear:
+%ifdef SAFE_DATA
+        ; Clear 352 bytes of four-lane state in 11 iterations of 32 bytes.
+        pxor    xmm0, xmm0
+        xor     idx, idx
+align_loop
+.nca6_clear_state:
+        movdqa  [nca_mgr + _zuc_state + idx], xmm0
+        movdqa  [nca_mgr + _zuc_state + idx + 16], xmm0
+        add     idx, 32
+        cmp     idx, 22*16
+        jb      .nca6_clear_state
+
+        ; Clear 192 bytes of H/Q/P in three iterations of 64 bytes.
+        xor     idx, idx
+align_loop
+.nca6_clear_keys:
+        movdqa  [nca_mgr + _zuc_args_digest + idx], xmm0
+        movdqa  [nca_mgr + _zuc_args_digest + idx + 16], xmm0
+        movdqa  [nca_mgr + _zuc_args_digest + idx + 32], xmm0
+        movdqa  [nca_mgr + _zuc_args_digest + idx + 48], xmm0
+        add     idx, 64
+        cmp     idx, 192
+        jb      .nca6_clear_keys
+
+        ; Seven 32-byte iterations on Linux, nine on Windows, then 24/8 bytes.
+        xor     idx, idx
+align_loop
+.nca6_clear_stack:
+        movdqa  [rsp + idx], xmm0
+        movdqa  [rsp + idx + 16], xmm0
+        add     idx, 32
+        cmp     idx, (NCA6_BUFFER_STACK_size / 32) * 32
+        jb      .nca6_clear_stack
+%if (NCA6_BUFFER_STACK_size % 32) == 24
+        movdqa  [rsp + (NCA6_BUFFER_STACK_size / 32) * 32], xmm0
+%endif
+        mov     qword [rsp + NCA6_BUFFER_STACK_size - 8], 0
+%endif
+        add     rsp, NCA6_BUFFER_STACK_size
 %ifdef SAFE_DATA
         clear_scratch_xmms_sse_asm
         clear_scratch_gps_asm
