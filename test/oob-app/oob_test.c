@@ -2147,32 +2147,30 @@ test_ml_dsa_keyops_oob(struct pqc_test_ctx *t, IMB_ML_DSA *ctx, const struct ml_
         }
 
         /* pubkey_from_privkey(): guarded sk input and guarded pk output */
-        {
-                /* volatile: live across the TEST_SETJMP() checkpoint below */
-                uint8_t *const volatile sk = oob_buf(&mem->privkey, tv->sk_len, t->oob);
-                uint8_t *const volatile pk = oob_buf(&mem->pubkey, tv->pk_len, t->oob);
-                int ok = 0;
+        /* volatile: live across the TEST_SETJMP() checkpoint below */
+        uint8_t *const volatile sk = oob_buf(&mem->privkey, tv->sk_len, t->oob);
+        uint8_t *const volatile pk = oob_buf(&mem->pubkey, tv->pk_len, t->oob);
+        volatile int ok = 0;
 
-                memcpy(sk, ref_sk, tv->sk_len);
+        memcpy(sk, ref_sk, tv->sk_len);
 
-                if (PQC_GUARD(t, "pubkey_from_privkey")) {
-                        pqc_fail(t, "SEGFAULT");
-                        pqc_record(t, -1);
-                        return fails + 1;
-                }
-
-                if (pqc_check_rc(t, imb_ml_dsa_pubkey_from_privkey(ctx, sk, tv->sk_len, pk,
-                                                                   tv->pk_len)) != 0)
-                        ok = -1;
-                else if (memcmp(pk, ref_pk, tv->pk_len) != 0) {
-                        pqc_fail(t, "derived public key mismatch");
-                        ok = -1;
-                }
-
-                pqc_record(t, ok);
-                if (ok != 0)
-                        fails++;
+        if (PQC_GUARD(t, "pubkey_from_privkey")) {
+                pqc_fail(t, "SEGFAULT");
+                pqc_record(t, -1);
+                return fails + 1;
         }
+
+        if (pqc_check_rc(t, imb_ml_dsa_pubkey_from_privkey(ctx, sk, tv->sk_len, pk, tv->pk_len)) !=
+            0)
+                ok = -1;
+        else if (memcmp(pk, ref_pk, tv->pk_len) != 0) {
+                pqc_fail(t, "derived public key mismatch");
+                ok = -1;
+        }
+
+        pqc_record(t, ok);
+        if (ok != 0)
+                fails++;
 
         /* re-bind the private key: it carries the public component too */
         if (PQC_GUARD(t, "set_privkey (re-bind)")) {
@@ -2213,8 +2211,9 @@ test_ml_dsa_sign_verify_oob(struct pqc_test_ctx *t, IMB_ML_DSA *ctx,
                             const unsigned msg_len, const unsigned ctx_len, const int hedged,
                             const int msg_is_mu)
 {
-        uint8_t *msg = oob_buf(&mem->msg, msg_len, t->oob);
-        uint8_t *sig = oob_buf(&mem->sig, tv->sig_len, t->oob);
+        /* volatile: reassigned between TEST_SETJMP() checkpoints below */
+        uint8_t *volatile msg = oob_buf(&mem->msg, msg_len, t->oob);
+        uint8_t *volatile sig = oob_buf(&mem->sig, tv->sig_len, t->oob);
         uint8_t *cstr = oob_buf(&mem->ctxstr, ctx_len, t->oob);
         uint8_t *rnd = oob_buf(&mem->seed, IMB_ML_DSA_SIGN_RND_BYTES, t->oob);
         IMB_ML_DSA_SIGN_PARAMS sp;
@@ -2534,8 +2533,9 @@ test_ml_kem_encap_decap_oob(struct pqc_test_ctx *t, IMB_ML_KEM *ctx,
                             const int seeded)
 {
         uint8_t ref_ss[IMB_ML_KEM_SHARED_SECRET_BYTES];
-        uint8_t *ct = oob_buf(&mem->sig, tv->ct_len, t->oob);
-        uint8_t *ss = oob_buf(&mem->ss, IMB_ML_KEM_SHARED_SECRET_BYTES, t->oob);
+        /* volatile: reassigned between TEST_SETJMP() checkpoints below */
+        uint8_t *volatile ct = oob_buf(&mem->sig, tv->ct_len, t->oob);
+        uint8_t *volatile ss = oob_buf(&mem->ss, IMB_ML_KEM_SHARED_SECRET_BYTES, t->oob);
         uint8_t *const m = oob_buf(&mem->seed, IMB_ML_KEM_ENCAP_SEED_BYTES, t->oob);
         IMB_ML_KEM_ENCAP_PARAMS params;
 
