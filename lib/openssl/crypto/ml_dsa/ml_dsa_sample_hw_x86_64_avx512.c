@@ -38,7 +38,7 @@
 #define ML_DSA_REJ_NTT_POLY_MB     rej_ntt_poly_mb_avx512
 #define ML_DSA_REJ_BOUNDED_POLY_MB rej_bounded_poly_mb_avx512
 
-/* Exported sampling function names */
+/* Sampling function names (static, installed via ML_DSA_SAMPLE_INIT_FN) */
 #define ML_DSA_VECTOR_EXPAND_MASK vector_expand_mask_avx512
 #define ML_DSA_MATRIX_EXPAND_A    matrix_expand_A_avx512
 #define ML_DSA_VECTOR_EXPAND_S    vector_expand_S_avx512

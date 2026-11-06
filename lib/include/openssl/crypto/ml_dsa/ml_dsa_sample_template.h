@@ -30,7 +30,7 @@
  *   ML_DSA_REJ_BOUNDED_POLY_MB       static rej_bounded_poly helper name
  *
  *   ML_DSA_VECTOR_EXPAND_MASK        \
- *   ML_DSA_MATRIX_EXPAND_A            > exported sampling function names
+ *   ML_DSA_MATRIX_EXPAND_A            > static sampling function names
  *   ML_DSA_VECTOR_EXPAND_S           /
  *
  *   ML_DSA_SAMPLE_INIT_FN            exported ossl_ml_dsa_sample_init_* name
