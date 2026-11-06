@@ -1774,7 +1774,7 @@ static inline void
 set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys, const uint32_t i,
                const uint32_t index, const IMB_JOB *template)
 {
-        uint32_t list_idx;
+        uint32_t list_idx = 0;
 
         /* If IMIX testing is being done, set the buffer size to cipher and hash
          * going through the list of sizes precalculated */
@@ -1792,10 +1792,7 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys, const uin
                 uint64_t *p_src = (uint64_t *) get_src_buffer(index, p_buffer);
 
                 job->src = (const uint8_t *) p_src;
-                if (imix_list_count != 0)
-                        p_src[0] = xgem_hdr_list[list_idx];
-                else
-                        p_src[0] = xgem_hdr_list[0];
+                p_src[0] = xgem_hdr_list[list_idx];
         } else
                 job->src = get_src_buffer(index, p_buffer);
 
