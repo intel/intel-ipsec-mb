@@ -11,6 +11,7 @@
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 %include "include/align_sse.inc"
+%include "include/memcpy.inc"
 
 %ifndef SUBMIT_JOB_ZUC128_EEA3
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_no_gfni_sse
@@ -24,6 +25,7 @@
 %define FLUSH_JOB_ZUC_NIA6 flush_job_zuc_nia6_no_gfni_sse
 %define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_no_gfni_sse
 %define ZUC_NIA6_4_BUFFER zuc_nia6_4_buffer_job_no_gfni_sse
+%define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC128_INIT_4        asm_ZucInitialization_4_sse
 %define ZUC256_INIT_4     asm_Zuc256Initialization_4_sse
 %define ZUCNEA6_INIT_4     asm_ZucNEA6Initialization_4_sse
@@ -83,10 +85,15 @@ dq      0xfc0000000
 dq      0x3f000000000
 dq      0xfc0000000000
 
+align 16
+nia6_bswap_dword:
+db      3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
+
 extern ZUC_EIA3_4_BUFFER
-extern ZUC_NIA6_4_BUFFER
 extern ZUC128_INIT_4
 extern ZUCNEA6_INIT_4
+extern ZUC_KEYGEN16B_4
+extern nia_clmul_sse
 extern ZUC_CIPHER_4
 extern ZUC_NCA6_4_BUFFER
 
@@ -1452,5 +1459,153 @@ align_label
 return_null_flush_nca6:
         xor     job_rax, job_rax
         jmp     return_flush_nca6
+
+struc NIA6_BUFFER_STACK
+%ifndef LINUX
+_nia6_shadow:   resb    32
+%endif
+_nia6_mgr:      resq    1
+_nia6_lane:     resq    1
+; Used first for the keygen pointer array, then reused for H/Q/P and the tag.
+                alignb  16
+_nia6_scratch:  resb    64
+; The 8-byte slot makes the frame size 8 mod 16, aligning RSP at call sites.
+_nia6_align:    resq    1
+endstruc
+
+; Generate one 16-byte ZUC key block for each lane into the digest scratch.
+; The offset selects H, Q or P; each group is 4 lanes * 16 bytes.
+%macro NIA6_GEN_KEY_BLOCK 1
+        mov     r10, [rsp + _nia6_mgr]
+%assign nia6_lane_i 0
+%rep 4
+        lea     rax, [r10 + _zuc_args_digest + %1 + nia6_lane_i*16]
+        mov     [rsp + _nia6_scratch + nia6_lane_i*8], rax
+%assign nia6_lane_i (nia6_lane_i + 1)
+%endrep
+
+        lea     arg1, [r10 + _zuc_state]
+        lea     arg2, [rsp + _nia6_scratch]
+        call    ZUC_KEYGEN16B_4
+%endmacro
+
+; void ZUC_NIA6_4_BUFFER(const void *const keys[4])
+; arg 1 : keys (_zuc_args_keys field in the owning MB_MGR_ZUC_OOO)
+; Compute four NIA6 tags using the selected SSE/GFNI ZUC primitives.
+; All other lane inputs are read from manager in arg1; arguments 2-6 are ignored.
+align_function
+MKGLOBAL(ZUC_NIA6_4_BUFFER,function,internal)
+ZUC_NIA6_4_BUFFER:
+%define tmp1 r10
+%define idx rax
+%define ptr rdx
+%define tmp2 r11
+%define tmp3 r8
+
+        mov     idx, arg1
+        sub     idx, _zuc_args_keys
+        sub     rsp, NIA6_BUFFER_STACK_size
+        mov     [rsp + _nia6_mgr], idx
+
+        ; Initialize the four-lane ZUC state.
+        mov     tmp1, [rsp + _nia6_mgr]
+        lea     arg1, [tmp1 + _zuc_args_keys]
+        lea     arg2, [tmp1 + _zuc_args_IV]
+        lea     arg3, [tmp1 + _zuc_state]
+        call    ZUCNEA6_INIT_4
+
+        ; Generate H, Q and P, with one 16-byte keystream block per lane.
+        NIA6_GEN_KEY_BLOCK 0       ; H
+        NIA6_GEN_KEY_BLOCK 64      ; Q
+        NIA6_GEN_KEY_BLOCK 128     ; P
+
+        mov     qword [rsp + _nia6_lane], 0
+align_loop
+.nia6_lane:
+        mov     idx, [rsp + _nia6_lane]
+        mov     tmp1, [rsp + _nia6_mgr]
+        mov     ptr, [tmp1 + _zuc_job_in_lane + idx*8]
+        test    ptr, ptr
+        jz      .nia6_next
+
+        ; Reorder each lane's H/Q/P words into POLYVAL byte order.
+        mov     ptr, idx
+        shl     ptr, 4
+        lea     tmp2, [tmp1 + _zuc_args_digest]
+        movdqu  xmm0, [tmp2 + ptr]
+        pshufb  xmm0, [rel nia6_bswap_dword]
+        movdqa  [rsp + _nia6_scratch], xmm0
+        movdqu  xmm0, [tmp2 + ptr + 64]
+        pshufb  xmm0, [rel nia6_bswap_dword]
+        movdqa  [rsp + _nia6_scratch + 16], xmm0
+        movdqu  xmm0, [tmp2 + ptr + 128]
+        pshufb  xmm0, [rel nia6_bswap_dword]
+        movdqa  [rsp + _nia6_scratch + 32], xmm0
+
+        ; Compute the lane's NIA6 tag.
+        lea     arg1, [rsp + _nia6_scratch + 48]
+        lea     arg2, [rsp + _nia6_scratch]
+        mov     arg3, [tmp1 + _zuc_args_in + idx*8]
+        movzx   arg4, word [tmp1 + _zuc_lens + idx*2]
+        call    nia_clmul_sse
+
+        ; Copy only the requested tag bytes to the caller's output buffer.
+        mov     idx, [rsp + _nia6_lane]
+        mov     tmp1, [rsp + _nia6_mgr]
+        mov     ptr, [tmp1 + _zuc_job_in_lane + idx*8]
+        mov     tmp2, [ptr + _auth_tag_output_len_in_bytes]
+        mov     tmp1, [tmp1 + _zuc_args_out + idx*8]
+        lea     ptr, [rsp + _nia6_scratch + 48]
+        memcpy_sse_64 tmp1, ptr, tmp2, idx, tmp3, xmm0, xmm1, xmm2, xmm3
+
+align_label
+.nia6_next:
+        inc     qword [rsp + _nia6_lane]
+        cmp     qword [rsp + _nia6_lane], 4
+        jb      .nia6_lane
+
+%ifdef SAFE_DATA
+        ; Wipe manager-owned ZUC state and generated H/Q/P values.
+        pxor    xmm0, xmm0
+        mov     tmp2, [rsp + _nia6_mgr]
+
+        ; Clear the 352-byte four-lane ZUC state.
+        xor     idx, idx
+align_loop
+.nia6_clear_state:
+        movdqa  [tmp2 + _zuc_state + idx], xmm0
+        movdqa  [tmp2 + _zuc_state + idx + 16], xmm0
+        add     idx, 32
+        cmp     idx, 22*16
+        jb      .nia6_clear_state
+
+        ; Clear the 192 bytes used for H, Q and P.
+        xor     idx, idx
+align_loop
+.nia6_clear_keys:
+        movdqa  [tmp2 + _zuc_args_digest + idx], xmm0
+        movdqa  [tmp2 + _zuc_args_digest + idx + 16], xmm0
+        movdqa  [tmp2 + _zuc_args_digest + idx + 32], xmm0
+        movdqa  [tmp2 + _zuc_args_digest + idx + 48], xmm0
+        add     idx, 64
+        cmp     idx, 3*64
+        jb      .nia6_clear_keys
+
+        ; Clear local scratch and saved manager/lane values.
+%assign nia_i 0
+%rep (NIA6_BUFFER_STACK_size / 16)
+        movdqa  [rsp + nia_i*16], xmm0
+%assign nia_i (nia_i + 1)
+%endrep
+        mov     qword [rsp + (NIA6_BUFFER_STACK_size / 16) * 16], 0
+%endif
+
+        add     rsp, NIA6_BUFFER_STACK_size
+
+%ifdef SAFE_DATA
+        clear_scratch_xmms_sse_asm
+        clear_scratch_gps_asm
+%endif
+        ret
 
 mksection stack-noexec

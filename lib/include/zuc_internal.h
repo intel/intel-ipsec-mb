@@ -978,19 +978,6 @@ zuc_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
 
 IMB_DLL_LOCAL
 void
-zuc_nia6_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
-                               const void *const pBufferIn[4], void *pMacI[4],
-                               const uint16_t lengthInBytes[4], const void *const job_in_lane[4]);
-
-IMB_DLL_LOCAL
-void
-zuc_nia6_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
-                                  const void *const pBufferIn[4], void *pMacI[4],
-                                  const uint16_t lengthInBytes[4],
-                                  const void *const job_in_lane[4]);
-
-IMB_DLL_LOCAL
-void
 zuc_eia3_8_buffer_job_avx2(const void *const pKey[8], const uint8_t *ivs,
                            const void *const pBufferIn[8], uint32_t *pMacI[8],
                            const uint16_t lengthInBytes[8], const void *const job_in_lane[8]);
