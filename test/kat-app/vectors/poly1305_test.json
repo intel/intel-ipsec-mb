@@ -5,7 +5,7 @@
         "Test vectors of type MacTest are intended for testing the generation and verification of MACs."
     ],
     "notes": {},
-    "numberOfTests": 37,
+    "numberOfTests": 42,
     "schema": "mac_test_schema_v1.json",
     "testGroups": [
         {
@@ -344,6 +344,51 @@
                     "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
                     "msg": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
                     "tag": "88a26e9a6b4c629e345775a342ddba74",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 38,
+                    "comment": "Max accumulator 1-block, all-ones key, 48 B",
+                    "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "msg": "e88c850343afa785216bc345c45398f8018d850343afa785216bc345c45398f8018d850343afa785216bc345c45398f8",
+                    "tag": "e1ffffffffffffffffffffffffffffff",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 39,
+                    "comment": "Max accumulator 16-block, all-ones key, 1024 B",
+                    "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "msg": "51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc",
+                    "tag": "6a46be1bf57459ccd3ecb581760cb924",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 40,
+                    "comment": "Max accumulator 16-block, all-ones key, 1039 B",
+                    "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "msg": "51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fcffffffffffffffffffffffffffffff",
+                    "tag": "6f18a25be81f5e65840ef8b72fa2b3f3",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 41,
+                    "comment": "Max accumulator 16-block, all-ones key, 1040 B",
+                    "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "msg": "51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc51741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc53741de279fe2f8d2ad121edae6198fc",
+                    "tag": "6a46be1bf57459ccd3ecb581760cb924",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 42,
+                    "comment": "All-ones key and message 255 B",
+                    "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "msg": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "tag": "c80cb43844f387946e5aa6085bdf67da",
                     "result": "valid",
                     "flags": []
                 }
