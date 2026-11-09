@@ -116,12 +116,6 @@ ml_kem_poly_tomsg_avx2(uint8_t *out, const scalar *in);
 void
 ml_kem_poly_frommsg_add_avx2(scalar *out, const uint8_t *in);
 
-/* AVX2 optimized SamplePolyCBD */
-void
-ml_kem_poly_cbd2_avx2(scalar *out, const uint8_t *in);
-void
-ml_kem_poly_cbd3_avx2(scalar *out, const uint8_t *in);
-
 /* Key material allocation layout */
 #define DECLARE_ML_KEM_PUBKEYDATA(name, rank)                                                      \
         struct name##_alloc {                                                                      \
@@ -149,9 +143,6 @@ DECLARE_ML_KEM_VARIANT_KEYDATA(1024);
 #undef DECLARE_ML_KEM_PUBKEYDATA
 #undef DECLARE_ML_KEM_PRVKEYDATA
 
-typedef __owur int (*CBD_FUNC)(const IMB_ML_KEM *self, scalar *out,
-                               uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx,
-                               const ML_KEM_KEY *key);
 static void
 scalar_encode(uint8_t *out, const scalar *s, int bits);
 
@@ -431,6 +422,7 @@ rej_uniform_block_base(uint16_t *out, const uint32_t capacity, const uint8_t *in
 }
 
 static ML_KEM_MATRIX_EXPAND_FN matrix_expand_base;
+static ML_KEM_GENCBD_FN gencbd_base;
 
 /* Forward declarations of the base (portable C, Barrett) implementations */
 static void
@@ -583,6 +575,7 @@ void
 ossl_ml_kem_sample_init_base(IMB_ML_KEM *self)
 {
         self->matrix_expand = matrix_expand_base;
+        self->gencbd = gencbd_base;
 }
 
 /*-
@@ -1234,20 +1227,6 @@ cbd2_base(scalar *out, const uint8_t *r)
         } while (curr < end);
 }
 
-/* As cbd2_base(), with the PRF call included */
-static __owur int
-cbd_2(const IMB_ML_KEM *self, scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx,
-      const ML_KEM_KEY *key)
-{
-        uint8_t randbuf[4 * DEGREE / 8]; /* 64 * eta slots */
-        int ret = prf(randbuf, sizeof(randbuf), in, mdctx, key);
-
-        if (ret)
-                self->poly_cbd2(out, randbuf);
-        OPENSSL_cleanse((void *) randbuf, sizeof(randbuf));
-        return ret;
-}
-
 /*
  * Algorithm 8 from the spec, with eta fixed to three, applied to the PRF
  * output in |r|. Creates binominally distributed elements by sampling 3*|eta| bits,
@@ -1295,72 +1274,40 @@ cbd3_base(scalar *out, const uint8_t *r)
         } while (curr < end);
 }
 
-/* As cbd3_base(), with the PRF call included */
-static __owur int
-cbd_3(const IMB_ML_KEM *self, scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx,
-      const ML_KEM_KEY *key)
-{
-        uint8_t randbuf[6 * DEGREE / 8]; /* 64 * eta slots */
-        int ret = prf(randbuf, sizeof(randbuf), in, mdctx, key);
+/* The |ETA1| value for ML-KEM-512 is 3, the rest and all ETA2 values are 2. */
+#define ETA1(evp_type) ((evp_type) == EVP_PKEY_ML_KEM_512 ? 3 : 2)
+#define ETA2           2
 
-        if (ret)
-                self->poly_cbd3(out, randbuf);
+/*
+ * Samples out[i] with SamplePolyCBD from PRF(seed, i), using eta1 for the
+ * first n1 polynomials and eta2 for the rest, one PRF call at a time.
+ */
+static int
+gencbd_base(const IMB_ML_KEM *self, scalar *const out[], int n, int n1, int eta1, int eta2,
+            const uint8_t seed[ML_KEM_RANDOM_BYTES], EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
+{
+        uint8_t input[ML_KEM_RANDOM_BYTES + 1];
+        uint8_t randbuf[6 * DEGREE / 8]; /* 64 * max(eta) slots */
+        int i, eta, ret = 0;
+
+        memcpy(input, seed, ML_KEM_RANDOM_BYTES);
+        for (i = 0; i < n; i++) {
+                eta = i < n1 ? eta1 : eta2;
+                input[ML_KEM_RANDOM_BYTES] = (uint8_t) i;
+                if (!prf(randbuf, 64 * eta, input, mdctx, key))
+                        goto end;
+                if (eta == 3)
+                        self->poly_cbd3(out[i], randbuf);
+                else
+                        self->poly_cbd2(out[i], randbuf);
+        }
+        ret = 1;
+
+end:
+        OPENSSL_cleanse((void *) input, sizeof(input));
         OPENSSL_cleanse((void *) randbuf, sizeof(randbuf));
         return ret;
 }
-
-/*
- * Generates a secret vector by using |cbd| with the given seed to generate
- * scalar elements and incrementing |counter| for each slot of the vector.
- */
-static __owur int
-gencbd_vector(const IMB_ML_KEM *self, scalar *out, CBD_FUNC cbd, uint8_t *counter,
-              const uint8_t seed[ML_KEM_RANDOM_BYTES], int rank, EVP_MD_CTX *mdctx,
-              const ML_KEM_KEY *key)
-{
-        uint8_t input[ML_KEM_RANDOM_BYTES + 1];
-        int ret = 0;
-
-        memcpy(input, seed, ML_KEM_RANDOM_BYTES);
-        do {
-                input[ML_KEM_RANDOM_BYTES] = (*counter)++;
-                if (!cbd(self, out++, input, mdctx, key))
-                        goto end;
-        } while (--rank > 0);
-        ret = 1;
-
-end:
-        OPENSSL_cleanse((void *) input, sizeof(input));
-        return ret;
-}
-
-/*
- * As above plus NTT transform.
- */
-static __owur int
-gencbd_vector_ntt(const IMB_ML_KEM *self, scalar *out, CBD_FUNC cbd, uint8_t *counter,
-                  const uint8_t seed[ML_KEM_RANDOM_BYTES], int rank, EVP_MD_CTX *mdctx,
-                  const ML_KEM_KEY *key)
-{
-        uint8_t input[ML_KEM_RANDOM_BYTES + 1];
-        int ret = 0;
-
-        memcpy(input, seed, ML_KEM_RANDOM_BYTES);
-        do {
-                input[ML_KEM_RANDOM_BYTES] = (*counter)++;
-                if (!cbd(self, out, input, mdctx, key))
-                        goto end;
-                self->poly_ntt(out++);
-        } while (--rank > 0);
-        ret = 1;
-
-end:
-        OPENSSL_cleanse((void *) input, sizeof(input));
-        return ret;
-}
-
-/* The |ETA1| value for ML-KEM-512 is 3, the rest and all ETA2 values are 2. */
-#define CBD1(evp_type) ((evp_type) == EVP_PKEY_ML_KEM_512 ? cbd_3 : cbd_2)
 
 /*
  * FIPS 203, Section 5.2, Algorithm 14: K-PKE.Encrypt.
@@ -1384,40 +1331,40 @@ encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
             EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo = key->vinfo;
-        CBD_FUNC cbd_1 = CBD1(vinfo->evp_type);
         int rank = vinfo->rank;
-        /* We can use tmp[0..rank-1] as storage for |y|, then |e1|, ... */
-        scalar *y = &tmp[0], *e1 = y, *e2 = y;
+        /* We can use tmp[0..rank-1] as storage for |y| */
+        scalar *y = &tmp[0];
         /* We can use tmp[rank]..tmp[2*rank - 1] for |u| */
         scalar *u = &tmp[rank];
+        /* FIPS 203 |e1| vector followed by the |e2| scalar */
+        scalar e[ML_KEM_1024_RANK + 1];
+        scalar *polys[2 * ML_KEM_1024_RANK + 1];
         scalar v;
-        uint8_t input[ML_KEM_RANDOM_BYTES + 1];
-        uint8_t counter = 0;
         int du = vinfo->du;
         int dv = vinfo->dv;
-        int ret = 0;
+        int i, ret = 0;
 
-        /* FIPS 203 "y" vector */
-        if (!gencbd_vector_ntt(self, y, cbd_1, &counter, r, rank, mdctx, key))
+        /* FIPS 203 "y", "e1" and "e2", PRF counters 0 .. 2*rank */
+        for (i = 0; i < rank; i++) {
+                polys[i] = &y[i];
+                polys[rank + i] = &e[i];
+        }
+        polys[2 * rank] = &e[rank];
+        if (!self->gencbd(self, polys, 2 * rank + 1, rank, ETA1(vinfo->evp_type), ETA2, r, mdctx,
+                          key))
                 goto end;
+        for (i = 0; i < rank; i++)
+                self->poly_ntt(&y[i]);
         /* FIPS 203 "v" scalar */
         inner_product(self, &v, key->t, y, rank);
         self->poly_ntt_inverse(&v);
         /* FIPS 203 "u" vector */
         matrix_mult_intt(self, u, key->m, y, rank);
 
-        /* All done with |y|, now free to reuse tmp[0] for FIPS 203 |e1| */
-        if (!gencbd_vector(self, e1, cbd_2, &counter, r, rank, mdctx, key))
-                goto end;
-        vector_add(self, u, e1, rank);
+        vector_add(self, u, e, rank);
         vector_compress_encode(self, out, u, du, rank);
 
-        /* All done with |e1|, now free to reuse tmp[0] for FIPS 203 |e2| */
-        memcpy(input, r, ML_KEM_RANDOM_BYTES);
-        input[ML_KEM_RANDOM_BYTES] = counter;
-        if (!cbd_2(self, e2, input, mdctx, key))
-                goto end;
-        self->poly_add(&v, e2);
+        self->poly_add(&v, &e[rank]);
 
         /* Combine message with |v| */
         self->poly_frommsg_add(&v, message);
@@ -1425,7 +1372,7 @@ encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
         ret = 1;
 
 end:
-        OPENSSL_cleanse((void *) input, sizeof(input));
+        OPENSSL_cleanse((void *) e, sizeof(e));
         OPENSSL_cleanse((void *) &v, sizeof(v));
         return ret;
 }
@@ -1594,10 +1541,9 @@ genkey(const IMB_ML_KEM *self, const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX
         const uint8_t *const sigma = hashed + ML_KEM_RANDOM_BYTES;
         uint8_t augmented_seed[ML_KEM_RANDOM_BYTES + 1];
         const ML_KEM_VINFO *vinfo = key->vinfo;
-        CBD_FUNC cbd_1 = CBD1(vinfo->evp_type);
+        scalar *polys[2 * ML_KEM_1024_RANK];
         int rank = vinfo->rank;
-        uint8_t counter = 0;
-        int ret = 0;
+        int i, ret = 0;
 
         /*
          * Use the "d" seed salted with the rank to derive the public and private
@@ -1612,10 +1558,16 @@ genkey(const IMB_ML_KEM *self, const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX
         CONSTTIME_DECLASSIFY(key->rho, ML_KEM_RANDOM_BYTES);
 
         /* FIPS 203 |e| vector is initial value of key->t */
+        for (i = 0; i < rank; i++) {
+                polys[i] = &key->s[i];
+                polys[rank + i] = &key->t[i];
+        }
         if (!self->matrix_expand(self, mdctx, key) ||
-            !gencbd_vector_ntt(self, key->s, cbd_1, &counter, sigma, rank, mdctx, key) ||
-            !gencbd_vector_ntt(self, key->t, cbd_1, &counter, sigma, rank, mdctx, key))
+            !self->gencbd(self, polys, 2 * rank, 2 * rank, ETA1(vinfo->evp_type), ETA2, sigma,
+                          mdctx, key))
                 goto end;
+        for (i = 0; i < 2 * rank; i++)
+                self->poly_ntt(polys[i]);
 
         /* To |e| we now add the product of transpose |m| and |s|, giving |t|. */
         matrix_mult_transpose_add(self, key->t, key->m, key->s, rank);

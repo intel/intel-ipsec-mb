@@ -21,11 +21,15 @@
 #define ML_KEM_SHA3_SHAKE128_X4_INC_SQUEEZE ossl_sha3_shake128_x4_inc_squeeze_avx512vl
 #define ML_KEM_SHA3_SHAKE128_X4_INC_CLEANUP ossl_sha3_shake128_x4_inc_cleanup_avx512vl
 
+/* x4 SHAKE-256 one-shot API */
+#define ML_KEM_SHA3_SHAKE256_X4 ossl_sha3_shake256_x4_avx512vl
+
 /* Internal helper name (static, unique within this TU) */
 #define ML_KEM_SAMPLE_NTT_X4 sample_ntt_x4_avx512
 
-/* Matrix expansion function name (static, installed via ML_KEM_SAMPLE_INIT_FN) */
+/* Sampling function names (static, installed via ML_KEM_SAMPLE_INIT_FN) */
 #define ML_KEM_MATRIX_EXPAND matrix_expand_x4_avx512
+#define ML_KEM_GENCBD        gencbd_x4_avx512
 
 /* Exported init function */
 #define ML_KEM_SAMPLE_INIT_FN ossl_ml_kem_sample_init_avx512

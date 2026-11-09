@@ -17,14 +17,18 @@
  *   ML_KEM_SHA3_SHAKE128_X4_INC_SQUEEZE  / x4 SHAKE-128 incremental API
  *   ML_KEM_SHA3_SHAKE128_X4_INC_CLEANUP /
  *
+ *   ML_KEM_SHA3_SHAKE256_X4             one-shot x4 SHAKE-256
+ *
  *   ML_KEM_SAMPLE_NTT_X4                static helper name (unique within the TU)
  *
- *   ML_KEM_MATRIX_EXPAND                matrix expansion function name
+ *   ML_KEM_MATRIX_EXPAND               \ static sampling function names
+ *   ML_KEM_GENCBD                      /
  *
  *   ML_KEM_SAMPLE_INIT_FN               exported ossl_ml_kem_sample_init_* name
  *
  * See ml_kem_sample_hw_x86_64_avx512.c and ml_kem_sample_hw_x86_64_avx2.c
- * for example instantiations. Both use the AVX2 rejection sampling kernel.
+ * for example instantiations. Both use the AVX2 rejection sampling and
+ * SamplePolyCBD kernels.
  */
 
 #define ML_KEM_X4_LANES              4
@@ -107,8 +111,58 @@ ML_KEM_MATRIX_EXPAND(const IMB_ML_KEM *self, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
         return 1;
 }
 
+/*
+ * Samples out[i] with SamplePolyCBD from PRF(seed, i), using eta1 for the
+ * first n1 polynomials and eta2 for the rest, four PRF calls at a time.
+ */
+static int
+ML_KEM_GENCBD(const IMB_ML_KEM *self, struct ossl_ml_kem_scalar_st *const out[], const int n,
+              const int n1, const int eta1, const int eta2, const uint8_t *seed, EVP_MD_CTX *mdctx,
+              const ML_KEM_KEY *key)
+{
+        uint8_t input[ML_KEM_X4_LANES][ML_KEM_RANDOM_BYTES + 1];
+        uint8_t randbuf[ML_KEM_X4_LANES][6 * ML_KEM_DEGREE / 8]; /* 64 * max(eta) slots */
+        int i, b, count, eta;
+
+        (void) self;
+        (void) mdctx;
+        (void) key;
+
+        for (b = 0; b < ML_KEM_X4_LANES; b++)
+                memcpy(input[b], seed, ML_KEM_RANDOM_BYTES);
+
+        for (i = 0; i < n; i += count) {
+                count = n - i < ML_KEM_X4_LANES ? n - i : ML_KEM_X4_LANES;
+
+                for (b = 0; b < count; b++)
+                        input[b][ML_KEM_RANDOM_BYTES] = (uint8_t) (i + b);
+
+                /*
+                 * A shorter SHAKE256 output is a prefix of a longer one, so the
+                 * largest eta in the batch covers a batch spanning both
+                 */
+                eta = i < n1 ? eta1 : eta2;
+                if (i + count > n1 && eta2 > eta)
+                        eta = eta2;
+                ML_KEM_SHA3_SHAKE256_X4(randbuf[0], randbuf[1], randbuf[2], randbuf[3], 64 * eta,
+                                        input[0], input[1], input[2], input[3], sizeof(input[0]));
+
+                for (b = 0; b < count; b++) {
+                        if ((i + b < n1 ? eta1 : eta2) == 3)
+                                ml_kem_poly_cbd3_avx2(out[i + b], randbuf[b]);
+                        else
+                                ml_kem_poly_cbd2_avx2(out[i + b], randbuf[b]);
+                }
+        }
+
+        OPENSSL_cleanse(input, sizeof(input));
+        OPENSSL_cleanse(randbuf, sizeof(randbuf));
+        return 1;
+}
+
 void
 ML_KEM_SAMPLE_INIT_FN(IMB_ML_KEM *self)
 {
         self->matrix_expand = ML_KEM_MATRIX_EXPAND;
+        self->gencbd = ML_KEM_GENCBD;
 }

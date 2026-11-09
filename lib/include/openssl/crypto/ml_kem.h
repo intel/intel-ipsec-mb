@@ -307,6 +307,12 @@ struct ossl_ml_kem_scalar_st {
 uint32_t
 ml_kem_rej_uniform_block_avx2(uint16_t *out, const uint32_t capacity, const uint8_t *in);
 
+/* AVX2 SamplePolyCBD from 64 * eta PRF output bytes */
+void
+ml_kem_poly_cbd2_avx2(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
+void
+ml_kem_poly_cbd3_avx2(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
+
 /* Compare the public key hashes of two keys */
 __owur int
 ossl_ml_kem_pubkey_cmp(const ML_KEM_KEY *key1, const ML_KEM_KEY *key2);

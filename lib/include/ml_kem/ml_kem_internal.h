@@ -96,6 +96,14 @@ typedef void(ML_KEM_POLY_TOMSG_FN)(uint8_t *out, struct ossl_ml_kem_scalar_st *i
 typedef void(ML_KEM_POLY_FROMMSG_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
 /* SamplePolyCBD from 64 * eta PRF output bytes */
 typedef void(ML_KEM_POLY_CBD_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
+/*
+ * SamplePolyCBD of out[0..n-1] from PRF(seed, i), eta1 for the first n1 and
+ * eta2 for the rest (eta1 and eta2 must be 2 or 3): returns 1 on success,
+ * 0 on error
+ */
+typedef int(ML_KEM_GENCBD_FN)(const IMB_ML_KEM *self, struct ossl_ml_kem_scalar_st *const out[],
+                              int n, int n1, int eta1, int eta2, const uint8_t *seed,
+                              struct evp_md_ctx_st *mdctx, const struct ossl_ml_kem_key_st *key);
 
 struct IMB_ML_KEM {
         IMB_MGR *mgr;
@@ -129,6 +137,7 @@ struct IMB_ML_KEM {
         ML_KEM_POLY_CBD_FN *poly_cbd3;
         ML_KEM_REJ_UNIFORM_FN *rej_uniform_block;
         ML_KEM_MATRIX_EXPAND_FN *matrix_expand;
+        ML_KEM_GENCBD_FN *gencbd;
 
         /**
          * Backend dispatch table (0 on success, <0 on error).
