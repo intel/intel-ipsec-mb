@@ -588,7 +588,10 @@ align_loop
         vmovdqa32       %%FSM_R2, %%TEMP0
         vmovdqa32       %%FSM_R3, %%TEMP0
         vmovdqa32       %%LFSR_B_LDQ, %%TEMP0
-        vmovdqu64       %%LFSR_A_LDQ, [%%IV_PTR]
+        ;; IVs are stored per lane as 16B; a 32B load of two 16B stores would
+        ;; not store-forward, so load each half separately.
+        vmovdqu64       XWORD(%%LFSR_A_LDQ), [%%IV_PTR]
+        vinserti32x4    %%LFSR_A_LDQ, %%LFSR_A_LDQ, [%%IV_PTR + 16], 1
         LOAD_KEY_PAIR   %%KEY_PTRS, 0, 1, 0,  %%LFSR_A_HDQ
         LOAD_KEY_PAIR   %%KEY_PTRS, 0, 1, 16, %%LFSR_B_HDQ
 %endmacro
