@@ -10,7 +10,7 @@
 # Description:
 #   AVX2 implementations of the ML-KEM polynomial operations outside the NTT
 #   (FIPS 203): SampleNTT rejection sampling, and Compress/Decompress with
-#   packing for d = 4, 5, 10 and 11.
+#   packing for d = 1, 4, 5, 10 and 11.
 #
 # Notes:
 #   - Rejection sampling branches on public data (derived from rho) only;
@@ -421,6 +421,124 @@ ___
 
 $code .= <<___;
 
+###############################################################################
+# ml_kem_poly_tomsg_avx2
+#
+# Compress_1 followed by ByteEncode_1 (FIPS 203, Algorithm 15, step 7).
+#
+# C Prototype:
+#   void ml_kem_poly_tomsg_avx2(
+#       uint8_t *out,               // (rdi) 32 output bytes
+#       const uint16_t *in          // (rsi) 256 input coefficients
+#   );
+#
+# Description:
+#   Compress_1(x) is 1 for x in [833, 2496]. The range check is a single
+#   signed compare of x - 833 + 2^15 against 1664 - 2^15; the word masks are
+#   packed to bytes and collected with vpmovmskb. Constant time.
+#
+# Inputs:
+#   in - coefficients in [0, q)
+###############################################################################
+.align 32
+.globl  ml_kem_poly_tomsg_avx2
+.type   ml_kem_poly_tomsg_avx2,\@function,2
+ml_kem_poly_tomsg_avx2:
+.cfi_startproc
+    endbranch
+    vpbroadcastw ml_kem_msg_off(%rip), %ymm4
+    vpbroadcastw ml_kem_msg_lim(%rip), %ymm5
+    mov     \$8, %ecx
+
+.align 32
+.Ltomsg_loop:
+    vpaddw  (%rsi), %ymm4, %ymm0
+    vpaddw  32(%rsi), %ymm4, %ymm1
+    vpcmpgtw %ymm0, %ymm5, %ymm0
+    vpcmpgtw %ymm1, %ymm5, %ymm1
+    vpacksswb %ymm1, %ymm0, %ymm0
+    vpermq  \$0xd8, %ymm0, %ymm0
+    vpmovmskb %ymm0, %eax
+    mov     %eax, (%rdi)
+
+    add     \$64, %rsi
+    add     \$4, %rdi
+    dec     %ecx
+    jnz     .Ltomsg_loop
+
+    xor     %eax, %eax
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_tomsg_avx2, .-ml_kem_poly_tomsg_avx2
+
+###############################################################################
+# ml_kem_poly_frommsg_add_avx2
+#
+# ByteDecode_1 and Decompress_1 of the message, added to a polynomial
+# (FIPS 203, Algorithm 14, steps 20-21).
+#
+# C Prototype:
+#   void ml_kem_poly_frommsg_add_avx2(
+#       uint16_t *out,              // (rdi) 256 input/output coefficients
+#       const uint8_t *in           // (rsi) 32 message bytes
+#   );
+#
+# Description:
+#   Each 16 message bits are broadcast, isolated with a per-word bit mask and
+#   turned into a word mask selecting (q + 1) / 2, then added and reduced
+#   once. Constant time (see scalar_decode_decompress_add).
+#
+# Inputs:
+#   out - coefficients in [0, q)
+#
+# Output:
+#   out - coefficients in [0, q)
+###############################################################################
+.align 32
+.globl  ml_kem_poly_frommsg_add_avx2
+.type   ml_kem_poly_frommsg_add_avx2,\@function,2
+ml_kem_poly_frommsg_add_avx2:
+.cfi_startproc
+    endbranch
+    vmovdqa ml_kem_msg_bits(%rip), %ymm3
+    vpbroadcastw ml_kem_half_q(%rip), %ymm4
+    vpbroadcastw ml_kem_q(%rip), %ymm5
+    mov     \$16, %ecx
+
+.align 32
+.Lfrommsg_loop:
+    vpbroadcastw (%rsi), %ymm0
+    vpand   %ymm3, %ymm0, %ymm0
+    vpcmpeqw %ymm3, %ymm0, %ymm0
+    vpand   %ymm4, %ymm0, %ymm0
+    vpaddw  (%rdi), %ymm0, %ymm0
+    vpsubw  %ymm5, %ymm0, %ymm1
+    vpminuw %ymm1, %ymm0, %ymm0
+    vmovdqu %ymm0, (%rdi)
+
+    add     \$2, %rsi
+    add     \$32, %rdi
+    dec     %ecx
+    jnz     .Lfrommsg_loop
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_frommsg_add_avx2, .-ml_kem_poly_frommsg_add_avx2
+___
+
+$code .= <<___;
+
 .section    .rodata
 
 # Modulus q = 3329 (FIPS 203, Section 2.4)
@@ -490,6 +608,20 @@ sub decompress_shuf {
 
 $code .= <<___;
 
+# Compress_1 range check offset and limit, x - 833 + 2^15 and 1664 - 2^15
+# (see ml_kem_poly_tomsg_avx2)
+.align 2
+ml_kem_msg_off:
+    .value 31935
+.align 2
+ml_kem_msg_lim:
+    .value -31104
+
+# Decompress_1 value (q + 1) / 2
+.align 2
+ml_kem_half_q:
+    .value 1665
+
 # ByteDecode_d field masks, 2^d - 1
 ___
 
@@ -516,6 +648,11 @@ foreach my $d (4, 5, 10, 11) {
 }
 
 $code .= <<___;
+
+# Decompress_1 bit selectors, word i holds 2^i
+.align 32
+ml_kem_msg_bits:
+    .value @{[join(",", map { sprintf("0x%x", 1 << $_) } (0 .. 15))]}
 
 # ByteEncode_d merge tables (vpmaddwd weights, dword and qword shifts),
 # ByteDecode_d field shifts and gathers, including the adjusted gathers of

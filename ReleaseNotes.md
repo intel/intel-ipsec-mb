@@ -25,7 +25,7 @@ Library
   options to set code alignment of the library C sources on GCC and clang.
 - Added ML-KEM AVX2 SampleNTT rejection sampling.
 - Added ML-KEM matrix expansion with x4 SHAKE128 (AVX2 and AVX512VL).
-- Added ML-KEM AVX2 Compress and Decompress with packing for d = 4, 5, 10 and 11.
+- Added ML-KEM AVX2 Compress and Decompress with packing for d = 1, 4, 5, 10 and 11.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

@@ -111,6 +111,10 @@ void
 ml_kem_poly_decompress10_avx2(scalar *out, const uint8_t *in);
 void
 ml_kem_poly_decompress11_avx2(scalar *out, const uint8_t *in);
+void
+ml_kem_poly_tomsg_avx2(uint8_t *out, const scalar *in);
+void
+ml_kem_poly_frommsg_add_avx2(scalar *out, const uint8_t *in);
 
 /* Key material allocation layout */
 #define DECLARE_ML_KEM_PUBKEYDATA(name, rank)                                                      \
@@ -438,6 +442,10 @@ static void
 compress_encode_base(uint8_t *out, scalar *s, int bits);
 static void
 decode_decompress_base(scalar *out, const uint8_t *in, int bits);
+static void
+tomsg_base(uint8_t out[DEGREE / 8], scalar *s);
+static void
+scalar_decode_decompress_add(scalar *out, const uint8_t in[DEGREE / 8]);
 
 /**
  * @brief Compress_d and ByteEncode_d with the AVX2 kernel for \a bits, if any.
@@ -498,6 +506,18 @@ decode_decompress_avx2(scalar *out, const uint8_t *in, int bits)
 }
 
 /**
+ * @brief Compress_1 and ByteEncode_1 of the decrypted message (AVX2).
+ *
+ * @param [out] out  32-byte message
+ * @param [in]  s    Input coefficients in [0, q)
+ */
+static void
+tomsg_avx2(uint8_t out[DEGREE / 8], scalar *s)
+{
+        ml_kem_poly_tomsg_avx2(out, s);
+}
+
+/**
  * @brief Assign the base (portable C) polynomial primitives to \a self.
  *
  * @param [in,out] self  ML-KEM context to initialise
@@ -513,6 +533,8 @@ ossl_ml_kem_poly_init_base(IMB_ML_KEM *self)
         self->poly_mult_add = poly_mult_add_base;
         self->poly_compress_encode = compress_encode_base;
         self->poly_decode_decompress = decode_decompress_base;
+        self->poly_tomsg = tomsg_base;
+        self->poly_frommsg_add = scalar_decode_decompress_add;
         self->rej_uniform_block = rej_uniform_block_base;
 }
 
@@ -532,6 +554,8 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_mult_add = ml_kem_mul_add_avx2;
         self->poly_compress_encode = compress_encode_avx2;
         self->poly_decode_decompress = decode_decompress_avx2;
+        self->poly_tomsg = tomsg_avx2;
+        self->poly_frommsg_add = ml_kem_poly_frommsg_add_avx2;
         self->rej_uniform_block = ml_kem_rej_uniform_block_avx2;
 }
 
@@ -1010,6 +1034,14 @@ decode_decompress_base(scalar *out, const uint8_t *in, int bits)
         scalar_decompress(out, bits);
 }
 
+/* Compress_1 and ByteEncode_1, |s| is compressed in place */
+static void
+tomsg_base(uint8_t out[DEGREE / 8], scalar *s)
+{
+        scalar_compress(s, 1);
+        scalar_encode_1(out, s);
+}
+
 /* Addition updating the LHS vector in-place. */
 static void
 vector_add(const IMB_ML_KEM *self, scalar *lhs, const scalar *rhs, int rank)
@@ -1362,7 +1394,7 @@ encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
         self->poly_add(&v, e2);
 
         /* Combine message with |v| */
-        scalar_decode_decompress_add(&v, message);
+        self->poly_frommsg_add(&v, message);
         self->poly_compress_encode(out + vinfo->u_vector_bytes, &v, dv);
         ret = 1;
 
@@ -1390,8 +1422,7 @@ decrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES], con
         inner_product(self, &mask, key->s, u, rank);
         self->poly_ntt_inverse(&mask);
         self->poly_sub(&v, &mask);
-        scalar_compress(&v, 1);
-        scalar_encode_1(out, &v);
+        self->poly_tomsg(out, &v);
 
         OPENSSL_cleanse((void *) &v, sizeof(v));
         OPENSSL_cleanse((void *) &mask, sizeof(mask));

@@ -90,6 +90,10 @@ typedef void(ML_KEM_POLY_COMPRESS_FN)(uint8_t *out, struct ossl_ml_kem_scalar_st
 /* ByteDecode_d and Decompress_d */
 typedef void(ML_KEM_POLY_DECOMPRESS_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in,
                                         int bits);
+/* Compress_1 and ByteEncode_1 of the message, the input may be modified */
+typedef void(ML_KEM_POLY_TOMSG_FN)(uint8_t *out, struct ossl_ml_kem_scalar_st *in);
+/* ByteDecode_1 and Decompress_1 of the message, added to out */
+typedef void(ML_KEM_POLY_FROMMSG_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
 
 struct IMB_ML_KEM {
         IMB_MGR *mgr;
@@ -117,6 +121,8 @@ struct IMB_ML_KEM {
         ML_KEM_POLY_MULT_FN *poly_mult_add;
         ML_KEM_POLY_COMPRESS_FN *poly_compress_encode;
         ML_KEM_POLY_DECOMPRESS_FN *poly_decode_decompress;
+        ML_KEM_POLY_TOMSG_FN *poly_tomsg;
+        ML_KEM_POLY_FROMMSG_FN *poly_frommsg_add;
         ML_KEM_REJ_UNIFORM_FN *rej_uniform_block;
         ML_KEM_MATRIX_EXPAND_FN *matrix_expand;
 
