@@ -9,8 +9,8 @@
 #
 # Description:
 #   AVX2 implementations of the ML-KEM polynomial operations outside the NTT
-#   (FIPS 203): SampleNTT rejection sampling, and Compress/Decompress with
-#   packing for d = 1, 4, 5, 10 and 11.
+#   (FIPS 203): SampleNTT rejection sampling, Compress/Decompress with
+#   packing for d = 1, 4, 5, 10 and 11, and SamplePolyCBD for eta = 2 and 3.
 #
 # Notes:
 #   - Rejection sampling branches on public data (derived from rho) only;
@@ -537,6 +537,210 @@ ml_kem_poly_frommsg_add_avx2:
 .size   ml_kem_poly_frommsg_add_avx2, .-ml_kem_poly_frommsg_add_avx2
 ___
 
+###############################################################################
+# cbd_fixup
+#
+# Description:
+#   Maps 16 words holding c + bias, with c in [-bias, bias], to c mod q in
+#   [0, q). x - bias wraps to a large unsigned value when c < 0, so the
+#   unsigned minimum of (x - bias) and (x - bias + q) selects the right one.
+#
+# Parameters:
+#   x    - YMM with input/output coefficients
+#   bias - YMM loaded with bias (words)
+#   qb   - YMM loaded with q - bias (words)
+#   tmp  - scratch YMM
+###############################################################################
+sub cbd_fixup {
+    my ($x, $bias, $qb, $tmp) = @_;
+
+    $code .= <<___;
+    vpaddw  $qb, $x, $tmp
+    vpsubw  $bias, $x, $x
+    vpminuw $tmp, $x, $x
+___
+}
+
+$code .= <<___;
+
+###############################################################################
+# ml_kem_poly_cbd2_avx2
+#
+# SamplePolyCBD for eta = 2 (FIPS 203, Algorithm 8).
+#
+# C Prototype:
+#   void ml_kem_poly_cbd2_avx2(
+#       uint16_t *out,              // (rdi) 256 output coefficients
+#       const uint8_t *in           // (rsi) 128 PRF output bytes
+#   );
+#
+# Description:
+#   Each byte yields two coefficients: (b0 + b1) - (b2 + b3) from the low
+#   nibble and (b4 + b5) - (b6 + b7) from the high nibble. Bit pairs are
+#   summed with byte-wise shifts and masks, then each nibble is formed as
+#   a + 3 - b in [1, 5], so no borrow crosses a nibble, and the bias of 3
+#   is removed by cbd_fixup. 32 input bytes give
+#   64 coefficients per iteration.
+#
+# Output:
+#   out - coefficients in [0, q)
+###############################################################################
+.align 32
+.globl  ml_kem_poly_cbd2_avx2
+.type   ml_kem_poly_cbd2_avx2,\@function,2
+ml_kem_poly_cbd2_avx2:
+.cfi_startproc
+    endbranch
+    mov     \$4, %ecx
+
+.align 32
+.Lcbd2_loop:
+    vpbroadcastd ml_kem_cbd_mask_55(%rip), %ymm5
+    vpbroadcastd ml_kem_cbd_mask_33(%rip), %ymm4
+    vpbroadcastd ml_kem_cbd_mask_0f(%rip), %ymm3
+    vmovdqu (%rsi), %ymm0
+    vpsrlw  \$1, %ymm0, %ymm1
+    vpand   %ymm5, %ymm0, %ymm0
+    vpand   %ymm5, %ymm1, %ymm1
+    vpaddb  %ymm1, %ymm0, %ymm0
+    vpsrlw  \$2, %ymm0, %ymm1
+    vpand   %ymm4, %ymm0, %ymm0
+    vpand   %ymm4, %ymm1, %ymm1
+    vpaddb  %ymm4, %ymm0, %ymm0
+    vpsubb  %ymm1, %ymm0, %ymm0
+    vpsrlw  \$4, %ymm0, %ymm1
+    vpand   %ymm3, %ymm0, %ymm0
+    vpand   %ymm3, %ymm1, %ymm1
+    vpunpcklbw %ymm1, %ymm0, %ymm2
+    vpunpckhbw %ymm1, %ymm0, %ymm0
+    vpbroadcastw ml_kem_cbd_bias(%rip), %ymm4
+    vpbroadcastw ml_kem_cbd_qbias(%rip), %ymm5
+    vpmovzxbw %xmm2, %ymm1
+___
+    &cbd_fixup("%ymm1", "%ymm4", "%ymm5", "%ymm3");
+$code .= <<___;
+    vmovdqu %ymm1, (%rdi)
+    vpmovzxbw %xmm0, %ymm1
+___
+    &cbd_fixup("%ymm1", "%ymm4", "%ymm5", "%ymm3");
+$code .= <<___;
+    vmovdqu %ymm1, 32(%rdi)
+    vextracti128 \$1, %ymm2, %xmm2
+    vpmovzxbw %xmm2, %ymm1
+___
+    &cbd_fixup("%ymm1", "%ymm4", "%ymm5", "%ymm3");
+$code .= <<___;
+    vmovdqu %ymm1, 64(%rdi)
+    vextracti128 \$1, %ymm0, %xmm0
+    vpmovzxbw %xmm0, %ymm1
+___
+    &cbd_fixup("%ymm1", "%ymm4", "%ymm5", "%ymm3");
+$code .= <<___;
+    vmovdqu %ymm1, 96(%rdi)
+
+    add     \$32, %rsi
+    add     \$128, %rdi
+    dec     %ecx
+    jnz     .Lcbd2_loop
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_cbd2_avx2, .-ml_kem_poly_cbd2_avx2
+
+###############################################################################
+# ml_kem_poly_cbd3_avx2
+#
+# SamplePolyCBD for eta = 3 (FIPS 203, Algorithm 8).
+#
+# C Prototype:
+#   void ml_kem_poly_cbd3_avx2(
+#       uint16_t *out,              // (rdi) 256 output coefficients
+#       const uint8_t *in           // (rsi) 192 PRF output bytes
+#   );
+#
+# Description:
+#   Every 3 bytes (24 bits) yield four coefficients, each from 6 bits:
+#   (b0 + b1 + b2) - (b3 + b4 + b5). Each 3-byte group is gathered into a
+#   dword, the 3-bit fields are summed in place and a + 3 - b is formed per
+#   coefficient (in [0, 6], no borrow across fields). 24 input bytes give 32
+#   coefficients per iteration.
+#
+# Output:
+#   out - coefficients in [0, q)
+###############################################################################
+.align 32
+.globl  ml_kem_poly_cbd3_avx2
+.type   ml_kem_poly_cbd3_avx2,\@function,2
+ml_kem_poly_cbd3_avx2:
+.cfi_startproc
+    endbranch
+    mov     \$8, %ecx
+
+.align 32
+.Lcbd3_loop:
+    vmovdqu (%rsi), %xmm0
+    vinserti128 \$1, 8(%rsi), %ymm0, %ymm0
+    vpshufb ml_kem_cbd3_shuf(%rip), %ymm0, %ymm0
+    vpbroadcastd ml_kem_cbd3_mask_249(%rip), %ymm5
+    vpsrld  \$1, %ymm0, %ymm1
+    vpsrld  \$2, %ymm0, %ymm2
+    vpand   %ymm5, %ymm0, %ymm0
+    vpand   %ymm5, %ymm1, %ymm1
+    vpand   %ymm5, %ymm2, %ymm2
+    vpaddd  %ymm1, %ymm0, %ymm0
+    vpaddd  %ymm2, %ymm0, %ymm0
+    vpsrld  \$3, %ymm0, %ymm1
+    vpbroadcastd ml_kem_cbd3_bias_6db(%rip), %ymm5
+    vpaddd  %ymm5, %ymm0, %ymm0
+    vpsubd  %ymm1, %ymm0, %ymm0
+    vpslld  \$10, %ymm0, %ymm1
+    vpsrld  \$12, %ymm0, %ymm2
+    vpsrld  \$2, %ymm0, %ymm3
+    vpbroadcastd ml_kem_cbd3_mask_07(%rip), %ymm5
+    vpbroadcastd ml_kem_cbd3_mask_70000(%rip), %ymm4
+    vpand   %ymm5, %ymm0, %ymm0
+    vpand   %ymm4, %ymm1, %ymm1
+    vpand   %ymm5, %ymm2, %ymm2
+    vpand   %ymm4, %ymm3, %ymm3
+    vpaddw  %ymm1, %ymm0, %ymm0
+    vpaddw  %ymm3, %ymm2, %ymm1
+    vpunpckldq %ymm1, %ymm0, %ymm2
+    vpunpckhdq %ymm1, %ymm0, %ymm3
+    vperm2i128 \$0x20, %ymm3, %ymm2, %ymm0
+    vperm2i128 \$0x31, %ymm3, %ymm2, %ymm1
+    vpbroadcastw ml_kem_cbd_bias(%rip), %ymm4
+    vpbroadcastw ml_kem_cbd_qbias(%rip), %ymm5
+___
+    &cbd_fixup("%ymm0", "%ymm4", "%ymm5", "%ymm2");
+    &cbd_fixup("%ymm1", "%ymm4", "%ymm5", "%ymm3");
+$code .= <<___;
+    vmovdqu %ymm0, (%rdi)
+    vmovdqu %ymm1, 32(%rdi)
+
+    add     \$24, %rsi
+    add     \$64, %rdi
+    dec     %ecx
+    jnz     .Lcbd3_loop
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_cbd3_avx2, .-ml_kem_poly_cbd3_avx2
+___
+
 $code .= <<___;
 
 .section    .rodata
@@ -674,6 +878,42 @@ foreach my $d (4, 5, 10, 11) {
         $code .= "ml_kem_unpack_shuf${d}_g$g:\n" . &decompress_shuf($d, $off) if ($off > 0);
     }
 }
+
+$code .= <<___;
+
+# CBD eta = 2: bit-pair, nibble-pair and nibble masks
+.align 4
+ml_kem_cbd_mask_55:
+    .long 0x55555555
+ml_kem_cbd_mask_33:
+    .long 0x33333333
+ml_kem_cbd_mask_0f:
+    .long 0x0f0f0f0f
+
+# CBD eta = 3: 3-bit field masks and the a + 3 - b bias of every field
+ml_kem_cbd3_mask_249:
+    .long 0x00249249
+ml_kem_cbd3_bias_6db:
+    .long 0x006db6db
+ml_kem_cbd3_mask_07:
+    .long 0x00000007
+ml_kem_cbd3_mask_70000:
+    .long 0x00070000
+
+# CBD fixup bias (both eta) and q - bias (words)
+.align 2
+ml_kem_cbd_bias:
+    .value 3
+ml_kem_cbd_qbias:
+    .value 3326
+
+# CBD eta = 3 gather: lane 0 takes bytes 0-11, lane 1 bytes 12-23 (its load
+# starts at byte 8), one 3-byte group per dword
+.align 32
+ml_kem_cbd3_shuf:
+    .byte 0,1,2,0x80,3,4,5,0x80,6,7,8,0x80,9,10,11,0x80
+    .byte 4,5,6,0x80,7,8,9,0x80,10,11,12,0x80,13,14,15,0x80
+___
 
 $code .= <<___;
 

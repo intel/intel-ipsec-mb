@@ -116,6 +116,12 @@ ml_kem_poly_tomsg_avx2(uint8_t *out, const scalar *in);
 void
 ml_kem_poly_frommsg_add_avx2(scalar *out, const uint8_t *in);
 
+/* AVX2 optimized SamplePolyCBD */
+void
+ml_kem_poly_cbd2_avx2(scalar *out, const uint8_t *in);
+void
+ml_kem_poly_cbd3_avx2(scalar *out, const uint8_t *in);
+
 /* Key material allocation layout */
 #define DECLARE_ML_KEM_PUBKEYDATA(name, rank)                                                      \
         struct name##_alloc {                                                                      \
@@ -143,7 +149,8 @@ DECLARE_ML_KEM_VARIANT_KEYDATA(1024);
 #undef DECLARE_ML_KEM_PUBKEYDATA
 #undef DECLARE_ML_KEM_PRVKEYDATA
 
-typedef __owur int (*CBD_FUNC)(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx,
+typedef __owur int (*CBD_FUNC)(const IMB_ML_KEM *self, scalar *out,
+                               uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx,
                                const ML_KEM_KEY *key);
 static void
 scalar_encode(uint8_t *out, const scalar *s, int bits);
@@ -446,6 +453,10 @@ static void
 tomsg_base(uint8_t out[DEGREE / 8], scalar *s);
 static void
 scalar_decode_decompress_add(scalar *out, const uint8_t in[DEGREE / 8]);
+static void
+cbd2_base(scalar *out, const uint8_t *r);
+static void
+cbd3_base(scalar *out, const uint8_t *r);
 
 /**
  * @brief Compress_d and ByteEncode_d with the AVX2 kernel for \a bits, if any.
@@ -535,6 +546,8 @@ ossl_ml_kem_poly_init_base(IMB_ML_KEM *self)
         self->poly_decode_decompress = decode_decompress_base;
         self->poly_tomsg = tomsg_base;
         self->poly_frommsg_add = scalar_decode_decompress_add;
+        self->poly_cbd2 = cbd2_base;
+        self->poly_cbd3 = cbd3_base;
         self->rej_uniform_block = rej_uniform_block_base;
 }
 
@@ -556,6 +569,8 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_decode_decompress = decode_decompress_avx2;
         self->poly_tomsg = tomsg_avx2;
         self->poly_frommsg_add = ml_kem_poly_frommsg_add_avx2;
+        self->poly_cbd2 = ml_kem_poly_cbd2_avx2;
+        self->poly_cbd3 = ml_kem_poly_cbd3_avx2;
         self->rej_uniform_block = ml_kem_rej_uniform_block_avx2;
 }
 
@@ -1183,25 +1198,19 @@ matrix_expand_base(const IMB_ML_KEM *self, EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
 }
 
 /*
- * Algorithm 7 from the spec, with eta fixed to two and the PRF call
- * included. Creates binominally distributed elements by sampling 2*|eta| bits,
+ * Algorithm 8 from the spec, with eta fixed to two, applied to the PRF
+ * output in |r|. Creates binominally distributed elements by sampling 2*|eta| bits,
  * and setting the coefficient to the count of the first bits minus the count of
  * the second bits, resulting in a centered binomial distribution. Since eta is
  * two this gives -2/2 with a probability of 1/16, -1/1 with probability 1/4,
  * and 0 with probability 3/8.
  */
-static __owur int
-cbd_2(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
+static void
+cbd2_base(scalar *out, const uint8_t *r)
 {
         uint16_t *curr = out->c, *end = curr + DEGREE;
-        uint8_t randbuf[4 * DEGREE / 8], *r = randbuf; /* 64 * eta slots */
         uint16_t value, mask;
         uint8_t b;
-
-        if (!prf(randbuf, sizeof(randbuf), in, mdctx, key)) {
-                OPENSSL_cleanse((void *) randbuf, sizeof(randbuf));
-                return 0;
-        }
 
         do {
                 b = *r++;
@@ -1223,29 +1232,34 @@ cbd_2(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx, const
                 mask = constish_time_true(value >> 15);
                 *curr++ = value + (kPrime & mask);
         } while (curr < end);
+}
 
+/* As cbd2_base(), with the PRF call included */
+static __owur int
+cbd_2(const IMB_ML_KEM *self, scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx,
+      const ML_KEM_KEY *key)
+{
+        uint8_t randbuf[4 * DEGREE / 8]; /* 64 * eta slots */
+        int ret = prf(randbuf, sizeof(randbuf), in, mdctx, key);
+
+        if (ret)
+                self->poly_cbd2(out, randbuf);
         OPENSSL_cleanse((void *) randbuf, sizeof(randbuf));
-        return 1;
+        return ret;
 }
 
 /*
- * Algorithm 7 from the spec, with eta fixed to three and the PRF call
- * included. Creates binominally distributed elements by sampling 3*|eta| bits,
+ * Algorithm 8 from the spec, with eta fixed to three, applied to the PRF
+ * output in |r|. Creates binominally distributed elements by sampling 3*|eta| bits,
  * and setting the coefficient to the count of the first bits minus the count of
  * the second bits, resulting in a centered binomial distribution.
  */
-static __owur int
-cbd_3(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
+static void
+cbd3_base(scalar *out, const uint8_t *r)
 {
         uint16_t *curr = out->c, *end = curr + DEGREE;
-        uint8_t randbuf[6 * DEGREE / 8], *r = randbuf; /* 64 * eta slots */
         uint8_t b1, b2, b3;
         uint16_t value, mask;
-
-        if (!prf(randbuf, sizeof(randbuf), in, mdctx, key)) {
-                OPENSSL_cleanse((void *) randbuf, sizeof(randbuf));
-                return 0;
-        }
 
         do {
                 b1 = *r++;
@@ -1279,9 +1293,20 @@ cbd_3(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx, const
                 mask = constish_time_true(value >> 15);
                 *curr++ = value + (kPrime & mask);
         } while (curr < end);
+}
 
+/* As cbd3_base(), with the PRF call included */
+static __owur int
+cbd_3(const IMB_ML_KEM *self, scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx,
+      const ML_KEM_KEY *key)
+{
+        uint8_t randbuf[6 * DEGREE / 8]; /* 64 * eta slots */
+        int ret = prf(randbuf, sizeof(randbuf), in, mdctx, key);
+
+        if (ret)
+                self->poly_cbd3(out, randbuf);
         OPENSSL_cleanse((void *) randbuf, sizeof(randbuf));
-        return 1;
+        return ret;
 }
 
 /*
@@ -1289,8 +1314,9 @@ cbd_3(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1], EVP_MD_CTX *mdctx, const
  * scalar elements and incrementing |counter| for each slot of the vector.
  */
 static __owur int
-gencbd_vector(scalar *out, CBD_FUNC cbd, uint8_t *counter, const uint8_t seed[ML_KEM_RANDOM_BYTES],
-              int rank, EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
+gencbd_vector(const IMB_ML_KEM *self, scalar *out, CBD_FUNC cbd, uint8_t *counter,
+              const uint8_t seed[ML_KEM_RANDOM_BYTES], int rank, EVP_MD_CTX *mdctx,
+              const ML_KEM_KEY *key)
 {
         uint8_t input[ML_KEM_RANDOM_BYTES + 1];
         int ret = 0;
@@ -1298,7 +1324,7 @@ gencbd_vector(scalar *out, CBD_FUNC cbd, uint8_t *counter, const uint8_t seed[ML
         memcpy(input, seed, ML_KEM_RANDOM_BYTES);
         do {
                 input[ML_KEM_RANDOM_BYTES] = (*counter)++;
-                if (!cbd(out++, input, mdctx, key))
+                if (!cbd(self, out++, input, mdctx, key))
                         goto end;
         } while (--rank > 0);
         ret = 1;
@@ -1322,7 +1348,7 @@ gencbd_vector_ntt(const IMB_ML_KEM *self, scalar *out, CBD_FUNC cbd, uint8_t *co
         memcpy(input, seed, ML_KEM_RANDOM_BYTES);
         do {
                 input[ML_KEM_RANDOM_BYTES] = (*counter)++;
-                if (!cbd(out, input, mdctx, key))
+                if (!cbd(self, out, input, mdctx, key))
                         goto end;
                 self->poly_ntt(out++);
         } while (--rank > 0);
@@ -1381,7 +1407,7 @@ encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
         matrix_mult_intt(self, u, key->m, y, rank);
 
         /* All done with |y|, now free to reuse tmp[0] for FIPS 203 |e1| */
-        if (!gencbd_vector(e1, cbd_2, &counter, r, rank, mdctx, key))
+        if (!gencbd_vector(self, e1, cbd_2, &counter, r, rank, mdctx, key))
                 goto end;
         vector_add(self, u, e1, rank);
         vector_compress_encode(self, out, u, du, rank);
@@ -1389,7 +1415,7 @@ encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
         /* All done with |e1|, now free to reuse tmp[0] for FIPS 203 |e2| */
         memcpy(input, r, ML_KEM_RANDOM_BYTES);
         input[ML_KEM_RANDOM_BYTES] = counter;
-        if (!cbd_2(e2, input, mdctx, key))
+        if (!cbd_2(self, e2, input, mdctx, key))
                 goto end;
         self->poly_add(&v, e2);
 
