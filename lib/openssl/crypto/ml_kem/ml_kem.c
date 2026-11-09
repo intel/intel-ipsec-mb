@@ -94,6 +94,24 @@ ml_kem_mul_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
 void
 ml_kem_mul_add_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
 
+/* AVX2 optimized Compress/Decompress and packing */
+void
+ml_kem_poly_compress4_avx2(uint8_t *out, const scalar *in);
+void
+ml_kem_poly_compress5_avx2(uint8_t *out, const scalar *in);
+void
+ml_kem_poly_compress10_avx2(uint8_t *out, const scalar *in);
+void
+ml_kem_poly_compress11_avx2(uint8_t *out, const scalar *in);
+void
+ml_kem_poly_decompress4_avx2(scalar *out, const uint8_t *in);
+void
+ml_kem_poly_decompress5_avx2(scalar *out, const uint8_t *in);
+void
+ml_kem_poly_decompress10_avx2(scalar *out, const uint8_t *in);
+void
+ml_kem_poly_decompress11_avx2(scalar *out, const uint8_t *in);
+
 /* Key material allocation layout */
 #define DECLARE_ML_KEM_PUBKEYDATA(name, rank)                                                      \
         struct name##_alloc {                                                                      \
@@ -416,6 +434,68 @@ static void
 poly_mult_base(scalar *out, const scalar *lhs, const scalar *rhs);
 static void
 poly_mult_add_base(scalar *out, const scalar *lhs, const scalar *rhs);
+static void
+compress_encode_base(uint8_t *out, scalar *s, int bits);
+static void
+decode_decompress_base(scalar *out, const uint8_t *in, int bits);
+
+/**
+ * @brief Compress_d and ByteEncode_d with the AVX2 kernel for \a bits, if any.
+ *
+ * @param [out]    out   Encoded output, 32 * \a bits bytes
+ * @param [in,out] s     Input coefficients in [0, q), may be modified
+ * @param [in]     bits  Compressed bit width d
+ */
+static void
+compress_encode_avx2(uint8_t *out, scalar *s, int bits)
+{
+        switch (bits) {
+        case 4:
+                ml_kem_poly_compress4_avx2(out, s);
+                break;
+        case 5:
+                ml_kem_poly_compress5_avx2(out, s);
+                break;
+        case 10:
+                ml_kem_poly_compress10_avx2(out, s);
+                break;
+        case 11:
+                ml_kem_poly_compress11_avx2(out, s);
+                break;
+        default:
+                compress_encode_base(out, s, bits);
+                break;
+        }
+}
+
+/**
+ * @brief ByteDecode_d and Decompress_d with the AVX2 kernel for \a bits, if any.
+ *
+ * @param [out] out   Output coefficients in [0, q)
+ * @param [in]  in    Encoded input, 32 * \a bits bytes
+ * @param [in]  bits  Compressed bit width d
+ */
+static void
+decode_decompress_avx2(scalar *out, const uint8_t *in, int bits)
+{
+        switch (bits) {
+        case 4:
+                ml_kem_poly_decompress4_avx2(out, in);
+                break;
+        case 5:
+                ml_kem_poly_decompress5_avx2(out, in);
+                break;
+        case 10:
+                ml_kem_poly_decompress10_avx2(out, in);
+                break;
+        case 11:
+                ml_kem_poly_decompress11_avx2(out, in);
+                break;
+        default:
+                decode_decompress_base(out, in, bits);
+                break;
+        }
+}
 
 /**
  * @brief Assign the base (portable C) polynomial primitives to \a self.
@@ -431,6 +511,8 @@ ossl_ml_kem_poly_init_base(IMB_ML_KEM *self)
         self->poly_sub = poly_sub_base;
         self->poly_mult = poly_mult_base;
         self->poly_mult_add = poly_mult_add_base;
+        self->poly_compress_encode = compress_encode_base;
+        self->poly_decode_decompress = decode_decompress_base;
         self->rej_uniform_block = rej_uniform_block_base;
 }
 
@@ -448,6 +530,8 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_sub = ml_kem_sub_avx2;
         self->poly_mult = ml_kem_mul_avx2;
         self->poly_mult_add = ml_kem_mul_add_avx2;
+        self->poly_compress_encode = compress_encode_avx2;
+        self->poly_decode_decompress = decode_decompress_avx2;
         self->rej_uniform_block = ml_kem_rej_uniform_block_avx2;
 }
 
@@ -910,6 +994,22 @@ scalar_decompress(scalar *s, int bits)
                 s->c[i] = decompress(s->c[i], bits);
 }
 
+/* Compress_d and ByteEncode_d, |s| is compressed in place */
+static void
+compress_encode_base(uint8_t *out, scalar *s, int bits)
+{
+        scalar_compress(s, bits);
+        scalar_encode(out, s, bits);
+}
+
+/* ByteDecode_d and Decompress_d */
+static void
+decode_decompress_base(scalar *out, const uint8_t *in, int bits)
+{
+        scalar_decode(out, in, bits);
+        scalar_decompress(out, bits);
+}
+
 /* Addition updating the LHS vector in-place. */
 static void
 vector_add(const IMB_ML_KEM *self, scalar *lhs, const scalar *rhs, int rank)
@@ -934,6 +1034,19 @@ vector_encode(uint8_t *out, const scalar *a, int bits, int rank)
 }
 
 /*
+ * Compresses and encodes an entire vector into 32*|rank|*|bits| bytes, see
+ * vector_encode(). The input vector may be modified.
+ */
+static void
+vector_compress_encode(const IMB_ML_KEM *self, uint8_t *out, scalar *a, int bits, int rank)
+{
+        int stride = bits * DEGREE / 8;
+
+        for (; rank-- > 0; out += stride)
+                self->poly_compress_encode(out, a++, bits);
+}
+
+/*
  * Decodes 32*|rank|*|bits| bytes from |in| into |out|. It returns early
  * if any parsed value is >= |ML_KEM_PRIME|.  The resulting scalars are
  * then decompressed and transformed via the NTT.
@@ -949,8 +1062,7 @@ vector_decode_decompress_ntt(const IMB_ML_KEM *self, scalar *out, const uint8_t 
         int stride = bits * DEGREE / 8;
 
         for (; rank-- > 0; in += stride, ++out) {
-                scalar_decode(out, in, bits);
-                scalar_decompress(out, bits);
+                self->poly_decode_decompress(out, in, bits);
                 self->poly_ntt(out);
         }
 }
@@ -965,15 +1077,6 @@ vector_decode_12(scalar *out, const uint8_t in[3 * DEGREE / 2], int rank)
                 if (!scalar_decode_12(out++, in))
                         return 0;
         return 1;
-}
-
-/* In-place compression of each scalar component */
-static void
-vector_compress(scalar *a, int bits, int rank)
-{
-        do {
-                scalar_compress(a++, bits);
-        } while (--rank > 0);
 }
 
 /* The output scalar must not overlap with the inputs */
@@ -1249,8 +1352,7 @@ encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
         if (!gencbd_vector(e1, cbd_2, &counter, r, rank, mdctx, key))
                 goto end;
         vector_add(self, u, e1, rank);
-        vector_compress(u, du, rank);
-        vector_encode(out, u, du, rank);
+        vector_compress_encode(self, out, u, du, rank);
 
         /* All done with |e1|, now free to reuse tmp[0] for FIPS 203 |e2| */
         memcpy(input, r, ML_KEM_RANDOM_BYTES);
@@ -1261,8 +1363,7 @@ encrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
 
         /* Combine message with |v| */
         scalar_decode_decompress_add(&v, message);
-        scalar_compress(&v, dv);
-        scalar_encode(out + vinfo->u_vector_bytes, &v, dv);
+        self->poly_compress_encode(out + vinfo->u_vector_bytes, &v, dv);
         ret = 1;
 
 end:
@@ -1285,8 +1386,7 @@ decrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES], con
         int dv = vinfo->dv;
 
         vector_decode_decompress_ntt(self, u, ctext, du, rank);
-        scalar_decode(&v, ctext + vinfo->u_vector_bytes, dv);
-        scalar_decompress(&v, dv);
+        self->poly_decode_decompress(&v, ctext + vinfo->u_vector_bytes, dv);
         inner_product(self, &mask, key->s, u, rank);
         self->poly_ntt_inverse(&mask);
         self->poly_sub(&v, &mask);

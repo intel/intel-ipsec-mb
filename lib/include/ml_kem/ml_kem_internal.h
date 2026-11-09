@@ -85,6 +85,11 @@ typedef int(ML_KEM_MATRIX_EXPAND_FN)(const IMB_ML_KEM *self, struct evp_md_ctx_s
 typedef void(ML_KEM_POLY_MULT_FN)(struct ossl_ml_kem_scalar_st *out,
                                   const struct ossl_ml_kem_scalar_st *lhs,
                                   const struct ossl_ml_kem_scalar_st *rhs);
+/* Compress_d and ByteEncode_d, the input may be modified */
+typedef void(ML_KEM_POLY_COMPRESS_FN)(uint8_t *out, struct ossl_ml_kem_scalar_st *in, int bits);
+/* ByteDecode_d and Decompress_d */
+typedef void(ML_KEM_POLY_DECOMPRESS_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in,
+                                        int bits);
 
 struct IMB_ML_KEM {
         IMB_MGR *mgr;
@@ -110,6 +115,8 @@ struct IMB_ML_KEM {
         ML_KEM_POLY_ARITH_FN *poly_sub;
         ML_KEM_POLY_MULT_FN *poly_mult;
         ML_KEM_POLY_MULT_FN *poly_mult_add;
+        ML_KEM_POLY_COMPRESS_FN *poly_compress_encode;
+        ML_KEM_POLY_DECOMPRESS_FN *poly_decode_decompress;
         ML_KEM_REJ_UNIFORM_FN *rej_uniform_block;
         ML_KEM_MATRIX_EXPAND_FN *matrix_expand;
 

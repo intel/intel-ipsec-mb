@@ -9,10 +9,14 @@
 #
 # Description:
 #   AVX2 implementations of the ML-KEM polynomial operations outside the NTT
-#   (FIPS 203): SampleNTT rejection sampling.
+#   (FIPS 203): SampleNTT rejection sampling, and Compress/Decompress with
+#   packing for d = 4, 5, 10 and 11.
 #
 # Notes:
-#   - Rejection sampling branches on public data (derived from rho) only
+#   - Rejection sampling branches on public data (derived from rho) only;
+#     the other routines have a fixed trip count
+#   - Only YMM0-YMM5 are used (volatile on SysV and Win64); they are cleared
+#     before returning
 #   - Must be kept functionally synchronized with the base implementations
 #     in ml_kem.c
 ###############################################################################
@@ -177,6 +181,245 @@ ml_kem_rej_uniform_block_avx2:
     ret
 .cfi_endproc
 .size   ml_kem_rej_uniform_block_avx2, .-ml_kem_rej_uniform_block_avx2
+___
+
+###############################################################################
+# decompress_tail
+#
+# Description:
+#   Finishes 16 coefficients from the gathered dwords of two groups: aligns
+#   and masks each field, packs to words in order, applies Decompress_d and
+#   stores them to (%rdi).
+#
+# Parameters:
+#   d     - compressed bit width
+#   lo    - YMM with the gathered first group; clobbered
+#   hi    - YMM with the gathered second group; clobbered
+#   shift - YMM with the per-dword field shifts
+#   mask  - YMM with the dword field mask
+#   q     - YMM loaded with q (words)
+###############################################################################
+sub decompress_tail {
+    my ($d, $lo, $hi, $shift, $mask, $q) = @_;
+
+    $code .= <<___;
+    vpsrlvd $shift, $lo, $lo
+    vpsrlvd $shift, $hi, $hi
+    vpand   $mask, $lo, $lo
+    vpand   $mask, $hi, $hi
+    vpackusdw $hi, $lo, $lo
+    vpermq  \$0xd8, $lo, $lo
+    vpsllw  \$@{[15 - $d]}, $lo, $lo
+    vpmulhrsw $q, $lo, $lo
+    vmovdqu $lo, (%rdi)
+___
+}
+
+###############################################################################
+# store_bytes
+#
+# Description:
+#   Stores exactly the low d bytes of an XMM register to off(%rdi).
+#
+# Parameters:
+#   x   - XMM holding the packed bytes
+#   off - byte offset from %rdi
+#   d   - number of bytes to store (4, 5, 10 or 11)
+###############################################################################
+sub store_bytes {
+    my ($x, $off, $d) = @_;
+
+    if ($d == 4) {
+        $code .= "    vmovd   $x, $off(%rdi)\n";
+    } elsif ($d == 5) {
+        $code .= "    vmovd   $x, $off(%rdi)\n";
+        $code .= "    vpextrb \$4, $x, " . ($off + 4) . "(%rdi)\n";
+    } else {
+        $code .= "    vmovq   $x, $off(%rdi)\n";
+        $code .= "    vpextrw \$4, $x, " . ($off + 8) . "(%rdi)\n";
+        $code .= "    vpextrb \$10, $x, " . ($off + 10) . "(%rdi)\n" if ($d == 11);
+    }
+}
+
+###############################################################################
+# decompress_safe_iters
+#
+# Description:
+#   Returns the number of leading ByteDecode_d iterations whose two 16-byte
+#   group loads stay inside the 32 * d byte input.
+###############################################################################
+sub decompress_safe_iters {
+    my ($d) = @_;
+
+    return int((31 * $d - 16) / (2 * $d)) + 1;
+}
+
+foreach my $d (4, 5, 10, 11) {
+    my $s32 = 32 - 2 * $d;
+    my $bytes = 32 * $d;
+    my $safe = &decompress_safe_iters($d);
+
+    $code .= <<___;
+
+###############################################################################
+# ml_kem_poly_compress${d}_avx2
+#
+# Compress_d followed by ByteEncode_d for d = $d (FIPS 203, Section 4.2.1).
+#
+# C Prototype:
+#   void ml_kem_poly_compress${d}_avx2(
+#       uint8_t *out,               // (rdi) $bytes output bytes
+#       const uint16_t *in          // (rsi) 256 input coefficients
+#   );
+#
+# Description:
+#   Compress_d is computed exactly with 16-bit multiplies (round(x * 2^d / q)
+#   via a Barrett style estimate and rounding multiply). The 16 d-bit values
+#   of each iteration are then merged: pairs into dwords with vpmaddwd, dword
+#   pairs into qwords with a variable shift and qword pairs into each 128-bit
+#   lane, which then holds $d packed bytes.
+#
+# Inputs:
+#   in - coefficients in [0, q)
+###############################################################################
+.align 32
+.globl  ml_kem_poly_compress${d}_avx2
+.type   ml_kem_poly_compress${d}_avx2,\@function,2
+ml_kem_poly_compress${d}_avx2:
+.cfi_startproc
+    endbranch
+    mov     \$16, %ecx
+
+.align 32
+.Lcompress${d}_loop:
+    vmovdqu (%rsi), %ymm0
+___
+    if ($d < 10) {
+        $code .= <<___;
+    vpmulhw ml_kem_cmp_v(%rip), %ymm0, %ymm0
+    vpmulhrsw ml_kem_cmp_sh$d(%rip), %ymm0, %ymm0
+___
+    } else {
+        $code .= <<___;
+    vpmullw ml_kem_cmp_v8(%rip), %ymm0, %ymm1
+    vpaddw  ml_kem_cmp_off$d(%rip), %ymm0, %ymm2
+    vpsllw  \$3, %ymm0, %ymm0
+    vpmulhw ml_kem_cmp_v(%rip), %ymm0, %ymm0
+    vpsubw  %ymm2, %ymm1, %ymm2
+    vpandn  %ymm2, %ymm1, %ymm1
+    vpsrlw  \$15, %ymm1, %ymm1
+    vpsubw  %ymm1, %ymm0, %ymm0
+    vpmulhrsw ml_kem_cmp_sh$d(%rip), %ymm0, %ymm0
+___
+    }
+    $code .= <<___;
+    vpand   ml_kem_mask_d$d(%rip), %ymm0, %ymm0
+    vpmaddwd ml_kem_pack_madd$d(%rip), %ymm0, %ymm0
+    vpsllvd ml_kem_pack_sllv$d(%rip), %ymm0, %ymm0
+    vpsrlq  \$$s32, %ymm0, %ymm0
+    vpsrldq \$8, %ymm0, %ymm1
+    vpsllq  \$@{[4 * $d]}, %ymm1, %ymm1
+    vpsrlvq ml_kem_pack_srlv$d(%rip), %ymm0, %ymm2
+    vpblendd \$0xcc, %ymm2, %ymm0, %ymm0
+    vpor    %ymm1, %ymm0, %ymm0
+    vextracti128 \$1, %ymm0, %xmm1
+___
+    &store_bytes("%xmm0", 0, $d);
+    &store_bytes("%xmm1", $d, $d);
+    $code .= <<___;
+
+    add     \$32, %rsi
+    add     \$@{[2 * $d]}, %rdi
+    dec     %ecx
+    jnz     .Lcompress${d}_loop
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_compress${d}_avx2, .-ml_kem_poly_compress${d}_avx2
+
+###############################################################################
+# ml_kem_poly_decompress${d}_avx2
+#
+# ByteDecode_d followed by Decompress_d for d = $d (FIPS 203, Section 4.2.1).
+#
+# C Prototype:
+#   void ml_kem_poly_decompress${d}_avx2(
+#       uint16_t *out,              // (rdi) 256 output coefficients
+#       const uint8_t *in           // (rsi) $bytes input bytes
+#   );
+#
+# Description:
+#   Each group of 8 coefficients ($d bytes) is broadcast to both lanes and
+#   each field is gathered into a dword with vpshufb, aligned with vpsrlvd
+#   and masked. Decompress_d is round(x * q / 2^d) = vpmulhrsw(x << (15 - d),
+#   q). Groups near the end of the input are loaded from the last 16 input
+#   bytes with adjusted gathers, so no byte past the input is read.
+#
+# Output:
+#   out - coefficients in [0, q)
+###############################################################################
+.align 32
+.globl  ml_kem_poly_decompress${d}_avx2
+.type   ml_kem_poly_decompress${d}_avx2,\@function,2
+ml_kem_poly_decompress${d}_avx2:
+.cfi_startproc
+    endbranch
+    vmovdqa ml_kem_unpack_srlv$d(%rip), %ymm3
+    vpbroadcastd ml_kem_unpack_mask$d(%rip), %ymm4
+    vpbroadcastw ml_kem_q(%rip), %ymm5
+    mov     \$$safe, %ecx
+
+.align 32
+.Ldecompress${d}_loop:
+    vbroadcasti128 (%rsi), %ymm0
+    vbroadcasti128 $d(%rsi), %ymm1
+    vpshufb ml_kem_unpack_shuf$d(%rip), %ymm0, %ymm0
+    vpshufb ml_kem_unpack_shuf$d(%rip), %ymm1, %ymm1
+___
+    &decompress_tail($d, "%ymm0", "%ymm1", "%ymm3", "%ymm4", "%ymm5");
+    $code .= <<___;
+
+    add     \$@{[2 * $d]}, %rsi
+    add     \$32, %rdi
+    dec     %ecx
+    jnz     .Ldecompress${d}_loop
+___
+    for my $it ($safe .. 15) {
+        for my $h (0, 1) {
+            my $g = 2 * $it + $h;
+            my $off = $g * $d - ($bytes - 16);
+            my $src = ($off > 0) ? ($bytes - 16) - $it * 2 * $d : $h * $d;
+            my $tbl = ($off > 0) ? "ml_kem_unpack_shuf${d}_g$g" : "ml_kem_unpack_shuf$d";
+            $code .= <<___;
+    vbroadcasti128 $src(%rsi), %ymm$h
+    vpshufb $tbl(%rip), %ymm$h, %ymm$h
+___
+        }
+        &decompress_tail($d, "%ymm0", "%ymm1", "%ymm3", "%ymm4", "%ymm5");
+        $code .= <<___;
+    add     \$@{[2 * $d]}, %rsi
+    add     \$32, %rdi
+___
+    }
+    $code .= <<___;
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_decompress${d}_avx2, .-ml_kem_poly_decompress${d}_avx2
+___
+}
+
+$code .= <<___;
 
 .section    .rodata
 
@@ -209,6 +452,90 @@ for (my $m = 0; $m < 256; $m++) {
     my @b = map { (2 * $_, 2 * $_ + 1) } grep { ($m >> $_) & 1 } 0 .. 7;
     push @b, ("0x80") x (16 - @b);
     $code .= "    .byte " . join(",", @b) . "\n";
+}
+
+###############################################################################
+# vec16
+#
+# Description:
+#   Returns a 32-byte rodata entry holding 16 copies of a word constant.
+###############################################################################
+sub vec16 {
+    my ($label, $val) = @_;
+
+    return "$label:\n    .value " . join(",", ($val) x 16) . "\n";
+}
+
+###############################################################################
+# decompress_shuf
+#
+# Description:
+#   Returns a vpshufb mask gathering 8 d-bit fields (4 per lane) from a
+#   16-byte load starting off bytes before the group: each dword gets the
+#   bytes holding its field, lowest first.
+###############################################################################
+sub decompress_shuf {
+    my ($d, $off) = @_;
+    my @b;
+
+    for my $j (0 .. 7) {
+        my $lo = int($j * $d / 8);
+        my $hi = int(($j * $d + $d - 1) / 8);
+        for my $k (0 .. 3) {
+            push @b, ($lo + $k <= $hi) ? $lo + $k + $off : "0x80";
+        }
+    }
+    return "    .byte " . join(",", @b[0 .. 15]) . "\n    .byte " . join(",", @b[16 .. 31]) . "\n";
+}
+
+$code .= <<___;
+
+# ByteDecode_d field masks, 2^d - 1
+___
+
+foreach my $d (4, 5, 10, 11) {
+    $code .= ".align 4\nml_kem_unpack_mask$d:\n    .long " . ((1 << $d) - 1) . "\n";
+}
+
+$code .= <<___;
+
+# Compress_d constants, used as memory operands inside the loops and
+# therefore stored at full vector width: Barrett estimate of x / q (v and
+# 8 * v for d >= 10), correction offsets for d = 10 and 11, rounding scales
+# and d-bit masks
+.align 32
+___
+
+$code .= &vec16("ml_kem_cmp_v", 20159);
+$code .= &vec16("ml_kem_cmp_v8", 30200);
+$code .= &vec16("ml_kem_cmp_off10", 15);
+$code .= &vec16("ml_kem_cmp_off11", 36);
+foreach my $d (4, 5, 10, 11) {
+    $code .= &vec16("ml_kem_cmp_sh$d", ($d < 10) ? 1 << ($d + 5) : 1 << ($d + 2));
+    $code .= &vec16("ml_kem_mask_d$d", (1 << $d) - 1);
+}
+
+$code .= <<___;
+
+# ByteEncode_d merge tables (vpmaddwd weights, dword and qword shifts),
+# ByteDecode_d field shifts and gathers, including the adjusted gathers of
+# the groups loaded from the last 16 input bytes
+.align 32
+___
+
+foreach my $d (4, 5, 10, 11) {
+    my $bytes = 32 * $d;
+    my $safe = &decompress_safe_iters($d);
+
+    $code .= "ml_kem_pack_madd$d:\n    .value " . join(",", (1, 1 << $d) x 8) . "\n";
+    $code .= "ml_kem_pack_sllv$d:\n    .long " . join(",", (32 - 2 * $d, 0) x 4) . "\n";
+    $code .= "ml_kem_pack_srlv$d:\n    .quad " . join(",", (64, 64 - 4 * $d) x 2) . "\n";
+    $code .= "ml_kem_unpack_srlv$d:\n    .long " . join(",", map { ($_ * $d) % 8 } (0 .. 7)) . "\n";
+    $code .= "ml_kem_unpack_shuf$d:\n" . &decompress_shuf($d, 0);
+    for my $g (2 * $safe .. 31) {
+        my $off = $g * $d - ($bytes - 16);
+        $code .= "ml_kem_unpack_shuf${d}_g$g:\n" . &decompress_shuf($d, $off) if ($off > 0);
+    }
 }
 
 $code .= <<___;
