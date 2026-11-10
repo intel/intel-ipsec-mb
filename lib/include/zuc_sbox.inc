@@ -283,39 +283,6 @@ Rotl5_matrix:
 %endmacro
 
 ;
-; Compute 64 S0 box values from 64 bytes, stored in ZMM register, using GFNI
-;
-%macro S0_comput_AVX512 3
-%define %%IN_OUT        %1 ; [in/out] ZMM reg with input values which will contain the output values
-%define %%ZTMP1         %2 ; [clobbered] Temporary ZMM register
-%define %%ZTMP2         %3 ; [clobbered] Temporary ZMM register
-
-        vpandq   %%ZTMP1, %%IN_OUT, [rel High_nibble_mask]
-        vpsrlq   %%ZTMP1, 4                 ; x1
-
-        vpandq   %%IN_OUT, [rel Low_nibble_mask] ; x2
-
-        vmovdqa64  %%ZTMP2, [rel P1]
-        vpshufb  %%ZTMP2, %%IN_OUT ; P1[x2]
-        vpxorq   %%ZTMP2, %%ZTMP1  ; q = x1 ^ P1[x2] ; %%ZTMP1 free
-
-        vmovdqa64 %%ZTMP1, [rel P2]
-        vpshufb  %%ZTMP1, %%ZTMP2 ; P2[q]
-        vpxorq   %%ZTMP1, %%IN_OUT ; r = x2 ^ P2[q] ; %%IN_OUT free
-
-        vmovdqa64  %%IN_OUT, [rel P3]
-        vpshufb  %%IN_OUT, %%ZTMP1 ; P3[r]
-        vpxorq   %%IN_OUT, %%ZTMP2 ; s = q ^ P3[r] ; %%ZTMP2 free
-
-        ; s << 4 (since high nibble of each byte is 0, no masking is required)
-        vpsllq   %%IN_OUT, 4
-        vporq    %%IN_OUT, %%ZTMP1 ; t = (s << 4) | r
-
-        vgf2p8affineqb  %%IN_OUT, %%IN_OUT, [rel Rotl5_matrix], 0x00
-
-%endmacro
-
-;
 ; Perform 8x8 matrix multiplication using lookup tables with partial results
 ; for high and low nible of each input byte
 ;
@@ -488,16 +455,4 @@ Rotl5_matrix:
 %endif
 %endmacro
 
-;
-; Compute 64 S1 box values from 64 bytes, stored in ZMM register, using GFNI and VAES
-;
-%macro S1_comput_AVX512 1
-%define %%ZIN_OUT       %1 ; [in/out] ZMM reg with input values which will contain the output values
-
-        vgf2p8affineqb  %%ZIN_OUT, %%ZIN_OUT, [rel Aes_to_Zuc], 0x00
-        vpshufb         %%ZIN_OUT, [rel Shuf_mask]
-        vaesenclast     %%ZIN_OUT, %%ZIN_OUT, [rel Cancel_aes]
-        vgf2p8affineqb  %%ZIN_OUT, %%ZIN_OUT, [rel CombMatrix], 0x55
-
-%endmacro
 %endif ; end ifndef _ZUC_SBOX_INC_

@@ -38,6 +38,50 @@ extern asm_ZucGenKeystream_avx
 mksection .rodata
 default rel
 
+;; NONLIN_FUN16 constants
+;; Byte masks for k7/k6
+align 8
+even_bytes_kmask:
+dq      0x5555555555555555
+odd_bytes_kmask:
+dq      0xAAAAAAAAAAAAAAAA
+
+;; Byte i <- byte i + 1 (odd bytes to even slots) / byte i <- byte i - 1
+;; (even bytes to odd slots), within each 128-bit lane
+align 64
+shuf_odd_to_even:
+times 4 db 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 15
+align 64
+shuf_even_to_odd:
+times 4 db 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
+
+;; S0(x) = (S0_q_mat * q) ^ S0_r_tab[r], where q = x1 ^ P1[x2], r = x2 ^ P2[q]
+;; - S0_q_mat:    affine matrix for Rotl5(q << 4) (ignores the high nibble of q)
+;; - S0_r_tab[r] = Rotl5((P3[r] << 4) | r), replicated for vpermb
+align 64
+S0_r_tab:
+times 4 db 0x04, 0x2c, 0x54, 0x6c, 0x80, 0xba, 0xd4, 0xfe, 0x07, 0x27, 0x5b, 0x6b, 0x81, 0xb3, 0xd9, 0xfb
+align 64
+S0_q_mat:
+times 8 dq 0x0001020408000000
+
+;; S1(x) = gf2p8affineinv(Aes_to_Zuc * x) with output matrix S1_out_mat and
+;; constant 0x55 (S1_out_mat = CombMatrix * linear part of AES SubBytes)
+align 64
+S1_out_mat:
+times 8 dq 0x6973993a7fb45c4d
+
+;; Rotate each dword left by 8/16/24 bits
+align 64
+rotl8_shuf:
+times 4 db 3, 0, 1, 2, 7, 4, 5, 6, 11, 8, 9, 10, 15, 12, 13, 14
+align 64
+rotl16_shuf:
+times 4 db 2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
+align 64
+rotl24_shuf:
+times 4 db 1, 2, 3, 0, 5, 6, 7, 4, 9, 10, 11, 8, 13, 14, 15, 12
+
 align 64
 EK_d64:
 dd      0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
@@ -87,34 +131,6 @@ db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
 align 64
-S1_S0_shuf:
-db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
-db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
-db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
-db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
-
-align 64
-S0_S1_shuf:
-db      0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E,
-db      0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E,
-db      0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E,
-db      0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E,
-
-align 64
-rev_S1_S0_shuf:
-db      0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B, 0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
-db      0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B, 0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
-db      0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B, 0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
-db      0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B, 0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
-
-align 64
-rev_S0_S1_shuf:
-db      0x08, 0x00, 0x09, 0x01, 0x0A, 0x02, 0x0B, 0x03, 0x0C, 0x04, 0x0D, 0x05, 0x0E, 0x06, 0x0F, 0x07
-db      0x08, 0x00, 0x09, 0x01, 0x0A, 0x02, 0x0B, 0x03, 0x0C, 0x04, 0x0D, 0x05, 0x0E, 0x06, 0x0F, 0x07
-db      0x08, 0x00, 0x09, 0x01, 0x0A, 0x02, 0x0B, 0x03, 0x0C, 0x04, 0x0D, 0x05, 0x0E, 0x06, 0x0F, 0x07
-db      0x08, 0x00, 0x09, 0x01, 0x0A, 0x02, 0x0B, 0x03, 0x0C, 0x04, 0x0D, 0x05, 0x0E, 0x06, 0x0F, 0x07
-
-align 64
 bit_reverse_table:
 times 8 db      0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 
@@ -151,17 +167,6 @@ align 64
 all_3fs:
 dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
 dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
-
-align 16
-bit_mask_table:
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe
 
 byte64_len_to_mask_table:
         dq      0xffffffffffffffff, 0x0000000000000001
@@ -206,21 +211,6 @@ align 32
 all_64w:
 dw      64, 64, 64, 64, 64, 64, 64, 64
 dw      64, 64, 64, 64, 64, 64, 64, 64
-
-align 64
-bswap_mask:
-db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
-db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
-db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
-db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
-db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
-db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
-db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
-db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
-
-align 32
-permw_mask:
-dw      0, 4, 8, 12, 1, 5, 8, 13, 2, 6, 10, 14, 3, 7, 11, 15
 
 extr_bits_0_4_8_12:
 db      00010001b, 00010001b, 00000000b, 00000000b
@@ -358,6 +348,11 @@ mksection .text
 %endmacro
 
 %macro FUNC_RESTORE 0
+
+%ifdef SAFE_DATA
+        ; k7 is a temporary mask in ADD_MOD31 and can hold state-dependent bits
+        kxorq   k7, k7, k7
+%endif
 
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqa xmm6,  [rsp + XMM_OFFSET + 0*16]
@@ -714,44 +709,58 @@ mksection .text
         vpshldd %%ZTMP1, %%W1, %%W2, 16
         vpshldd %%ZTMP2, %%W2, %%W1, 16
 
-        vprold  %%ZTMP3, %%ZTMP1, 10
-        vprold  %%ZTMP4, %%ZTMP1, 18
-        vprold  %%ZTMP5, %%ZTMP1, 24
-        vprold  %%ZTMP6, %%ZTMP1, 2
-        ; ZMM1 = U = L1(P)
+        ; L1/L2, with the rotations by multiples of 8 done by vpshufb
+        ; ZTMP1 = U = L1(P) = P ^ rot24(P) ^ rot2(P ^ rot8(P) ^ rot16(P))
+        vpshufb     %%ZTMP3, %%ZTMP1, [rel rotl8_shuf]
+        vpshufb     %%ZTMP4, %%ZTMP1, [rel rotl16_shuf]
+        vpternlogq  %%ZTMP3, %%ZTMP1, %%ZTMP4, 0x96 ; (A ^ B) ^ C
+        vprold      %%ZTMP3, %%ZTMP3, 2
+        vpshufb     %%ZTMP4, %%ZTMP1, [rel rotl24_shuf]
         vpternlogq  %%ZTMP1, %%ZTMP3, %%ZTMP4, 0x96 ; (A ^ B) ^ C
-        vpternlogq  %%ZTMP1, %%ZTMP5, %%ZTMP6, 0x96 ; (A ^ B) ^ C
 
-        vprold  %%ZTMP3, %%ZTMP2, 8
-        vprold  %%ZTMP4, %%ZTMP2, 14
-        vprold  %%ZTMP5, %%ZTMP2, 22
-        vprold  %%ZTMP6, %%ZTMP2, 30
-        ; ZMM2 = V = L2(Q)
+        ; ZTMP2 = V = L2(Q) = Q ^ rot8(Q) ^ rot30(Q ^ rot16(Q) ^ rot24(Q))
+        vpshufb     %%ZTMP3, %%ZTMP2, [rel rotl16_shuf]
+        vpshufb     %%ZTMP4, %%ZTMP2, [rel rotl24_shuf]
+        vpternlogq  %%ZTMP3, %%ZTMP2, %%ZTMP4, 0x96 ; (A ^ B) ^ C
+        vprold      %%ZTMP3, %%ZTMP3, 30
+        vpshufb     %%ZTMP4, %%ZTMP2, [rel rotl8_shuf]
         vpternlogq  %%ZTMP2, %%ZTMP3, %%ZTMP4, 0x96 ; (A ^ B) ^ C
-        vpternlogq  %%ZTMP2, %%ZTMP5, %%ZTMP6, 0x96 ; (A ^ B) ^ C
 
-        ; Shuffle U and V to have all S0 lookups in XMM1 and all S1 lookups in XMM2
+        ; S-boxes: S0 on the odd bytes and S1 on the even bytes of U and V.
+        ; Gather all S0 inputs into A and all S1 inputs into B, apply the
+        ; S-boxes, then scatter the results back into R1/R2.
+        ; k6/k7 are free in all callers of this macro.
+        kmovq   k7, [rel even_bytes_kmask]
+        kmovq   k6, [rel odd_bytes_kmask]
 
-        ; Compress all S0 and S1 input values in each register
-        ; S0: Bytes 0-7,16-23,32-39,48-55 S1: Bytes 8-15,24-31,40-47,56-63
-        vpshufb %%ZTMP1, [rel S0_S1_shuf]
-        ; S1: Bytes 0-7,16-23,32-39,48-55 S0: Bytes 8-15,24-31,40-47,56-63
-        vpshufb %%ZTMP2, [rel S1_S0_shuf]
+        ; ZTMP3 = A = U odd bytes + V odd bytes (in the even slots)
+        ; ZTMP2 = B = V even bytes + U even bytes (in the odd slots)
+        vmovdqa64 %%ZTMP3, %%ZTMP1
+        vpshufb %%ZTMP3{k7}, %%ZTMP2, [rel shuf_odd_to_even]
+        vpshufb %%ZTMP2{k6}, %%ZTMP1, [rel shuf_even_to_odd]
 
-        vshufpd %%ZTMP3, %%ZTMP1, %%ZTMP2, 0xAA ; All S0 input values
-        vshufpd %%ZTMP4, %%ZTMP2, %%ZTMP1, 0xAA ; All S1 input values
+        ; S0(A) = (S0_q_mat * q) ^ S0_r_tab[r]
+        ; No nibble masking needed: vpermb only uses index bits 5:0 (tables
+        ; are replicated 4x) and S0_q_mat ignores the high nibble of q.
+        vpsrlq  %%ZTMP4, %%ZTMP3, 4                             ; x1
+        vpermb  %%ZTMP5, %%ZTMP3, [rel P1]                      ; P1[x2]
+        vpxorq  %%ZTMP4, %%ZTMP4, %%ZTMP5                       ; q
+        vpermb  %%ZTMP5, %%ZTMP4, [rel P2]                      ; P2[q]
+        vpxorq  %%ZTMP3, %%ZTMP3, %%ZTMP5                       ; r
+        vpermb  %%ZTMP5, %%ZTMP3, [rel S0_r_tab]
+        vgf2p8affineqb %%ZTMP4, %%ZTMP4, [rel S0_q_mat], 0x00
+        vpxorq  %%ZTMP3, %%ZTMP4, %%ZTMP5                       ; S0(A)
 
-        ; Compute S0 and S1 values
-        S0_comput_AVX512  %%ZTMP3, %%ZTMP1, %%ZTMP2
-        S1_comput_AVX512  %%ZTMP4
+        ; S1(B)
+        vgf2p8affineqb    %%ZTMP2, %%ZTMP2, [rel Aes_to_Zuc], 0x00
+        vgf2p8affineinvqb %%ZTMP2, %%ZTMP2, [rel S1_out_mat], 0x55 ; S1(B)
 
-        ; Need to shuffle back %%ZTMP1 & %%ZTMP2 before storing output
-        ; (revert what was done before S0 and S1 computations)
-        vshufpd %%ZTMP1, %%ZTMP3, %%ZTMP4, 0xAA
-        vshufpd %%ZTMP2, %%ZTMP4, %%ZTMP3, 0xAA
-
-        vpshufb %%R1, %%ZTMP1, [rel rev_S0_S1_shuf]
-        vpshufb %%R2, %%ZTMP2, [rel rev_S1_S0_shuf]
+        ; R1 = S0(A) odd bytes + S1(B) odd bytes (in the even slots)
+        ; R2 = S1(B) even bytes + S0(A) even bytes (in the odd slots)
+        vmovdqa64 %%R1, %%ZTMP3
+        vpshufb %%R1{k7}, %%ZTMP2, [rel shuf_odd_to_even]
+        vpshufb %%ZTMP2{k6}, %%ZTMP3, [rel shuf_even_to_odd]
+        vmovdqa64 %%R2, %%ZTMP2
 %endmacro
 
 ;
@@ -908,16 +917,16 @@ mksection .text
 ;
 ; Add two 32-bit args and reduce mod (2^31-1)
 ;
-%macro  ADD_MOD31 4
+%macro  ADD_MOD31 3
 %define %%IN_OUT        %1 ; [in/out] ZMM register with first input and output
 %define %%IN2           %2 ; [in] ZMM register with second input
-%define %%ZTMP          %3 ; [clobbered] Temporary ZMM register
-%define %%MASK31        %4 ; [in] ZMM register containing 0x7FFFFFFF's in all dwords
+%define %%MASK31        %3 ; [in] ZMM register containing 0x7FFFFFFF's in all dwords
 
+        ; Inputs are at most 2^31 - 1, so subtracting 2^31 - 1 once when the
+        ; sum is larger is enough. Clobbers k7 (free in all callers).
         vpaddd  %%IN_OUT, %%IN2
-        vpsrld  %%ZTMP, %%IN_OUT, 31
-        vpandq  %%IN_OUT, %%MASK31
-        vpaddd  %%IN_OUT, %%ZTMP
+        vpcmpud k7, %%IN_OUT, %%MASK31, 6       ; sum > 2^31 - 1
+        vpsubd  %%IN_OUT{k7}, %%IN_OUT, %%MASK31
 %endmacro
 
 ;
@@ -974,20 +983,20 @@ mksection .text
 
         ; In Init mode, W is added to the S_16 calculation
 %ifidn %%MODE, init
-        ADD_MOD31 %%W, %%LFSR_0, %%ZTMP, %%MASK_31
+        ADD_MOD31 %%W, %%LFSR_0, %%MASK_31
 %else
         vmovdqa64 %%W, %%LFSR_0
 %endif
         ROT_MOD31 %%LFSR_0, %%ZTMP, %%MASK_31, 8
-        ADD_MOD31 %%W, %%LFSR_0, %%ZTMP, %%MASK_31
+        ADD_MOD31 %%W, %%LFSR_0, %%MASK_31
         ROT_MOD31 %%LFSR_4, %%ZTMP, %%MASK_31, 20
-        ADD_MOD31 %%W, %%LFSR_4, %%ZTMP, %%MASK_31
+        ADD_MOD31 %%W, %%LFSR_4, %%MASK_31
         ROT_MOD31 %%LFSR_10, %%ZTMP, %%MASK_31, 21
-        ADD_MOD31 %%W, %%LFSR_10, %%ZTMP, %%MASK_31
+        ADD_MOD31 %%W, %%LFSR_10, %%MASK_31
         ROT_MOD31 %%LFSR_13, %%ZTMP, %%MASK_31, 17
-        ADD_MOD31 %%W, %%LFSR_13, %%ZTMP, %%MASK_31
+        ADD_MOD31 %%W, %%LFSR_13, %%MASK_31
         ROT_MOD31 %%LFSR_15, %%ZTMP, %%MASK_31, 15
-        ADD_MOD31 %%W, %%LFSR_15, %%ZTMP, %%MASK_31
+        ADD_MOD31 %%W, %%LFSR_15, %%MASK_31
 
         ; LFSR_S16 = (LFSR_S15++) = eax
 %ifnum %%ROUND_NUM
