@@ -28,6 +28,7 @@ Library
 - Added ML-KEM AVX2 Compress and Decompress with packing for d = 1, 4, 5, 10 and 11.
 - Added ML-KEM AVX2 SamplePolyCBD for eta 2 and 3.
 - Optimized ML-KEM PRF sampling with x4 SHAKE256 (AVX2 and AVX512VL).
+- Optimized ML-KEM AVX2 matrix multiplication with a fused NTT row dot product.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).

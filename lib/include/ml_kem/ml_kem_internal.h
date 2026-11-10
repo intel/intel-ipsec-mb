@@ -82,9 +82,10 @@ typedef uint32_t(ML_KEM_REJ_UNIFORM_FN)(uint16_t *out, const uint32_t capacity, 
 /* Expand the public matrix from key->rho: returns 1 on success, 0 on error */
 typedef int(ML_KEM_MATRIX_EXPAND_FN)(const IMB_ML_KEM *self, struct evp_md_ctx_st *mdctx,
                                      struct ossl_ml_kem_key_st *key);
-typedef void(ML_KEM_POLY_MULT_FN)(struct ossl_ml_kem_scalar_st *out,
-                                  const struct ossl_ml_kem_scalar_st *lhs,
-                                  const struct ossl_ml_kem_scalar_st *rhs);
+/* out (+)= sum_j lhs[j * lhs_stride] (*) rhs[j], j = 0..count-1 (NTT domain) */
+typedef void(ML_KEM_POLY_NTT_DOT_FN)(struct ossl_ml_kem_scalar_st *out,
+                                     const struct ossl_ml_kem_scalar_st *lhs, size_t lhs_stride,
+                                     const struct ossl_ml_kem_scalar_st *rhs, size_t count);
 /* Compress_d and ByteEncode_d, the input may be modified */
 typedef void(ML_KEM_POLY_COMPRESS_FN)(uint8_t *out, struct ossl_ml_kem_scalar_st *in, int bits);
 /* ByteDecode_d and Decompress_d */
@@ -127,8 +128,8 @@ struct IMB_ML_KEM {
         ML_KEM_POLY_NTT_FN *poly_ntt_inverse;
         ML_KEM_POLY_ARITH_FN *poly_add;
         ML_KEM_POLY_ARITH_FN *poly_sub;
-        ML_KEM_POLY_MULT_FN *poly_mult;
-        ML_KEM_POLY_MULT_FN *poly_mult_add;
+        ML_KEM_POLY_NTT_DOT_FN *poly_ntt_dot;
+        ML_KEM_POLY_NTT_DOT_FN *poly_ntt_dot_add;
         ML_KEM_POLY_COMPRESS_FN *poly_compress_encode;
         ML_KEM_POLY_DECOMPRESS_FN *poly_decode_decompress;
         ML_KEM_POLY_TOMSG_FN *poly_tomsg;

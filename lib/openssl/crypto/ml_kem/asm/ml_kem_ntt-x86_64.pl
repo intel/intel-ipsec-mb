@@ -64,7 +64,7 @@ my $code = '';
 #       t = (a*c_hi - m*q) / 2^16,   m = low16(a*c_lo), |m| <= 2^15
 #   and therefore
 #       |t| <= |a|*|c_hi| / 2^16 + q/2.                                 (M)
-#   Twiddle high parts (kNTTZetaHi, kInvNTTZetaHi, kBaseMulZetaHi) and the
+#   Twiddle high parts (kNTTZetaHi, kInvNTTZetaHi, kDotMulHi) and the
 #   R^2 / 512 constants are stored in signed canonical form, |c_hi| <= (q-1)/2,
 #   so for any signed 16-bit |a| the product satisfies |t| <= 3q/4 < q.
 #
@@ -92,18 +92,18 @@ my $code = '';
 #   is x * 2^9 * 2^-16 = x/128 mod q), again bounded by (M).
 #   Output: canonical [0, q-1].
 #
-# Basemul (ml_kem_mul_avx2 / ml_kem_mul_add_avx2)
-#   Precondition: both operands canonical, in [0, q-1].
-#       A, B, D, E = M(l, r):      |.| <= q^2/2^16 + q/2   ~ 1834 (0.55q)
-#       C = M(B, zeta*R):          |.| <= 1834*1664/2^16 + q/2 ~ 1711 (0.51q)
-#       A + C, D + E:              |.| <= 3545 (1.07q), fits int16
-#       o = M(A+C, R^2), M(D+E, R^2): |.| <= 3668*1664/2^16 + q/2 ~ 1758 (0.53q)
-#   The conditional +q therefore maps o from (-q, q) to canonical [0, q-1].
-#   ml_kem_mul_add_avx2 adds this canonical product to a canonical accumulator
-#   ([0, 2q)) and applies reduce_once, so the accumulator is canonical after
-#   every call; the bound is independent of the number of accumulated terms
-#   (rank 2, 3 or 4 in matrix_mult_intt / matrix_mult_transpose_add /
-#   inner_product).
+# Row dot product (ml_kem_ntt_dot_avx2 / ml_kem_ntt_dot_add_avx2)
+#   Precondition: all operands canonical, in [0, q-1]; count <= 4 (rank).
+#       lz = M(l, c):                    |.| <= 3328*1636/2^16 + q/2 ~ 1748
+#       vpmaddwd(lz, r) per term:        |.| <= 2*1748*3328          ~ 11.6M
+#       vpmaddwd(l, swap(r)) per term:   |.| <= 2*3328*3328          ~ 22.2M
+#       4-term int32 sums:               |.| <= 88.6M < 2^31
+#   The 32-bit Montgomery step t = (x - m*q) / 2^16 with |m| <= 2^15 gives
+#   |t| <= (88.6M + 2^15*q) / 2^16 ~ 3017 < q, so the even outputs are in
+#   (-q, q); the odd outputs M(t, R^2) satisfy |.| <= 3017*1353/2^16 + q/2
+#   ~ 1727. The conditional +q therefore maps both to canonical [0, q-1].
+#   ml_kem_ntt_dot_add_avx2 adds this canonical sum to a canonical accumulator
+#   ([0, 2q)) and applies reduce_once.
 #
 # Add / sub (ml_kem_add_avx2 / ml_kem_sub_avx2)
 #   Precondition: both operands canonical. Sum in [0, 2q) feeds reduce_once;
@@ -240,7 +240,7 @@ ___
 # otherwise keeps the original value. $qw contains q broadcast across the
 # vector; $t1 and $t2 are scratch registers.
 #
-# Used by ml_kem_add and ml_kem_mul_add. ntt_reduce and intt_scale_reduce
+# Used by ml_kem_add and ml_kem_ntt_dot_add. ntt_reduce and intt_scale_reduce
 # perform the same step inline as part of their normalization logic.
 sub reduce_once {
     my ($v, $qw, $t1, $t2) = @_;
@@ -684,175 +684,161 @@ ___
 ___
 }
 
-# NTT-domain pointwise multiplication ("basemul") helpers.
+# NTT-domain row dot product helpers.
 #
 # After the forward NTT, the 256 coefficients are arranged as 128 independent
 # elements of GF(q)[X]/(X^2 - zeta_i). Each element is stored as a consecutive
-# coefficient pair:
-#
-#     (l0, l1) = (lhs[2i], lhs[2i+1])
-#     (r0, r1) = (rhs[2i], rhs[2i+1])
-#
-# The product of two such elements is:
+# coefficient pair (l0, l1) = (lhs[2i], lhs[2i+1]). The product of two such
+# elements is:
 #
 #     out[2i]   = l0*r0 + l1*r1*zeta_i   (mod q)
 #     out[2i+1] = l0*r1 + l1*r0          (mod q)
 #
-# This matches scalar_mult() and scalar_mult_add() in ml_kem.c
-# (roots = kModRoots).
+# This matches poly_mult_base() in ml_kem.c (roots = kModRoots). The kernels
+# below compute a whole matrix row (or inner product) at once:
 #
-# The implementation uses signed 16-bit Montgomery multiplication
+#     out = sum_j lhs[j * stride] (*) rhs[j],   j = 0..count-1
 #
-#     M(a,b) = a*b*R^-1 mod q,  R = 2^16
+# The pairs are kept interleaved, so no even/odd split is needed:
 #
-# so all intermediate values remain in 16-bit lanes and no 32-bit widening
-# is required:
+#     lz  = M(l, c),   c = [R^2, zeta_i*R^2] per pair  -> [l0*R, l1*zeta_i*R]
+#     x0 += vpmaddwd(lz, r)                            -> (l0*r0 + l1*r1*zeta_i)*R
+#     x1 += vpmaddwd(l, swap(r))                       -> l0*r1 + l1*r0
 #
-#     A = M(l0,r0)
-#     B = M(l1,r1)
-#     C = M(B, zeta*R mod q)
-#     D = M(l0,r1)
-#     E = M(l1,r0)
+# with M(a,b) = a*b*R^-1 mod q the signed 16-bit Montgomery multiply and
+# R = 2^16. The int32 sums are reduced once per output coefficient with an
+# exact 32-bit to 16-bit Montgomery reduction:
 #
-#     out[2i]   = M(A+C, R^2 mod q)
-#     out[2i+1] = M(D+E, R^2 mod q)
+#     m = low16(x) * q^-1 mod 2^16,   t = (x - m*q) / 2^16 = x*R^-1 mod q
 #
-# The outputs are in (-q, q). A final conditional add of q converts negative
-# values to the canonical range [0, q-1].
-#
-# kBaseMulZeta{Hi,Lo} contains zeta*R mod q, and basemul_R2{Hi,Lo} contains
-# R^2 mod q. Both use the same split representation as the twiddle-factor
-# tables.
+# giving out[2i] = t(x0) and out[2i+1] = M(t(x1), R^2). kDotMul{Hi,Lo} hold c
+# in the same split representation as the twiddle-factor tables.
 #
 # Fixed register assignments:
-#     ymm15 = q
-#     ymm14 = -q^-1 mod 2^16
-#     ymm13 = R2 high part
-#     ymm12 = R2 low part
-#     ymm11 = 0x0000ffff dword mask (even/odd split)
+#     ymm15 = q (words)
+#     ymm14 = vpshufb mask swapping the two words of each dword
+#     ymm13 = [q^-1 mod 2^16, 0] per dword
+#     ymm12 = [q, 0] per dword
 
-# Signed Montgomery multiply of two live vectors: $out = $a * $b * R^-1 mod q.
-sub bm_fqmul {
-    my ($a, $b, $out, $t) = @_;
+# dot_term: accumulate one term of the row dot product for 16 coefficients.
+#   $l  = lhs vector (scratch, loaded by the caller)
+#   $r  = rhs memory operand
+#   $chi, $clo = per-pair constant c (hi/lo)
+#   $x0, $x1 = int32 accumulators for the even and odd outputs
+sub dot_term {
+    my ($l, $r, $chi, $clo, $x0, $x1, $t0, $t1, $t2) = @_;
     $code .= <<___;
-    vpmullw     $b, $a, $t                      # lo = a*b (mod 2^16)
-    vpmulhw     $b, $a, $out                    # hi = high(a*b)
-    vpmullw     %ymm14, $t, $t                  # t  = lo * (-q^-1)
-    vpmulhw     %ymm15, $t, $t                  # t  = high(t * q)
-    vpsubw      $t, $out, $out                  # out = hi - t
+    vpmullw     $clo, $l, $t0                   # t  = clo*l (mod 2^16)
+    vpmulhw     $chi, $l, $t1                   # lz = high(chi*l)
+    vpmulhw     %ymm15, $t0, $t0                # t  = high(q * t)
+    vpsubw      $t0, $t1, $t1                   # lz = [l0*R, l1*zeta*R]
+    vmovdqu     $r, $t2                         # [r0, r1]
+    vpmaddwd    $t2, $t1, $t1                   # l0*r0*R + l1*r1*zeta*R
+    vpaddd      $t1, $x0, $x0
+    vpshufb     %ymm14, $t2, $t2                # [r1, r0]
+    vpmaddwd    $t2, $l, $t2                    # l0*r1 + l1*r0
+    vpaddd      $t2, $x1, $x1
 ___
 }
 
-# Signed Montgomery multiply of a live vector by a table constant (hi/lo pair):
-# $out = $data * chi * R^-1 mod q.  $out may alias $data.
-sub bm_mconst {
-    my ($data, $chi, $clo, $out, $t) = @_;
+# dot_reduce: reduce the int32 accumulators of 16 coefficients to canonical
+# [0, q-1] and interleave them back into (even, odd) pairs in $x0.
+# $r2hi/$r2lo hold R^2 mod q in split form.
+sub dot_reduce {
+    my ($x0, $x1, $r2hi, $r2lo, $t0) = @_;
     $code .= <<___;
-    vpmullw     $clo, $data, $t                 # t  = clo*data (mod 2^16)
-    vpmulhw     $chi, $data, $out               # out = high(chi*data)
-    vpmulhw     %ymm15, $t, $t                  # t  = high(q * t)
-    vpsubw      $t, $out, $out                  # out = out - t
+    vpmullw     %ymm13, $x0, $t0                # m = low16(x0) * q^-1, high word 0
+    vpmaddwd    %ymm12, $t0, $t0                # m*q (exact int32)
+    vpsubd      $t0, $x0, $x0                   # x0 - m*q, low word is 0
+    vpsrld      \$16, $x0, $x0                  # even outputs in the low words
+    vpmullw     %ymm13, $x1, $t0                # same reduction for the odd sums
+    vpmaddwd    %ymm12, $t0, $t0
+    vpsubd      $t0, $x1, $x1                   # odd outputs * R^-1 in the high words
+    vpmullw     $r2lo, $x1, $t0                 # M(x1, R^2): remove the R^-1
+    vpmulhw     $r2hi, $x1, $x1
+    vpmulhw     %ymm15, $t0, $t0
+    vpsubw      $t0, $x1, $x1                   # low words stay 0
+    vpor        $x1, $x0, $x0                   # re-interleave (even, odd) pairs
+    vpsraw      \$15, $x0, $t0                  # canonicalize: +q if < 0
+    vpand       %ymm15, $t0, $t0
+    vpaddw      $t0, $x0, $x0
 ___
 }
 
-# Split 16 consecutive (even, odd) 16-bit pairs held in ($a, $b) into an
-# even-lane vector $even and an odd-lane vector $odd, both in natural pair order.
-sub bm_deint {
-    my ($a, $b, $even, $odd, $t0, $t1) = @_;
-    $code .= <<___;
-    vpand       %ymm11, $a, $t0                 # even words of $a
-    vpand       %ymm11, $b, $t1                 # even words of $b
-    vpackusdw   $t1, $t0, $even
-    vpermq      \$0xd8, $even, $even            # -> natural pair order
-    vpsrld      \$16, $a, $t0                   # odd words of $a
-    vpsrld      \$16, $b, $t1                   # odd words of $b
-    vpackusdw   $t1, $t0, $odd
-    vpermq      \$0xd8, $odd, $odd
-___
-}
-
-# Emit the body of ml_kem_mul_avx2 ($acc=0) or ml_kem_mul_add_avx2 ($acc=1).
-# rdi = out, rsi = lhs, rdx = rhs.
-sub emit_ml_kem_basemul {
+# Emit the body of ml_kem_ntt_dot_avx2 ($acc=0) or ml_kem_ntt_dot_add_avx2 ($acc=1).
+# rdi = out, rsi = lhs, rdx = lhs stride (scalars), rcx = rhs, r8 = count.
+# Each outer iteration produces 32 output coefficients (two ymm halves).
+sub emit_ml_kem_dot {
     my ($acc) = @_;
+    my $sfx = $acc ? "_add" : "";
 
     $code .= <<___;
-    vpbroadcastw   q(%rip), %ymm15                      # q
-    vpbroadcastw   basemul_qinv(%rip), %ymm14           # -q^-1 mod 2^16
-    vpbroadcastw   basemul_R2hi(%rip), %ymm13           # (R^2 mod q) hi
-    vpbroadcastw   basemul_R2lo(%rip), %ymm12           # (R^2 mod q) lo
-    vpcmpeqd       %ymm11, %ymm11, %ymm11               # 0xffffffff
-    vpsrld         \$16, %ymm11, %ymm11                 # 0x0000ffff dword mask
-    lea            kBaseMulZetaHi(%rip), %r15
-    lea            kBaseMulZetaLo(%rip), %r14
-___
+    vpbroadcastw   q(%rip), %ymm15                      # q (words)
+    vmovdqa        dot_swap_mask(%rip), %ymm14          # word swap within dwords
+    vpbroadcastd   dot_qinv(%rip), %ymm13               # [q^-1 mod 2^16, 0]
+    vpbroadcastd   q(%rip), %ymm12                      # [q, 0]
+    shl            \$9, %rdx                            # lhs stride in bytes
+    shl            \$9, %r8                             # count * sizeof(scalar)
+    lea            kDotMulHi(%rip), %r10                # c table (lo at +512)
+    lea            kDotMulHi+512(%rip), %r11            # end of the hi table
 
-    for my $it (0 .. 7) {
-        my $bo = $it * 64;                               # byte offset: 32 words
-        my $zo = $it * 32;                               # zeta byte offset: 16 words
-        my ($p0, $p1) = ($it * 16, $it * 16 + 15);
+.align 32
+.Lntt_dot${sfx}_coeff_loop:
+    vmovdqu        (%r10), %ymm8                        # c hi, coefficients 0..15
+    vmovdqu        32(%r10), %ymm9                      # c hi, coefficients 16..31
+    vmovdqu        512(%r10), %ymm10                    # c lo, coefficients 0..15
+    vmovdqu        512+32(%r10), %ymm11                 # c lo, coefficients 16..31
+    vpxor          %ymm0, %ymm0, %ymm0                  # even sums, 0..15
+    vpxor          %ymm1, %ymm1, %ymm1                  # even sums, 16..31
+    vpxor          %ymm2, %ymm2, %ymm2                  # odd sums, 0..15
+    vpxor          %ymm3, %ymm3, %ymm3                  # odd sums, 16..31
+    mov            %rsi, %r9                            # lhs term pointer
+    xor            %eax, %eax                           # rhs term offset
 
-        $code .= "    # ---- pairs $p0..$p1 ----\n";
+.align 32
+.Lntt_dot${sfx}_poly_loop:
+    vmovdqu        (%r9), %ymm4
+___
+    &dot_term("%ymm4", "(%rcx,%rax)", "%ymm8", "%ymm10",
+              "%ymm0", "%ymm2", "%ymm5", "%ymm6", "%ymm7");
+    $code .= <<___;
+    vmovdqu        32(%r9), %ymm4
+___
+    &dot_term("%ymm4", "32(%rcx,%rax)", "%ymm9", "%ymm11",
+              "%ymm1", "%ymm3", "%ymm5", "%ymm6", "%ymm7");
+    $code .= <<___;
+    add            %rdx, %r9
+    add            \$512, %rax
+    cmp            %r8, %rax
+    jb             .Lntt_dot${sfx}_poly_loop
+
+    vpbroadcastw   dot_r2_hi(%rip), %ymm8               # (R^2 mod q) hi
+    vpbroadcastw   dot_r2_lo(%rip), %ymm10              # (R^2 mod q) lo
+___
+    &dot_reduce("%ymm0", "%ymm2", "%ymm8", "%ymm10", "%ymm4");
+    &dot_reduce("%ymm1", "%ymm3", "%ymm8", "%ymm10", "%ymm4");
+
+    if ($acc) {
+        # out = reduce_once(out + product), both canonical
         $code .= <<___;
-    vmovdqu        $bo(%rsi), %ymm6
-    vmovdqu        $bo+32(%rsi), %ymm7
+    vpaddw         (%rdi), %ymm0, %ymm0
+    vpaddw         32(%rdi), %ymm1, %ymm1
 ___
-        &bm_deint("%ymm6", "%ymm7", "%ymm0", "%ymm1", "%ymm8", "%ymm9");
-        $code .= <<___;
-    vmovdqu        $bo(%rdx), %ymm6
-    vmovdqu        $bo+32(%rdx), %ymm7
-___
-        &bm_deint("%ymm6", "%ymm7", "%ymm2", "%ymm3", "%ymm8", "%ymm9");
-        $code .= <<___;
-    vmovdqu        $zo(%r15), %ymm4                     # zeta*R hi
-    vmovdqu        $zo(%r14), %ymm5                     # zeta*R lo
-___
-        &bm_fqmul("%ymm0", "%ymm2", "%ymm6", "%ymm10");   # A = M(l0,r0)
-        &bm_fqmul("%ymm1", "%ymm3", "%ymm7", "%ymm10");   # B = M(l1,r1)
-        &bm_mconst("%ymm7", "%ymm4", "%ymm5", "%ymm8", "%ymm10"); # C = M(B,zeta)
-        $code .= "    vpaddw      %ymm8, %ymm6, %ymm6            # o0raw = A + C\n";
-        &bm_fqmul("%ymm0", "%ymm3", "%ymm7", "%ymm10");   # D = M(l0,r1)
-        &bm_fqmul("%ymm1", "%ymm2", "%ymm8", "%ymm10");   # E = M(l1,r0)
-        $code .= "    vpaddw      %ymm8, %ymm7, %ymm7            # o1raw = D + E\n";
-        &bm_mconst("%ymm6", "%ymm13", "%ymm12", "%ymm6", "%ymm10"); # o0 = M(o0raw,R2)
-        &bm_mconst("%ymm7", "%ymm13", "%ymm12", "%ymm7", "%ymm10"); # o1 = M(o1raw,R2)
-        $code .= <<___;
-    vpsraw         \$15, %ymm6, %ymm8                   # canonicalize o0: +q if < 0
-    vpand          %ymm15, %ymm8, %ymm8
-    vpaddw         %ymm8, %ymm6, %ymm6
-    vpsraw         \$15, %ymm7, %ymm8                   # canonicalize o1: +q if < 0
-    vpand          %ymm15, %ymm8, %ymm8
-    vpaddw         %ymm8, %ymm7, %ymm7
-    vpunpcklwd     %ymm7, %ymm6, %ymm8                  # re-interleave even/odd
-    vpunpckhwd     %ymm7, %ymm6, %ymm9
-    vperm2i128     \$0x20, %ymm9, %ymm8, %ymm6          # pairs $p0..${\($p0+7)}
-    vperm2i128     \$0x31, %ymm9, %ymm8, %ymm7          # pairs ${\($p0+8)}..$p1
-___
-        if (!$acc) {
-            $code .= <<___;
-    vmovdqu        %ymm6, $bo(%rdi)
-    vmovdqu        %ymm7, $bo+32(%rdi)
-___
-        } else {
-            # out = reduce_once(out + product), product in [0, q-1]
-            $code .= <<___;
-    vmovdqu        $bo(%rdi), %ymm8
-    vpaddw         %ymm6, %ymm8, %ymm8                  # out + prod, in [0, 2q)
-___
-            reduce_once("%ymm8", "%ymm15", "%ymm9", "%ymm10");
-            $code .= <<___;
-    vmovdqu        %ymm8, $bo(%rdi)
-    vmovdqu        $bo+32(%rdi), %ymm8
-    vpaddw         %ymm7, %ymm8, %ymm8
-___
-            reduce_once("%ymm8", "%ymm15", "%ymm9", "%ymm10");
-            $code .= <<___;
-    vmovdqu        %ymm8, $bo+32(%rdi)
-___
-        }
+        reduce_once("%ymm0", "%ymm15", "%ymm4", "%ymm5");
+        reduce_once("%ymm1", "%ymm15", "%ymm4", "%ymm5");
     }
-}
 
+    $code .= <<___;
+    vmovdqu        %ymm0, (%rdi)
+    vmovdqu        %ymm1, 32(%rdi)
+    add            \$64, %rdi
+    add            \$64, %rsi
+    add            \$64, %rcx
+    add            \$64, %r10
+    cmp            %r11, %r10
+    jne            .Lntt_dot${sfx}_coeff_loop
+___
+}
 
 # Per-level byte offsets into a zeta table.
 #
@@ -1185,36 +1171,37 @@ $code .= <<'___';
 .size    ml_kem_sub_avx2, .-ml_kem_sub_avx2
 
 ###############################################################################
-# ml_kem_mul_avx2
+# ml_kem_ntt_dot_avx2
 #
 # Prototype:
-#   void ml_kem_mul_avx2(scalar *out, const scalar *lhs, const scalar *rhs)
+#   void ml_kem_ntt_dot_avx2(scalar *out, const scalar *lhs, size_t lhs_stride,
+#                            const scalar *rhs, size_t count)
 #
-# Arguments (System V AMD64 ABI; Windows x64 rcx/rdx/r8 are remapped to
-# rdi/rsi/rdx by the x86_64-xlate.pl prologue, so the names below apply to both):
-#   rdi: out (must not overlap the inputs)
-#   rsi: lhs
-#   rdx: rhs
+# Arguments (System V AMD64 ABI; Windows x64 rcx/rdx/r8/r9/stack are remapped to
+# rdi/rsi/rdx/rcx/r8 by the x86_64-xlate.pl prologue, so the names below apply
+# to both):
+#   rdi: out (canonical result; must not overlap the inputs)
+#   rsi: lhs, first of count polynomials spaced lhs_stride scalars apart
+#   rdx: lhs_stride, in scalars
+#   rcx: rhs, count consecutive polynomials
+#   r8:  count, number of terms (1 or more)
 #
 # Returns:
 #   none
 #
 # Description:
-#   Vectorized NTT-domain pointwise multiply ("basemul"): for each of the 128
-#   (even, odd) coefficient pairs interpreted as an element of
-#   GF(q)[X]/(X^2 - zeta_i),
-#       out[2i]   = lhs0*rhs0 + lhs1*rhs1*zeta_i   (mod q)
-#       out[2i+1] = lhs0*rhs1 + lhs1*rhs0          (mod q)
-#   using 16-bit Montgomery arithmetic.  Equivalent to scalar_mult().
+#   Vectorized NTT-domain row dot product: with (*) the pointwise multiply of
+#   the 128 (even, odd) coefficient pairs as elements of GF(q)[X]/(X^2 - zeta_i),
+#       out = sum_j lhs[j * lhs_stride] (*) rhs[j],   j = 0..count-1
+#   accumulating in 32-bit lanes and reducing once per output coefficient.
+#   Equivalent to repeated poly_mult_base() / poly_mult_add_base() calls.
 ###############################################################################
 .align 32
-.globl ml_kem_mul_avx2
-.type  ml_kem_mul_avx2,@function,3
-ml_kem_mul_avx2:
+.globl ml_kem_ntt_dot_avx2
+.type  ml_kem_ntt_dot_avx2,@function,5
+ml_kem_ntt_dot_avx2:
 .cfi_startproc
     endbranch
-    push           %r14
-    push           %r15
 ___
 
 # Windows x64: preserve the caller's callee-saved xmm6..15 (low 128 bits).
@@ -1232,7 +1219,7 @@ $code .= <<'___' if $win64;
     vmovdqu        %xmm15, 144(%rsp)
 ___
 
-&emit_ml_kem_basemul(0);
+&emit_ml_kem_dot(0);
 
 $code .= <<'___';
     vzeroall                                            # clear all vector regs (secret scrub)
@@ -1254,40 +1241,39 @@ $code .= <<'___' if $win64;
 ___
 
 $code .= <<'___';
-    pop            %r15
-    pop            %r14
     ret
 .cfi_endproc
-.size    ml_kem_mul_avx2, .-ml_kem_mul_avx2
+.size    ml_kem_ntt_dot_avx2, .-ml_kem_ntt_dot_avx2
 
 ###############################################################################
-# ml_kem_mul_add_avx2
+# ml_kem_ntt_dot_add_avx2
 #
 # Prototype:
-#   void ml_kem_mul_add_avx2(scalar *out, const scalar *lhs, const scalar *rhs)
+#   void ml_kem_ntt_dot_add_avx2(scalar *out, const scalar *lhs, size_t lhs_stride,
+#                                const scalar *rhs, size_t count)
 #
-# Arguments (System V AMD64 ABI; Windows x64 rcx/rdx/r8 are remapped to
-# rdi/rsi/rdx by the x86_64-xlate.pl prologue, so the names below apply to both):
+# Arguments (System V AMD64 ABI; Windows x64 rcx/rdx/r8/r9/stack are remapped to
+# rdi/rsi/rdx/rcx/r8 by the x86_64-xlate.pl prologue, so the names below apply
+# to both):
 #   rdi: out (accumulated in place; must not overlap the inputs)
-#   rsi: lhs
-#   rdx: rhs
+#   rsi: lhs, first of count polynomials spaced lhs_stride scalars apart
+#   rdx: lhs_stride, in scalars
+#   rcx: rhs, count consecutive polynomials
+#   r8:  count, number of terms (1 or more)
 #
 # Returns:
 #   none
 #
 # Description:
-#   As ml_kem_mul_avx2, but accumulates the product into out:
-#       out[k] = reduce_once(out[k] + (lhs (*) rhs)[k]).
-#   Equivalent to scalar_mult_add().
+#   As ml_kem_ntt_dot_avx2, but accumulates the row dot product into out:
+#       out[k] = reduce_once(out[k] + (sum_j lhs[j * lhs_stride] (*) rhs[j])[k]).
 ###############################################################################
 .align 32
-.globl ml_kem_mul_add_avx2
-.type  ml_kem_mul_add_avx2,@function,3
-ml_kem_mul_add_avx2:
+.globl ml_kem_ntt_dot_add_avx2
+.type  ml_kem_ntt_dot_add_avx2,@function,5
+ml_kem_ntt_dot_add_avx2:
 .cfi_startproc
     endbranch
-    push           %r14
-    push           %r15
 ___
 
 # Windows x64: preserve the caller's callee-saved xmm6..15 (low 128 bits).
@@ -1305,7 +1291,7 @@ $code .= <<'___' if $win64;
     vmovdqu        %xmm15, 144(%rsp)
 ___
 
-&emit_ml_kem_basemul(1);
+&emit_ml_kem_dot(1);
 
 $code .= <<'___';
     vzeroall                                            # clear all vector regs (secret scrub)
@@ -1327,11 +1313,9 @@ $code .= <<'___' if $win64;
 ___
 
 $code .= <<'___';
-    pop            %r15
-    pop            %r14
     ret
 .cfi_endproc
-.size    ml_kem_mul_add_avx2, .-ml_kem_mul_add_avx2
+.size    ml_kem_ntt_dot_add_avx2, .-ml_kem_ntt_dot_add_avx2
 
 # Twiddle tables for forward and inverse ML-KEM NTT in Montgomery form.
 #
@@ -1673,55 +1657,93 @@ kNTTZetaHi:
 .size    kNTTZetaHi, . - kNTTZetaHi
 
 
-# Basemul twiddles: (kModRoots[i] * R mod q) in centered/Montgomery split form,
-# in natural pair order (i = 0..127).  Consumed by ml_kem_mul_avx2 /
-# ml_kem_mul_add_avx2 with the 16-bit Montgomery multiply.
+# Row dot product constants: per coefficient pair i, c = [R^2 mod q,
+# kModRoots[i] * R^2 mod q] in centered/Montgomery split form, natural order.
+# M(lhs, c) yields [l0*R, l1*zeta_i*R] for ml_kem_ntt_dot_avx2 /
+# ml_kem_ntt_dot_add_avx2. kDotMulLo must directly follow kDotMulHi (512 bytes).
 .align 32
-.type    kBaseMulZetaHi, @object
-kBaseMulZetaHi:
-    .value  -1103,   1103,    430,   -430,    555,   -555,    843,   -843
-    .value  -1251,   1251,    871,   -871,   1550,  -1550,    105,   -105
-    .value    422,   -422,    587,   -587,    177,   -177,   -235,    235
-    .value   -291,    291,   -460,    460,   1574,  -1574,   1653,  -1653
-    .value   -246,    246,    778,   -778,   1159,  -1159,   -147,    147
-    .value   -777,    777,   1483,  -1483,   -602,    602,   1119,  -1119
-    .value  -1590,   1590,    644,   -644,   -872,    872,    349,   -349
-    .value    418,   -418,    329,   -329,   -156,    156,    -75,     75
-    .value    817,   -817,   1097,  -1097,    603,   -603,    610,   -610
-    .value   1322,  -1322,  -1285,   1285,  -1465,   1465,    384,   -384
-    .value  -1215,   1215,   -136,    136,   1218,  -1218,  -1335,   1335
-    .value   -874,    874,    220,   -220,  -1187,   1187,  -1659,   1659
-    .value  -1185,   1185,  -1530,   1530,  -1278,   1278,    794,   -794
-    .value  -1510,   1510,   -854,    854,   -870,    870,    478,   -478
-    .value   -108,    108,   -308,    308,    996,   -996,    991,   -991
-    .value    958,   -958,  -1460,   1460,   1522,  -1522,   1628,  -1628
-.size    kBaseMulZetaHi, . - kBaseMulZetaHi
+.type    kDotMulHi, @object
+kDotMulHi:
+    .value   1353,   -302,   1353,    302,   1353,    495,   1353,   -495
+    .value   1353,   -174,   1353,    174,   1353,  -1236,   1353,   1236
+    .value   1353,   1076,   1353,  -1076,   1353,   -507,   1353,    507
+    .value   1353,   -306,   1353,    306,   1353,    237,   1353,   -237
+    .value   1353,  -1140,   1353,   1140,   1353,   -292,   1353,    292
+    .value   1353,   1636,   1353,  -1636,   1353,  -1006,   1353,   1006
+    .value   1353,    865,   1353,   -865,   1353,    864,   1353,   -864
+    .value   1353,   1270,   1353,  -1270,   1353,  -1310,   1353,   1310
+    .value   1353,    491,   1353,   -491,   1353,     44,   1353,    -44
+    .value   1353,  -1569,   1353,   1569,   1353,    334,   1353,   -334
+    .value   1353,  -1088,   1353,   1088,   1353,   -267,   1353,    267
+    .value   1353,   -693,   1353,    693,   1353,    243,   1353,   -243
+    .value   1353,  -1211,   1353,   1211,   1353,    122,   1353,   -122
+    .value   1353,   1551,   1353,  -1551,   1353,  -1495,   1353,   1495
+    .value   1353,   -293,   1353,    293,   1353,   -589,   1353,    589
+    .value   1353,   -257,   1353,    257,   1353,  -1596,   1353,   1596
+    .value   1353,   -724,   1353,    724,   1353,    -92,   1353,     92
+    .value   1353,   -351,   1353,    351,   1353,  -1001,   1353,   1001
+    .value   1353,   1367,   1353,  -1367,   1353,    -47,   1353,     47
+    .value   1353,   1449,   1353,  -1449,   1353,  -1416,   1353,   1416
+    .value   1353,    111,   1353,   -111,   1353,  -1163,   1353,   1163
+    .value   1353,     86,   1353,    -86,   1353,  -1111,   1353,   1111
+    .value   1353,    310,   1353,   -310,   1353,     21,   1353,    -21
+    .value   1353,    840,   1353,   -840,   1353,    916,   1353,   -916
+    .value   1353,  -1248,   1353,   1248,   1353,   -600,   1353,    600
+    .value   1353,   -697,   1353,    697,   1353,    -15,   1353,     15
+    .value   1353,  -1506,   1353,   1506,   1353,   -596,   1353,    596
+    .value   1353,   -537,   1353,    537,   1353,    318,   1353,   -318
+    .value   1353,   -434,   1353,    434,   1353,  -1361,   1353,   1361
+    .value   1353,  -1176,   1353,   1176,   1353,    715,   1353,   -715
+    .value   1353,  -1452,   1353,   1452,   1353,   -442,   1353,    442
+    .value   1353,  -1035,   1353,   1035,   1353,   1487,   1353,  -1487
+.size    kDotMulHi, . - kDotMulHi
 
+.type    kDotMulLo, @object
+kDotMulLo:
+    .value  20553,  21714,  20553, -21714,  20553,  -8465,  20553,   8465
+    .value  20553, -10926,  20553,  10926,  20553, -16596,  20553,  16596
+    .value  20553,  24628,  20553, -24628,  20553, -17147,  20553,  17147
+    .value  20553, -30514,  20553,  30514,  20553,  -2067,  20553,   2067
+    .value  20553,  -8308,  20553,   8308,  20553, -11556,  20553,  11556
+    .value  20553,  -3484,  20553,   3484,  20553,   4626,  20553,  -4626
+    .value  20553,   5729,  20553,  -5729,  20553,   9056,  20553,  -9056
+    .value  20553, -30986,  20553,  30986,  20553, -32542,  20553,  32542
+    .value  20553,   4843,  20553,  -4843,  20553, -15316,  20553,  15316
+    .value  20553, -22817,  20553,  22817,  20553,   2894,  20553,  -2894
+    .value  20553,  15296,  20553, -15296,  20553, -29195,  20553,  29195
+    .value  20553,  11851,  20553, -11851,  20553, -22029,  20553,  22029
+    .value  20553,  31301,  20553, -31301,  20553, -12678,  20553,  12678
+    .value  20553,  17167,  20553, -17167,  20553,  -6871,  20553,   6871
+    .value  20553,  -8229,  20553,   8229,  20553,  -6477,  20553,   6477
+    .value  20553,   3071,  20553,  -3071,  20553,   1476,  20553,  -1476
+    .value  20553, -16084,  20553,  16084,  20553, -21596,  20553,  21596
+    .value  20553, -11871,  20553,  11871,  20553, -12009,  20553,  12009
+    .value  20553, -26025,  20553,  26025,  20553,  25297,  20553, -25297
+    .value  20553,  28841,  20553, -28841,  20553,  -7560,  20553,   7560
+    .value  20553,  23919,  20553, -23919,  20553,   2677,  20553,  -2677
+    .value  20553, -23978,  20553,  23978,  20553,  26281,  20553, -26281
+    .value  20553,  17206,  20553, -17206,  20553,  -4331,  20553,   4331
+    .value  20553,  23368,  20553, -23368,  20553,  32660,  20553, -32660
+    .value  20553,  23328,  20553, -23328,  20553,  30120,  20553, -30120
+    .value  20553,  25159,  20553, -25159,  20553, -15631,  20553,  15631
+    .value  20553,  29726,  20553, -29726,  20553,  16812,  20553, -16812
+    .value  20553,  17127,  20553, -17127,  20553,  -9410,  20553,   9410
+    .value  20553,   2126,  20553,  -2126,  20553,   6063,  20553,  -6063
+    .value  20553, -19608,  20553,  19608,  20553, -19509,  20553,  19509
+    .value  20553, -18860,  20553,  18860,  20553,  28742,  20553, -28742
+    .value  20553, -29963,  20553,  29963,  20553, -32049,  20553,  32049
+.size    kDotMulLo, . - kDotMulLo
+
+# vpshufb mask swapping the two words of every dword: [r0, r1] -> [r1, r0].
 .align 32
-.type    kBaseMulZetaLo, @object
-kBaseMulZetaLo:
-    .value   -335,    335,  11182, -11182, -11477,  11477,  13387, -13387
-    .value -32227,  32227, -14233,  14233,  20494, -20494, -21655,  21655
-    .value -27738,  27738,  13131, -13131,    945,   -945,  -4587,   4587
-    .value -14883,  14883,  23092, -23092,   6182,  -6182,   5493,  -5493
-    .value  32010, -32010, -32502,  32502,  10631, -10631,  30317, -30317
-    .value  29175, -29175, -18741,  18741, -28762,  28762,  12639, -12639
-    .value -18486,  18486,  20100, -20100,  17560, -17560,  18525, -18525
-    .value -14430,  14430,  19529, -19529,  -5276,   5276, -12619,  12619
-    .value -31183,  31183,  20297, -20297,  25435, -25435,   2146,  -2146
-    .value  -7382,   7382,  15355, -15355,  24391, -24391, -32384,  32384
-    .value -20927,  20927,  -6280,   6280,  10946, -10946, -14903,  14903
-    .value  24214, -24214, -11044,  11044,  16989, -16989,  14469, -14469
-    .value  10335, -10335, -21498,  21498,  -7934,   7934, -20198,  20198
-    .value -22502,  22502,  23210, -23210,  10906, -10906, -17442,  17442
-    .value  31636, -31636, -23860,  23860,  28644, -28644, -20257,  20257
-    .value  23998, -23998,   7756,  -7756, -17422,  17422,  23132, -23132
-.size    kBaseMulZetaLo, . - kBaseMulZetaLo
+dot_swap_mask:
+    .byte 2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
+    .byte 2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
 
 
 # Scalar broadcast constants.  Barrett-reduction values (ntt_reduce) are read as
 # dwords via vpbroadcastd; the modulus q is stored as a .long so the same label
-# feeds both the dword (qhat*q) and word (Montgomery/add/sub/basemul) broadcasts.
+# feeds both the dword (qhat*q) and word (Montgomery/add/sub/dot) broadcasts.
 
 # 5*q = 16645; dword bias in ntt_reduce that lifts a signed lane non-negative
 # before the reciprocal multiply (the extra 5q are removed by qhat*q).
@@ -1742,7 +1764,7 @@ minus_q:
     .long -3329
 
 # Modulus q = 3329.  Broadcast as dwords for qhat*q (Barrett) and as words for
-# Montgomery fixups and the add/sub/basemul reduce_once steps.
+# Montgomery fixups and the add/sub/dot reduce_once steps.
 .align 4
 q:
     .long 3329
@@ -1754,16 +1776,19 @@ q:
 inv_deg_factor:
     .long 512
 
-# Basemul constants (16-bit).  qinv = -q^-1 mod 2^16; R2 = (2^16)^2 mod q in
-# the Montgomery split form: hi = R^2 mod q (centered), lo = int16(-hi*3327).
+# q^-1 mod 2^16 = 62209 in the low word of a dword (high word 0), read via
+# vpbroadcastd for the 32-bit Montgomery reduction in ml_kem_ntt_dot_avx2.
+.align 4
+dot_qinv:
+    .long 62209
+
+# R2 = (2^16)^2 mod q in the Montgomery split form: hi = R^2 mod q (centered),
+# lo = int16(hi * q^-1 mod 2^16).
 .align 2
-basemul_qinv:
-    .value -3327
-.align 2
-basemul_R2hi:
+dot_r2_hi:
     .value 1353
 .align 2
-basemul_R2lo:
+dot_r2_lo:
     .value 20553
 
 .section    .note.GNU-stack,"",@progbits

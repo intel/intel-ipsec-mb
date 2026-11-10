@@ -90,9 +90,11 @@ ml_kem_add_avx2(scalar *lhs, const scalar *rhs);
 void
 ml_kem_sub_avx2(scalar *lhs, const scalar *rhs);
 void
-ml_kem_mul_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
+ml_kem_ntt_dot_avx2(scalar *out, const scalar *lhs, size_t lhs_stride, const scalar *rhs,
+                    size_t count);
 void
-ml_kem_mul_add_avx2(scalar *out, const scalar *lhs, const scalar *rhs);
+ml_kem_ntt_dot_add_avx2(scalar *out, const scalar *lhs, size_t lhs_stride, const scalar *rhs,
+                        size_t count);
 
 /* AVX2 optimized Compress/Decompress and packing */
 void
@@ -434,9 +436,11 @@ poly_add_base(scalar *lhs, const scalar *rhs);
 static void
 poly_sub_base(scalar *lhs, const scalar *rhs);
 static void
-poly_mult_base(scalar *out, const scalar *lhs, const scalar *rhs);
+poly_ntt_dot_base(scalar *out, const scalar *lhs, size_t lhs_stride, const scalar *rhs,
+                  size_t count);
 static void
-poly_mult_add_base(scalar *out, const scalar *lhs, const scalar *rhs);
+poly_ntt_dot_add_base(scalar *out, const scalar *lhs, size_t lhs_stride, const scalar *rhs,
+                      size_t count);
 static void
 compress_encode_base(uint8_t *out, scalar *s, int bits);
 static void
@@ -532,8 +536,8 @@ ossl_ml_kem_poly_init_base(IMB_ML_KEM *self)
         self->poly_ntt_inverse = poly_ntt_inverse_base;
         self->poly_add = poly_add_base;
         self->poly_sub = poly_sub_base;
-        self->poly_mult = poly_mult_base;
-        self->poly_mult_add = poly_mult_add_base;
+        self->poly_ntt_dot = poly_ntt_dot_base;
+        self->poly_ntt_dot_add = poly_ntt_dot_add_base;
         self->poly_compress_encode = compress_encode_base;
         self->poly_decode_decompress = decode_decompress_base;
         self->poly_tomsg = tomsg_base;
@@ -555,8 +559,8 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_ntt_inverse = ml_kem_inverse_ntt_avx2;
         self->poly_add = ml_kem_add_avx2;
         self->poly_sub = ml_kem_sub_avx2;
-        self->poly_mult = ml_kem_mul_avx2;
-        self->poly_mult_add = ml_kem_mul_add_avx2;
+        self->poly_ntt_dot = ml_kem_ntt_dot_avx2;
+        self->poly_ntt_dot_add = ml_kem_ntt_dot_add_avx2;
         self->poly_compress_encode = compress_encode_avx2;
         self->poly_decode_decompress = decode_decompress_avx2;
         self->poly_tomsg = tomsg_avx2;
@@ -763,6 +767,47 @@ poly_mult_add_base(scalar *out, const scalar *lhs, const scalar *rhs)
                 *c0 = reduce(*c0 + l0 * r0 + reduce(l1 * r1) * zetapow);
                 *c1 = reduce(*c1 + l0 * r1 + l1 * r0);
         } while (curr < end);
+}
+
+/**
+ * @brief NTT-domain dot product of \a count polynomial pairs.
+ *
+ * out = sum_j lhs[j * lhs_stride] (*) rhs[j], j = 0..count-1.
+ *
+ * @param [out] out         Result, must not overlap the inputs
+ * @param [in]  lhs         First left-hand polynomial
+ * @param [in]  lhs_stride  Distance between left-hand polynomials, in scalars
+ * @param [in]  rhs         \a count consecutive right-hand polynomials
+ * @param [in]  count       Number of terms, at least 1
+ */
+static void
+poly_ntt_dot_base(scalar *out, const scalar *lhs, size_t lhs_stride, const scalar *rhs,
+                  size_t count)
+{
+        size_t j;
+
+        poly_mult_base(out, lhs, rhs);
+        for (j = 1; j < count; j++)
+                poly_mult_add_base(out, lhs + j * lhs_stride, rhs + j);
+}
+
+/**
+ * @brief As poly_ntt_dot_base(), but accumulates the dot product into \a out.
+ *
+ * @param [in,out] out         Accumulator, must not overlap the inputs
+ * @param [in]     lhs         First left-hand polynomial
+ * @param [in]     lhs_stride  Distance between left-hand polynomials, in scalars
+ * @param [in]     rhs         \a count consecutive right-hand polynomials
+ * @param [in]     count       Number of terms
+ */
+static void
+poly_ntt_dot_add_base(scalar *out, const scalar *lhs, size_t lhs_stride, const scalar *rhs,
+                      size_t count)
+{
+        size_t j;
+
+        for (j = 0; j < count; j++)
+                poly_mult_add_base(out, lhs + j * lhs_stride, rhs + j);
 }
 
 /*-
@@ -1123,9 +1168,7 @@ vector_decode_12(scalar *out, const uint8_t in[3 * DEGREE / 2], int rank)
 static void
 inner_product(const IMB_ML_KEM *self, scalar *out, const scalar *lhs, const scalar *rhs, int rank)
 {
-        self->poly_mult(out, lhs, rhs);
-        while (--rank > 0)
-                self->poly_mult_add(out, ++lhs, ++rhs);
+        self->poly_ntt_dot(out, lhs, 1, rhs, rank);
 }
 
 /*
@@ -1135,13 +1178,10 @@ inner_product(const IMB_ML_KEM *self, scalar *out, const scalar *lhs, const scal
 static void
 matrix_mult_intt(const IMB_ML_KEM *self, scalar *out, const scalar *m, const scalar *a, int rank)
 {
-        const scalar *ar;
-        int i, j;
+        int i;
 
-        for (i = rank; i-- > 0; ++out) {
-                self->poly_mult(out, m++, ar = a);
-                for (j = rank - 1; j > 0; --j)
-                        self->poly_mult_add(out, m++, ++ar);
+        for (i = rank; i-- > 0; ++out, m += rank) {
+                self->poly_ntt_dot(out, m, 1, a, rank);
                 self->poly_ntt_inverse(out);
         }
 }
@@ -1151,14 +1191,10 @@ static void
 matrix_mult_transpose_add(const IMB_ML_KEM *self, scalar *out, const scalar *m, const scalar *a,
                           int rank)
 {
-        const scalar *mc = m, *mr, *ar;
-        int i, j;
+        int i;
 
-        for (i = rank; i-- > 0; ++out) {
-                self->poly_mult_add(out, mr = mc++, ar = a);
-                for (j = rank; --j > 0;)
-                        self->poly_mult_add(out, (mr += rank), ++ar);
-        }
+        for (i = rank; i-- > 0; ++out)
+                self->poly_ntt_dot_add(out, m++, rank, a, rank);
 }
 
 /*-
