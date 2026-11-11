@@ -266,9 +266,11 @@ ossl_ml_kem_genkey(const IMB_ML_KEM *self, uint8_t *pubenc, size_t publen, ML_KE
  * key or performing KEM decapsulation.
  */
 __owur int
-ossl_ml_kem_encode_public_key(uint8_t *out, size_t len, const ML_KEM_KEY *key);
+ossl_ml_kem_encode_public_key(const IMB_ML_KEM *self, uint8_t *out, size_t len,
+                              const ML_KEM_KEY *key);
 __owur int
-ossl_ml_kem_encode_private_key(uint8_t *out, size_t len, const ML_KEM_KEY *key);
+ossl_ml_kem_encode_private_key(const IMB_ML_KEM *self, uint8_t *out, size_t len,
+                               const ML_KEM_KEY *key);
 __owur int
 ossl_ml_kem_encode_seed(uint8_t *out, size_t len, const ML_KEM_KEY *key);
 

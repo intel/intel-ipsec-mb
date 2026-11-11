@@ -572,6 +572,21 @@ exit:
         return ret;
 }
 
+/* Sets 12-bit coefficient |idx| of a ByteEncode_12 encoded vector to |val| */
+static void
+ml_kem_set_coeff12(uint8_t *buf, const size_t idx, const uint16_t val)
+{
+        uint8_t *p = &buf[3 * (idx / 2)];
+
+        if (idx & 1) {
+                p[1] = (uint8_t) ((p[1] & 0x0f) | ((val & 0x0f) << 4));
+                p[2] = (uint8_t) (val >> 4);
+        } else {
+                p[0] = (uint8_t) val;
+                p[1] = (uint8_t) ((p[1] & 0xf0) | (val >> 8));
+        }
+}
+
 /*
  * Malformed encapsulation/decapsulation key handling.
  *
@@ -659,6 +674,30 @@ ml_kem_key_negative(struct IMB_MGR *mb_mgr, const IMB_ML_KEM_ALG alg)
         exp_dk[ek_off + 1] |= 0x0f;
         if (imb_ml_kem_privkey_validate(self, exp_dk, dk_bytes) != IMB_ERR_PQC_KEYOP)
                 goto exit;
+
+        /*
+         * Modulus check at other positions: odd coefficient, upper half of a
+         * 16-coefficient block, last coefficient of a polynomial, a later
+         * polynomial and the last coefficient of the vector; alternating
+         * 4095 with q itself to also cover the boundary.
+         */
+        stage = "ek and dk s vector modulus check, other coefficients";
+        const size_t n_coeffs = (ek_bytes - ML_KEM_K_BYTES) * 2 / 3;
+        const size_t idx[] = { 1, 10, 255, 256 + 3, n_coeffs - 1 };
+
+        for (size_t i = 0; i < DIM(idx); i++) {
+                const uint16_t val = (i & 1) ? 3329 : 0xfff;
+
+                memcpy(exp_ek, buf_ek, ek_bytes);
+                ml_kem_set_coeff12(exp_ek, idx[i], val);
+                if (imb_ml_kem_pubkey_validate(self, exp_ek, ek_bytes) != IMB_ERR_PQC_KEYOP)
+                        goto exit;
+
+                memcpy(exp_dk, buf_dk, dk_bytes);
+                ml_kem_set_coeff12(exp_dk, idx[i], val);
+                if (imb_ml_kem_privkey_validate(self, exp_dk, dk_bytes) != IMB_ERR_PQC_KEYOP)
+                        goto exit;
+        }
 
         /* hash check: flip a bit of H(ek) so dk no longer matches its ek */
         stage = "dk hash check";

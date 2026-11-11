@@ -145,9 +145,6 @@ DECLARE_ML_KEM_VARIANT_KEYDATA(1024);
 #undef DECLARE_ML_KEM_PUBKEYDATA
 #undef DECLARE_ML_KEM_PRVKEYDATA
 
-static void
-scalar_encode(uint8_t *out, const scalar *s, int bits);
-
 /*
  * The wire-form of a losslessly encoded vector uses 12-bits per element.
  *
@@ -318,7 +315,8 @@ hash_h(uint8_t out[ML_KEM_PKHASH_BYTES], const uint8_t *in, size_t len, EVP_MD_C
 
 /* Incremental hash_h of expanded public key */
 static int
-hash_h_pubkey(uint8_t pkhash[ML_KEM_PKHASH_BYTES], EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
+hash_h_pubkey(const IMB_ML_KEM *self, uint8_t pkhash[ML_KEM_PKHASH_BYTES], EVP_MD_CTX *mdctx,
+              ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo = key->vinfo;
         const scalar *t = key->t, *end = t + vinfo->rank;
@@ -330,7 +328,7 @@ hash_h_pubkey(uint8_t pkhash[ML_KEM_PKHASH_BYTES], EVP_MD_CTX *mdctx, ML_KEM_KEY
         do {
                 uint8_t buf[3 * DEGREE / 2];
 
-                scalar_encode(buf, t++, 12);
+                self->poly_encode12(buf, t++);
                 if (!EVP_DigestUpdate(mdctx, buf, sizeof(buf)))
                         return 0;
         } while (t < end);
@@ -453,6 +451,10 @@ static void
 cbd2_base(scalar *out, const uint8_t *r);
 static void
 cbd3_base(scalar *out, const uint8_t *r);
+static void
+encode12_base(uint8_t *out, const scalar *s);
+static __owur int
+scalar_decode_12(scalar *out, const uint8_t in[3 * DEGREE / 2]);
 
 /**
  * @brief Compress_d and ByteEncode_d with the AVX2 kernel for \a bits, if any.
@@ -544,6 +546,8 @@ ossl_ml_kem_poly_init_base(IMB_ML_KEM *self)
         self->poly_frommsg_add = scalar_decode_decompress_add;
         self->poly_cbd2 = cbd2_base;
         self->poly_cbd3 = cbd3_base;
+        self->poly_encode12 = encode12_base;
+        self->poly_decode12 = scalar_decode_12;
         self->rej_uniform_block = rej_uniform_block_base;
 }
 
@@ -567,6 +571,8 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_frommsg_add = ml_kem_poly_frommsg_add_avx2;
         self->poly_cbd2 = ml_kem_poly_cbd2_avx2;
         self->poly_cbd3 = ml_kem_poly_cbd3_avx2;
+        self->poly_encode12 = encode12_base;
+        self->poly_decode12 = scalar_decode_12;
         self->rej_uniform_block = ml_kem_rej_uniform_block_avx2;
 }
 
@@ -845,6 +851,18 @@ scalar_encode(uint8_t *out, const scalar *s, int bits)
         } while (curr < end);
 }
 
+/**
+ * @brief ByteEncode_12, scalar_encode() specialised to bits == 12.
+ *
+ * @param [out] out  Encoded output, 384 bytes
+ * @param [in]  s    Input coefficients in [0, 4096)
+ */
+static void
+encode12_base(uint8_t *out, const scalar *s)
+{
+        scalar_encode(out, s, 12);
+}
+
 /*
  * scalar_encode_1 is |scalar_encode| specialised for |bits| == 1.
  */
@@ -1105,22 +1123,21 @@ vector_add(const IMB_ML_KEM *self, scalar *lhs, const scalar *rhs, int rank)
 }
 
 /*
- * Encodes an entire vector into 32*|rank|*|bits| bytes. Note that since 256
- * (DEGREE) is divisible by 8, the individual vector entries will always fill a
- * whole number of bytes, so we do not need to worry about bit packing here.
+ * Encodes an entire vector into 384*|rank| bytes (12 bits per coefficient).
  */
 static void
-vector_encode(uint8_t *out, const scalar *a, int bits, int rank)
+vector_encode_12(const IMB_ML_KEM *self, uint8_t *out, const scalar *a, int rank)
 {
-        int stride = bits * DEGREE / 8;
+        const int stride = 3 * DEGREE / 2;
 
         for (; rank-- > 0; out += stride)
-                scalar_encode(out, a++, bits);
+                self->poly_encode12(out, a++);
 }
 
 /*
- * Compresses and encodes an entire vector into 32*|rank|*|bits| bytes, see
- * vector_encode(). The input vector may be modified.
+ * Compresses and encodes an entire vector into 32*|rank|*|bits| bytes. Since
+ * 256 (DEGREE) is divisible by 8, the individual vector entries always fill a
+ * whole number of bytes. The input vector may be modified.
  */
 static void
 vector_compress_encode(const IMB_ML_KEM *self, uint8_t *out, scalar *a, int bits, int rank)
@@ -1154,12 +1171,12 @@ vector_decode_decompress_ntt(const IMB_ML_KEM *self, scalar *out, const uint8_t 
 
 /* vector_decode(), specialised to bits == 12. */
 static __owur int
-vector_decode_12(scalar *out, const uint8_t in[3 * DEGREE / 2], int rank)
+vector_decode_12(const IMB_ML_KEM *self, scalar *out, const uint8_t in[3 * DEGREE / 2], int rank)
 {
         int stride = 3 * DEGREE / 2;
 
         for (; rank-- > 0; in += stride)
-                if (!scalar_decode_12(out++, in))
+                if (!self->poly_decode12(out++, in))
                         return 0;
         return 1;
 }
@@ -1446,12 +1463,12 @@ decrypt_cpa(const IMB_ML_KEM *self, uint8_t out[ML_KEM_SHARED_SECRET_BYTES], con
  * wire-format of an ML-KEM public key.
  */
 static void
-encode_pubkey(uint8_t *out, const ML_KEM_KEY *key)
+encode_pubkey(const IMB_ML_KEM *self, uint8_t *out, const ML_KEM_KEY *key)
 {
         const uint8_t *rho = key->rho;
         const ML_KEM_VINFO *vinfo = key->vinfo;
 
-        vector_encode(out, key->t, 12, vinfo->rank);
+        vector_encode_12(self, out, key->t, vinfo->rank);
         memcpy(out + vinfo->vector_bytes, rho, ML_KEM_RANDOM_BYTES);
 }
 
@@ -1462,13 +1479,13 @@ encode_pubkey(uint8_t *out, const ML_KEM_KEY *key)
  * This matches the input format of parse_prvkey() below.
  */
 static void
-encode_prvkey(uint8_t *out, const ML_KEM_KEY *key)
+encode_prvkey(const IMB_ML_KEM *self, uint8_t *out, const ML_KEM_KEY *key)
 {
         const ML_KEM_VINFO *vinfo = key->vinfo;
 
-        vector_encode(out, key->s, 12, vinfo->rank);
+        vector_encode_12(self, out, key->s, vinfo->rank);
         out += vinfo->vector_bytes;
-        encode_pubkey(out, key);
+        encode_pubkey(self, out, key);
         out += vinfo->pubkey_bytes;
         memcpy(out, key->pkhash, ML_KEM_PKHASH_BYTES);
         out += ML_KEM_PKHASH_BYTES;
@@ -1489,7 +1506,7 @@ parse_pubkey(const IMB_ML_KEM *self, const uint8_t *in, EVP_MD_CTX *mdctx, ML_KE
         const ML_KEM_VINFO *vinfo = key->vinfo;
 
         /* Decode and check |t| */
-        if (!vector_decode_12(key->t, in, vinfo->rank)) {
+        if (!vector_decode_12(self, key->t, in, vinfo->rank)) {
                 ERR_raise_data(ERR_LIB_PROV, PROV_R_INVALID_KEY, "%s invalid public 't' vector",
                                vinfo->algorithm_name);
                 return 0;
@@ -1521,7 +1538,7 @@ parse_prvkey(const IMB_ML_KEM *self, const uint8_t *in, EVP_MD_CTX *mdctx, ML_KE
         const ML_KEM_VINFO *vinfo = key->vinfo;
 
         /* Decode and check |s|. */
-        if (!vector_decode_12(key->s, in, vinfo->rank)) {
+        if (!vector_decode_12(self, key->s, in, vinfo->rank)) {
                 ERR_raise_data(ERR_LIB_PROV, PROV_R_INVALID_KEY, "%s invalid private 's' vector",
                                vinfo->algorithm_name);
                 return 0;
@@ -1612,10 +1629,10 @@ genkey(const IMB_ML_KEM *self, const uint8_t seed[ML_KEM_SEED_BYTES], EVP_MD_CTX
 
         if (pubenc == NULL) {
                 /* Incremental digest of public key without in-full serialisation. */
-                if (!hash_h_pubkey(key->pkhash, mdctx, key))
+                if (!hash_h_pubkey(self, key->pkhash, mdctx, key))
                         goto end;
         } else {
-                encode_pubkey(pubenc, key);
+                encode_pubkey(self, pubenc, key);
                 if (!hash_h(key->pkhash, pubenc, vinfo->pubkey_bytes, mdctx, key))
                         goto end;
         }
@@ -1987,21 +2004,23 @@ ossl_ml_kem_key_free(ML_KEM_KEY *key)
 
 /* Serialise the public component of an ML-KEM key */
 int
-ossl_ml_kem_encode_public_key(uint8_t *out, size_t len, const ML_KEM_KEY *key)
+ossl_ml_kem_encode_public_key(const IMB_ML_KEM *self, uint8_t *out, size_t len,
+                              const ML_KEM_KEY *key)
 {
         if (!ossl_ml_kem_have_pubkey(key) || len != key->vinfo->pubkey_bytes)
                 return 0;
-        encode_pubkey(out, key);
+        encode_pubkey(self, out, key);
         return 1;
 }
 
 /* Serialise an ML-KEM private key */
 int
-ossl_ml_kem_encode_private_key(uint8_t *out, size_t len, const ML_KEM_KEY *key)
+ossl_ml_kem_encode_private_key(const IMB_ML_KEM *self, uint8_t *out, size_t len,
+                               const ML_KEM_KEY *key)
 {
         if (!ossl_ml_kem_have_prvkey(key) || len != key->vinfo->prvkey_bytes)
                 return 0;
-        encode_prvkey(out, key);
+        encode_prvkey(self, out, key);
         return 1;
 }
 

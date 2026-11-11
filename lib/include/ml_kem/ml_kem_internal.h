@@ -97,6 +97,10 @@ typedef void(ML_KEM_POLY_TOMSG_FN)(uint8_t *out, struct ossl_ml_kem_scalar_st *i
 typedef void(ML_KEM_POLY_FROMMSG_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
 /* SamplePolyCBD from 64 * eta PRF output bytes */
 typedef void(ML_KEM_POLY_CBD_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
+/* ByteEncode_12 */
+typedef void(ML_KEM_POLY_ENCODE12_FN)(uint8_t *out, const struct ossl_ml_kem_scalar_st *in);
+/* ByteDecode_12: returns 1 if all coefficients are below q, 0 otherwise */
+typedef int(ML_KEM_POLY_DECODE12_FN)(struct ossl_ml_kem_scalar_st *out, const uint8_t *in);
 /*
  * SamplePolyCBD of out[0..n-1] from PRF(seed, i), eta1 for the first n1 and
  * eta2 for the rest (eta1 and eta2 must be 2 or 3): returns 1 on success,
@@ -136,6 +140,8 @@ struct IMB_ML_KEM {
         ML_KEM_POLY_FROMMSG_FN *poly_frommsg_add;
         ML_KEM_POLY_CBD_FN *poly_cbd2;
         ML_KEM_POLY_CBD_FN *poly_cbd3;
+        ML_KEM_POLY_ENCODE12_FN *poly_encode12;
+        ML_KEM_POLY_DECODE12_FN *poly_decode12;
         ML_KEM_REJ_UNIFORM_FN *rej_uniform_block;
         ML_KEM_MATRIX_EXPAND_FN *matrix_expand;
         ML_KEM_GENCBD_FN *gencbd;

@@ -86,7 +86,7 @@ op_keypair(IMB_ML_KEM *self, void *ek, void *dk, const void *seed_64_or_null)
         if (!ossl_ml_kem_genkey(self, ek, self->ek_len, key))
                 goto end;
 
-        if (!ossl_ml_kem_encode_private_key(dk, self->dk_len, key))
+        if (!ossl_ml_kem_encode_private_key(self, dk, self->dk_len, key))
                 goto end;
 
         /* Bind the freshly generated key (both components) to the context. */
