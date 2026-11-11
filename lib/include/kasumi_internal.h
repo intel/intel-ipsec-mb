@@ -42,7 +42,7 @@ typedef union _ku64 {
  * Inline 16-bit left rotation
  *---------------------------------------------------------------------*/
 
-#define ROL16(a, b) (uint16_t)((a << b) | (a >> (16 - b)))
+#define ROL16(a, b) (uint16_t) ((a << b) | (a >> (16 - b)))
 
 static inline void
 kasumi_update(const uint16_t *context, void *data)

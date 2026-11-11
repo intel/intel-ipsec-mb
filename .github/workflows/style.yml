@@ -10,23 +10,21 @@ permissions:
   contents: read
 
 jobs:
-  # Style check with clang-format 18
+  # Style check with clang-format 22
   style-check:
     runs-on: ubuntu-latest
 
     steps:
     - name: Install packages
       run: |
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo -E ./llvm.sh 18
-        sudo -E apt-get install -y nasm cmake clang-format-18
+        sudo -E apt-get install -y nasm cmake
+        pipx install clang-format==22.1.8
 
     - name: Checkout repo
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCLANG_FORMAT_BIN=clang-format-18
+      run: cmake -B ${{github.workspace}}/build -DCLANG_FORMAT_BIN=clang-format
 
     - name: Run C style check
       run: cmake --build ${{github.workspace}}/build --target style

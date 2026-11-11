@@ -2,6 +2,9 @@
 
 Unreleased
 ======================================================================
+General
+- Updated style check to clang-format version 22.
+
 Library
 - Added AVX2 implementations of ML-DSA polynomial rounding (HighBits, LowBits,
   Decompose, MakeHint), modular addition/subtraction, norm checks, hint counting

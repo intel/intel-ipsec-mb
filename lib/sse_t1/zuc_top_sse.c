@@ -81,9 +81,9 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
         DECLARE_ALIGNED(uint8_t H[NUM_SSE_BUFS][16], 64);
         DECLARE_ALIGNED(uint8_t Q[NUM_SSE_BUFS][16], 64);
         DECLARE_ALIGNED(uint8_t P[NUM_SSE_BUFS][16], 64);
-        DECLARE_ALIGNED(uint32_t * pKeyStrArr[NUM_SSE_BUFS], 16) = { NULL };
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = { NULL };
         DECLARE_ALIGNED(const uint64_t *pIn64[NUM_SSE_BUFS], 64) = { NULL };
-        DECLARE_ALIGNED(uint64_t * pOut64[NUM_SSE_BUFS], 64) = { NULL };
+        DECLARE_ALIGNED(uint64_t *pOut64[NUM_SSE_BUFS], 64) = { NULL };
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
 

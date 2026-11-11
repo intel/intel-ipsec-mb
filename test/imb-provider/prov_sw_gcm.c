@@ -23,7 +23,7 @@
 #include "prov_sw_gcm.h"
 #include "prov_ciphers.h"
 
-#define PROV_GCM_TLS_TOTAL_IV_LEN             (EVP_GCM_TLS_FIXED_IV_LEN + EVP_GCM_TLS_EXPLICIT_IV_LEN)
+#define PROV_GCM_TLS_TOTAL_IV_LEN (EVP_GCM_TLS_FIXED_IV_LEN + EVP_GCM_TLS_EXPLICIT_IV_LEN)
 #define PROV_GCM_TLS_PAYLOADLENGTH_MSB_OFFSET 2
 #define PROV_GCM_TLS_PAYLOADLENGTH_LSB_OFFSET 1
 #define PROV_BYTE_SHIFT                       8

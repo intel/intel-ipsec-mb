@@ -18,8 +18,9 @@
  * constraint violation.  Forward-declare only what we need.
  */
 #define BCRYPT_USE_SYSTEM_PREFERRED_RNG 0x00000002UL
-long __stdcall BCryptGenRandom(void *hAlgorithm, unsigned char *pbBuffer, unsigned long cbBuffer,
-                               unsigned long dwFlags);
+long __stdcall
+BCryptGenRandom(void *hAlgorithm, unsigned char *pbBuffer, unsigned long cbBuffer,
+                unsigned long dwFlags);
 #else
 #include <windows.h>
 #include <bcrypt.h>

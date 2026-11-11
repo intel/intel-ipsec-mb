@@ -4,16 +4,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # cmake-format: on
 
-# set clang-format binary name
+# set clang-format binary name (prefer versioned binary if installed)
 if(NOT CLANG_FORMAT_BIN)
-  set(CLANG_FORMAT_BIN clang-format)
+  set(CLANG_FORMAT_BIN clang-format-22 clang-format)
 endif()
 
 find_program(CLANG_FORMAT NAMES ${CLANG_FORMAT_BIN})
 
 # set up target if clang-format available
 if(CLANG_FORMAT)
-  set(CLANG_FORMAT_REQUIRED "18.1.0")
+  set(CLANG_FORMAT_REQUIRED "22.1.0")
 
   execute_process(
     COMMAND ${CLANG_FORMAT} --version
@@ -53,11 +53,13 @@ if(CLANG_FORMAT)
       add_custom_target(
         style
         COMMENT "Checking style using clang-format"
-        COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "${MIN_VERSION_MSG}")
+        COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "${MIN_VERSION_MSG}"
+        COMMAND ${CMAKE_COMMAND} -E false)
       add_custom_target(
         style-fix
         COMMENT "Fixing style issues using clang-format"
-        COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "${MIN_VERSION_MSG}")
+        COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "${MIN_VERSION_MSG}"
+        COMMAND ${CMAKE_COMMAND} -E false)
     endif()
   endif()
 endif()
