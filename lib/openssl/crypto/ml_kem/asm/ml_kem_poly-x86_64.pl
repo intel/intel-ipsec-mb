@@ -10,7 +10,8 @@
 # Description:
 #   AVX2 implementations of the ML-KEM polynomial operations outside the NTT
 #   (FIPS 203): SampleNTT rejection sampling, Compress/Decompress with
-#   packing for d = 1, 4, 5, 10 and 11, and SamplePolyCBD for eta = 2 and 3.
+#   packing for d = 1, 4, 5, 10 and 11, SamplePolyCBD for eta = 2 and 3, and
+#   ByteEncode/ByteDecode for d = 12.
 #
 # Notes:
 #   - Rejection sampling branches on public data (derived from rho) only;
@@ -739,6 +740,125 @@ $code .= <<___;
     ret
 .cfi_endproc
 .size   ml_kem_poly_cbd3_avx2, .-ml_kem_poly_cbd3_avx2
+
+###############################################################################
+# ml_kem_poly_encode12_avx2
+#
+# ByteEncode for d = 12 (FIPS 203, Algorithm 5).
+#
+# C Prototype:
+#   void ml_kem_poly_encode12_avx2(
+#       uint8_t *out,               // (rdi) 384 output bytes
+#       const uint16_t *in          // (rsi) 256 input coefficients
+#   );
+#
+# Description:
+#   Each coefficient pair (a, b) is combined into the dword a + 4096 * b with
+#   vpmaddwd, and the low 3 bytes of each dword are gathered with vpshufb.
+#   16 coefficients give 24 bytes per iteration: the lower lane is stored
+#   with a 16-byte write whose last 4 bytes are rewritten by the upper lane.
+#
+# Inputs:
+#   in - coefficients in [0, 4096)
+###############################################################################
+.align 32
+.globl  ml_kem_poly_encode12_avx2
+.type   ml_kem_poly_encode12_avx2,\@function,2
+ml_kem_poly_encode12_avx2:
+.cfi_startproc
+    endbranch
+    vpbroadcastd ml_kem_enc12_mul(%rip), %ymm4
+    vmovdqa ml_kem_enc12_shuf(%rip), %ymm5
+    mov     \$16, %ecx
+
+.align 32
+.Lenc12_loop:
+    vpmaddwd (%rsi), %ymm4, %ymm0
+    vpshufb %ymm5, %ymm0, %ymm0
+    vextracti128 \$1, %ymm0, %xmm1
+    vmovdqu %xmm0, (%rdi)
+    vmovq   %xmm1, 12(%rdi)
+    vpextrd \$2, %xmm1, 20(%rdi)
+
+    add     \$32, %rsi
+    add     \$24, %rdi
+    dec     %ecx
+    jnz     .Lenc12_loop
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_encode12_avx2, .-ml_kem_poly_encode12_avx2
+
+###############################################################################
+# ml_kem_poly_decode12_avx2
+#
+# ByteDecode for d = 12 (FIPS 203, Algorithm 6) with the modulus check of
+# FIPS 203, Section 7.2.
+#
+# C Prototype:
+#   int ml_kem_poly_decode12_avx2(
+#       uint16_t *out,              // (rdi) 256 output coefficients
+#       const uint8_t *in           // (rsi) 384 input bytes
+#   );
+#
+# Description:
+#   Uses the SampleNTT gather: 24 bytes give 16 12-bit coefficients per
+#   iteration. All coefficients are decoded and the check result is
+#   accumulated, so the run time does not depend on the input.
+#
+# Output:
+#   out - decoded coefficients in [0, 4096)
+#   eax - 1 if all coefficients are below q, 0 otherwise
+###############################################################################
+.align 32
+.globl  ml_kem_poly_decode12_avx2
+.type   ml_kem_poly_decode12_avx2,\@function,2
+ml_kem_poly_decode12_avx2:
+.cfi_startproc
+    endbranch
+    vpbroadcastw ml_kem_q(%rip), %ymm3
+    vpbroadcastw ml_kem_mask_12(%rip), %ymm4
+    vmovdqa ml_kem_rej_shuf(%rip), %ymm5
+    vpcmpeqd %ymm2, %ymm2, %ymm2
+    mov     \$16, %ecx
+
+.align 32
+.Ldec12_loop:
+    vmovdqu (%rsi), %xmm0
+    vinserti128 \$1, 8(%rsi), %ymm0, %ymm0
+    vpshufb %ymm5, %ymm0, %ymm0
+    vpsrlw  \$4, %ymm0, %ymm1
+    vpblendw \$0xaa, %ymm1, %ymm0, %ymm0
+    vpand   %ymm4, %ymm0, %ymm0
+    vmovdqu %ymm0, (%rdi)
+    vpcmpgtw %ymm0, %ymm3, %ymm1
+    vpand   %ymm1, %ymm2, %ymm2
+
+    add     \$24, %rsi
+    add     \$32, %rdi
+    dec     %ecx
+    jnz     .Ldec12_loop
+
+    vpmovmskb %ymm2, %ecx
+    xor     %eax, %eax
+    cmp     \$-1, %ecx
+    sete    %al
+
+    vpxor   %ymm0, %ymm0, %ymm0
+    vpxor   %ymm1, %ymm1, %ymm1
+    vpxor   %ymm2, %ymm2, %ymm2
+    vpxor   %ymm3, %ymm3, %ymm3
+    vpxor   %ymm4, %ymm4, %ymm4
+    vpxor   %ymm5, %ymm5, %ymm5
+    vzeroupper
+    ret
+.cfi_endproc
+.size   ml_kem_poly_decode12_avx2, .-ml_kem_poly_decode12_avx2
 ___
 
 $code .= <<___;
@@ -913,6 +1033,17 @@ ml_kem_cbd_qbias:
 ml_kem_cbd3_shuf:
     .byte 0,1,2,0x80,3,4,5,0x80,6,7,8,0x80,9,10,11,0x80
     .byte 4,5,6,0x80,7,8,9,0x80,10,11,12,0x80,13,14,15,0x80
+
+# ByteEncode d = 12: vpmaddwd multipliers (1, 4096) per word pair
+.align 4
+ml_kem_enc12_mul:
+    .value 1, 4096
+
+# ByteEncode d = 12: low 3 bytes of each dword, packed to the lane start
+.align 32
+ml_kem_enc12_shuf:
+    .byte 0,1,2,4,5,6,8,9,10,12,13,14,0x80,0x80,0x80,0x80
+    .byte 0,1,2,4,5,6,8,9,10,12,13,14,0x80,0x80,0x80,0x80
 ___
 
 $code .= <<___;

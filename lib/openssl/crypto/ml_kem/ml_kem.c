@@ -118,6 +118,12 @@ ml_kem_poly_tomsg_avx2(uint8_t *out, const scalar *in);
 void
 ml_kem_poly_frommsg_add_avx2(scalar *out, const uint8_t *in);
 
+/* AVX2 optimized ByteEncode_12 and ByteDecode_12 */
+void
+ml_kem_poly_encode12_avx2(uint8_t *out, const scalar *in);
+int
+ml_kem_poly_decode12_avx2(scalar *out, const uint8_t *in);
+
 /* Key material allocation layout */
 #define DECLARE_ML_KEM_PUBKEYDATA(name, rank)                                                      \
         struct name##_alloc {                                                                      \
@@ -571,8 +577,8 @@ ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self)
         self->poly_frommsg_add = ml_kem_poly_frommsg_add_avx2;
         self->poly_cbd2 = ml_kem_poly_cbd2_avx2;
         self->poly_cbd3 = ml_kem_poly_cbd3_avx2;
-        self->poly_encode12 = encode12_base;
-        self->poly_decode12 = scalar_decode_12;
+        self->poly_encode12 = ml_kem_poly_encode12_avx2;
+        self->poly_decode12 = ml_kem_poly_decode12_avx2;
         self->rej_uniform_block = ml_kem_rej_uniform_block_avx2;
 }
 

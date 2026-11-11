@@ -32,6 +32,7 @@ Library
 - Added ML-KEM AVX2 SamplePolyCBD for eta 2 and 3.
 - Optimized ML-KEM PRF sampling with x4 SHAKE256 (AVX2 and AVX512VL).
 - Optimized ML-KEM AVX2 matrix multiplication with a fused NTT row dot product.
+- Added ML-KEM AVX2 ByteEncode and ByteDecode for d = 12.
 
 Fixes
 - Fixes MinGW builds when not using CMake "MinGW Makefiles" generator (issue #185).
