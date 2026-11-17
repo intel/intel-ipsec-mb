@@ -2139,16 +2139,17 @@ cipher_common:
         vpcmpw k1, ymm1, [rel all_ffs], 0
         vmovdqu16 ymm1{k1}, ymm0 ; YMM1 contain updated lengths
 
-        ; Round up to nearest multiple of 4 bytes
-        vpaddw  ymm0, [rel all_threes]
-        vpandq  ymm0, [rel all_fffcs]
-
-        ; Calculate remaining bytes to encrypt after function call
-        vpsubw  ymm2, ymm1, ymm0
-        vpxorq  ymm3, ymm3
-        vpcmpw  k1, ymm2, ymm3, 1 ; Get mask of lengths < 0
-        ; Set to zero the lengths of the lanes which are going to be completed
-        vmovdqu16 ymm2{k1}, ymm3 ; YMM2 contain final lengths
+        ; Calculate remaining bytes to encrypt after function call:
+        ; max(length - min length - pad, 0), pad = -min length mod 4, with two
+        ; unsigned saturating subtractions (lengths can be above 32767 and the
+        ; rounded-up min length can exceed 16 bits)
+        vpbroadcastw ymm4, min_length
+        vpsubusw ymm2, ymm1, ymm4
+        mov     r12d, DWORD(min_length)
+        neg     r12d
+        and     r12d, 3
+        vpbroadcastw ymm4, r12d
+        vpsubusw ymm2, ymm2, ymm4 ; YMM2 contain final lengths
         vmovdqa [lengths], ymm2 ; Update in memory the final updated lengths
 
         ; Calculate number of bytes to encrypt after round of 64 bytes (up to 63 bytes),
@@ -2500,16 +2501,17 @@ CIPHER_INIT_16:
         vpcmpw k1, ymm1, [rel all_ffs], 0
         vmovdqu16 ymm1{k1}, ymm0 ; YMM1 contain updated lengths
 
-        ; Round up to nearest multiple of 4 bytes
-        vpaddw  ymm0, [rel all_threes]
-        vpandq  ymm0, [rel all_fffcs]
-
-        ; Calculate remaining bytes to encrypt after function call
-        vpsubw  ymm2, ymm1, ymm0
-        vpxorq  ymm3, ymm3
-        vpcmpw  k1, ymm2, ymm3, 1 ; Get mask of lengths < 0
-        ; Set to zero the lengths of the lanes which are going to be completed
-        vmovdqu16 ymm2{k1}, ymm3 ; YMM2 contain final lengths
+        ; Calculate remaining bytes to encrypt after function call:
+        ; max(length - min length - pad, 0), pad = -min length mod 4, with two
+        ; unsigned saturating subtractions (lengths can be above 32767 and the
+        ; rounded-up min length can exceed 16 bits)
+        vpbroadcastw ymm4, min_length
+        vpsubusw ymm2, ymm1, ymm4
+        mov     r12d, DWORD(min_length)
+        neg     r12d
+        and     r12d, 3
+        vpbroadcastw ymm4, r12d
+        vpsubusw ymm2, ymm2, ymm4 ; YMM2 contain final lengths
         vmovdqa [lengths], ymm2 ; Update in memory the final updated lengths
 
         ; Calculate number of bytes to encrypt after round of 64 bytes (up to 63 bytes),
