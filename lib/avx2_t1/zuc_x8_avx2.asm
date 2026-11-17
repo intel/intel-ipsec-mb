@@ -1341,15 +1341,18 @@ ZUC_CIPHER_8:
         vpor    xmm1, xmm4 ;; XMM1 contain updated lengths
 
         ; Round up to nearest multiple of 4 bytes
+        vmovdqa xmm5, xmm0 ;; XMM5 contain min length
         vpaddw  xmm0, [rel all_threes]
         vpand   xmm0, [rel all_fffcs]
 
-        ; Calculate remaining bytes to encrypt after function call
-        vpsubw  xmm2, xmm1, xmm0
+        ; Calculate remaining bytes to encrypt after function call:
+        ; max(length - min length - pad, 0), pad = rounded-up min length - min length,
+        ; with two unsigned saturating subtractions (lengths can be above 32767 and
+        ; the rounded-up min length can exceed 16 bits)
+        vpsubusw xmm2, xmm1, xmm5
+        vpsubw  xmm4, xmm0, xmm5 ;; pad (0-3)
+        vpsubusw xmm2, xmm2, xmm4 ;; Lanes which are going to be completed get length 0
         vpxor   xmm3, xmm3
-        vpcmpgtw xmm4, xmm2, xmm3 ;; Mask with FFFF in lengths > 0
-        ; Set to zero the lengths of the lanes which are going to be completed (lengths < 0)
-        vpand   xmm2, xmm4
         vmovdqa [lengths], xmm2 ; Update in memory the final updated lengths
 
         ; Calculate number of bytes to encrypt after round of 32 bytes (up to 31 bytes),
