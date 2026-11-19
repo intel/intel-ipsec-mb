@@ -1952,6 +1952,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         IMB_JOB *job;
         IMB_JOB job_template;
         uint32_t i;
+        uint32_t imix_index = 0;
         static uint32_t index = 0;
         static DECLARE_ALIGNED(imb_uint128_t iv, 16);
         static DECLARE_ALIGNED(imb_uint128_t auth_iv, 16);
@@ -2279,14 +2280,15 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                         *job = job_template;
 
                                 if (segment_size != 0)
-                                        set_sgl_job_fields(job, p_buffer, p_keys, i, index, sgl[i],
-                                                           &gcm_ctx[i], &cp_ctx[i]);
+                                        set_sgl_job_fields(job, p_buffer, p_keys, imix_index + i,
+                                                           index, sgl[i], &gcm_ctx[i], &cp_ctx[i]);
                                 else
-                                        set_job_fields(job, p_buffer, p_keys, i, index,
+                                        set_job_fields(job, p_buffer, p_keys, imix_index + i, index,
                                                        &job_template);
 
                                 index = get_next_index(index);
                         }
+                        imix_index += n;
                         /* submit burst */
 #ifdef DEBUG
                         const uint32_t ret = IMB_SUBMIT_BURST(mb_mgr, n, jobs);
@@ -2336,7 +2338,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                  * size to cipher going through the
                                  * list of sizes precalculated */
                                 if (imix_list_count != 0) {
-                                        list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
+                                        list_idx = (imix_index + i) & (JOB_SIZE_IMIX_LIST - 1);
                                         job->msg_len_to_cipher_in_bytes =
                                                 cipher_size_list[list_idx];
                                 } else
@@ -2354,6 +2356,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 
                                 index = get_next_index(index);
                         }
+                        imix_index += n_jobs;
                         /* submit cipher-only burst */
 #ifdef DEBUG
                         const uint32_t completed_jobs =
@@ -2396,7 +2399,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                  * size to cipher going through the
                                  * list of sizes precalculated */
                                 if (imix_list_count != 0) {
-                                        list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
+                                        list_idx = (imix_index + i) & (JOB_SIZE_IMIX_LIST - 1);
                                         job->msg_len_to_hash_in_bytes = hash_size_list[list_idx];
                                 } else
                                         job->msg_len_to_hash_in_bytes =
@@ -2432,6 +2435,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 
                                 index = get_next_index(index);
                         }
+                        imix_index += n_jobs;
                         /* submit hash-only burst */
 #ifdef DEBUG
                         const uint32_t completed_jobs =
@@ -2472,7 +2476,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                  * size to cipher going through the
                                  * list of sizes precalculated */
                                 if (imix_list_count != 0) {
-                                        list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
+                                        list_idx = (imix_index + i) & (JOB_SIZE_IMIX_LIST - 1);
                                         job->msg_len_to_cipher_in_bytes =
                                                 cipher_size_list[list_idx];
                                 } else
@@ -2500,6 +2504,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 
                                 index = get_next_index(index);
                         }
+                        imix_index += n_jobs;
                         /* submit AEAD burst */
 #ifdef DEBUG
                         const uint32_t completed_jobs =
