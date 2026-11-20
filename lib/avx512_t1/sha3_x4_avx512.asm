@@ -3,8 +3,7 @@
 ;
 ; SPDX-License-Identifier: BSD-3-Clause
 
-;; SHAKE x4 functions for ML-KEM and ML-DSA (AVX512VL), ported from
-;; keccak1600x4-avx512vl.pl.
+;; SHAKE128 and SHAKE256 x4 functions for ML-KEM and ML-DSA (AVX512VL).
 ;;
 ;; Four independent Keccak states are kept interleaved: state word i of
 ;; lanes 0-3 is held in ymm<i> (ymm0-ymm24), or in memory at offset 32*i of
@@ -24,6 +23,7 @@ extern keccak1600_block_64bit
 extern keccak_1600_init_state
 
 %define SHAKE128_RATE   168
+%define SHAKE256_RATE   136
 
 %define X4_STATE_SZ     (25 * 32 + 8)
 %define X4_POS          (25 * 32)       ; s[100]: byte position in block
@@ -745,6 +745,7 @@ SHA3_shake %+ %%BITS %+ _x4_avx512vl:
 %endmacro
 
 SHAKE_X4_FUNCS 128, SHAKE128_RATE
+SHAKE_X4_FUNCS 256, SHAKE256_RATE
 
 mksection .rodata
 default rel
