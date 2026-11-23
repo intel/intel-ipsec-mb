@@ -384,7 +384,7 @@ ossl_ml_dsa_key_public_from_private(const IMB_ML_DSA *self, ML_DSA_KEY *key)
 
         if (!vector_secure_alloc(&t0, key->params->k)) /* t0 is already in the private key */
                 return 0;
-        ret = ((md_ctx = EVP_MD_CTX_new()) != NULL) &&
+        ret = ((md_ctx = imb_evp_md_ctx_new(self->sha3_meth)) != NULL) &&
               ossl_ml_dsa_key_pub_alloc(key) /* allocate space for t1 */
               && public_from_private(self, key, md_ctx, &key->t1, &t0) &&
               vector_equal(&t0, &key->t0) /* compare the generated t0 to the expected */
@@ -412,7 +412,7 @@ ossl_ml_dsa_key_pairwise_check(const IMB_ML_DSA *self, const ML_DSA_KEY *key)
         polys = OPENSSL_secure_malloc_array(2 * k, sizeof(*polys));
         if (polys == NULL)
                 return 0;
-        md_ctx = EVP_MD_CTX_new();
+        md_ctx = imb_evp_md_ctx_new(self->sha3_meth);
         if (md_ctx == NULL)
                 goto err;
 
@@ -449,7 +449,7 @@ keygen_internal(const IMB_ML_DSA *self, ML_DSA_KEY *out)
         const ML_DSA_PARAMS *params = out->params;
         EVP_MD_CTX *md_ctx = NULL;
 
-        if (out->seed == NULL || (md_ctx = EVP_MD_CTX_new()) == NULL ||
+        if (out->seed == NULL || (md_ctx = imb_evp_md_ctx_new(self->sha3_meth)) == NULL ||
             !ossl_ml_dsa_key_pub_alloc(out) || !ossl_ml_dsa_key_priv_alloc(out))
                 goto err;
 

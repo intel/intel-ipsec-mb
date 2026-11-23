@@ -594,6 +594,30 @@ ossl_ml_kem_sample_init_base(IMB_ML_KEM *self)
         self->gencbd = gencbd_base;
 }
 
+/**
+ * @brief Select the generic single-buffer SHA3/SHAKE implementation for
+ *        \a self.
+ *
+ * @param [in,out] self  ML-KEM context to initialise
+ */
+void
+ossl_ml_kem_sha3_init_base(IMB_ML_KEM *self)
+{
+        self->sha3_meth = &ossl_sha3_default_meth;
+}
+
+/**
+ * @brief Select the AVX512 single-buffer SHA3/SHAKE implementation for
+ *        \a self.
+ *
+ * @param [in,out] self  ML-KEM context to initialise
+ */
+void
+ossl_ml_kem_sha3_init_avx512(IMB_ML_KEM *self)
+{
+        self->sha3_meth = &ossl_sha3_avx512_meth;
+}
+
 /*-
  * reduce_once reduces 0 <= x < 2*kPrime, mod kPrime.
  *
@@ -2084,7 +2108,7 @@ ossl_ml_kem_parse_public_key(const IMB_ML_KEM *self, const uint8_t *in, size_t l
                 return 0;
         vinfo = key->vinfo;
 
-        if (len != vinfo->pubkey_bytes || (mdctx = EVP_MD_CTX_new()) == NULL)
+        if (len != vinfo->pubkey_bytes || (mdctx = imb_evp_md_ctx_new(self->sha3_meth)) == NULL)
                 return 0;
 
         if (add_storage(OPENSSL_malloc(vinfo->puballoc), NULL, 0, 0, key))
@@ -2110,7 +2134,7 @@ ossl_ml_kem_parse_private_key(const IMB_ML_KEM *self, const uint8_t *in, size_t 
                 return 0;
         vinfo = key->vinfo;
 
-        if (len != vinfo->prvkey_bytes || (mdctx = EVP_MD_CTX_new()) == NULL)
+        if (len != vinfo->prvkey_bytes || (mdctx = imb_evp_md_ctx_new(self->sha3_meth)) == NULL)
                 return 0;
 
         /* Clear any unused seed */
@@ -2157,7 +2181,7 @@ ossl_ml_kem_genkey(const IMB_ML_KEM *self, uint8_t *pubenc, size_t publen, ML_KE
                 goto err;
         }
 
-        if ((mdctx = EVP_MD_CTX_new()) == NULL)
+        if ((mdctx = imb_evp_md_ctx_new(self->sha3_meth)) == NULL)
                 goto err;
 
         /*
@@ -2207,7 +2231,7 @@ ossl_ml_kem_encap_seed(const IMB_ML_KEM *self, uint8_t *ctext, size_t clen, uint
 
         if (ctext == NULL || clen != vinfo->ctext_bytes || shared_secret == NULL ||
             slen != ML_KEM_SHARED_SECRET_BYTES || entropy == NULL || elen != ML_KEM_RANDOM_BYTES ||
-            (mdctx = EVP_MD_CTX_new()) == NULL)
+            (mdctx = imb_evp_md_ctx_new(self->sha3_meth)) == NULL)
                 return 0;
         /*
          * Data derived from the encap entropy defaults secret, and to avoid
@@ -2287,7 +2311,7 @@ ossl_ml_kem_decap(const IMB_ML_KEM *self, uint8_t *shared_secret, size_t slen, c
         vinfo = key->vinfo;
 
         if (shared_secret == NULL || slen != ML_KEM_SHARED_SECRET_BYTES || ctext == NULL ||
-            clen != vinfo->ctext_bytes || (mdctx = EVP_MD_CTX_new()) == NULL) {
+            clen != vinfo->ctext_bytes || (mdctx = imb_evp_md_ctx_new(self->sha3_meth)) == NULL) {
                 (void) RAND_bytes_ex(key->libctx, shared_secret, ML_KEM_SHARED_SECRET_BYTES,
                                      vinfo->secbits);
                 return 0;

@@ -63,6 +63,7 @@ struct vector_st;
 struct matrix_st;
 struct evp_md_st;
 struct evp_md_ctx_st;
+struct prov_sha3_meth_st;
 
 /* ISA specific sampling (SHAKE based) primitives */
 typedef int(ML_DSA_MATRIX_EXPAND_A_FN)(struct evp_md_ctx_st *g_ctx, const struct evp_md_st *md,
@@ -159,6 +160,8 @@ struct IMB_ML_DSA {
         ML_DSA_POLY_PACK_FN *poly_pack_z_18;
         ML_DSA_POLY_PACK_FN *poly_pack_z_20;
         ML_DSA_POLY_PACK_HINT_FN *poly_pack_hint;
+        /* Single-buffer SHA3/SHAKE implementation of the digest contexts */
+        const struct prov_sha3_meth_st *sha3_meth;
 
         /**
          * Backend dispatch table. All ops return 0 on success, <0 on error,

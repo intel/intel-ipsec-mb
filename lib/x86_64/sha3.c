@@ -23,13 +23,6 @@
 #include <sha3.h>
 #include "include/clear_regs_mem.h"
 
-/* Method table shared by all SHA3 / SHAKE contexts in this module. */
-static const PROV_SHA3_METHOD sha3_ossl_meth = {
-        ossl_sha3_absorb_default,
-        ossl_sha3_final_default,
-        ossl_shake_squeeze_default,
-};
-
 /* ------------------------------------------------------------------ */
 /* One-shot SHA3 / SHAKE functions                                     */
 /* ------------------------------------------------------------------ */
@@ -40,7 +33,7 @@ shake128(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t 
         KECCAK1600_CTX ctx;
 
         ossl_sha3_init(&ctx, 0x1f, 128);
-        ctx.meth = sha3_ossl_meth;
+        ctx.meth = ossl_sha3_default_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_squeeze(&ctx, output, (size_t) outputByteLen);
 #ifdef SAFE_DATA
@@ -54,7 +47,7 @@ shake256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t 
         KECCAK1600_CTX ctx;
 
         ossl_sha3_init(&ctx, 0x1f, 256);
-        ctx.meth = sha3_ossl_meth;
+        ctx.meth = ossl_sha3_default_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_squeeze(&ctx, output, (size_t) outputByteLen);
 #ifdef SAFE_DATA
@@ -68,7 +61,7 @@ sha3_224(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         KECCAK1600_CTX ctx;
 
         ossl_sha3_init(&ctx, 0x06, 224);
-        ctx.meth = sha3_ossl_meth;
+        ctx.meth = ossl_sha3_default_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_224_DIGEST_SIZE_IN_BYTES);
 #ifdef SAFE_DATA
@@ -82,7 +75,7 @@ sha3_256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         KECCAK1600_CTX ctx;
 
         ossl_sha3_init(&ctx, 0x06, 256);
-        ctx.meth = sha3_ossl_meth;
+        ctx.meth = ossl_sha3_default_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_256_DIGEST_SIZE_IN_BYTES);
 #ifdef SAFE_DATA
@@ -96,7 +89,7 @@ sha3_384(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         KECCAK1600_CTX ctx;
 
         ossl_sha3_init(&ctx, 0x06, 384);
-        ctx.meth = sha3_ossl_meth;
+        ctx.meth = ossl_sha3_default_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_384_DIGEST_SIZE_IN_BYTES);
 #ifdef SAFE_DATA
@@ -110,7 +103,7 @@ sha3_512(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
         KECCAK1600_CTX ctx;
 
         ossl_sha3_init(&ctx, 0x06, 512);
-        ctx.meth = sha3_ossl_meth;
+        ctx.meth = ossl_sha3_default_meth;
         ossl_sha3_absorb(&ctx, input, (size_t) inputByteLen);
         ossl_sha3_final(&ctx, output, IMB_SHA3_512_DIGEST_SIZE_IN_BYTES);
 #ifdef SAFE_DATA
@@ -134,7 +127,7 @@ sha3_ctx_init(sha3_ctx_t *ctx, uint64_t rateInBytes, uint8_t delimitedSuffix)
         const size_t bitlen = (KECCAK1600_WIDTH - (size_t) rateInBytes * 8) / 2;
 
         ossl_sha3_init(&ctx->kctx, delimitedSuffix, bitlen);
-        ctx->kctx.meth = sha3_ossl_meth;
+        ctx->kctx.meth = ossl_sha3_default_meth;
 }
 
 void

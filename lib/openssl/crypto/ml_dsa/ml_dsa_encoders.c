@@ -621,6 +621,7 @@ err:
  * @brief The reverse of ossl_ml_dsa_pk_encode().
  * See FIPS 204, Algorithm 23, pkDecode().
  *
+ * @param self ML-DSA context, selecting the SHA3/SHAKE implementation.
  * @param in An encoded public key.
  * @param in_len The size of |in|
  * @param key A key object to store the decoded public key into.
@@ -628,7 +629,7 @@ err:
  * @returns 1 if the public key was decoded successfully or 0 otherwise.
  */
 int
-ossl_ml_dsa_pk_decode(ML_DSA_KEY *key, const uint8_t *in, size_t in_len)
+ossl_ml_dsa_pk_decode(const IMB_ML_DSA *self, ML_DSA_KEY *key, const uint8_t *in, size_t in_len)
 {
         int ret = 0;
         size_t i;
@@ -642,7 +643,7 @@ ossl_ml_dsa_pk_decode(ML_DSA_KEY *key, const uint8_t *in, size_t in_len)
 
         if (!ossl_ml_dsa_key_pub_alloc(key))
                 return 0;
-        ctx = EVP_MD_CTX_new();
+        ctx = imb_evp_md_ctx_new(self->sha3_meth);
         if (ctx == NULL)
                 goto err;
         if (!PACKET_buf_init(&pkt, in, in_len) ||

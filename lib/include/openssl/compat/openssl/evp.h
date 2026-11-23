@@ -16,8 +16,10 @@
 /**
  * Compatibility shim for <openssl/evp.h> used by the vendored ML-DSA
  * (FIPS 204) sources.  Provides a header-only EVP digest interface that
- * understands SHAKE-128 and SHAKE-256, backed by the OpenSSL KECCAK1600_CTX
- * with the optimized keccak1600-x86_64 asm permutation.
+ * understands SHAKE-128 and SHAKE-256, backed by the OpenSSL KECCAK1600_CTX.
+ * Each context uses the SHA3 method passed to imb_evp_md_ctx_new(): the
+ * AVX-512 one on AVX512 and AVX10 managers, otherwise the scalar
+ * keccak1600-x86_64 one (also used by EVP_MD_CTX_new()).
  *
  * The x4 parallel SHAKE path (AVX512VL) is selected in the sampling layer,
  * from the architecture the IMB_MGR was initialised with.
@@ -127,10 +129,28 @@ EVP_MD_xof(const EVP_MD *md)
         return 1;
 }
 
+/**
+ * @brief Allocate a digest context using the given single-buffer SHA3/SHAKE
+ *        implementation for all digests initialised on it.
+ *
+ * @param [in] meth  SHA3/SHAKE method table
+ *
+ * @return New digest context, or NULL on allocation failure
+ */
+static ossl_inline ossl_unused EVP_MD_CTX *
+imb_evp_md_ctx_new(const PROV_SHA3_METHOD *meth)
+{
+        EVP_MD_CTX *ctx = (EVP_MD_CTX *) calloc(1, sizeof(EVP_MD_CTX));
+
+        if (ctx != NULL)
+                ctx->sctx.meth = *meth;
+        return ctx;
+}
+
 static ossl_inline ossl_unused EVP_MD_CTX *
 EVP_MD_CTX_new(void)
 {
-        return (EVP_MD_CTX *) calloc(1, sizeof(EVP_MD_CTX));
+        return imb_evp_md_ctx_new(&ossl_sha3_default_meth);
 }
 
 static ossl_inline ossl_unused void
@@ -145,24 +165,12 @@ EVP_MD_CTX_free(EVP_MD_CTX *ctx)
 static ossl_inline ossl_unused int
 EVP_DigestInit_ex2(EVP_MD_CTX *ctx, const EVP_MD *md, const OSSL_PARAM *p)
 {
-        /**
-         * ossl_sha3_init sets block_size, md_size, pad, and zeros xof_state/bufsz
-         * but does NOT populate ctx->sctx.meth.  Set the x86_64 generic vtable
-         * entries explicitly so ossl_sha3_absorb / ossl_sha3_squeeze dispatch
-         * correctly without needing the full ossl_shake256_new() allocator path.
-         */
-        static const PROV_SHA3_METHOD shake_meth = {
-                ossl_sha3_absorb_default,
-                ossl_sha3_final_default,
-                ossl_shake_squeeze_default,
-        };
         (void) p;
         if (ctx == NULL || md == NULL)
                 return 0;
         ctx->md = md;
         if (!ossl_sha3_init(&ctx->sctx, (unsigned char) md->suffix, (size_t) md->bitlen))
                 return 0;
-        ctx->sctx.meth = shake_meth;
         return 1;
 }
 

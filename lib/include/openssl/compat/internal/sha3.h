@@ -43,15 +43,14 @@
 #define XOF_STATE_FINAL   2
 #define XOF_STATE_SQUEEZE 3
 
-/* Forward declarations for the vtable function types */
 typedef struct keccak_st KECCAK1600_CTX;
-typedef size_t(sha3_absorb_fn)(KECCAK1600_CTX *ctx, const unsigned char *in, size_t inlen);
-typedef int(sha3_final_fn)(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
-typedef int(sha3_squeeze_fn)(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
+
+/* Keccak block absorb/squeeze, with the SHA3_absorb()/SHA3_squeeze() interface */
+typedef size_t(sha3_absorb_fn)(uint64_t A[5][5], const unsigned char *inp, size_t len, size_t r);
+typedef void(sha3_squeeze_fn)(uint64_t A[5][5], unsigned char *out, size_t len, size_t r, int next);
 
 typedef struct prov_sha3_meth_st {
         sha3_absorb_fn *absorb;
-        sha3_final_fn *final;
         sha3_squeeze_fn *squeeze;
 } PROV_SHA3_METHOD;
 
@@ -73,6 +72,16 @@ SHA3_absorb(uint64_t A[5][5], const unsigned char *inp, size_t len, size_t r);
 void
 SHA3_squeeze(uint64_t A[5][5], unsigned char *out, size_t len, size_t r, int next);
 
+/*
+ * AVX-512 replacements of SHA3_absorb() and SHA3_squeeze() (sha3_avx512.asm).
+ * SHA3_absorb_avx512() handles r = 72, 136 and 168 (SHA3-512, SHA3-256,
+ * SHAKE128 and SHAKE256) and passes any other rate on to SHA3_absorb().
+ */
+size_t
+SHA3_absorb_avx512(uint64_t A[5][5], const unsigned char *inp, size_t len, size_t r);
+void
+SHA3_squeeze_avx512(uint64_t A[5][5], unsigned char *out, size_t len, size_t r, int next);
+
 /* Single-buffer SHA3/SHAKE API (provided by sha3_ossl.c) */
 void
 ossl_sha3_reset(KECCAK1600_CTX *ctx);
@@ -87,17 +96,9 @@ ossl_sha3_final(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
 int
 ossl_sha3_squeeze(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
 
-/* Default (generic x86_64) implementations - called directly by the EVP shim */
-size_t
-ossl_sha3_absorb_default(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len);
-int
-ossl_sha3_final_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
-int
-ossl_shake_squeeze_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
-
-/* Allocates and initialises a SHAKE-256 context (used by ML-KEM) */
-KECCAK1600_CTX *
-ossl_shake256_new(void);
+/* Keccak implementations of the single-buffer API: generic x86_64 and AVX-512 */
+extern const PROV_SHA3_METHOD ossl_sha3_default_meth;
+extern const PROV_SHA3_METHOD ossl_sha3_avx512_meth;
 
 /* Multi-buffer (x4) Keccak-f[1600] context and API */
 

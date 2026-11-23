@@ -50,8 +50,8 @@ ossl_keccak_init(KECCAK1600_CTX *ctx, unsigned char pad, size_t bitlen, size_t m
 }
 
 /*
- * A buffered absorb function that calls a platform specific absorb
- * method.
+ * A buffered absorb function that calls the absorb function of the
+ * context's method.
  */
 int
 ossl_sha3_absorb(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len)
@@ -80,12 +80,12 @@ ossl_sha3_absorb(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len)
                 /* Update the input pointer */
                 inp += rem;
                 len -= rem;
-                ctx->meth.absorb(ctx, ctx->buf, bsz);
+                ctx->meth.absorb(ctx->A, ctx->buf, bsz, bsz);
                 ctx->bufsz = 0;
                 ctx->xof_state = XOF_STATE_ABSORB;
         }
         /* Absorb the input - rem = leftover part of the input < blocksize) */
-        rem = ctx->meth.absorb(ctx, inp, len);
+        rem = ctx->meth.absorb(ctx->A, inp, len, bsz);
         if (len >= bsz)
                 ctx->xof_state = XOF_STATE_ABSORB;
         /* Copy the leftover bit of the input into the buffer */
@@ -96,8 +96,13 @@ ossl_sha3_absorb(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len)
         return 1;
 }
 
+static int
+sha3_final(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
+static int
+shake_squeeze(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen);
+
 /*
- * Call a platform specific final method.
+ * Single shot final.
  * In most cases outlen should be set to ctx->mdlen.
  * This function assumes the caller has checked outlen is bounded.
  */
@@ -111,12 +116,12 @@ ossl_sha3_final(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
         if (outlen == 0)
                 return 1;
 
-        ret = ctx->meth.final(ctx, out, outlen);
+        ret = sha3_final(ctx, out, outlen);
         ctx->xof_state = XOF_STATE_FINAL;
         return ret;
 }
 
-/* Calls a platform specific squeeze method */
+/* Squeeze that can be called multiple times */
 int
 ossl_sha3_squeeze(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
 {
@@ -124,27 +129,17 @@ ossl_sha3_squeeze(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
 
         if (ctx->xof_state == XOF_STATE_FINAL)
                 return 0;
-        ret = ctx->meth.squeeze(ctx, out, outlen);
+        ret = shake_squeeze(ctx, out, outlen);
         ctx->xof_state = XOF_STATE_SQUEEZE;
         return ret;
 }
 
-/* Default version of the absorb() */
-size_t
-ossl_sha3_absorb_default(KECCAK1600_CTX *ctx, const unsigned char *inp, size_t len)
+/* Pad the buffered input with 10*1 and absorb it as the last block */
+static void
+sha3_pad_absorb(KECCAK1600_CTX *ctx)
 {
-        return SHA3_absorb(ctx->A, inp, len, ctx->block_size);
-}
-
-/*
- * Default version of the final() is a single shot method
- * (Use ossl_sha3_default_squeeze() for multiple calls).
- */
-int
-ossl_sha3_final_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
-{
-        size_t bsz = ctx->block_size;
-        size_t num = ctx->bufsz;
+        const size_t bsz = ctx->block_size;
+        const size_t num = ctx->bufsz;
 
         /*
          * Pad the data with 10*1. Note that |num| can be |bsz - 1|
@@ -155,9 +150,18 @@ ossl_sha3_final_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
         ctx->buf[num] = ctx->pad;
         ctx->buf[bsz - 1] |= 0x80;
 
-        (void) SHA3_absorb(ctx->A, ctx->buf, bsz, bsz);
+        (void) ctx->meth.absorb(ctx->A, ctx->buf, bsz, bsz);
+}
 
-        SHA3_squeeze(ctx->A, out, outlen, bsz, 0);
+/*
+ * Single shot final
+ * (Use shake_squeeze() for multiple calls).
+ */
+static int
+sha3_final(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
+{
+        sha3_pad_absorb(ctx);
+        ctx->meth.squeeze(ctx->A, out, outlen, ctx->block_size, 0);
         return 1;
 }
 
@@ -171,10 +175,10 @@ ossl_sha3_final_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
  * buffer the results. The next request will use the buffer first
  * to grab output bytes.
  */
-int
-ossl_shake_squeeze_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
+static int
+shake_squeeze(KECCAK1600_CTX *ctx, unsigned char *out, size_t outlen)
 {
-        size_t bsz = ctx->block_size;
+        const size_t bsz = ctx->block_size;
         size_t num = ctx->bufsz;
         size_t len;
         int next = 1;
@@ -185,15 +189,7 @@ ossl_shake_squeeze_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outle
          * a final absorb.
          */
         if (ctx->xof_state != XOF_STATE_SQUEEZE) {
-                /*
-                 * Pad the data with 10*1. Note that |num| can be |bsz - 1|
-                 * in which case both byte operations below are performed on
-                 * same byte...
-                 */
-                memset(ctx->buf + num, 0, bsz - num);
-                ctx->buf[num] = ctx->pad;
-                ctx->buf[bsz - 1] |= 0x80;
-                (void) SHA3_absorb(ctx->A, ctx->buf, bsz, bsz);
+                sha3_pad_absorb(ctx);
                 num = ctx->bufsz = 0;
                 next = 0;
         }
@@ -218,14 +214,14 @@ ossl_shake_squeeze_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outle
         /* Step 2. Copy full sized squeezed blocks to the output buffer directly */
         if (outlen >= bsz) {
                 len = bsz * (outlen / bsz);
-                SHA3_squeeze(ctx->A, out, len, bsz, next);
+                ctx->meth.squeeze(ctx->A, out, len, bsz, next);
                 next = 1;
                 out += len;
                 outlen -= len;
         }
         if (outlen > 0) {
                 /* Step 3. Squeeze one more block into a buffer */
-                SHA3_squeeze(ctx->A, ctx->buf, bsz, bsz, next);
+                ctx->meth.squeeze(ctx->A, ctx->buf, bsz, bsz, next);
                 safe_memcpy(out, ctx->buf, outlen);
                 /* Step 4. Remember the leftover part of the squeezed block */
                 ctx->bufsz = bsz - outlen;
@@ -233,18 +229,6 @@ ossl_shake_squeeze_default(KECCAK1600_CTX *ctx, unsigned char *out, size_t outle
         return 1;
 }
 
-static PROV_SHA3_METHOD shake_generic_meth = { ossl_sha3_absorb_default, ossl_sha3_final_default,
-                                               ossl_shake_squeeze_default };
+const PROV_SHA3_METHOD ossl_sha3_default_meth = { SHA3_absorb, SHA3_squeeze };
 
-KECCAK1600_CTX *
-ossl_shake256_new(void)
-{
-        KECCAK1600_CTX *ctx = OPENSSL_zalloc(sizeof(*ctx));
-
-        if (ctx == NULL)
-                return NULL;
-        ossl_keccak_init(ctx, '\x1f', 256, 0);
-        ctx->md_size = SIZE_MAX;
-        ctx->meth = shake_generic_meth;
-        return ctx;
-}
+const PROV_SHA3_METHOD ossl_sha3_avx512_meth = { SHA3_absorb_avx512, SHA3_squeeze_avx512 };

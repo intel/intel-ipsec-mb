@@ -73,6 +73,9 @@ struct ossl_ml_kem_scalar_st;
 /* Vendored OpenSSL digest context, only used through pointers */
 struct evp_md_ctx_st;
 
+/* Vendored OpenSSL SHA3/SHAKE method table, only used through pointers */
+struct prov_sha3_meth_st;
+
 /* ISA specific polynomial (NTT domain) primitives */
 typedef void(ML_KEM_POLY_NTT_FN)(struct ossl_ml_kem_scalar_st *s);
 typedef void(ML_KEM_POLY_ARITH_FN)(struct ossl_ml_kem_scalar_st *lhs,
@@ -145,6 +148,8 @@ struct IMB_ML_KEM {
         ML_KEM_REJ_UNIFORM_FN *rej_uniform_block;
         ML_KEM_MATRIX_EXPAND_FN *matrix_expand;
         ML_KEM_GENCBD_FN *gencbd;
+        /* Single-buffer SHA3/SHAKE implementation of the digest contexts */
+        const struct prov_sha3_meth_st *sha3_meth;
 
         /**
          * Backend dispatch table (0 on success, <0 on error).

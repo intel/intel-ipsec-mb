@@ -30,6 +30,9 @@ Library
 - Added ML-KEM matrix expansion with x4 SHAKE128 (AVX2 and AVX512VL).
 - Added ML-KEM AVX2 Compress and Decompress with packing for d = 1, 4, 5, 10 and 11.
 - Added ML-KEM AVX2 SamplePolyCBD for eta 2 and 3.
+- Used AVX512 single-buffer SHA3/SHAKE absorb and squeeze for ML-KEM and ML-DSA
+  on AVX512 and AVX10 managers, and shared the SHA3 method tables between the
+  SHA3 API, ML-KEM and ML-DSA.
 - Optimized ML-KEM PRF sampling with x4 SHAKE256 (AVX2 and AVX512VL).
 - Optimized ML-KEM AVX2 matrix multiplication with a fused NTT row dot product.
 - Added ML-KEM AVX2 ByteEncode and ByteDecode for d = 12.

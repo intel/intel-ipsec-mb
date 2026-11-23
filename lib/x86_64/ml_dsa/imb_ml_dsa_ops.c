@@ -144,7 +144,7 @@ op_set_pubkey(IMB_ML_DSA *self, const void *pk)
         if (key == NULL)
                 goto end;
 
-        if (!ossl_ml_dsa_pk_decode(key, pk, self->pk_len))
+        if (!ossl_ml_dsa_pk_decode(self, key, pk, self->pk_len))
                 goto end;
 
         key_unbind(self);
@@ -272,7 +272,7 @@ op_pubkey_validate(IMB_ML_DSA *self, const void *pk)
                 goto end;
 
         /* Decoding enforces the encoded length and coefficient ranges. */
-        if (!ossl_ml_dsa_pk_decode(key, pk, self->pk_len))
+        if (!ossl_ml_dsa_pk_decode(self, key, pk, self->pk_len))
                 goto end;
 
         rc = 0;

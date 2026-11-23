@@ -55,6 +55,7 @@ signature_init(ML_DSA_SIG *sig, POLY *hint, uint32_t k, POLY *z, uint32_t l, uin
  * Finally a public key hash is prepended, and the whole is hashed
  * to derive the mu value.
  *
+ * @param self: ML-DSA context, selecting the SHA3/SHAKE implementation;
  * @param key: A public or private ML-DSA key;
  * @param encode: if not set, assumes that M' is provided raw and the
  * following parameters are ignored.
@@ -63,13 +64,13 @@ signature_init(ML_DSA_SIG *sig, POLY *hint, uint32_t k, POLY *z, uint32_t l, uin
  * @returns an EVP_MD_CTX if the operation is successful, NULL otherwise.
  */
 EVP_MD_CTX *
-ossl_ml_dsa_mu_init_int(EVP_MD *shake256_md, const uint8_t *tr, size_t tr_len, int encode,
-                        int prehash, const uint8_t *ctx, size_t ctx_len)
+ossl_ml_dsa_mu_init_int(const IMB_ML_DSA *self, EVP_MD *shake256_md, const uint8_t *tr,
+                        size_t tr_len, int encode, int prehash, const uint8_t *ctx, size_t ctx_len)
 {
         EVP_MD_CTX *md_ctx;
         uint8_t itb[2];
 
-        md_ctx = EVP_MD_CTX_new();
+        md_ctx = imb_evp_md_ctx_new(self->sha3_meth);
         if (md_ctx == NULL)
                 return NULL;
 
@@ -103,12 +104,13 @@ err:
 }
 
 EVP_MD_CTX *
-ossl_ml_dsa_mu_init(const ML_DSA_KEY *key, int encode, const uint8_t *ctx, size_t ctx_len)
+ossl_ml_dsa_mu_init(const IMB_ML_DSA *self, const ML_DSA_KEY *key, int encode, const uint8_t *ctx,
+                    size_t ctx_len)
 {
         if (key == NULL)
                 return NULL;
-        return ossl_ml_dsa_mu_init_int(key->shake256_md, key->tr, sizeof(key->tr), encode, 0, ctx,
-                                       ctx_len);
+        return ossl_ml_dsa_mu_init_int(self, key->shake256_md, key->tr, sizeof(key->tr), encode, 0,
+                                       ctx, ctx_len);
 }
 
 /*
@@ -201,7 +203,7 @@ ml_dsa_sign_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, const uint8
         if (alloc == NULL)
                 goto err;
 
-        md_ctx = EVP_MD_CTX_new();
+        md_ctx = imb_evp_md_ctx_new(self->sha3_meth);
         if (md_ctx == NULL)
                 goto err;
 
@@ -460,7 +462,7 @@ ml_dsa_verify_internal(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, const uint
         if (alloc == NULL)
                 goto err;
 
-        md_ctx = EVP_MD_CTX_new();
+        md_ctx = imb_evp_md_ctx_new(self->sha3_meth);
         if (md_ctx == NULL)
                 goto err;
 
@@ -552,7 +554,7 @@ ossl_ml_dsa_sign(const IMB_ML_DSA *self, const ML_DSA_KEY *priv, int msg_is_mu, 
                 mu_ptr = msg;
                 mu_len = msg_len;
         } else {
-                md_ctx = ossl_ml_dsa_mu_init(priv, encode, context, context_len);
+                md_ctx = ossl_ml_dsa_mu_init(self, priv, encode, context, context_len);
                 if (md_ctx == NULL)
                         return 0;
 
@@ -596,7 +598,7 @@ ossl_ml_dsa_verify(const IMB_ML_DSA *self, const ML_DSA_KEY *pub, int msg_is_mu,
                 mu_ptr = msg;
                 mu_len = msg_len;
         } else {
-                md_ctx = ossl_ml_dsa_mu_init(pub, encode, context, context_len);
+                md_ctx = ossl_ml_dsa_mu_init(self, pub, encode, context, context_len);
                 if (md_ctx == NULL)
                         return -1;
 

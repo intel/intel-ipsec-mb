@@ -353,3 +353,27 @@ ossl_ml_dsa_sample_init_base(IMB_ML_DSA *self)
         self->vector_expand_S = vector_expand_S_base;
         self->vector_expand_mask = vector_expand_mask_base;
 }
+
+/**
+ * @brief Select the generic single-buffer SHA3/SHAKE implementation for
+ *        \a self.
+ *
+ * @param [in,out] self  ML-DSA context to initialise
+ */
+void
+ossl_ml_dsa_sha3_init_base(IMB_ML_DSA *self)
+{
+        self->sha3_meth = &ossl_sha3_default_meth;
+}
+
+/**
+ * @brief Select the AVX512 single-buffer SHA3/SHAKE implementation for
+ *        \a self.
+ *
+ * @param [in,out] self  ML-DSA context to initialise
+ */
+void
+ossl_ml_dsa_sha3_init_avx512(IMB_ML_DSA *self)
+{
+        self->sha3_meth = &ossl_sha3_avx512_meth;
+}

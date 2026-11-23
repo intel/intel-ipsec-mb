@@ -299,6 +299,10 @@ void
 ossl_ml_kem_poly_init_base(IMB_ML_KEM *self);
 void
 ossl_ml_kem_poly_init_avx2(IMB_ML_KEM *self);
+void
+ossl_ml_kem_sha3_init_base(IMB_ML_KEM *self);
+void
+ossl_ml_kem_sha3_init_avx512(IMB_ML_KEM *self);
 
 struct ossl_ml_kem_scalar_st {
         /* On every function entry and exit, 0 <= c[i] < ML_KEM_PRIME. */

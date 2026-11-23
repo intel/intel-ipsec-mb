@@ -133,16 +133,17 @@ ossl_ml_dsa_key_get0_libctx(const ML_DSA_KEY *key);
 __owur int
 ossl_ml_dsa_key_public_from_private(const IMB_ML_DSA *self, ML_DSA_KEY *key);
 __owur int
-ossl_ml_dsa_pk_decode(ML_DSA_KEY *key, const uint8_t *in, size_t in_len);
+ossl_ml_dsa_pk_decode(const IMB_ML_DSA *self, ML_DSA_KEY *key, const uint8_t *in, size_t in_len);
 __owur int
 ossl_ml_dsa_sk_decode(const IMB_ML_DSA *self, ML_DSA_KEY *key, const uint8_t *in, size_t in_len);
 
 __owur EVP_MD_CTX *
-ossl_ml_dsa_mu_init(const ML_DSA_KEY *key, int encode, const uint8_t *ctx, size_t ctx_len);
+ossl_ml_dsa_mu_init(const IMB_ML_DSA *self, const ML_DSA_KEY *key, int encode, const uint8_t *ctx,
+                    size_t ctx_len);
 
 __owur EVP_MD_CTX *
-ossl_ml_dsa_mu_init_int(EVP_MD *shake256_md, const uint8_t *tr, size_t tr_len, int encode,
-                        int prehash, const uint8_t *ctx, size_t ctx_len);
+ossl_ml_dsa_mu_init_int(const IMB_ML_DSA *self, EVP_MD *shake256_md, const uint8_t *tr,
+                        size_t tr_len, int encode, int prehash, const uint8_t *ctx, size_t ctx_len);
 __owur int
 ossl_ml_dsa_mu_update(EVP_MD_CTX *md_ctx, const uint8_t *msg, size_t msg_len);
 __owur int

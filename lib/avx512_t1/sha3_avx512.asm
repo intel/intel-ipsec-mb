@@ -22,6 +22,8 @@ default rel
 %include "include/cet.inc"
 %include "include/clear_regs.inc"
 
+extern SHA3_absorb
+
 ;; Stack frame layout of the exported functions (offsets from rsp
 ;; after 'sub rsp, FRAME_SZ'):
 ;;
@@ -895,6 +897,149 @@ align_label
         pop     r12
         pop     rbx
         pop     rbp
+        ret
+
+;; Absorb full blocks of %%RATE bytes into the state in ymm0-ymm24
+;; until fewer than %%RATE bytes remain, then jump to %%DONE.
+%macro ABSORB_BLOCKS 4
+%define %%INP   %1      ; [in/out] GP reg, input pointer
+%define %%LEN   %2      ; [in/out] GP reg, input length (>= %%RATE on entry)
+%define %%RATE  %3      ; [in] immediate, rate in bytes
+%define %%DONE  %4      ; [in] label to jump to when done
+
+align_loop
+%%loop:
+        ABSORB_BYTES %%INP, 0, %%RATE
+        call    keccak1600_block_64bit
+        add     %%INP, %%RATE
+        sub     %%LEN, %%RATE
+        cmp     %%LEN, %%RATE
+        jae     %%loop
+        jmp     %%DONE
+%endmacro
+
+;; size_t SHA3_absorb_avx512(uint64_t A[5][5], const uint8_t *inp,
+;;                           size_t len, size_t r)
+;;
+;; Drop-in replacement for the OpenSSL SHA3_absorb(): absorbs all full
+;; r-byte blocks of inp into the state A and returns the number of bytes
+;; left over (len % r). Rates 72 (SHA3-512), 136 (SHA3-256, SHAKE256) and
+;; 168 (SHAKE128) are absorbed here, any other rate is passed on to the
+;; scalar SHA3_absorb().
+align_function
+MKGLOBAL(SHA3_absorb_avx512,function,internal)
+SHA3_absorb_avx512:
+        endbranch64
+        mov     rax, arg3
+        cmp     arg3, arg4
+        jb      .exit
+        ;; Rates other than 72, 136 and 168 tail jump to the scalar SHA3_absorb(),
+        ;; which takes the same arguments and returns directly to the caller.
+        cmp     arg4, SHAKE128_RATE
+        je      .rate_ok
+        cmp     arg4, SHA3_256_RATE
+        je      .rate_ok
+        cmp     arg4, SHA3_512_RATE
+        jne     SHA3_absorb
+.rate_ok:
+        push    r13
+        push    r14
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
+        call    keccak_1600_load_state
+        cmp     arg4, SHA3_256_RATE
+        jb      .rate_72
+        je      .rate_136
+.rate_168:
+        ABSORB_BLOCKS arg2, arg3, SHAKE128_RATE, .absorbed
+.rate_136:
+        ABSORB_BLOCKS arg2, arg3, SHA3_256_RATE, .absorbed
+.rate_72:
+        ABSORB_BLOCKS arg2, arg3, SHA3_512_RATE, .absorbed
+align_label
+.absorbed:
+        call    keccak_1600_save_state
+        mov     rax, arg3
+
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%else
+        vzeroupper
+%endif
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
+        pop     r14
+        pop     r13
+.exit:
+        ret
+
+;; void SHA3_squeeze_avx512(uint64_t A[5][5], uint8_t *out, size_t len,
+;;                          size_t r, int next)
+;;
+;; Drop-in replacement for the OpenSSL SHA3_squeeze(): writes len bytes of
+;; output from the state A, r bytes per block. The state is permuted before
+;; each block, except before the first one when next is 0.
+;;
+;; next = 0: first squeeze after the final absorb; A already holds the first
+;;           output block.
+;; next = 1: A has been squeezed before; it is permuted to get a fresh block.
+align_function
+MKGLOBAL(SHA3_squeeze_avx512,function,internal)
+SHA3_squeeze_avx512:
+        endbranch64
+%ifdef LINUX
+        mov     eax, r8d                ; next
+%else
+        mov     eax, [rsp + 5*8]        ; next (5th argument on the stack)
+%endif
+        test    arg3, arg3
+        jz      .exit
+        push    r12
+        push    r13
+        push    r14
+        push    r15
+        sub     rsp, FRAME_SZ
+        SAVE_WIN_XMMS
+        mov     r10, arg2               ; output pointer
+        mov     r11, arg3               ; bytes left to write
+        xor     r15d, r15d              ; state not loaded into ymm0-ymm24 yet
+        test    eax, eax
+        jz      .extract
+align_loop
+.permute:
+        ;; Load A into ymm0-ymm24 on the first permutation only; later
+        ;; blocks keep the state in registers.
+        test    r15d, r15d
+        jnz     .loaded
+        call    keccak_1600_load_state
+        mov     r15d, 1
+.loaded:
+        call    keccak1600_block_64bit
+        ;; Store the permuted state to A; the output bytes are copied from it.
+        call    keccak_1600_save_state
+.extract:
+        ;; Copy min(r, bytes left) bytes from A to the output (advances r10)
+        mov     r12, arg4
+        cmp     r11, r12
+        cmovb   r12, r11
+        sub     r11, r12
+        mov     r13, arg1
+        call    keccak_1600_extract_bytes
+        test    r11, r11
+        jnz     .permute
+
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%else
+        vzeroupper
+%endif
+        RESTORE_WIN_XMMS
+        add     rsp, FRAME_SZ
+        pop     r15
+        pop     r14
+        pop     r13
+        pop     r12
+.exit:
         ret
 
 mksection .rodata
